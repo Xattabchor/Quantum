@@ -52,3 +52,48 @@ almost certainly wants a `VertexArray` of indices as the first argument).
 - **No behaviour.** Anything run against these stubs does nothing, which is
   exactly why `tools/difftest` links the harness against them only for the
   engine's own integer code, never for the platform calls.
+
+## Getting the real platform jars (and `preverify`)
+
+The stubs stand in for the API; they do not replace it. For a device build you
+want the real jars plus the `preverify` tool.
+
+Sun Java Wireless Toolkit 2.5.2_01 — the platform named by
+`configs.DefaultColorPhone` in `nbproject/project.properties`. URL and the
+cookie are the ones used by the `labac-dev/j2me-env` Docker build:
+
+```sh
+wget --no-cookies --no-check-certificate \
+     --header "Cookie: oraclelicense=accept-securebackup-cookie" \
+     -O wtk-2.5.2_01.bin.sh \
+     "https://download.oracle.com/otn-pub/java/sun_java_wireless_toolkit/2.5.2_01/sun_java_wireless_toolkit-2.5.2_01-linuxi486.bin.sh"
+```
+
+It installs `lib/cldcapi11.jar`, `lib/midpapi21.jar`, `lib/mmapi.jar`,
+`lib/jsr184.jar`, `lib/jsr75.jar`, ... and `bin/preverify`. The JDK it was built
+for: `https://repo.huaweicloud.com/java/jdk/6u45-b06/jdk-6u45-linux-i586.bin`.
+Or skip the install:
+
+```sh
+docker pull ghcr.io/labac-dev/j2me-env:latest
+docker run --rm -it -v "$PWD:/workspace" ghcr.io/labac-dev/j2me-env:latest
+```
+
+The project's *active* platform is Oracle Java ME SDK 3.4 (`platform.bootclasspath`
+lists `midp_2.0.jar`, `cldc_1.1.jar`, `jsr184_1.1.jar`, `jsr75_1.0.jar`,
+`jsr234_1.0.jar`, `jsr226_1.0.jar`); that one comes from Oracle's Java ME archive
+behind a login. WTK 2.5.2 covers the same APIs at MIDP 2.1.
+
+Build against the real thing:
+
+```sh
+WTK=/opt/WTK2.5.2
+MIDP_LIBS=$WTK/lib/cldcapi11.jar:$WTK/lib/midpapi21.jar:$WTK/lib/mmapi.jar:$WTK/lib/jsr184.jar:$WTK/lib/jsr75.jar \
+PREVERIFY=$WTK/bin/preverify sh tools/build-jar.sh
+```
+
+Open-source API sources, if you would rather read the API than download it:
+`barteo/microemu` (`api/cldcapi10`, `api/cldcapi11`, `api/midpapi20`),
+`magicus/phoneME` (archived Sun phoneME sources), `SquirrelJME/SquirrelJME`.
+The microemu modules ship `*-signature.xml` files, which are a usable check on
+what a stub set like this one may and may not declare.

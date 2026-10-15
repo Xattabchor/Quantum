@@ -11,10 +11,18 @@
 # come from tools/j2me-stubs, so no proprietary Wireless Toolkit is needed to
 # build. Output lands in dist/, which .gitignore already excludes.
 #
-# NOTE: the classes are NOT preverified. A real CLDC device or the WTK emulator
-# needs `preverify` (shipped with the Wireless Toolkit / Java ME SDK) to be run
-# over build/compiled before the JAR will install there:
-#     preverify -classpath <platform jars> -d build/preverified build/compiled
+# Environment:
+#   MIDP_LIBS   ':' separated JavaME SDK jars (or class dirs) to compile
+#               against, instead of the stubs in tools/j2me-stubs. With a real
+#               Wireless Toolkit 2.5.2 in $WTK:
+#                 MIDP_LIBS=$WTK/lib/cldcapi11.jar:$WTK/lib/midpapi21.jar:\
+# $WTK/lib/mmapi.jar:$WTK/lib/jsr184.jar:$WTK/lib/jsr75.jar
+#   PREVERIFY   path to the `preverify` tool (also picked up from PATH). A CLDC
+#               device or the WTK emulator only installs preverified classes,
+#               so a device build needs it; a desktop/stub build does not.
+#
+# Without MIDP_LIBS the classes are NOT preverified and the JAR is only good
+# for desktop testing.
 set -e
 
 ROOT=`cd "$(dirname "$0")/.." && pwd`
@@ -36,30 +44,50 @@ else
 fi
 echo "compiler: $($JAVAC -version 2>&1)"
 
-# ---------------------------------------------------------------- platform stubs
-if [ ! -f "$STUB_CLASSES/javax/microedition/midlet/MIDlet.class" ]; then
-    echo "compiling JavaME API stubs"
-    rm -rf "$STUB_CLASSES" && mkdir -p "$STUB_CLASSES"
-    $JAVAC -nowarn -source 1.3 -target 1.1 -bootclasspath "" -d "$STUB_CLASSES" \
-        `find "$STUB_SRC" -name '*.java'`
+# ---------------------------------------------------------------- platform API
+if [ -n "$MIDP_LIBS" ]; then
+    PLATFORM="$MIDP_LIBS"
+    echo "platform API: \$MIDP_LIBS"
+else
+    if [ ! -f "$STUB_CLASSES/javax/microedition/midlet/MIDlet.class" ]; then
+        echo "compiling JavaME API stubs (no \$MIDP_LIBS given)"
+        rm -rf "$STUB_CLASSES" && mkdir -p "$STUB_CLASSES"
+        $JAVAC -nowarn -source 1.3 -target 1.1 -bootclasspath "" -d "$STUB_CLASSES" \
+            `find "$STUB_SRC" -name '*.java'`
+    fi
+    PLATFORM="$STUB_CLASSES"
+    echo "platform stubs: $(find "$STUB_CLASSES" -name '*.class' | wc -l | tr -d ' ') classes"
 fi
-echo "platform stubs: $(find "$STUB_CLASSES" -name '*.class' | wc -l | tr -d ' ') classes"
 
 # ---------------------------------------------------------------- engine
 rm -rf "$CLASSES" && mkdir -p "$CLASSES"
 find src Utils/src UtilsFPS/src UtilsText/src -name '*.java' > build/sources.txt
 echo "compiling $(wc -l < build/sources.txt | tr -d ' ') sources"
-$JAVAC -nowarn -encoding UTF-8 -source 1.3 -target 1.3 -bootclasspath "$STUB_CLASSES" \
+$JAVAC -nowarn -encoding UTF-8 -source 1.3 -target 1.3 -bootclasspath "$PLATFORM" \
     -d "$CLASSES" "@build/sources.txt"
 echo "engine classes: $(find "$CLASSES" -name '*.class' | wc -l | tr -d ' ')"
+
+# ---------------------------------------------------------------- preverify
+# Optional: without it the JAR runs nowhere but a desktop JVM test harness.
+PACK="$CLASSES"
+if [ -n "$PREVERIFY" ] || command -v preverify >/dev/null 2>&1; then
+    PV=${PREVERIFY:-preverify}
+    rm -rf build/preverified && mkdir -p build/preverified
+    echo "preverifying with $PV"
+    "$PV" -classpath "$PLATFORM:$CLASSES" -d build/preverified "$CLASSES"
+    PACK=build/preverified
+    echo "preverified classes: $(find "$PACK" -name '*.class' | wc -l | tr -d ' ')"
+else
+    echo "preverify: skipped (set PREVERIFY=<path>/preverify for a device build)"
+fi
 
 # ---------------------------------------------------------------- jar + jad
 mkdir -p "$DIST"
 rm -f "$DIST/Quantum.jar" "$DIST/Quantum.jad"
-python3 - "$ROOT" <<'PY'
+python3 - "$ROOT" "$PACK" <<'PY'
 import os, sys, zipfile
 
-root, classes, res, dist = sys.argv[1], "build/compiled", "res", "dist"
+root, classes, res, dist = sys.argv[1], sys.argv[2], "res", "dist"
 jar, jad = os.path.join(dist, "Quantum.jar"), os.path.join(dist, "Quantum.jad")
 
 # nbproject/project.properties: manifest.midlets + manifest.others
