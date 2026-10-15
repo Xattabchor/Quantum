@@ -189,7 +189,11 @@ public class Asset {
                 RawImage rmImg1 = RawImage.createMipRawImage(rImg);
                 if(rmImg1!=null) {
                     table.put("RIMGMIP1_" + file, rmImg1);
-                    RawImage rmImg2 = RawImage.createMipRawImage(rImg);
+                    // Build the mip chain progressively. Rebuilding level 2 from the
+                    // full-resolution image duplicated level 1 and wasted texture
+                    // memory/cache on devices with small data caches (for example,
+                    // the 16 KiB D-cache on ARM9/OMAP1710).
+                    RawImage rmImg2 = RawImage.createMipRawImage(rmImg1);
                     if(rmImg2!=null) table.put("RIMGMIP2_" + file, rmImg2);
                     else {
                         rmImg2 = rmImg1;

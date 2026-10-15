@@ -87,6 +87,13 @@ public abstract class RenderObject {
    
    
    public int[] getLight(Vertex a, int la, int la2, int la3, DirectX7 g3d) {
+       int[] out = new int[3];
+       getLight(a, la, la2, la3, g3d, out);
+       return out;
+   }
+
+   /** Fills caller-owned storage so the per-polygon lighting path needn't allocate. */
+   public void getLight(Vertex a, int la, int la2, int la3, DirectX7 g3d, int[] out) {
        int lightLen = g3d.flashlightEnabled?6500:5000;
        int lita=(-a.rz<DirectX7.fDist || DirectX7.fDist <= 1)?255:0;
        int fa=0;
@@ -108,14 +115,11 @@ public abstract class RenderObject {
            else if(fa > 0xFF) fa = 0xff;
        }
        
-       int[] out=new int[3];
        out[0] = (la * lita) / 255 + fa;
        if (out[0] > 255) out[0]=255;
        out[1] = (la2 * lita) / 255 + fa;
        if (out[1] > 255) out[1]=255;
        out[2] = (la3 * lita) / 255 + fa;
        if (out[2] > 255) out[2]=255;
-       
-       return out;
    }
 }

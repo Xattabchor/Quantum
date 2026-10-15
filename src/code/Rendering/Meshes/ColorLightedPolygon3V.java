@@ -22,6 +22,8 @@ public class ColorLightedPolygon3V extends Polygon3V {
     private static int q,sz2;
     private static int sizex,sizey,sizeu,sizev;
     private static int addmip,fog;
+    // Reused by the serial render path to avoid three short-lived arrays per triangle.
+    private static final int[] lightResult = new int[3];
     
     public ColorLightedPolygon3V(ColorLightedPolygon3V p) {
         super((Polygon3V)p);
@@ -42,9 +44,12 @@ fog=texture.drawmode;
 sizex=size(a.sx, b.sx, c.sx);
 sizey=size(a.sy, b.sy, c.sy);
 
-int[] al=getLight(a,ar,ag,ab,g3d);
-int[] bl=getLight(b,br,bg,bb,g3d);
-int[] cl=getLight(c,cr,cg,cb,g3d);
+getLight(a,ar,ag,ab,g3d,lightResult);
+int alr=lightResult[0], alg=lightResult[1], alb=lightResult[2];
+getLight(b,br,bg,bb,g3d,lightResult);
+int blr=lightResult[0], blg=lightResult[1], blb=lightResult[2];
+getLight(c,cr,cg,cb,g3d,lightResult);
+int clr=lightResult[0], clg=lightResult[1], clb=lightResult[2];
 
 
 if(fog==5) {
@@ -90,14 +95,14 @@ if(sizex<texture.rImg.w || sizey<texture.rImg.w)  {
                     texture,
                 a, au, av&0xff,
                 b, bu, bv&0xff,
-                c, cu, cv&0xff,DirectX7.fogc,fog,sz2,q,al[0],bl[0],cl[0],al[1],bl[1],cl[1],al[2],bl[2],cl[2],nx,ny,nz);
+                c, cu, cv&0xff,DirectX7.fogc,fog,sz2,q,alr,blr,clr,alg,blg,clg,alb,blb,clb,nx,ny,nz);
         } else {
 
             TexturingAffine.paint(g3d,
                     texture,
                 a, au&0xff, av&0xff,
                 b, bu&0xff, bv&0xff,
-                c, cu&0xff, cv&0xff,DirectX7.fogc,fog,sz2,al[0],bl[0],cl[0],al[1],bl[1],cl[1],al[2],bl[2],cl[2],nx,ny,nz);
+                c, cu&0xff, cv&0xff,DirectX7.fogc,fog,sz2,alr,blr,clr,alg,blg,clg,alb,blb,clb,nx,ny,nz);
     }
     
 }

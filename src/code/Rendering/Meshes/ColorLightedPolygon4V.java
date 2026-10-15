@@ -23,6 +23,8 @@ public class ColorLightedPolygon4V extends Polygon4V {
     private static int q,sz2;
     private static int sizex,sizey,sizeu,sizev;
     private static int addmip,fog;
+    // Reused by the serial render path to avoid four short-lived arrays per quad.
+    private static final int[] lightResult = new int[3];
     
     public ColorLightedPolygon4V(ColorLightedPolygon4V p) {
         super((Polygon4V)p);
@@ -45,10 +47,14 @@ sizex=size(a.sx, b.sx, c.sx, d.sx);
 sizey=size(a.sy, b.sy, c.sy, d.sy);
 
 
-int[] al=getLight(a,ar,ag,ab,g3d);
-int[] bl=getLight(b,br,bg,bb,g3d);
-int[] cl=getLight(c,cr,cg,cb,g3d);
-int[] dl=getLight(d,dr,dg,db,g3d);
+getLight(a,ar,ag,ab,g3d,lightResult);
+int alr=lightResult[0], alg=lightResult[1], alb=lightResult[2];
+getLight(b,br,bg,bb,g3d,lightResult);
+int blr=lightResult[0], blg=lightResult[1], blb=lightResult[2];
+getLight(c,cr,cg,cb,g3d,lightResult);
+int clr=lightResult[0], clg=lightResult[1], clb=lightResult[2];
+getLight(d,dr,dg,db,g3d,lightResult);
+int dlr=lightResult[0], dlg=lightResult[1], dlb=lightResult[2];
 
 
 if(fog==5) {
@@ -98,21 +104,21 @@ boolean pers=(( texture.perspectiveCorrection && (sizex>70-(Main.persQ<3?0:20) |
             if(a.rz<0 || b.rz<0 || d.rz<0) TexturingPers.paint(g3d, texture,
                 a, ((au)), ((av)),
                 b, ((bu)), ((bv)),
-                d, ((du)), ((dv)),DirectX7.fogc,fog,sz2,q,al[0],bl[0],dl[0],al[1],bl[1],dl[1],al[2],bl[2],dl[2],nx,ny,nz);
+                d, ((du)), ((dv)),DirectX7.fogc,fog,sz2,q,alr,blr,dlr,alg,blg,dlg,alb,blb,dlb,nx,ny,nz);
         if(c.rz<0 || b.rz<0 || d.rz<0)  TexturingPers.paint(g3d, texture,
                 b, ((bu)), ((bv)),
                 c, ((cu)), ((cv)),
-                d, ((du)), ((dv)),DirectX7.fogc,fog,sz2,q,bl[0],cl[0],dl[0],bl[1],cl[1],dl[1],bl[2],cl[2],dl[2],nx,ny,nz);
+                d, ((du)), ((dv)),DirectX7.fogc,fog,sz2,q,blr,clr,dlr,blg,clg,dlg,blb,clb,dlb,nx,ny,nz);
         } else {
 
            if(a.rz<0 || b.rz<0 || d.rz<0)  TexturingAffine.paint(g3d, texture,
                 a, ((au)), ((av)),
                 b, ((bu)), ((bv)),
-                d, ((du)), ((dv)),DirectX7.fogc,fog,sz2,al[0],bl[0],dl[0],al[1],bl[1],dl[1],al[2],bl[2],dl[2],nx,ny,nz);
+                d, ((du)), ((dv)),DirectX7.fogc,fog,sz2,alr,blr,dlr,alg,blg,dlg,alb,blb,dlb,nx,ny,nz);
         if(c.rz<0 || b.rz<0 || d.rz<0) TexturingAffine.paint(g3d, texture,
                 b, ((bu)), ((bv)),
                 c, ((cu)), ((cv)),
-                d, ((du)), ((dv)),DirectX7.fogc,fog,sz2,bl[0],cl[0],dl[0],bl[1],cl[1],dl[1],bl[2],cl[2],dl[2],nx,ny,nz);
+                d, ((du)), ((dv)),DirectX7.fogc,fog,sz2,blr,clr,dlr,blg,clg,dlg,blb,clb,dlb,nx,ny,nz);
        }
 
     }

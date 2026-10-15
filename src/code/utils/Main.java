@@ -100,11 +100,13 @@ public final class Main extends MIDlet {
     public static boolean verticalShopScroll = false;
 
     public static MainCanvas mainCanvas;
-    public static final int s60Optimization = 0;
+    // ARM9 / TI OMAP1710 profile (the existing N73 path): prefer compact scalar
+    // fallbacks over larger unrolled kernels, keeping hot code small for its 32 KiB I-cache.
+    public static final int s60Optimization = -1;
     /*
-     n73 -1
-     n86 0
-     n95 1
+     n73 / OMAP1710 ARM9: -1
+     n86: 0
+     n95: 1
      */
     public static boolean levelCounter = true;
     public static boolean resizeWeapons = false;
