@@ -44,9 +44,11 @@ almost certainly wants a `VertexArray` of indices as the first argument).
 
 ## What the stubs cannot give you
 
-- **No preverification.** `preverify` is a native tool from the Wireless
-  Toolkit. A CLDC device or the WTK emulator will refuse classes that have not
-  been through it. Run it over `build/compiled` before shipping.
+- **No preverification by itself.** A CLDC device or the WTK emulator refuses
+  classes that have not been preverified. `sh tools/build-preverify.sh` builds
+  a `preverify` for x86_64 Linux from the phoneME sources; then
+  `PREVERIFY=.toolchain/preverify sh tools/build-jar.sh` packages the
+  preverified classes into the JAR.
 - **No API checking.** A stub is not a spec. A method that exists here but not
   in MIDP 2.0 would compile and then fail at runtime on a device.
 - **No behaviour.** Anything run against these stubs does nothing, which is

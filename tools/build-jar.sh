@@ -60,6 +60,12 @@ else
 fi
 
 # ---------------------------------------------------------------- engine
+for d in Utils/src UtilsFPS/src UtilsText/src; do
+    if [ ! -d "$d" ] || [ -z "$(ls -A "$d" 2>/dev/null)" ]; then
+        echo "submodule content missing: $d -- run 'git submodule update --init'" >&2
+        exit 1
+    fi
+done
 rm -rf "$CLASSES" && mkdir -p "$CLASSES"
 find src Utils/src UtilsFPS/src UtilsText/src -name '*.java' > build/sources.txt
 echo "compiling $(wc -l < build/sources.txt | tr -d ' ') sources"
