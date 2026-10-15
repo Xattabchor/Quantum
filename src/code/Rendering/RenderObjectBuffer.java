@@ -137,19 +137,20 @@ el.tex=tex.textures[((Polygon3V)(obj)).tex];
     
     public void sort(int start, int end) {
         if(start >= end) return;
+        final TMPElement[] elements = buffer;
         TMPElement tmp;
-        int opora = buffer[(start+end)>>1].obj.sz;
+        int opora = elements[(start+end)>>1].obj.sz;
         
         int first = start, second = end;
         
         while(first <= second) {
-            while(buffer[first].obj.sz>opora) {first++;} //Отрисовка идёт с конца списка
-            while(buffer[second].obj.sz<opora) {second--;}
+            while(elements[first].obj.sz>opora) {first++;} //Отрисовка идёт с конца списка
+            while(elements[second].obj.sz<opora) {second--;}
             
             if(first <= second) {
-                tmp = buffer[first];
-                buffer[first] = buffer[second];
-                buffer[second] = tmp;
+                tmp = elements[first];
+                elements[first] = elements[second];
+                elements[second] = tmp;
                 first++; second--;
             }
         }

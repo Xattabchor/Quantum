@@ -303,6 +303,8 @@ public class Mesh {
         Light[] lights=room.lights;
         if(lights==null) return;
         Vertex normal = new Vertex(0,0,0);
+        // Reuse one position scratch instead of allocating a Vertex for each polygon corner.
+        Vertex lightPosition = new Vertex();
         DirectX7.transform(this, transform);
         tmpMatrix.set(transform);
         tmpMatrix.setPosition(0,0,0);
@@ -313,17 +315,17 @@ public class Mesh {
                 LightedPolygon3V p = (LightedPolygon3V)ro;
                 normal.set(p.nx,p.ny,p.nz);
                 normal.transform(tmpMatrix);
-                p.la=getVertexLit(p.la,normal,p.a,room);
-                p.lb=getVertexLit(p.lb,normal,p.b,room);
-                p.lc=getVertexLit(p.lc,normal,p.c,room);
+                p.la=getVertexLit(p.la,normal,p.a,room,lightPosition);
+                p.lb=getVertexLit(p.lb,normal,p.b,room,lightPosition);
+                p.lc=getVertexLit(p.lc,normal,p.c,room,lightPosition);
             } else if(ro instanceof LightedPolygon4V) {
                 LightedPolygon4V p = (LightedPolygon4V)ro;
                 normal.set(p.nx,p.ny,p.nz);
                 normal.transform(tmpMatrix);
-                p.la=getVertexLit(p.la,normal,p.a,room);
-                p.lb=getVertexLit(p.lb,normal,p.b,room);
-                p.lc=getVertexLit(p.lc,normal,p.c,room);
-                p.ld=getVertexLit(p.ld,normal,p.d,room);
+                p.la=getVertexLit(p.la,normal,p.a,room,lightPosition);
+                p.lb=getVertexLit(p.lb,normal,p.b,room,lightPosition);
+                p.lc=getVertexLit(p.lc,normal,p.c,room,lightPosition);
+                p.ld=getVertexLit(p.ld,normal,p.d,room,lightPosition);
             }
         }
         
@@ -357,10 +359,12 @@ public class Mesh {
         return norm;
     }
     
-    private byte getVertexLit(int orig, Vertex norm, Vertex v, Room room) {
+    private byte getVertexLit(int orig, Vertex norm, Vertex v, Room room, Vertex tmp) {
         long lit=0;
         Light[] lights=room.lights;
-        Vertex tmp=new Vertex(v.sx,v.sy,v.rz);
+        tmp.x=v.sx;
+        tmp.y=v.sy;
+        tmp.z=v.rz;
         
         
         for(int i=0; i<lights.length; i++) {

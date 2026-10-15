@@ -397,82 +397,8 @@ else return;
 
 
     public void transformAndProjectVertices(Mesh ms, Matrix matrix) {
-        Vertex[] vertices=ms.getVertices();
-
-
-        final int m00 = matrix.m00 >> 2;
-        final int m01 = matrix.m01 >> 2;
-        final int m02 = matrix.m02 >> 2;
-        final int m03 = matrix.m03;
-
-        final int m10 = matrix.m10 >> 2;
-        final int m11 = matrix.m11 >> 2;
-        final int m12 = matrix.m12 >> 2;
-        final int m13 = matrix.m13;
-
-        final int m20 = matrix.m20 >> 2;
-        final int m21 = matrix.m21 >> 2;
-        final int m22 = matrix.m22 >> 2;
-        final int m23 = matrix.m23;
-
-        final int fp =  Matrix.fp-2;
-
-        Vertex ver;
-        int x, y, z;
-        int sx, sy, rz;
-
-        for(int i=vertices.length-1; i>=0; i--) {
-            ver = vertices[i];
-            x = ver.x;
-            y = ver.y;
-            z = ver.z;
-
-            sx = m03;
-if(m00!=0) sx+= (x * m00 >> fp);
-if(m01!=0) sx+= (y * m01 >> fp);
-if(m02!=0) sx+= (z * m02 >> fp);
-
-            sy = -m13;
-if(m10!=0) sy-= (x * m10 >> fp);
-if(m11!=0) sy-= (y * m11 >> fp);
-if(m12!=0) sy-= (z * m12 >> fp);
-
-rz = m23;
-if(m20!=0) rz+= (x * m20 >> fp);
-if(m21!=0) rz+= (y * m21 >> fp);
-if(m22!=0) rz+= (z * m22 >> fp);
-
-//int rz2=MathUtils.pLength(sx*100/centreX,sy*100/centreY,0);
-if(rz<0) {
-sx = sx *distX /(-rz/*+rz2*/ + distX) ;
-sy = sy *distY /(-rz/*+rz2*/ + distY) ;
-} /*else {
-sx = sx *distX /(1+rz2 + distX) ;
-sy = sy *distY /(1+rz2 + distY) ;
-}*/
-
-ver.sx = sx+centreX;//(this.height-sy)*this.width/this.height;
-ver.sy = sy+centreY;//sx*this.height/this.width;
-ver.rz = rz;
-
-/*
-//if(rz<0) {
-sx = sx *3/distX;//*distX /(-rz + distX) ;
-sy = sy *3/distY;//*distY /(-rz + distY) ;
-//}
-
-ver.sx = sx+centreX;//(this.height-sy)*this.width/this.height;
-ver.sy = sy+centreY;//sx*this.height/this.width;
-ver.rz = rz;
-*/
-        }
-
-    
-
-
-
-}
-
+        transformAndProjectVertices(ms.getVertices(), matrix);
+    }
 
     public void transformAndProjectVertices(Vertex[] vertices, Matrix matrix) {
 
