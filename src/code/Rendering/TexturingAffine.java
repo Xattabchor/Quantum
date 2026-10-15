@@ -35,9 +35,11 @@ public class TexturingAffine {
                 if(bu == 255) bu = 256;
                 if(cu == 255) cu = 256;
             }
-            au = au * texture.rImg.w / 256;
-            bu = bu * texture.rImg.w / 256;
-            cu = cu * texture.rImg.w / 256;
+            // Polygon UVs are unsigned 8-bit values (with 256 used at wrap seams),
+            // so a shift matches division while avoiding integer divides on ARM9.
+            au = (au * texture.rImg.w) >> 8;
+            bu = (bu * texture.rImg.w) >> 8;
+            cu = (cu * texture.rImg.w) >> 8;
         }
 
         if(texture.rImg.h != 256) {
@@ -46,9 +48,9 @@ public class TexturingAffine {
                 if(bv == 255) bv = 256;
                 if(cv == 255) cv = 256;
             }
-            av = av * texture.rImg.h / 256;
-            bv = bv * texture.rImg.h / 256;
-            cv = cv * texture.rImg.h / 256;
+            av = (av * texture.rImg.h) >> 8;
+            bv = (bv * texture.rImg.h) >> 8;
+            cv = (cv * texture.rImg.h) >> 8;
         }
 
 switch(fog)
@@ -2292,9 +2294,10 @@ static final void paintDitherGradient(DirectX7 g3d, Texture texture,
 
         int wInH=texture.rImg.h/texture.rImg.w;
         
-        int au=au2*wInH/256;
-        int bu=bu2*wInH/256;
-        int cu=cu2*wInH/256;
+        // The dither inputs are 8-bit color values, so keep this scale in fixed point.
+        int au=(au2*wInH)>>8;
+        int bu=(bu2*wInH)>>8;
+        int cu=(cu2*wInH)>>8;
         if(au>wInH-1) au=wInH-1;
         if(bu>wInH-1) bu=wInH-1;
         if(cu>wInH-1) cu=wInH-1;
