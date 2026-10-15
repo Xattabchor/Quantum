@@ -668,10 +668,12 @@ x1++;
             return;
         }
             
-        final int[] tex = texture.rImg.img;
+        final RawImage rawImage = texture.rImg;
+        final int[] tex = rawImage.img;
         final int lengthBIT = tex.length-1;
-        final int widthBIT = texture.rImg.widthBIT;
+        final int widthBIT = rawImage.widthBIT;
         final int[] rgb = g3d.display; //�������
+        final boolean hasTransparentPixels = rawImage.hasTransparentPixels;
 
         int tempI;
         long subtexel_a, subtexel_b;
@@ -759,24 +761,40 @@ x1++;
                 
                 du2 = du<<1; dv2 = dv<<1;
                 
-                while(lineEnd-x1>=6)
-                {
-                if((col=tex[((((v+dv)>>>fp)<<widthBIT) + ((u+du)>>>fp)) &lengthBIT]) != 0) rgb[x1]=col; 
-                if((col=tex[((((v+dv2)>>>fp)<<widthBIT) + ((u+du2)>>>fp)) &lengthBIT]) != 0) rgb[x1+1]=col; 
-                u+=du2; v+=dv2;
-                if((col=tex[((((v+dv)>>>fp)<<widthBIT) + ((u+du)>>>fp)) &lengthBIT]) != 0) rgb[x1+2]=col; 
-                if((col=tex[((((v+dv2)>>>fp)<<widthBIT) + ((u+du2)>>>fp)) &lengthBIT]) != 0) rgb[x1+3]=col; 
-                u+=du2; v+=dv2;
-                if((col=tex[((((v+dv)>>>fp)<<widthBIT) + ((u+du)>>>fp)) &lengthBIT]) != 0) rgb[x1+4]=col; 
-                if((col=tex[((((v+dv2)>>>fp)<<widthBIT) + ((u+du2)>>>fp)) &lengthBIT]) != 0) rgb[x1+5]=col; 
-                u+=du2; v+=dv2;
-                x1+=6;
-                }
-                
-                while(x1<lineEnd)
-                {
-                if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT]) != 0) rgb[x1]=col; 
-                x1++;
+                if (hasTransparentPixels) {
+                    while(lineEnd-x1>=6) {
+                        if((col=tex[((((v+dv)>>>fp)<<widthBIT) + ((u+du)>>>fp)) &lengthBIT]) != 0) rgb[x1]=col;
+                        if((col=tex[((((v+dv2)>>>fp)<<widthBIT) + ((u+du2)>>>fp)) &lengthBIT]) != 0) rgb[x1+1]=col;
+                        u+=du2; v+=dv2;
+                        if((col=tex[((((v+dv)>>>fp)<<widthBIT) + ((u+du)>>>fp)) &lengthBIT]) != 0) rgb[x1+2]=col;
+                        if((col=tex[((((v+dv2)>>>fp)<<widthBIT) + ((u+du2)>>>fp)) &lengthBIT]) != 0) rgb[x1+3]=col;
+                        u+=du2; v+=dv2;
+                        if((col=tex[((((v+dv)>>>fp)<<widthBIT) + ((u+du)>>>fp)) &lengthBIT]) != 0) rgb[x1+4]=col;
+                        if((col=tex[((((v+dv2)>>>fp)<<widthBIT) + ((u+du2)>>>fp)) &lengthBIT]) != 0) rgb[x1+5]=col;
+                        u+=du2; v+=dv2;
+                        x1+=6;
+                    }
+                    while(x1<lineEnd) {
+                        if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT]) != 0) rgb[x1]=col;
+                        x1++;
+                    }
+                } else {
+                    while(lineEnd-x1>=6) {
+                        rgb[x1]=tex[((((v+dv)>>>fp)<<widthBIT) + ((u+du)>>>fp)) &lengthBIT];
+                        rgb[x1+1]=tex[((((v+dv2)>>>fp)<<widthBIT) + ((u+du2)>>>fp)) &lengthBIT];
+                        u+=du2; v+=dv2;
+                        rgb[x1+2]=tex[((((v+dv)>>>fp)<<widthBIT) + ((u+du)>>>fp)) &lengthBIT];
+                        rgb[x1+3]=tex[((((v+dv2)>>>fp)<<widthBIT) + ((u+du2)>>>fp)) &lengthBIT];
+                        u+=du2; v+=dv2;
+                        rgb[x1+4]=tex[((((v+dv)>>>fp)<<widthBIT) + ((u+du)>>>fp)) &lengthBIT];
+                        rgb[x1+5]=tex[((((v+dv2)>>>fp)<<widthBIT) + ((u+du2)>>>fp)) &lengthBIT];
+                        u+=du2; v+=dv2;
+                        x1+=6;
+                    }
+                    while(x1<lineEnd) {
+                        rgb[x1]=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT];
+                        x1++;
+                    }
                 }
                 
             }

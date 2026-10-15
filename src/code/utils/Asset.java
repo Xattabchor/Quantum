@@ -63,10 +63,12 @@ public class Asset {
                 if (rImg.scale == 1) {
                     rImg.img = ImageResize.cubic2XHorDesize(rImg.img, rImg.w, rImg.h);
                     rImg.w /= 2;
+                    rImg.refreshTransparentPixels();
                     rImg.scale = 0;
                 } else {
                     rImg.img = ImageResize.cubic2XVertDesize(rImg.img, rImg.w, rImg.h);
                     rImg.h /= 2;
+                    rImg.refreshTransparentPixels();
                     rImg.scale = 1;
                 }
                 return true;

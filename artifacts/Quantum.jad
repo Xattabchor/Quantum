@@ -4,7 +4,7 @@ MIDlet-Vendor: AE-MODS.RU
 MIDlet-1: Quantum,/images/icon.png,code.utils.Main
 MIDlet-Info-URL: ae-mods.ru
 MIDlet-Jar-URL: Quantum.jar
-MIDlet-Jar-Size: 399491
+MIDlet-Jar-Size: 400128
 MicroEdition-Configuration: CLDC-1.1
 MicroEdition-Profile: MIDP-2.0
 Nokia-MIDlet-Background-Event: pause

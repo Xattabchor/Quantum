@@ -357,9 +357,11 @@ static final void paintAffine_0(DirectX7 g3d, Texture texture,
         }
         if(a.sy == c.sy) return;
 
-        final int[] tex = texture.rImg.img;
+        final RawImage rawImage = texture.rImg;
+        final int[] tex = rawImage.img;
         final int lengthBIT = tex.length-1;
-        final int widthBIT = texture.rImg.widthBIT;
+        final int widthBIT = rawImage.widthBIT;
+        final boolean hasTransparentPixels = rawImage.hasTransparentPixels;
         final int[] rgb = g3d.display; //�������
         int x1, x2, u, v, tempI;
         int col;
@@ -457,7 +459,11 @@ for(;y_start<y_end; y_start++,
             x2 += tempI; //до куда рисовать в массив
             u -= du; v -= dv;
             
-            line_0(x1, x2, rgb, tex, lengthBIT, widthBIT, u, v,  du, dv);
+            if (hasTransparentPixels) {
+                line_0(x1, x2, rgb, tex, lengthBIT, widthBIT, u, v, du, dv);
+            } else {
+                line_0Opaque(x1, x2, rgb, tex, lengthBIT, widthBIT, u, v, du, dv);
+            }
             
 }
 
@@ -492,7 +498,24 @@ for(;y_start<y_end; y_start++,
         }
     }
 
+    static final void line_0Opaque(int x1, final int x2,
+            final int[] rgb, final int[] tex, final int lengthBIT, final int widthBIT,
+            int u, int v, final int du, final int dv) {
+        while (x2 - x1 >= 6) {
+            rgb[x1] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            rgb[x1 + 1] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            rgb[x1 + 2] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            rgb[x1 + 3] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            rgb[x1 + 4] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            rgb[x1 + 5] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            x1 += 6;
+        }
 
+        while (x1 < x2) {
+            rgb[x1] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            x1++;
+        }
+    }
 
 static final void paintAffine_1(DirectX7 g3d, Texture texture,
             Vertex a, int au, int av,

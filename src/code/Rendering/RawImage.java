@@ -18,6 +18,8 @@ public class RawImage {
     public int widthBITmode10;
     public int W_UNIT;
     public boolean alphaMixing = false;
+    // True only when the rasterizer's transparent-key value (zero) occurs in img.
+    public boolean hasTransparentPixels = false;
 
     static RawImage error = new RawImage(new int[]{0xff0000, 0xff0000, 0xff0000, 0xff0000}, 2, 2);
 
@@ -240,16 +242,29 @@ public class RawImage {
         }
     }
 
-    private static final boolean prepareAlpha(int[] pix) {
-        boolean alphaMixing = false;
+    private final boolean prepareAlpha(int[] pix) {
+        boolean hasAlphaMixing = false;
         
         for (int i = 0; i < pix.length; i++) {
             int alpha = (pix[i] >>> 24) & 0xff;
-            if (alpha > 0 && alpha < 255) alphaMixing = true;
-            if (alpha == 0) pix[i] = 0;
+            if (alpha > 0 && alpha < 255) hasAlphaMixing = true;
+            if (alpha == 0) {
+                pix[i] = 0;
+                hasTransparentPixels = true;
+            }
         }
-        return alphaMixing;
+        return hasAlphaMixing;
+    }
 
+    /** Rechecks the transparent-key flag after a caller replaces the pixel array. */
+    public final void refreshTransparentPixels() {
+        hasTransparentPixels = false;
+        for (int i = 0; i < img.length; i++) {
+            if (img[i] == 0) {
+                hasTransparentPixels = true;
+                return;
+            }
+        }
     }
 }
 
