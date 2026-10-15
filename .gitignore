@@ -2,3 +2,5 @@
 dist
 nbproject/private
 Thumbs.db
+# compiled JavaME API stubs (tools/build-jar.sh regenerates them)
+tools/j2me-stubs/classes

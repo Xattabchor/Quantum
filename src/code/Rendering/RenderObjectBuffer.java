@@ -53,10 +53,10 @@ public class RenderObjectBuffer {
                 el.obj = obj;
                 el.tex = tex.textures[0];
 
+//a polygon is either a quad or a triangle, never both
 if(obj instanceof Polygon4V) {
     el.tex=tex.textures[((Polygon4V)(obj)).tex];
-}
-if(obj instanceof Polygon3V) {
+} else if(obj instanceof Polygon3V) {
 el.tex=tex.textures[((Polygon3V)(obj)).tex];
 }
                 size++;
@@ -102,10 +102,10 @@ el.tex=tex.textures[((Polygon3V)(obj)).tex];
             TMPElement el = buffer[size];
             el.obj = obj;
             el.tex = tex.textures[0];
+//a polygon is either a quad or a triangle, never both
 if(obj instanceof Polygon4V) {
 el.tex=tex.textures[((Polygon4V)(obj)).tex];
-}
-if(obj instanceof Polygon3V) {
+} else if(obj instanceof Polygon3V) {
 el.tex=tex.textures[((Polygon3V)(obj)).tex];
 }
 

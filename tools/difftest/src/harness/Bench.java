@@ -8,10 +8,15 @@ import code.Rendering.Texture;
 import code.Rendering.TexturingAffine;
 import code.Rendering.TexturingPers;
 import code.Rendering.Vertex;
+import code.Rendering.Meshes.Mesh;
 import code.Rendering.Meshes.Polygon3V;
 import code.Rendering.Meshes.Polygon4V;
 import code.Rendering.Meshes.Sprite;
+import code.Rendering.MultyTexture;
 import code.Math.Matrix;
+import code.Collision.HeightComputer;
+import code.Collision.Ray;
+import code.Collision.RayCast;
 import code.utils.Main;
 import java.util.Random;
 
@@ -180,6 +185,38 @@ public class Bench {
             objs[i] = new Polygon3V(a, b, c, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0);
             objs[i].sz = rr.nextInt(100000);
         }
+        // ---- sort isolated from the buffer filling ----------------------
+        //All sz equal: the degenerate key distribution the buffer test above
+        //actually produces (isVisible() recomputes sz from the vertex rz).
+        final RenderObjectBuffer sbufEq = new RenderObjectBuffer();
+        sbufEq.addRenderObjects(objs, 0, 0, 10, 10);
+        time("sort-only-20k-equal-keys", 20, new Runnable() {
+            public void run() { sbufEq.sort(0, sbufEq.getSize() - 1); }
+        });
+
+        //Distinct keys, added in shuffled order, so the first sort sees a
+        //genuinely unsorted array.
+        final Polygon3V[] objs2 = new Polygon3V[20000];
+        int[] order = new int[objs2.length];
+        for (int i = 0; i < order.length; i++) order[i] = i;
+        for (int i = order.length - 1; i > 0; i--) {
+            int j = rr.nextInt(i + 1);
+            int t = order[i]; order[i] = order[j]; order[j] = t;
+        }
+        for (int i = 0; i < objs2.length; i++) {
+            Vertex a = new Vertex(0, 0, 0), b = new Vertex(1, 0, 0), c = new Vertex(0, 1, 0);
+            int d = -(1000 + order[i]);
+            a.sx = 10; a.sy = 10; a.rz = d;
+            b.sx = 20; b.sy = 10; b.rz = d;
+            c.sx = 10; c.sy = 20; c.rz = d;
+            objs2[i] = new Polygon3V(a, b, c, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0);
+        }
+        final RenderObjectBuffer sbufRnd = new RenderObjectBuffer();
+        sbufRnd.addRenderObjects(objs2, 0, 0, 10, 10);
+        time("sort-only-20k-distinct-keys", 20, new Runnable() {
+            public void run() { sbufRnd.sort(0, sbufRnd.getSize() - 1); }
+        });
+
         time("buffer-add-sort-20k", reps, new Runnable() {
             public void run() {
                 buf.reset();
@@ -219,6 +256,66 @@ public class Bench {
                 RenderObjectBuffer fresh = new RenderObjectBuffer();
                 fresh.addRenderObjects(big, 0, 0, 10, 10);
                 fresh.sort(0, fresh.getSize() - 1);
+            }
+        });
+
+        // ---- collision / culling paths ---------------------------------
+        final int GN = 8, GSTEP = 400;
+        final Vertex[] gverts = new Vertex[(GN + 1) * (GN + 1)];
+        int gvi = 0;
+        for (int z = 0; z <= GN; z++) {
+            for (int x = 0; x <= GN; x++) gverts[gvi++] = new Vertex(x * GSTEP, (x * z) % 300, z * GSTEP);
+        }
+        final RenderObject[] gpolys = new RenderObject[GN * GN];
+        int gpi = 0;
+        for (int z = 0; z < GN; z++) {
+            for (int x = 0; x < GN; x++) {
+                gpolys[gpi++] = new Polygon4V(
+                        gverts[z * (GN + 1) + x], gverts[z * (GN + 1) + x + 1],
+                        gverts[(z + 1) * (GN + 1) + x + 1], gverts[(z + 1) * (GN + 1) + x],
+                        (byte) 0, (byte) 0, (byte) 255, (byte) 0,
+                        (byte) 255, (byte) 255, (byte) 0, (byte) 255);
+            }
+        }
+        //MultyTexture() is package-private, so use the public (int) ctor
+        final MultyTexture gmt = new MultyTexture(1);
+        int[] px = new int[64];
+        gmt.textures[0] = new Texture(new RawImage(px, 8, 8), false, null);
+        gmt.textures[0].collision = true;   //Ray.onlyCollidable defaults to true
+        gmt.textures[0].castShadow = true;  //and ignoreNonShadowed would skip otherwise
+        final Mesh gmesh = new Mesh(gverts, gpolys, gmt);
+
+        final Ray[] rays = new Ray[400];
+        Random r3 = new Random(555L);
+        for (int i = 0; i < rays.length; i++) {
+            rays[i] = new Ray();
+            rays[i].getStart().set(r3.nextInt(3200), 900, r3.nextInt(3200));
+            rays[i].getDir().set(r3.nextInt(200) - 100, -1500, r3.nextInt(200) - 100);
+        }
+        time("raycast-400", reps, new Runnable() {
+            public void run() {
+                for (int i = 0; i < rays.length; i++) {
+                    rays[i].reset();
+                    RayCast.rayCast(gmesh, rays[i]);
+                }
+            }
+        });
+
+        final int[] hpos = new int[400 * 3];
+        for (int i = 0; i < hpos.length; i++) hpos[i] = r3.nextInt(3200);
+        time("compute-height-400", reps, new Runnable() {
+            public void run() {
+                for (int i = 0; i < 400; i++) {
+                    HeightComputer.computeHeight(gmesh, hpos[i * 3], 900, hpos[i * 3 + 1]);
+                }
+            }
+        });
+
+        final RenderObjectBuffer addBuf = new RenderObjectBuffer();
+        time("add-render-objects", reps, new Runnable() {
+            public void run() {
+                addBuf.reset();
+                for (int i = 0; i < 200; i++) addBuf.addRenderObjects(gpolys, gmt, 0, 0, 240, 320);
             }
         });
 
