@@ -1,5 +1,23 @@
 # Сборка J2ME без NetBeans и без WTK
 
+## Готовый JAR (лежит в репозитории)
+
+Собранный и препроверенный MIDlet сохранён в `artifacts/`, чтобы его можно было
+скачать прямо из GitHub, не собирая проект:
+
+* файл в дереве: <https://github.com/Xattabchor/Quantum/blob/arena/50252a64-quantum/artifacts/Quantum.jar>
+* прямая загрузка: <https://github.com/Xattabchor/Quantum/raw/arena/50252a64-quantum/artifacts/Quantum.jar>
+* JAD: <https://github.com/Xattabchor/Quantum/raw/arena/50252a64-quantum/artifacts/Quantum.jad>
+
+После слияния ветки в `master` те же ссылки работают с `master` вместо имени
+ветки. Рядом с JAR нужен `.jad` только для установки по HTTP; при установке
+файла напрямую телефон читает манифест из самого JAR. Игровые ресурсы
+(`images/`, `levels/`, `languages/`, `setting.txt`) в репозиторий не входят:
+`res/` содержит только `README.md`, поэтому JAR собирается и препроверяется, но
+запускается лишь с оригинальными данными игры.
+
+## Сборка с нуля
+
 Два скрипта повторяют сборку NetBeans (компиляция -> препроверка -> JAR/JAD),
 но работают на обычной JRE: ни `javac`, ни `jar`, ни `preverify` из Wireless
 Toolkit не нужны.
@@ -33,9 +51,20 @@ base64-содержимым в ответе contents API, большие (ProGua
 | `build/<config>/preverified/` | классы после препроверки (атрибуты `StackMap`) |
 | `dist/Quantum.jar`, `dist/Quantum.jad` | готовый MIDlet; атрибуты манифеста берутся из `nbproject/project.properties` |
 
-`build/` и `dist/` уже в `.gitignore`. Скрипт сам проверяет собранный JAR:
+`build/` и `dist/` уже в `.gitignore`; из `artifacts/` в репозиторий попадают
+только `Quantum.jar` и `Quantum.jad` (ZIP с промежуточными классами игнорируется).
+Скрипт сам проверяет собранный JAR:
 манифест первой записью, все классы версии 48, нет атрибутов `StackMapTable`
 (их KVM не понимает), класс MIDlet на месте, размер в JAD совпадает.
+Более глубокую проверку делает `check-jar.py`: он разбирает class-файлы и
+докладывает число методов с `StackMap`, отсутствующие классы вне CLDC/MIDP/JSR
+(сверка с банками из `--lib`) и согласованность манифеста с JAD:
+
+```sh
+python3 check-jar.py ../../dist/Quantum.jar \
+    --lib $T/lib/cldc_1.1.jar --lib $T/lib/midp_2.0.jar \
+    --lib $T/lib/jsr184_1.1.jar --lib $T/lib/jsr075_stub.jar
+```
 
 Препроверка настоящая, а не номинальная: в собранном JAR 920 атрибутов
 `StackMap` на 126 классов и 0 атрибутов `StackMapTable`. Сама заглушка JSR-75 в

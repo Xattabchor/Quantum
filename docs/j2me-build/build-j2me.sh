@@ -157,7 +157,7 @@ if smt:
 sm = len([n for n in cls if b'StackMap' in z.read(n)])
 if os.path.getsize(jar) != size:
     problems.append('размер в JAD не совпадает')
-print('препроверено (есть StackMap): %d из %d классов' % (sm, len(cls)))
+print('классов с атрибутом StackMap: %d из %d (прочие без ветвлений)' % (sm, len(cls)))
 print('ЗАПИСЕЙ: %d, РАЗМЕР: %d байт' % (len(names), size))
 if problems:
     print('ПРОБЛЕМЫ:', problems)
@@ -165,5 +165,34 @@ if problems:
 print('самопроверка JAR: OK')
 PYEOF
 
-echo "готово: $OUT"
-ls -la "$OUT"
+# 5. Копия в artifacts/ - именно оттуда JAR скачивается по ссылке из GitHub
+#    (build/ и dist/ в .gitignore; artifacts/Quantum.jar и .jad - нет)
+ART="$SRC/artifacts"
+mkdir -p "$ART"
+cp "$OUT/$NAME.jar" "$OUT/$NAME.jad" "$ART/"
+python3 - "$PREVER" "$ART/preverified-classes.zip" <<'PYEOF'
+import os, sys, zipfile
+src, out = sys.argv[1], sys.argv[2]
+with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
+    for root, dirs, files in os.walk(src):
+        for f in sorted(files):
+            full = os.path.join(root, f)
+            z.write(full, os.path.relpath(full, src).replace(os.sep, '/'))
+print('ZIP препроверенных классов: %d байт' % os.path.getsize(out))
+PYEOF
+
+# 6. Глубокая проверка: полный разбор class-файлов (не только поиск подстрок)
+CHECK="$(dirname "$0")/check-jar.py"
+if [ -f "$CHECK" ]; then
+    LIBS=""
+    for j in "$T/lib/cldc_1.1.jar" "$T/lib/midp_2.0.jar" "$T/lib/jsr184_1.1.jar" \
+             "$T/lib/jsr075_stub.jar"; do
+        if [ -f "$j" ]; then
+            LIBS="$LIBS --lib $j"
+        fi
+    done
+    python3 "$CHECK" "$OUT/$NAME.jar" $LIBS
+fi
+
+echo "готово: $OUT и $ART"
+ls -la "$OUT" "$ART"

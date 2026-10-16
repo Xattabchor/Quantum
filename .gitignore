@@ -2,4 +2,12 @@
 dist
 nbproject/private
 Thumbs.db
-artifacts
+# артефакты сборки: ZIP с промежуточными классами игнорируем,
+# но готовые Quantum.jar / Quantum.jad храним в репозитории
+artifacts/*
+!artifacts/Quantum.jar
+!artifacts/Quantum.jad
+
+# python-артефакты от check-jar.py
+__pycache__/
+*.pyc
