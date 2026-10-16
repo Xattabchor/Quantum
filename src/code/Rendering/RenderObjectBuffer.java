@@ -53,10 +53,9 @@ public class RenderObjectBuffer {
                 el.obj = obj;
                 el.tex = tex.textures[0];
 
-if(obj instanceof Polygon4V) {
+if(obj.kind == RenderObject.KIND_POLY4) {
     el.tex=tex.textures[((Polygon4V)(obj)).tex];
-}
-if(obj instanceof Polygon3V) {
+} else if(obj.kind == RenderObject.KIND_POLY3) {
 el.tex=tex.textures[((Polygon3V)(obj)).tex];
 }
                 size++;
@@ -102,10 +101,9 @@ el.tex=tex.textures[((Polygon3V)(obj)).tex];
             TMPElement el = buffer[size];
             el.obj = obj;
             el.tex = tex.textures[0];
-if(obj instanceof Polygon4V) {
+if(obj.kind == RenderObject.KIND_POLY4) {
 el.tex=tex.textures[((Polygon4V)(obj)).tex];
-}
-if(obj instanceof Polygon3V) {
+} else if(obj.kind == RenderObject.KIND_POLY3) {
 el.tex=tex.textures[((Polygon3V)(obj)).tex];
 }
 
@@ -135,8 +133,29 @@ el.tex=tex.textures[((Polygon3V)(obj)).tex];
         buffer = newBuffer;
     }
     
+    /**
+     * Сортировка по убыванию sz (отрисовка идёт с конца списка).
+     *
+     * Между кадрами порядок полигонов одного меша почти не меняется, поэтому
+     * короткие и почти упорядоченные диапазоны досортировываются вставками -
+     * это O(N + число инверсий) вместо O(N log N) с рекурсией и обменами.
+     * Для больших перемешанных диапазонов (глобальный буфер DirectX7)
+     * проверка cheap: смотрим только первые 32 пары и сразу уходим в
+     * прежнюю быструю сортировку.
+     */
     public void sort(int start, int end) {
         if(start >= end) return;
+
+        // Между кадрами порядок полигонов одного меша почти не меняется,
+        // поэтому сначала пробуем досортировать вставками: для почти
+        // упорядоченного массива это O(N + сумма смещений) вместо
+        // O(N log N) с рекурсией и обменами. Если смещений больше бюджета,
+        // метод возвращает false, и диапазон досортировывается прежней
+        // быстрой сортировкой (ей всё равно, в каком порядке массив).
+        if(insertionSortLimited(start, end, end - start <= 24 ? Integer.MAX_VALUE : (end - start + 1) * 2)) {
+            return;
+        }
+
         TMPElement tmp;
         int opora = buffer[(start+end)>>1].obj.sz;
         
@@ -156,6 +175,31 @@ el.tex=tex.textures[((Polygon3V)(obj)).tex];
         
         if(start < second) sort(start,second);
         if(end > first) sort(first,end);
+    }
+
+    /**
+     * Сортировка вставками по убыванию sz с ограничением на число перестановок.
+     *
+     * @return true, если диапазон отсортирован полностью; false - если бюджет
+     *         исчерпан (массив при этом остаётся корректной перестановкой).
+     */
+    private boolean insertionSortLimited(int start, int end, int budget) {
+        int work = 0;
+        for(int i = start + 1; i <= end; i++) {
+            final TMPElement v = buffer[i];
+            final int vsz = v.obj.sz;
+            int j = i - 1;
+            while(j >= start && buffer[j].obj.sz < vsz) {
+                buffer[j+1] = buffer[j];
+                j--;
+                if(++work > budget) {
+                    buffer[j+1] = v;
+                    return false;
+                }
+            }
+            buffer[j+1] = v;
+        }
+        return true;
     }
     
     public void reset() {

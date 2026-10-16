@@ -2,6 +2,7 @@ package code.Rendering;
 
 import code.Gameplay.Map.LightMapper;
 import code.HUD.DeveloperMenu;
+import code.Math.FastMath;
 import code.Math.MathUtils;
 import code.utils.Main;
 
@@ -35,9 +36,9 @@ public class TexturingAffine {
                 if(bu == 255) bu = 256;
                 if(cu == 255) cu = 256;
             }
-            au = au * texture.rImg.w / 256;
-            bu = bu * texture.rImg.w / 256;
-            cu = cu * texture.rImg.w / 256;
+            au = (au * texture.rImg.w) >> 8;
+            bu = (bu * texture.rImg.w) >> 8;
+            cu = (cu * texture.rImg.w) >> 8;
         }
 
         if(texture.rImg.h != 256) {
@@ -46,9 +47,9 @@ public class TexturingAffine {
                 if(bv == 255) bv = 256;
                 if(cv == 255) cv = 256;
             }
-            av = av * texture.rImg.h / 256;
-            bv = bv * texture.rImg.h / 256;
-            cv = cv * texture.rImg.h / 256;
+            av = (av * texture.rImg.h) >> 8;
+            bv = (bv * texture.rImg.h) >> 8;
+            cv = (cv * texture.rImg.h) >> 8;
         }
 
 switch(fog)
@@ -455,7 +456,13 @@ for(;y_start<y_end; y_start++,
             x2 += tempI; //до куда рисовать в массив
             u -= du; v -= dv;
             
-            line_0(x1, x2, rgb, tex, lengthBIT, widthBIT, u, v,  du, dv);
+            // Если в текстуре нет прозрачных пикселов, проверку col != 0 можно
+            // не делать: результат бит-в-бит тот же, а байткодов на пиксел меньше.
+            if(texture.rImg.opaque) {
+                line_0_opaque(x1, x2, rgb, tex, lengthBIT, widthBIT, u, v, du, dv);
+            } else {
+                line_0(x1, x2, rgb, tex, lengthBIT, widthBIT, u, v,  du, dv);
+            }
             
 }
 
@@ -490,6 +497,31 @@ for(;y_start<y_end; y_start++,
         }
     }
 
+
+
+    /**
+     * То же, что line_0(), но для текстур без прозрачных пикселов
+     * (RawImage.opaque): убрана проверка col != 0, результат идентичен.
+     * На ARM9 это минус 2 байткода на каждый пиксел самого частого режима.
+     */
+    public static void line_0_opaque(int x1, final int x2,
+            final int[] rgb, final int[] tex, final int lengthBIT, final int widthBIT,
+            int u, int v, final int du, final int dv) {
+        while(x2 - x1 >= 6) {
+            rgb[x1] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            rgb[x1 + 1] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            rgb[x1 + 2] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            rgb[x1 + 3] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            rgb[x1 + 4] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            rgb[x1 + 5] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            x1 += 6;
+        }
+
+        while(x1 < x2) {
+            rgb[x1] = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            x1++;
+        }
+    }
 
 
 static final void paintAffine_1(DirectX7 g3d, Texture texture,
@@ -610,7 +642,7 @@ int colf =sz2&0xFEFEFE; //set some lsb to 0
                 v = v_end;
                 x2 = x_start >> fpPosition;
             } else {
-                tempI = x_start%FP;
+                tempI = FastMath.modFP(x_start);
                 x1 = x_start >> fpPosition;
                 u = u_start;
                 v = v_start;
@@ -1719,9 +1751,9 @@ static final void paintAffine_9(DirectX7 g3d, Texture texture,
         if(a.sy == c.sy) return;
 
 		if (LightMapper.cameraVectorLight && texture.drawmode == 6) {
-			ar = ar * MathUtils.calcLight(nx, ny, nz, a.x - g3d.getCamera().m03, a.y - g3d.getCamera().m13, a.z - g3d.getCamera().m23) / 255;
-			br = br * MathUtils.calcLight(nx, ny, nz, b.x - g3d.getCamera().m03, b.y - g3d.getCamera().m13, b.z - g3d.getCamera().m23) / 255;
-			cr = cr * MathUtils.calcLight(nx, ny, nz, c.x - g3d.getCamera().m03, c.y - g3d.getCamera().m13, c.z - g3d.getCamera().m23) / 255;
+			ar = ar * MathUtils.calcLightRender(nx, ny, nz, a.x - g3d.getCamera().m03, a.y - g3d.getCamera().m13, a.z - g3d.getCamera().m23) / 255;
+			br = br * MathUtils.calcLightRender(nx, ny, nz, b.x - g3d.getCamera().m03, b.y - g3d.getCamera().m13, b.z - g3d.getCamera().m23) / 255;
+			cr = cr * MathUtils.calcLightRender(nx, ny, nz, c.x - g3d.getCamera().m03, c.y - g3d.getCamera().m13, c.z - g3d.getCamera().m23) / 255;
 		}
 
 
@@ -1911,9 +1943,62 @@ if((col= tex[ ( (((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp) ) & lengthBIT ])  !=
 x1+=2;
 }
 }
+// Развёртка на 4 пиксела + отдельная ветка для непрозрачных текстур
+// (RawImage.opaque). Порядок операций сохранён один в один: rC+=dr2
+// по-прежнему выполняется только для непрозрачного пиксела, поэтому
+// картинка идентична прежней, а байткодов на пиксел меньше.
+if(texture.rImg.opaque) {
+while(x2-x1>=4) {
+col= tex[ ( (((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp) ) & lengthBIT ];
+rgb[x1]=(   
+        (  ( (col&0xFF00FF)*(rT=(rC+=dr2)>>>fp))  &0xFF00FF00  )+
+        (  ( (col&0x00FF00)* rT)                &0x00FF0000  )   
+        ) >>>8;
+col= tex[ ( (((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp) ) & lengthBIT ];
+rgb[x1+1]=(   
+        (  ( (col&0xFF00FF)*(rT=(rC+=dr2)>>>fp))  &0xFF00FF00  )+
+        (  ( (col&0x00FF00)* rT)                &0x00FF0000  )   
+        ) >>>8;
+col= tex[ ( (((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp) ) & lengthBIT ];
+rgb[x1+2]=(   
+        (  ( (col&0xFF00FF)*(rT=(rC+=dr2)>>>fp))  &0xFF00FF00  )+
+        (  ( (col&0x00FF00)* rT)                &0x00FF0000  )   
+        ) >>>8;
+col= tex[ ( (((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp) ) & lengthBIT ];
+rgb[x1+3]=(   
+        (  ( (col&0xFF00FF)*(rT=(rC+=dr2)>>>fp))  &0xFF00FF00  )+
+        (  ( (col&0x00FF00)* rT)                &0x00FF0000  )   
+        ) >>>8;
+x1+=4;
+}
+} else {
+while(x2-x1>=4) {
+if((col= tex[ ( (((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp) ) & lengthBIT ])  != 0) 
+rgb[x1]=(   
+        (  ( (col&0xFF00FF)*(rT=(rC+=dr2)>>>fp))  &0xFF00FF00  )+
+        (  ( (col&0x00FF00)* rT)                &0x00FF0000  )   
+        ) >>>8;
+if((col= tex[ ( (((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp) ) & lengthBIT ])  != 0) 
+rgb[x1+1]=(   
+        (  ( (col&0xFF00FF)*(rT=(rC+=dr2)>>>fp))  &0xFF00FF00  )+
+        (  ( (col&0x00FF00)* rT)                &0x00FF0000  )   
+        ) >>>8;
+if((col= tex[ ( (((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp) ) & lengthBIT ])  != 0) 
+rgb[x1+2]=(   
+        (  ( (col&0xFF00FF)*(rT=(rC+=dr2)>>>fp))  &0xFF00FF00  )+
+        (  ( (col&0x00FF00)* rT)                &0x00FF0000  )   
+        ) >>>8;
+if((col= tex[ ( (((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp) ) & lengthBIT ])  != 0) 
+rgb[x1+3]=(   
+        (  ( (col&0xFF00FF)*(rT=(rC+=dr2)>>>fp))  &0xFF00FF00  )+
+        (  ( (col&0x00FF00)* rT)                &0x00FF0000  )   
+        ) >>>8;
+x1+=4;
+}
+}
 while(x1<x2) {
 if((col= tex[ ( (((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp) ) & lengthBIT ])  != 0) 
-    rgb[x1]=(   
+rgb[x1]=(   
         (  ( (col&0xFF00FF)*(rT=(rC+=dr2)>>>fp))  &0xFF00FF00  )+
         (  ( (col&0x00FF00)* rT)                &0x00FF0000  )   
         ) >>>8;

@@ -4,6 +4,7 @@ import code.Gameplay.Map.House;
 import code.Gameplay.Map.Portal;
 import code.Gameplay.Map.Scene;
 import code.Gameplay.Objects.GameObject;
+import code.Math.FastMath;
 import code.Math.Matrix;
 import code.Math.Vector3D;
 import code.Rendering.DirectX7;
@@ -81,8 +82,8 @@ public final class Zombie extends Bot {
         if (boundingBox.isVisible(g3d, finalMatrix, x1, y1, x2, y2) == false) return;
         
         if (mat.m11 == 16384) {
-            if (state == 1) meshImage.setFrame(getFrameInter() * animSpeed / 100);
-            if (state == 2) meshImage.setFrame(getFrameInter() * attackAnimSpeed / 100);
+            if (state == 1) meshImage.setFrame(FastMath.div100(getFrameInter() * animSpeed));
+            if (state == 2) meshImage.setFrame(FastMath.div100(getFrameInter() * attackAnimSpeed));
         }
 
         meshImage.setMatrix(finalMatrix);

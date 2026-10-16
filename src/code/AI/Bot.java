@@ -3,6 +3,7 @@ package code.AI;
 import code.AI.misc.Blood;
 import code.AI.misc.Trace;
 import code.Collision.Ray;
+import code.Gameplay.Map.Character;
 import code.Gameplay.Map.House;
 import code.Gameplay.Map.Portal;
 import code.Gameplay.Map.Scene;
@@ -16,6 +17,7 @@ import code.Rendering.Meshes.Polygon4V;
 import code.Rendering.RenderObject;
 import code.Rendering.Vertex;
 import code.utils.QFPS;
+import code.utils.DeviceProfile;
 import code.utils.Main;
 import java.util.Vector;
 
@@ -88,7 +90,17 @@ public abstract class Bot extends GameObject {
     }
 
     // Поведение (движение и поиск врага или падение при 0 hp)
+    /**
+     * AI-LOD: флаг "игрок далеко". Ставится раз в кадр здесь, потому что
+     * action(Scene) игрока не видит, а scene.findPlayer() - это обход всех
+     * объектов. Используется в NPC.action(), чтобы вдвое реже искать цель.
+     */
+    protected boolean aiFar = false;
+
     public final void update(Scene scene, Player player) {
+        aiFar = DeviceProfile.aiLod && player != null
+                && character.distance(player.character) > DeviceProfile.aiLodDist;
+
         if (!isDead()) action(scene);
         else {
             if(bloodwall==null && Main.blood && hasBlood) if(character.getTransform().m11 == 16384 || deathFall==0) spawnBlood(scene);
@@ -146,14 +158,17 @@ public abstract class Bot extends GameObject {
     protected GameObject findBot(Vector objs, GameObject ignore, int[] fractions) {
         long dis = Long.MAX_VALUE;
         GameObject bot = null;
-        if (objs.isEmpty()) return null;
-        
-        for(int i = 0; i < objs.size(); ++i) {
-            if(objs.elementAt(i) instanceof GameObject) {
-                GameObject obj = (GameObject) objs.elementAt(i);
+        final int count = objs.size();   // было isEmpty() + size() на каждой итерации
+        if (count == 0) return null;
+        final Character myChar = getCharacter();
+
+        for(int i = 0; i < count; ++i) {
+            Object el = objs.elementAt(i);
+            if(el instanceof GameObject) {
+                GameObject obj = (GameObject) el;
 
                 if(!obj.isDead() && (obj instanceof Bot || obj instanceof Player) && obj != ignore) {
-                    long dis2 = getCharacter().distance(obj.getCharacter());
+                    long dis2 = myChar.distance(obj.getCharacter());
                     if(dis2 >= dis) continue;
 
                     if(visiblityCheck && !isTargetInFOV(this, obj)) continue;
@@ -178,21 +193,17 @@ public abstract class Bot extends GameObject {
     }
     
     public static boolean isTargetInFOV(GameObject observer, GameObject observable) {
-        Vector3D lookDir = new Vector3D(
-                observer.getCharacter().transform.m02, 
-                0, 
-                observer.getCharacter().transform.m22
-                );
-        lookDir.setLength(4096);
+        // Нормировка векторов здесь не нужна: проверяется только ЗНАК
+        // скалярного произведения, а умножение на положительный множитель
+        // (4096/|v|) знак не меняет. Убраны две аллокации Vector3D, два
+        // Math.sqrt и шесть double-делений на каждую пару кандидатов -
+        // а вызов идёт по всем парам ботов каждый тик ИИ.
+        Matrix mo = observer.getCharacter().transform;
+        Matrix mt = observable.getCharacter().transform;
 
-        Vector3D observableDir = new Vector3D(
-                observable.getCharacter().transform.m03 - observer.getCharacter().transform.m03, 
-                0,
-                observable.getCharacter().transform.m23 - observer.getCharacter().transform.m23
-                );
-        observableDir.setLength(4096);
+        long dot = (long) mo.m02 * (mt.m03 - mo.m03) + (long) mo.m22 * (mt.m23 - mo.m23);
 
-        boolean result = lookDir.dot(observableDir) > 0;
+        boolean result = dot > 0;
 
         result |= observer.character.distance(observable.character) < 2500*2500;
         
@@ -204,20 +215,20 @@ public abstract class Bot extends GameObject {
         Matrix pos = this.getCharacter().getTransform();
 
         dir.set(pos.m03 - x, 0, pos.m23 - z); //направление до цели
-        dir.setLength(-Matrix.FP);
+        dir.setLengthFast(-Matrix.FP);
 
         if (dir.x == 0 && dir.y == 0) return;
         setDir(pos, dir.x, dir.z);
     }
     private void setDir(Matrix m, int dirX, int dirZ) {
         dir.set(dirX, 0, dirZ);
-        dir.setLength(Matrix.FP);
+        dir.setLengthFast(Matrix.FP);
         if (equals(dir.x, dir.y, dir.z, m.m02, m.m12, m.m22)) return;
         
         up.set(0, Matrix.FP, 0);
 
         side.cross(up, dir, Matrix.fp);
-        side.setLength(Matrix.FP);
+        side.setLengthFast(Matrix.FP);
 
         if (dir.lengthSquared() != 0 && side.lengthSquared() != 0) {
             m.setDir(dir.x, dir.y, dir.z);

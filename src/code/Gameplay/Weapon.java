@@ -334,7 +334,7 @@ public final class Weapon {
             end.set(-mat.m02 << 1, -mat.m12 << 1, -mat.m22 << 1);
             ray.reset();
             house.rayCast(player.getPart(), ray, true);
-            if (ray.isCollision()) end.setLength(ray.getDistance());
+            if (ray.isCollision()) end.setLengthFast(ray.getDistance());
 
             GameObject pobj = player;
             Character pchar = player.getCharacter();

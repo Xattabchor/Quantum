@@ -42,13 +42,18 @@ fog=texture.drawmode;
 sizex=size(a.sx, b.sx, c.sx);
 sizey=size(a.sy, b.sy, c.sy);
 
-int[] al=getLight(a,ar,ag,ab,g3d);
-int[] bl=getLight(b,br,bg,bb,g3d);
-int[] cl=getLight(c,cr,cg,cb,g3d);
+// getLight() больше не создаёт массив на каждую вершину:
+// результат лежит в общем RenderObject.lightOut, забираем его сразу.
+getLight(a,ar,ag,ab,g3d);
+int al0=lightOut[0], al1=lightOut[1], al2=lightOut[2];
+getLight(b,br,bg,bb,g3d);
+int bl0=lightOut[0], bl1=lightOut[1], bl2=lightOut[2];
+getLight(c,cr,cg,cb,g3d);
+int cl0=lightOut[0], cl1=lightOut[1], cl2=lightOut[2];
 
 
 if(fog==5) {
-sz2=0xff-(int)MathUtils.calcLight(nx, ny, nz,(int)DirectX7.lightdirx,(int)DirectX7.lightdiry,(int)DirectX7.lightdirz);
+sz2=0xff-dirLight(nx, ny, nz);
 }
 
 if(fog==1) szCalcfogAdd();
@@ -90,14 +95,14 @@ if(sizex<texture.rImg.w || sizey<texture.rImg.w)  {
                     texture,
                 a, au, av&0xff,
                 b, bu, bv&0xff,
-                c, cu, cv&0xff,DirectX7.fogc,fog,sz2,q,al[0],bl[0],cl[0],al[1],bl[1],cl[1],al[2],bl[2],cl[2],nx,ny,nz);
+                c, cu, cv&0xff,DirectX7.fogc,fog,sz2,q,al0,bl0,cl0,al1,bl1,cl1,al2,bl2,cl2,nx,ny,nz);
         } else {
 
             TexturingAffine.paint(g3d,
                     texture,
                 a, au&0xff, av&0xff,
                 b, bu&0xff, bv&0xff,
-                c, cu&0xff, cv&0xff,DirectX7.fogc,fog,sz2,al[0],bl[0],cl[0],al[1],bl[1],cl[1],al[2],bl[2],cl[2],nx,ny,nz);
+                c, cu&0xff, cv&0xff,DirectX7.fogc,fog,sz2,al0,bl0,cl0,al1,bl1,cl1,al2,bl2,cl2,nx,ny,nz);
     }
     
 }
@@ -105,7 +110,7 @@ if(sizex<texture.rImg.w || sizey<texture.rImg.w)  {
 public void renderFast(DirectX7 g3d, Texture texture) {
 
 if(texture.drawmode==5) {
-sz2=0xff-(int)MathUtils.calcLight(nx, ny, nz,(int)DirectX7.lightdirx,(int)DirectX7.lightdiry,(int)DirectX7.lightdirz);
+sz2=0xff-dirLight(nx, ny, nz);
 if(sz2<0) sz2=0;
 }
 

@@ -402,7 +402,7 @@ public final class GameScreen extends MyCanvas {
             player.lastZoomAction = QFPS.currentTime;
 
             boolean lighting = false;
-            if(wg != null && wg.lighting) lighting = (System.currentTimeMillis() - wg.lastLighting) < 135;
+            if(wg != null && wg.lighting) lighting = (FrameClock.time() - wg.lastLighting) < 135;
 
             Skybox sky = scene.getHouse().getSkybox();
             if(sky != null) {
@@ -436,17 +436,23 @@ public final class GameScreen extends MyCanvas {
 				wg.lightingEffect(g3d, cam != null ? cam.currentRotX : player.rotateX);
 			}
 
-            if(vignette != null) applyVignette(g3d.getDisplay()); //maybe i should remove all these vignette stuff?
+            if(vignette != null && DeviceProfile.postFx) applyVignette(g3d.getDisplay()); //maybe i should remove all these vignette stuff?
         } catch (Exception ext) {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
         }
         
         int screenY = (height - g3d.getHeight()) / 2;
         try {
-            if(playerDied) deathScr(g3d.getDisplay());
+            // damageScr оставлен всегда: это игровая обратная связь, а не украшение.
+            // Остальные полноэкранные эффекты можно отключить целиком через
+            // DeviceProfile.postFx (arm9.postfx=false) - на ARM9 это
+            // экономит 2-4 прохода по всему кадру.
             if(player.isDamaged()) damageScr(g3d.getDisplay());
-            if(bloom) fastbloomScr(g3d);
-            if(doubleBright) applySub(scene.getG3D().display);
+            if(DeviceProfile.postFx) {
+                if(playerDied) deathScr(g3d.getDisplay());
+                if(bloom) fastbloomScr(g3d);
+                if(doubleBright) applySub(scene.getG3D().display);
+            }
         } catch (Exception ext) {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
         }
@@ -467,7 +473,7 @@ public final class GameScreen extends MyCanvas {
         }
 
         if(overlay != null) {
-            if(System.currentTimeMillis() - overlayStart < overlayTimeOut) {
+            if(FrameClock.time() - overlayStart < overlayTimeOut) {
                 g.drawImage(overlay, getWidth() / 2, getHeight() / 2, 3);
             } else overlay = null;
         }
@@ -647,7 +653,7 @@ public final class GameScreen extends MyCanvas {
                     customMessage = null;
                 }
                 
-                if(System.currentTimeMillis() > customMessageEndTime) {
+                if(FrameClock.time() > customMessageEndTime) {
                     customMessage = null;
                 }
 
@@ -690,25 +696,48 @@ public final class GameScreen extends MyCanvas {
 		changed = true;
     }
     
+    // Буферы bloom больше не создаются каждый кадр: на ARM9 два массива
+    // размером с кадр каждый кадр - это гарантированная пауза GC.
+    // Размеры проверяются, поэтому смена разрешения/ориентации работает как раньше.
+    private int[] bloomSmall;
+    private int[] bloomFull;
+
     private void fastbloomScr(DirectX7 g3d) {
         int scr[] = g3d.getDisplay();
 
-        int rgb2[] = new int[g3d.getHeight() / 10 * g3d.getWidth() / 10];
+        int smallLen = g3d.getHeight() / 10 * g3d.getWidth() / 10;
+        if(bloomSmall == null || bloomSmall.length != smallLen) bloomSmall = new int[smallLen];
+        if(bloomFull == null || bloomFull.length != scr.length) bloomFull = new int[scr.length];
+
+        int rgb2[] = bloomSmall;
         ImageResize.bilinearResizeRGBnA_toLow(scr, rgb2, g3d.getWidth(), g3d.getHeight(), g3d.getWidth() / 10, g3d.getHeight() / 10);
         for(int i = 0; i < rgb2.length; i++) {
             int col = rgb2[i];
             rgb2[i] = ((((col & 0xFF00FF) * (127) + (0xff000000 & 0xFF00FF) * 128) & 0xFF00FF00) | (((col & 0x00FF00) * (127) + (0xff000000 & 0x00FF00) * 128) & 0x00FF0000)) >>> 8;
         }
 
-        int rgb3[] = new int[scr.length];
+        int rgb3[] = bloomFull;
         ImageResize.bilinearResizeRGBnA(rgb2, rgb3, g3d.getWidth() / 10, g3d.getHeight() / 10, g3d.getWidth(), g3d.getHeight());
-        rgb2 = null;
 
-        for(int i = 0; i < scr.length; i++) {
+        // Развёртка на 4: сложение кадра с blur-ом идёт по всему экрану.
+        int i = 0;
+        int len = scr.length;
+        while(len - i >= 4) {
             int col = (scr[i] & 0xFEFEFE) + (rgb3[i] & 0xFEFEFE);  //add color
             scr[i] = col | (((col >> 8) & 0x010101) * 0xFF);  //clamp color to 0 - 255
+            col = (scr[i+1] & 0xFEFEFE) + (rgb3[i+1] & 0xFEFEFE);
+            scr[i+1] = col | (((col >> 8) & 0x010101) * 0xFF);
+            col = (scr[i+2] & 0xFEFEFE) + (rgb3[i+2] & 0xFEFEFE);
+            scr[i+2] = col | (((col >> 8) & 0x010101) * 0xFF);
+            col = (scr[i+3] & 0xFEFEFE) + (rgb3[i+3] & 0xFEFEFE);
+            scr[i+3] = col | (((col >> 8) & 0x010101) * 0xFF);
+            i += 4;
         }
-        rgb3 = null;
+        while(i < len) {
+            int col = (scr[i] & 0xFEFEFE) + (rgb3[i] & 0xFEFEFE);  //add color
+            scr[i] = col | (((col >> 8) & 0x010101) * 0xFF);  //clamp color to 0 - 255
+            i++;
+        }
     }
     
     private void damageScr(int[] scr) {
@@ -723,7 +752,8 @@ public final class GameScreen extends MyCanvas {
             int r = (col) >> 16 & 0xff;
             int g = col >> 8 & 0xff;
             col &= 255;
-            col = (r + g + col) / 3;
+            // (x*43691)>>17 == x/3 для 0..765 (r+g+b), но без долгого деления
+            col = ((r + g + col) * 43691) >> 17;
             scr[i] = col << 16 | col << 8 | col;
         }
     }

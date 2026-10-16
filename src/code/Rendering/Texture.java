@@ -1,6 +1,8 @@
 package code.Rendering;
 
+import code.Math.FastMath;
 import code.utils.Asset;
+import code.utils.FrameClock;
 
 public class Texture {
 
@@ -52,11 +54,41 @@ public class Texture {
         return new Texture(rimg,false,null);
     }
 
+    /**
+     * Кэш периода анимации: раньше (long)(animMIP.length*1000/animation_speed)
+     * пересчитывался с float-делением каждый кадр для каждой текстуры.
+     * Поля без private - MultyTexture (тот же пакет) сбрасывает animPeriod,
+     * когда переустанавливает animMIP.
+     */
+    long animPeriod = 0;
+    float animPeriodSpeed = 0f;
+    /** animMIP.length - 1, если длина - степень двойки, иначе 0. */
+    int animLenMask = 0;
+
     public void updateAnimation() {
         if(animMIP == null) return;
-        long time = System.currentTimeMillis();
-        time = time % (long) (animMIP.length * 1000 / animation_speed);
-        int anim_index = (int) (time * animation_speed / 1000) % animMIP.length;
+        if(animPeriod == 0 || animation_speed != animPeriodSpeed) {
+            animPeriodSpeed = animation_speed;
+            animPeriod = (long) (animMIP.length * 1000 / animation_speed);
+            animLenMask = FastMath.isPow2(animMIP.length) ? animMIP.length - 1 : 0;
+        }
+        int anim_index;
+        if(animPeriod > 0L && animPeriod <= 2147483647L) {
+            // Абсолютное время epoch в int не помещается, поэтому остаток
+            // берётся от интервала с момента запуска (FrameClock.base): фаза
+            // анимации сдвигается на постоянную величину, а период и взаимная
+            // синхронность текстур не меняются. 64-битное деление (на ARM9 -
+            // библиотечная подпрограмма) заменяется 32-битным, нативный вызов
+            // currentTimeMillis() на каждую текстуру убирается вовсе.
+            int t = FrameClock.elapsed() % (int) animPeriod;
+            anim_index = (int) ((float) t * animation_speed / 1000);
+        } else {
+            long time = FrameClock.time() % animPeriod;
+            anim_index = (int) (time * animation_speed / 1000);
+        }
+        // '%' на переменный делитель на ARM9 - библиотечная подпрограмма;
+        // для степени двойки достаточно маски (индекс здесь неотрицательный).
+        anim_index = animLenMask != 0 ? (anim_index & animLenMask) : anim_index % animMIP.length;
 
         rImg = animMIP[anim_index].rImg;
         mip = animMIP[anim_index].mip;

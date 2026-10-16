@@ -1,5 +1,6 @@
 package code.Collision;
 
+import code.Math.FastMath;
 import code.Math.MathUtils2;
 import code.Math.Matrix;
 import code.Rendering.DirectX7;
@@ -42,7 +43,7 @@ public final class SphereCast {
             int dis = Integer.MAX_VALUE;
             int mat = -1;
             
-            if(poly instanceof Polygon4V) {
+            if(poly.kind == RenderObject.KIND_POLY4) {
                 Polygon4V p = (Polygon4V) poly;
                 final Vertex a = p.a;
                 final Vertex b = p.b;
@@ -99,9 +100,9 @@ public final class SphereCast {
                 nor.x=p.nx;
                 nor.y=p.ny;
                 nor.z=p.nz;
-                if(recalc) MathUtils2.calcNormal(nor, v1, v2, v4);
+                if(recalc) MathUtils2.calcNormalFast(nor, v1, v2, v4);
                 dis = distanceSphereToPolygon(v1, v2, v3, v4, nor, pos, rad);
-            } else if(poly instanceof Polygon3V) {
+            } else if(poly.kind == RenderObject.KIND_POLY3) {
                 Polygon3V p = (Polygon3V) poly;
                 final Vertex a = p.a;
                 final Vertex b = p.b;
@@ -150,7 +151,7 @@ public final class SphereCast {
                 nor.x=p.nx;
                 nor.y=p.ny;
                 nor.z=p.nz;
-                if(recalc) MathUtils2.calcNormal(nor, v1, v2, v3);
+                if(recalc) MathUtils2.calcNormalFast(nor, v1, v2, v3);
                 dis = distanceSphereToPolygon(v1, v2, v3, nor, pos, rad);
             }
             
@@ -167,6 +168,27 @@ public final class SphereCast {
         return col;
     }
     
+    /**
+     * Дешёвая отсечка ребра: если точка дальше rad от AABB ребра хотя бы по
+     * одной оси, расстояние до ребра заведомо больше rad.
+     */
+    private static boolean edgeFar(Vector3D p, Vector3D a, Vector3D b, int rad) {
+        int min = a.x < b.x ? a.x : b.x;
+        int max = a.x > b.x ? a.x : b.x;
+        int d = p.x < min ? min - p.x : (p.x > max ? p.x - max : 0);
+        if(d > rad) return true;
+
+        min = a.y < b.y ? a.y : b.y;
+        max = a.y > b.y ? a.y : b.y;
+        d = p.y < min ? min - p.y : (p.y > max ? p.y - max : 0);
+        if(d > rad) return true;
+
+        min = a.z < b.z ? a.z : b.z;
+        max = a.z > b.z ? a.z : b.z;
+        d = p.z < min ? min - p.z : (p.z > max ? p.z - max : 0);
+        return d > rad;
+    }
+
     private static int distanceSphereToPolygon(Vector3D a, Vector3D b, Vector3D c, Vector3D nor,
             Vector3D point, int rad) {
         temp.x=point.x-a.x;
@@ -185,14 +207,19 @@ public final class SphereCast {
             return dis;
         }
 
-        final int len1 = MathUtils2.distanceToLine(point, a, b);
-        final int len2 = MathUtils2.distanceToLine(point, b, c);
-        final int len3 = MathUtils2.distanceToLine(point, c, a);
+        // Ребро, которое заведомо дальше rad, не может дать min <= rad*rad,
+        // поэтому дорогое distanceToLine() (внутри 64-битное деление) для него
+        // не вызывается вовсе.
+        final int len1 = edgeFar(point, a, b, rad) ? Integer.MAX_VALUE : MathUtils2.distanceToLine(point, a, b);
+        final int len2 = edgeFar(point, b, c, rad) ? Integer.MAX_VALUE : MathUtils2.distanceToLine(point, b, c);
+        final int len3 = edgeFar(point, c, a, rad) ? Integer.MAX_VALUE : MathUtils2.distanceToLine(point, c, a);
 
         int min = len1;
         if(len2 < min) min = len2;
         if(len3 < min) min = len3;
-        if(min <= rad*rad) return rad - (int)(1/MathUtils2.invSqrt(min));
+        // FastMath.isqrt точнее, чем (int)(1/invSqrt(x)) (у того ~1-2% ошибки),
+        // и не требует float-деления 1/x, которое на ARM9 очень дорогое.
+        if(min <= rad*rad) return rad - FastMath.isqrt(min);
         return Integer.MAX_VALUE;
     }
 
@@ -214,16 +241,16 @@ public final class SphereCast {
             return dis;
         }
 
-        final int len1 = MathUtils2.distanceToLine(point, a, b);
-        final int len2 = MathUtils2.distanceToLine(point, b, c);
-        final int len3 = MathUtils2.distanceToLine(point, c, d);
-        final int len4 = MathUtils2.distanceToLine(point, d, a);
+        final int len1 = edgeFar(point, a, b, rad) ? Integer.MAX_VALUE : MathUtils2.distanceToLine(point, a, b);
+        final int len2 = edgeFar(point, b, c, rad) ? Integer.MAX_VALUE : MathUtils2.distanceToLine(point, b, c);
+        final int len3 = edgeFar(point, c, d, rad) ? Integer.MAX_VALUE : MathUtils2.distanceToLine(point, c, d);
+        final int len4 = edgeFar(point, d, a, rad) ? Integer.MAX_VALUE : MathUtils2.distanceToLine(point, d, a);
 
         int min = len1;
         if(len2 < min) min = len2;
         if(len3 < min) min = len3;
         if(len4 < min) min = len4;
-        if(min <= rad*rad) return rad - (int)(1/MathUtils2.invSqrt(min));
+        if(min <= rad*rad) return rad - FastMath.isqrt(min);
         return Integer.MAX_VALUE;
     }
 

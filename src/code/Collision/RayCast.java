@@ -124,10 +124,8 @@ public final class RayCast {
                     long xx = (long)(a.y-b.y)*(a.z-c.z) - (long)(a.z-b.z)*(a.y-c.y);
                     long yy = (long)(a.z-b.z)*(a.x-c.x) - (long)(a.x-b.x)*(a.z-c.z);
                     long zz = (long)(a.x-b.x)*(a.y-c.y) - (long)(a.y-b.y)*(a.x-c.x);
-                    double sqrt = Math.sqrt(xx*xx + yy*yy + zz*zz)/4096;
-                    normal.x=(int)(xx/sqrt);
-                    normal.y=(int)(yy/sqrt);
-                    normal.z=(int)(zz/sqrt);
+                    // без Math.sqrt и трёх double-делений (нормаль та же, +-1)
+                    MathUtils2.setNormalFromCross(normal, xx, yy, zz);
                 }
                 
                 v1.set(a.x, a.y, a.z);
@@ -155,10 +153,7 @@ public final class RayCast {
                     long xx = (long)(a.y-b.y)*(a.z-d.z) - (long)(a.z-b.z)*(a.y-d.y);
                     long yy = (long)(a.z-b.z)*(a.x-d.x) - (long)(a.x-b.x)*(a.z-d.z);
                     long zz = (long)(a.x-b.x)*(a.y-d.y) - (long)(a.y-b.y)*(a.x-d.x);
-                    double sqrt = Math.sqrt(xx*xx + yy*yy + zz*zz)/4096;
-                    normal.x=(int)(xx/sqrt);
-                    normal.y=(int)(yy/sqrt);
-                    normal.z=(int)(zz/sqrt);
+                    MathUtils2.setNormalFromCross(normal, xx, yy, zz);
                 }
                 
                 v1.set(a.x, a.y, a.z);

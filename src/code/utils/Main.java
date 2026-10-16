@@ -134,6 +134,11 @@ public final class Main extends MIDlet {
 
         settings = GameIni.createGameIniFromResource("/setting.txt", true);
 
+        // Профиль устройства (ARM9/FAST) читается раньше defaultSettings() и
+        // loadGame-ветки, чтобы setPersQ() уже знал свой шаг. Все ключи
+        // setting.txt опциональны: без них поведение прежнее.
+        DeviceProfile.init(settings);
+
         savename = settings.getDef("SAVE_NAME", "ZOMBIE");
         DeveloperMenu.debugMode = settings.getInt("DEBUG", 0) == 1;
 
@@ -325,6 +330,18 @@ public final class Main extends MIDlet {
             //displaySize = 100;
             frameskip = true;
             setPersQ(3);
+        }
+
+        // ARM9: defaultSettings() вызывается только когда сохранённого профиля
+        // в RMS нет (первый запуск или повреждённая запись), поэтому чужие
+        // настройки мы никогда не перезаписываем. Всё это обычные пункты меню
+        // настроек - игрок может вернуть любое значение.
+        if(DeviceProfile.tuneDefaults && !maxQuality) {
+            displaySize = 70;  // меньше пикселов в кадре - главный выигрыш
+            fogQ = 1;          // освещение/туман по вершинам, без per-channel
+            pixelsQ = 1;       // текстуры в два раза ниже по памяти/кешу
+            setPersQ(2);       // q = DeviceProfile.perspectiveStep (на ARM9 крупнее)
+            System.out.println("ARM9 quality defaults applied");
         }
 
         updateLevelCount();
@@ -939,6 +956,9 @@ public final class Main extends MIDlet {
     public static void setPersQ(int pq) {
         persQ = pq;
         q = 12;
-        if(persQ <= 2) q = 24;
+        // DeviceProfile.perspectiveStep == 0 означает "как раньше" (24).
+        // На ARM9 шаг крупнее: длинный сегмент растрируется одним набором
+        // инкрементов, а дорогое 64-битное деление выполняется реже.
+        if(persQ <= 2) q = DeviceProfile.perspectiveStep > 0 ? DeviceProfile.perspectiveStep : 24;
     }
 }

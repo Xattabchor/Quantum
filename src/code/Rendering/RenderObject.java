@@ -1,12 +1,25 @@
 package code.Rendering;
 import code.Gameplay.Map.LightMapper;
 import code.Math.MathUtils;
+import code.utils.DeviceProfile;
 
 public abstract class RenderObject {
 
    public int sz;
    public int nx, ny, nz;
    public static final int normal_fp = 12, normal_FP = 1 << normal_fp;
+
+   /**
+    * Тег типа вместо instanceof в горячих циклах (коллизии, сортировка,
+    * applySz): instanceof в J2ME-машине обходит иерархию классов, а чтение
+    * поля стоит один байткод. Значение ставится в конструкторах Polygon3V/
+    * Polygon4V, поэтому наследники (Lighted*, ColorLighted*) получают его
+    * автоматически.
+    */
+   public static final int KIND_OTHER = 0;
+   public static final int KIND_POLY3 = 3;
+   public static final int KIND_POLY4 = 4;
+   public int kind = KIND_OTHER;
 
 
    public RenderObject() {
@@ -50,6 +63,35 @@ public abstract class RenderObject {
     
    }
 
+   /**
+    * Общий буфер результата getLight(a, la, la2, la3, g3d).
+    *
+    * Раньше этот метод возвращал new int[3] на каждую вершину каждого
+    * цветного полигона каждый кадр (3..4 массива на полигон). При heap в
+    * 0.5..2 Мб (типичный ARM9-аппарат) это главный источник пауз сборщика
+    * мусора: кадр "дёргается", даже когда растеризатор успевает.
+    *
+    * Значения из массива нужно забирать СРАЗУ после вызова: следующий
+    * вызов перезаписывает тот же буфер.
+    */
+   public static final int[] lightOut = new int[3];
+
+   /**
+    * Освещённость полигона постоянным направлением света (drawmode 5).
+    * Направления света не меняются в течение уровня, поэтому быстрая ветка
+    * кэширует его длину и не трогает double. Оригинальный MathUtils.calcLight()
+    * при этом не изменён - им пользуется LightMapper, который пишет файлы.
+    */
+   protected static final int dirLight(int nx, int ny, int nz) {
+       if(DeviceProfile.fastLight) return MathUtils.calcLightDirFast(nx, ny, nz);
+       return MathUtils.calcLight(nx, ny, nz, DirectX7.lightdirx, DirectX7.lightdiry, DirectX7.lightdirz);
+   }
+
+   private static final int microLight(int nx, int ny, int nz, int sx, int sy, int sz) {
+       if(DeviceProfile.fastLight) return MathUtils.microCalcLightFast(nx, ny, nz, sx, sy, sz);
+       return MathUtils.microCalcLight(nx, ny, nz, sx, sy, sz);
+   }
+
    public abstract void render(DirectX7 g3d, Texture texture);
    
    public abstract void renderFast(DirectX7 g3d, Texture texture);
@@ -64,7 +106,7 @@ public abstract class RenderObject {
        int vec=255;
        
        if( (DirectX7.fDist > 1 && LightMapper.cameraVectorLight) || ((g3d.shootIntensity > 0 || g3d.flashlightEnabled) && -a.rz<lightLen) ) {
-           vec=MathUtils.microCalcLight(nx,ny,nz,a.x-g3d.camera.m03,a.y-g3d.camera.m13,a.z-g3d.camera.m23);
+           vec=microLight(nx,ny,nz,a.x-g3d.camera.m03,a.y-g3d.camera.m13,a.z-g3d.camera.m23);
        }
            
        if(DirectX7.fDist > 1 && -a.rz<DirectX7.fDist) {
@@ -92,7 +134,7 @@ public abstract class RenderObject {
        int fa=0;
        int vec=255;
        if( (DirectX7.fDist > 1 && LightMapper.cameraVectorLight) || ((g3d.shootIntensity > 0 || g3d.flashlightEnabled) && -a.rz<lightLen) ) {
-           vec=MathUtils.microCalcLight(nx,ny,nz,a.x-g3d.camera.m03,a.y-g3d.camera.m13,a.z-g3d.camera.m23);
+           vec=microLight(nx,ny,nz,a.x-g3d.camera.m03,a.y-g3d.camera.m13,a.z-g3d.camera.m23);
        }
            
        if(DirectX7.fDist > 1 && -a.rz<DirectX7.fDist) {
@@ -108,7 +150,8 @@ public abstract class RenderObject {
            else if(fa > 0xFF) fa = 0xff;
        }
        
-       int[] out=new int[3];
+       // Без new int[3] на каждую вершину: пишем в общий буфер (lightOut).
+       int[] out=lightOut;
        out[0] = (la * lita) / 255 + fa;
        if (out[0] > 255) out[0]=255;
        out[1] = (la2 * lita) / 255 + fa;

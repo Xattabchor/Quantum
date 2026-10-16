@@ -29,6 +29,7 @@ public class MultyTexture {
                 textures[i] = Asset.getTexture(anims[1]);
                 textures[i].animation_speed=Float.parseFloat(anims[0].trim());
                 textures[i].animMIP = new Texture[anims.length-1];
+                textures[i].animPeriod = 0;   // период зависит от animMIP.length
                 for(int x=1; x<anims.length; x++) {
                     textures[i].animMIP[x-1]=Asset.getTexture(anims[x]);
                 }
@@ -55,6 +56,7 @@ public class MultyTexture {
             if(animation.length>1) {
                 textures[i].animation_speed=Float.parseFloat(animation[0].trim());
                 textures[i].animMIP = new Texture[animation.length-1];
+                textures[i].animPeriod = 0;   // период зависит от animMIP.length
                 
                 for(int i2=1;i2<animation.length;i2++) {
                     textures[i].animMIP[i2-1]=Asset.getTexture(animation[i2].trim());

@@ -24,6 +24,7 @@ import code.AI.TPPose;
 import code.AI.Zombie;
 import code.utils.WeatherGenerator;
 import code.utils.Asset;
+import code.utils.DeviceProfile;
 import code.utils.Main;
 import code.utils.ImageResize;
 import code.Rendering.MultyTexture;
@@ -210,7 +211,10 @@ public class LevelLoader {
 
         Main.forceLQFog = getBoolean("LQFOG", lvl, setting, false);
         
-        Main.updateOnlyNear = getBoolean("UPDATE_ONLY_NEAR", lvl, setting, false);
+        // Значение по умолчанию берётся из профиля устройства: на ARM9 дешевле
+        // симулировать только объекты рядом с игроком. Ключ в level.ini или
+        // setting.txt по-прежнему важнее профиля - файлы оригинала работают.
+        Main.updateOnlyNear = getBoolean("UPDATE_ONLY_NEAR", lvl, setting, DeviceProfile.nearOnly);
         Main.updateOnlyNearPhysics = getBoolean("UPDATE_ONLY_NEAR_PHYSICS", lvl, setting, Main.updateOnlyNear);
        
         String skyboxModel = getStringdef("SKYBOX_MODEL", lvl, setting, "NULL");

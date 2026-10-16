@@ -1,5 +1,6 @@
 package code.Rendering;
 
+import code.Math.FastMath;
 import code.utils.Asset;
 import code.utils.ImageResize;
 import code.utils.Main;
@@ -19,6 +20,25 @@ public class RawImage {
     public int W_UNIT;
     public boolean alphaMixing = false;
 
+    /**
+     * true, если в img[] нет ни одного полностью прозрачного пиксела
+     * (значения 0). Растеризатор может тогда не проверять `col != 0` на
+     * каждом пикселе: результат бит-в-бит тот же, а байткодов на пиксел
+     * меньше - на ARM9 это заметно. Флаг вычисляется в том же единственном
+     * проходе по пикселам, что и alphaMixing, то есть бесплатно.
+     */
+    public boolean opaque = false;
+
+    /**
+     * true, если img.length - степень двойки. Тогда взятие индекса по модулю
+     * длины (`% texLength` в Sprite) заменяется маской: на ARM9 irem - это
+     * вызов подпрограммы деления на КАЖДОМ пикселе.
+     */
+    public boolean pow2Length = false;
+
+    /** img.length - 1: маска индекса, корректна только при pow2Length. */
+    public int lengthBIT = 0;
+
     static RawImage error = new RawImage(new int[]{0xff0000, 0xff0000, 0xff0000, 0xff0000}, 2, 2);
 
     public RawImage(int[] rgb, int w2, int h2) {
@@ -29,8 +49,24 @@ public class RawImage {
         widthBIT = widthToBIT(w);
         widthBITmode10 = widthToBIT(w * w);
         W_UNIT = wUnitGen(Math.max(w, h));
-        alphaMixing = prepareAlpha(rgb);
+        prepareAlpha(rgb);
+        pow2Length = FastMath.isPow2(rgb.length);
+        lengthBIT = rgb.length - 1;
         //this.img = TextureCompressor.compress(w, h, rgb);
+    }
+
+    /**
+     * Обновляет флаги индекса после замены img/w/h "на живую"
+     * (Asset.desizeSomething() ужимает текстуры при нехватке памяти).
+     * alphaMixing и widthBIT/W_UNIT намеренно не пересчитываются: раньше
+     * они тоже не пересчитывались, поэтому поведение не меняется.
+     * opaque сбрасывается - после ресайза дешевле не гарантировать
+     * непрозрачность (это лишь отключает ускоренную ветку растеризатора).
+     */
+    public final void refreshFlags() {
+        pow2Length = FastMath.isPow2(img.length);
+        lengthBIT = img.length - 1;
+        opaque = false;
     }
     
     
@@ -240,16 +276,26 @@ public class RawImage {
         }
     }
 
-    private static final boolean prepareAlpha(int[] pix) {
-        boolean alphaMixing = false;
-        
+    /**
+     * Нормализует полностью прозрачные пикселы в 0 (как и раньше) и заодно
+     * вычисляет флаг opaque. Проход по пикселам один и тот же, поэтому
+     * дополнительная стоимость флага - ноль.
+     */
+    private final void prepareAlpha(int[] pix) {
+        boolean mixing = false;
+        boolean solid = true;
+
         for (int i = 0; i < pix.length; i++) {
             int alpha = (pix[i] >>> 24) & 0xff;
-            if (alpha > 0 && alpha < 255) alphaMixing = true;
-            if (alpha == 0) pix[i] = 0;
+            if (alpha > 0 && alpha < 255) mixing = true;
+            if (alpha == 0) {
+                pix[i] = 0;
+                solid = false;
+            }
         }
-        return alphaMixing;
 
+        alphaMixing = mixing;
+        opaque = solid;
     }
 }
 

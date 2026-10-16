@@ -7,6 +7,7 @@ import code.Gameplay.Map.House;
 import code.Gameplay.Map.RoomObject;
 import code.Gameplay.Map.Scene;
 import code.Math.Vector3D;
+import code.Math.FastMath;
 import code.utils.Asset;
 import code.utils.QFPS;
 import code.utils.Main;
@@ -16,6 +17,10 @@ public abstract class GameObject extends RoomObject {
     private int frame;
     private int frame100;
     private float friction = 4f;
+    // Кэш для целочисленного пути: если friction - целое (обычно 4f),
+    // деление можно делать в int, без трёх float-делений на объект за кадр.
+    private int frictionInt = 4;
+    private boolean frictionIsInt = true;
     public final Character character = new Character(0, 0);
     private int hp;
     public long DeathTime = 0l;
@@ -44,12 +49,21 @@ public abstract class GameObject extends RoomObject {
             if(character.isOnFloor() || character.fly) {
                 Vector3D speed = character.getSpeed();
 
-                speed.x = (int) ((float) (speed.x / friction));
-                speed.y = (int) ((float) (speed.y / (friction/**
-                         * 200.0F/(float)QFPS.getFps()
-                         */
-                        )));
-                speed.z = (int) ((float) (speed.z / friction));
+                if(frictionIsInt) {
+                    // (int)((float)(v / 4f)) == v / 4 для |v| < 2^24: float-деление
+                    // корректно округляется, а приведение к int усекает к нулю -
+                    // то же самое делает целочисленное деление.
+                    speed.x /= frictionInt;
+                    speed.y /= frictionInt;
+                    speed.z /= frictionInt;
+                } else {
+                    speed.x = (int) ((float) (speed.x / friction));
+                    speed.y = (int) ((float) (speed.y / (friction/**
+                             * 200.0F/(float)QFPS.getFps()
+                             */
+                            )));
+                    speed.z = (int) ((float) (speed.z / friction));
+                }
             }
         }
 
@@ -103,6 +117,8 @@ public abstract class GameObject extends RoomObject {
 
     public final void setFriction(float f) {
         friction = f;
+        frictionInt = (int) f;
+        frictionIsInt = (frictionInt > 0 && (float) frictionInt == f);
     }
 
     public final float getFriction() {
@@ -114,7 +130,10 @@ public abstract class GameObject extends RoomObject {
     }
 
     public final int getFrameInterDiv() {
-        return this.frame100 / 100;
+        // frame100 / 100 вызывается по несколько раз на кадр на каждого бота
+        // (проверки реактивного таймера и таймера атаки) - idiv заменён на
+        // умножение и сдвиг, результат бит-в-бит тот же.
+        return FastMath.div100(this.frame100);
     }
 
     public final int getPosX() {

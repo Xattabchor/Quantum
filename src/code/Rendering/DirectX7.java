@@ -16,6 +16,13 @@ public final class DirectX7 {
    public int fovX, fovY;
    
    public static int fDist = 1;
+   /**
+    * Кэш fDist/255 для szCalcfogAdd(): fDist меняется только на загрузке
+    * уровня, а деление с runtime-делителем на ARM9 стоит десятки тактов и
+    * выполнялось по два раза на каждый полигон с fog-add.
+    */
+   public static int fDist255 = 0;
+   public static int fDist255Key = Integer.MIN_VALUE;
    public static int drDist = 30000000;
    public static int waterDistance = 10000;
    public static byte standartDrawmode = 0;
@@ -421,50 +428,82 @@ else return;
         int x, y, z;
         int sx, sy, rz;
 
-        for(int i=vertices.length-1; i>=0; i--) {
-            ver = vertices[i];
-            x = ver.x;
-            y = ver.y;
-            z = ver.z;
+        // Матрица обычно плотная (камера повёрнута произвольно), и тогда
+        // девять проверок if(m..!=0) на каждой вершине - чистый расход
+        // байткодов в самом горячем цикле движка. Проверки инвариантны
+        // относительно цикла, поэтому вынесены наружу: для плотной матрицы
+        // работает вариант без ветвлений (результат тот же, потому что
+        // x*0>>fp == 0), для разреженной остаётся прежний цикл.
+        final boolean dense = m00!=0 && m01!=0 && m02!=0
+                && m10!=0 && m11!=0 && m12!=0
+                && m20!=0 && m21!=0 && m22!=0;
 
-            sx = m03;
-if(m00!=0) sx+= (x * m00 >> fp);
-if(m01!=0) sx+= (y * m01 >> fp);
-if(m02!=0) sx+= (z * m02 >> fp);
-
-            sy = -m13;
-if(m10!=0) sy-= (x * m10 >> fp);
-if(m11!=0) sy-= (y * m11 >> fp);
-if(m12!=0) sy-= (z * m12 >> fp);
-
-rz = m23;
-if(m20!=0) rz+= (x * m20 >> fp);
-if(m21!=0) rz+= (y * m21 >> fp);
-if(m22!=0) rz+= (z * m22 >> fp);
-
-//int rz2=MathUtils.pLength(sx*100/centreX,sy*100/centreY,0);
-if(rz<0) {
-sx = sx *distX /(-rz/*+rz2*/ + distX) ;
-sy = sy *distY /(-rz/*+rz2*/ + distY) ;
-} /*else {
-sx = sx *distX /(1+rz2 + distX) ;
-sy = sy *distY /(1+rz2 + distY) ;
-}*/
-
-ver.sx = sx+centreX;//(this.height-sy)*this.width/this.height;
-ver.sy = sy+centreY;//sx*this.height/this.width;
-ver.rz = rz;
-
-/*
-//if(rz<0) {
-sx = sx *3/distX;//*distX /(-rz + distX) ;
-sy = sy *3/distY;//*distY /(-rz + distY) ;
-//}
-
-ver.sx = sx+centreX;//(this.height-sy)*this.width/this.height;
-ver.sy = sy+centreY;//sx*this.height/this.width;
-ver.rz = rz;
-*/
+        if(dense) {
+            for(int i=vertices.length-1; i>=0; i--) {
+                ver = vertices[i];
+                x = ver.x;
+                y = ver.y;
+                z = ver.z;
+        
+                sx = m03 + (x * m00 >> fp) + (y * m01 >> fp) + (z * m02 >> fp);
+                sy = -m13 - (x * m10 >> fp) - (y * m11 >> fp) - (z * m12 >> fp);
+                rz = m23 + (x * m20 >> fp) + (y * m21 >> fp) + (z * m22 >> fp);
+        
+                if(rz<0) {
+                    sx = sx *distX /(-rz + distX) ;
+                    sy = sy *distY /(-rz + distY) ;
+                }
+        
+                ver.sx = sx+centreX;
+                ver.sy = sy+centreY;
+                ver.rz = rz;
+            }
+        } else {
+            for(int i=vertices.length-1; i>=0; i--) {
+                        ver = vertices[i];
+                        x = ver.x;
+                        y = ver.y;
+                        z = ver.z;
+            
+                        sx = m03;
+            if(m00!=0) sx+= (x * m00 >> fp);
+            if(m01!=0) sx+= (y * m01 >> fp);
+            if(m02!=0) sx+= (z * m02 >> fp);
+            
+                        sy = -m13;
+            if(m10!=0) sy-= (x * m10 >> fp);
+            if(m11!=0) sy-= (y * m11 >> fp);
+            if(m12!=0) sy-= (z * m12 >> fp);
+            
+            rz = m23;
+            if(m20!=0) rz+= (x * m20 >> fp);
+            if(m21!=0) rz+= (y * m21 >> fp);
+            if(m22!=0) rz+= (z * m22 >> fp);
+            
+            //int rz2=MathUtils.pLength(sx*100/centreX,sy*100/centreY,0);
+            if(rz<0) {
+            sx = sx *distX /(-rz/*+rz2*/ + distX) ;
+            sy = sy *distY /(-rz/*+rz2*/ + distY) ;
+            } /*else {
+            sx = sx *distX /(1+rz2 + distX) ;
+            sy = sy *distY /(1+rz2 + distY) ;
+            }*/
+            
+            ver.sx = sx+centreX;//(this.height-sy)*this.width/this.height;
+            ver.sy = sy+centreY;//sx*this.height/this.width;
+            ver.rz = rz;
+            
+            /*
+            //if(rz<0) {
+            sx = sx *3/distX;//*distX /(-rz + distX) ;
+            sy = sy *3/distY;//*distY /(-rz + distY) ;
+            //}
+            
+            ver.sx = sx+centreX;//(this.height-sy)*this.width/this.height;
+            ver.sy = sy+centreY;//sx*this.height/this.width;
+            ver.rz = rz;
+            */
+                    }
         }
 
     
@@ -499,36 +538,68 @@ ver.rz = rz;
         int sx, sy, rz;
 
         
-        for(int i=vertices.length-1; i>=0; i--) {
-            ver = vertices[i];
-            x = ver.x;
-            y = ver.y;
-            z = ver.z;
+        // Матрица обычно плотная (камера повёрнута произвольно), и тогда
+        // девять проверок if(m..!=0) на каждой вершине - чистый расход
+        // байткодов в самом горячем цикле движка. Проверки инвариантны
+        // относительно цикла, поэтому вынесены наружу: для плотной матрицы
+        // работает вариант без ветвлений (результат тот же, потому что
+        // x*0>>fp == 0), для разреженной остаётся прежний цикл.
+        final boolean dense = m00!=0 && m01!=0 && m02!=0
+                && m10!=0 && m11!=0 && m12!=0
+                && m20!=0 && m21!=0 && m22!=0;
 
-            sx = m03;
-if(m00!=0) sx+= (x * m00 >> fp);
-if(m01!=0) sx+= (y * m01 >> fp);
-if(m02!=0) sx+= (z * m02 >> fp);
-
-            sy = -m13;
-if(m10!=0) sy-= (x * m10 >> fp);
-if(m11!=0) sy-= (y * m11 >> fp);
-if(m12!=0) sy-= (z * m12 >> fp);
-
-            rz = m23;
-if(m20!=0) rz+= (x * m20 >> fp);
-if(m21!=0) rz+= (y * m21 >> fp);
-if(m22!=0) rz+= (z * m22 >> fp);
-
-if(rz<0) {
-sx = sx *distX /(-rz + distX) ;
-sy = sy *distY /(-rz + distY) ;
-}
-
-ver.sx = sx+centreX;//(this.height-sy)*this.width/this.height;
-ver.sy = sy+centreY;//sx*this.height/this.width;
-ver.rz = rz;
-       }
+        if(dense) {
+            for(int i=vertices.length-1; i>=0; i--) {
+                ver = vertices[i];
+                x = ver.x;
+                y = ver.y;
+                z = ver.z;
+        
+                sx = m03 + (x * m00 >> fp) + (y * m01 >> fp) + (z * m02 >> fp);
+                sy = -m13 - (x * m10 >> fp) - (y * m11 >> fp) - (z * m12 >> fp);
+                rz = m23 + (x * m20 >> fp) + (y * m21 >> fp) + (z * m22 >> fp);
+        
+                if(rz<0) {
+                    sx = sx *distX /(-rz + distX) ;
+                    sy = sy *distY /(-rz + distY) ;
+                }
+        
+                ver.sx = sx+centreX;
+                ver.sy = sy+centreY;
+                ver.rz = rz;
+            }
+        } else {
+            for(int i=vertices.length-1; i>=0; i--) {
+                        ver = vertices[i];
+                        x = ver.x;
+                        y = ver.y;
+                        z = ver.z;
+            
+                        sx = m03;
+            if(m00!=0) sx+= (x * m00 >> fp);
+            if(m01!=0) sx+= (y * m01 >> fp);
+            if(m02!=0) sx+= (z * m02 >> fp);
+            
+                        sy = -m13;
+            if(m10!=0) sy-= (x * m10 >> fp);
+            if(m11!=0) sy-= (y * m11 >> fp);
+            if(m12!=0) sy-= (z * m12 >> fp);
+            
+                        rz = m23;
+            if(m20!=0) rz+= (x * m20 >> fp);
+            if(m21!=0) rz+= (y * m21 >> fp);
+            if(m22!=0) rz+= (z * m22 >> fp);
+            
+            if(rz<0) {
+            sx = sx *distX /(-rz + distX) ;
+            sy = sy *distY /(-rz + distY) ;
+            }
+            
+            ver.sx = sx+centreX;//(this.height-sy)*this.width/this.height;
+            ver.sy = sy+centreY;//sx*this.height/this.width;
+            ver.rz = rz;
+                   }
+        }
 
     
 
@@ -551,18 +622,22 @@ public final void clearDisplay(int col) {
 
    int length = display.length;
    int i=0;
-   //if(Main.s60Optimization==true) {
-   for(; length-i>5;i+=5) {
-      display[i] = col;
-      display[i+1] = col;
-      display[i+2] = col;
-      display[i+3] = col;
-      display[i+4] = col;
+   // Экран чистится каждый кадр (небо/режим отладки): развёртка на 8 вместо 5
+   // уменьшает число проверок цикла на ARM9. Результат идентичен.
+   int[] d = display;
+   for(; length-i>=8;i+=8) {
+      d[i] = col;
+      d[i+1] = col;
+      d[i+2] = col;
+      d[i+3] = col;
+      d[i+4] = col;
+      d[i+5] = col;
+      d[i+6] = col;
+      d[i+7] = col;
    }
-   //}
 
    for(; i<length;i++) {
-      display[i] = col;
+      d[i] = col;
    }
 
 

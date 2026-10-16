@@ -51,7 +51,7 @@ int lc2=getLight(c,lc,g3d);
 
 
 if(fog==5) {
-sz2=0xff-MathUtils.calcLight(nx, ny, nz,DirectX7.lightdirx,DirectX7.lightdiry,DirectX7.lightdirz);
+sz2=0xff-dirLight(nx, ny, nz);
 }
 
 if(fog==1) szCalcfogAdd();
@@ -108,7 +108,7 @@ if(sizex<texture.rImg.w || sizey<texture.rImg.w)  {
 public void renderFast(DirectX7 g3d, Texture texture) {
 
 if(texture.drawmode==5) {
-sz2=0xff-(int)MathUtils.calcLight(nx, ny, nz,(int)DirectX7.lightdirx,(int)DirectX7.lightdiry,(int)DirectX7.lightdirz);
+sz2=0xff-dirLight(nx, ny, nz);
 if(sz2<0) sz2=0;
 }
 

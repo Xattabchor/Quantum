@@ -15,6 +15,7 @@ import code.Math.Vector3D;
 import code.Rendering.Camera;
 import code.Rendering.DirectX7;
 import code.utils.Asset;
+import code.utils.FrameClock;
 import code.utils.QFPS;
 import code.utils.Main;
 import code.utils.WeaponCreator;
@@ -30,6 +31,10 @@ public final class Player extends GameObject {
     
     public static Vector toAddOnStart = new Vector();
     public static Vector usedPoints = new Vector();
+    /** Общий буфер направления ходьбы: walk() вызывается каждый кадр, а
+     *  Character.moveFree() только читает вектор (speed.add) и не сохраняет
+     *  ссылку, поэтому аллокация на кадр не нужна. */
+    private static final Vector3D walkDir = new Vector3D();
     
     public int money = 0;
     public int frags = 0;
@@ -112,7 +117,7 @@ public final class Player extends GameObject {
         if(Main.stepSound != null && Main.isFootsteps && Main.footsteps != 0) {
             if((character.speed.x != 0 || character.speed.z != 0)
                     && character.onFloor == true
-                    && System.currentTimeMillis() - lastStep > 450
+                    && FrameClock.time() - lastStep > 450
                     && !character.fly) {
                 
                 String[] soundz = Main.stepSound;
@@ -164,7 +169,7 @@ public final class Player extends GameObject {
         sndJump = scene.getHouse().getRooms()[getPart()].jumpSound;
         
         if(fallDamage) {
-        if (character.onFloor == false && System.currentTimeMillis() - lastYCheck < 1000) {
+        if (character.onFloor == false && FrameClock.time() - lastYCheck < 1000) {
             falldist += lastY - getPosY();
         }
         if(falldist > 7000 && character.onFloor == true) {
@@ -341,7 +346,7 @@ public final class Player extends GameObject {
     }
 
     public final boolean isTimeToRenew() {
-        return isDead() && (System.currentTimeMillis() - DeathTime) > 3000;
+        return isDead() && (FrameClock.time() - DeathTime) > 3000;
     }
 
     public final void fire(DirectX7 g3d) {
@@ -435,7 +440,16 @@ public final class Player extends GameObject {
 			if(forward < 0) modelRot += 180;
 			modelRot -= right*90/(forward!=0?(forward>0?2:-2):1);
 			
-			Vector3D dir = new Vector3D((int) (-Math.sin(modelRot * Math.PI / 180) * walkSpeed), 0, (int) (-Math.cos(modelRot * Math.PI / 180) * walkSpeed));
+			// ARM9: два double-вызова Math.sin/Math.cos (эмуляция FPU, сотни
+			// тактов каждый) и аллокация Vector3D на каждый кадр ходьбы
+			// заменены целочисленной таблицей Matrix.sin/cos - той самой,
+			// которой updateMatrix() строит матрицу модели, поэтому вектор
+			// движения согласован с поворотом модели (угол приводится к целым
+			// градусам так же, как это делает Matrix.rotateY()).
+			int deg = (int) modelRot;
+			walkDir.set(-Matrix.sin(deg) * walkSpeed / Matrix.FP, 0,
+			            -Matrix.cos(deg) * walkSpeed / Matrix.FP);
+			Vector3D dir = walkDir;
 			
 			if(character.fly || character.onFloor) {
 				rotateY = modelRot;

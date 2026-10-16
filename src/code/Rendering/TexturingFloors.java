@@ -1,5 +1,6 @@
 package code.Rendering;
 
+import code.Math.FastMath;
 import code.utils.Main;
 
 /**
@@ -51,8 +52,8 @@ y++
             vz_a = vz_start; vz_b = vz_end;
             wz_a = wz_start; wz_b = wz_end;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -150,8 +151,8 @@ y++
             vz_a = vz_start; vz_b = vz_end;
             wz_a = wz_start; wz_b = wz_end;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -265,8 +266,8 @@ y++
             vz_a = vz_start; vz_b = vz_end;
             wz_a = wz_start; wz_b = wz_end;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -393,8 +394,8 @@ y++
             vz_a = vz_start; vz_b = vz_end;
             wz_a = wz_start; wz_b = wz_end;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -536,8 +537,8 @@ y++
             vz_a = vz_start; vz_b = vz_end;
             wz_a = wz_start; wz_b = wz_end;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -673,8 +674,8 @@ y++
             wz_a = wz_start; wz_b = wz_end;
             f=f_start;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -798,8 +799,8 @@ y++
             wz_a = wz_start; wz_b = wz_end;
             f = f_start;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -922,8 +923,8 @@ y++
             wz_a = wz_start; wz_b = wz_end;
             f=f_start;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -1048,8 +1049,8 @@ y++
             wz_a = wz_start; wz_b = wz_end;
             rC=r_start; gC=g_start; bC=b_start;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������

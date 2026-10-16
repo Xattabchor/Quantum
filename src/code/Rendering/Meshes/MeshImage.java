@@ -6,6 +6,7 @@ import code.Rendering.MultyTexture;
 import code.Rendering.RenderObject;
 import code.Rendering.Texture;
 import code.Rendering.Vertex;
+import code.utils.DeviceProfile;
 
 
 
@@ -95,12 +96,39 @@ public class MeshImage extends RenderObject {
         this.frame=f;
     }
     
+    /**
+     * Morph-LOD: sz = centre.rz * 4, впереди камеры rz < 0, значит -sz/4 -
+     * дистанция до меша. Дальнему мешу не нужно смешивать кадры анимации:
+     * Morphing.interpolation() считает 6 умножений и 6 сдвигов на КАЖДУЮ
+     * вершину каждый кадр, а на экране такой меш занимает несколько пикселов.
+     */
+    private final boolean morphLod() {
+        return DeviceProfile.morphLod && sz < -(DeviceProfile.morphLodDist << 2);
+    }
+
+    /**
+     * mesh.setAnimation() с временно выключенным морфингом. Флаг morphEnabled
+     * принадлежит анимации, а анимация может быть общей для нескольких NPC
+     * (кэш Asset), поэтому он восстанавливается сразу после вызова - на
+     * остальные меши это не влияет.
+     */
+    private final void setAnimationLod() {
+        if(morphLod()) {
+            boolean savedMorph = animation.morphEnabled;
+            animation.morphEnabled = false;
+            mesh.setAnimation(animation);
+            animation.morphEnabled = savedMorph;
+        } else {
+            mesh.setAnimation(animation);
+        }
+    }
+
     public void render(DirectX7 g3d, Texture texture) {
         if(tex!=null) tex.updateAnimation();
         
         if(animation != null) {
             animation.setFrameNI(frame);
-            mesh.setAnimation(animation);
+            setAnimationLod();
             //if(animation.normalsExist()) mesh.rotateNormals(matrix);
         }
         
@@ -113,7 +141,7 @@ public class MeshImage extends RenderObject {
         if(tex!=null) tex.updateAnimation();
         if(animation != null) {
             animation.setFrameNI(frame);
-            mesh.setAnimation(animation);
+            setAnimationLod();
         } 
         
         g3d.transformAndProjectVertices(mesh, matrix);

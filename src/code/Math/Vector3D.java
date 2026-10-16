@@ -61,7 +61,33 @@ public final class Vector3D {
     }
 
     public int length() {
-        return (int) Math.sqrt(x * x + y * y + z * z);
+        // FastMath.isqrt(n) == (int)Math.sqrt(n) для любого int n (включая
+        // переполнение суммы квадратов: там и там 0), но без эмуляции FPU.
+        return FastMath.isqrt(x * x + y * y + z * z);
+    }
+
+    /**
+     * Целочисленный аналог setLength(): без Math.sqrt и трёх double-делений,
+     * которые на ARM9 эмулируются программно. Отклонение от setLength() - не
+     * более единицы на компоненту (при длине 4096 это 0.02%).
+     *
+     * LightMapper намеренно продолжает пользоваться setLength(), чтобы
+     * пересобранные лайтмапы совпадали с оригинальными бит-в-бит.
+     */
+    public final void setLengthFast(int len) {
+        if((x * x + y * y + z * z) != len * len) {
+            while (Math.abs(x) + Math.abs(y) + Math.abs(z) > 30000) {
+                x = FastMath.div2(x);
+                y = FastMath.div2(y);
+                z = FastMath.div2(z);
+            }
+
+            int r = FastMath.isqrtRound(x * x + y * y + z * z);
+            if(r < 1) r = 1;
+            x = (int) (((long) x * len) / r);
+            y = (int) (((long) y * len) / r);
+            z = (int) (((long) z * len) / r);
+        }
     }
 
     public int lengthSquared() {

@@ -105,7 +105,10 @@ class Point {
     int dis(Point p) {
         int dx = x-p.x;
         int dy = y-p.y;
-        return (int)Math.sqrt( dx*dx + dy*dy );
+        // FastMath.isqrt(n) == (int)Math.sqrt(n) для любого int (включая
+        // переполнение суммы квадратов: там и там 0). dis() вызывается на
+        // каждую пару точек при построении графа путей на загрузке уровня.
+        return code.Math.FastMath.isqrt( dx*dx + dy*dy );
     }
 }
 class Edge {

@@ -67,7 +67,7 @@ public class HeightComputer {
             int cx = Integer.MAX_VALUE, cz = Integer.MAX_VALUE, cy = Integer.MAX_VALUE;
             int mat = -1;
             
-            if(el instanceof Polygon4V) {
+            if(el.kind == RenderObject.KIND_POLY4) {
                 Polygon4V p = (Polygon4V) el;
                 Vertex a = p.a;
                 Vertex b = p.b;
@@ -115,7 +115,7 @@ public class HeightComputer {
                     cz = (az + bz + c.z + dz) >> 2;
                     cy = (a.y + b.y + c.y + d.y) >> 2;
                 }
-            } else if(el instanceof Polygon3V) {
+            } else if(el.kind == RenderObject.KIND_POLY3) {
                 Polygon3V p = (Polygon3V) el;
                 Vertex a = p.a;
                 Vertex b = p.b;

@@ -17,6 +17,7 @@ import java.io.DataInputStream;
 import java.io.InputStream;
 import java.util.Vector;
 import code.HUD.DeveloperMenu;
+import code.Math.FastMath;
 import code.Math.MathUtils2;
 import code.Rendering.Meshes.BoundingBox;
 import code.Rendering.Meshes.ColorLightedPolygon3V;
@@ -49,6 +50,45 @@ public class Room {
     public String jumpSound = null;
     public static int chunkSize;
     public static int chunkSizeRender = 0;
+
+    /**
+     * chunkSize/chunkSizeRender задаются уровнем и почти всегда являются
+     * степенью двойки, а делят на них по 8+ раз на каждого персонажа за кадр
+     * (sphereCast, computeHeight, isPointOnMesh) и по 4 раза на комнату в
+     * render(). На ARM9 деление на переменный делитель - библиотечная
+     * подпрограмма, поэтому кэшируем сдвиг. divChunk()/divChunkRender()
+     * дают ТОЧНО тот же результат, что и '/': усечение к нулю, а не пол.
+     */
+    private static int chunkShift = -1;
+    private static int chunkShiftKey = Integer.MIN_VALUE;
+    private static int chunkRenderShift = -1;
+    private static int chunkRenderShiftKey = Integer.MIN_VALUE;
+
+    private static final int divChunk(int v) {
+        final int cs = chunkSize;
+        if(cs != chunkShiftKey) {
+            chunkShiftKey = cs;
+            chunkShift = FastMath.shiftFor(cs);
+        }
+        final int s = chunkShift;
+        if(s < 0) return v / cs;
+        int q = v >> s;
+        if(v < 0 && (q << s) != v) q++;   // floor -> trunc, как у '/'
+        return q;
+    }
+
+    private static final int divChunkRender(int v) {
+        final int cs = chunkSizeRender;
+        if(cs != chunkRenderShiftKey) {
+            chunkRenderShiftKey = cs;
+            chunkRenderShift = FastMath.shiftFor(cs);
+        }
+        final int s = chunkRenderShift;
+        if(s < 0) return v / cs;
+        int q = v >> s;
+        if(v < 0 && (q << s) != v) q++;
+        return q;
+    }
     public String reverb;
     private Vector objects = new Vector();
     public Light[] lights;
@@ -273,8 +313,8 @@ public class Room {
         Mesh testMesh = fullMesh;
         
         if(mesh != null) {
-            int xx = (cx - minx) / chunkSize;
-            int zz = (cz - minz) / chunkSize;
+            int xx = divChunk(cx - minx);
+            int zz = divChunk(cz - minz);
             
             if(xx >= mesh.length || xx < 0) return true;
             if(zz >= mesh[0].length || zz < 0) return true;
@@ -289,10 +329,10 @@ public class Room {
             if(isPointOnPolygon(cx, cz, obj) && obj.ny > 2048) {
                 int centerY = 0;
                 
-                if(obj instanceof Polygon4V) {
+                if(obj.kind == RenderObject.KIND_POLY4) {
                     Polygon4V pol = (Polygon4V) obj;
                     centerY = (pol.a.y + pol.b.y + pol.c.y + pol.d.y) / 4;
-                } else if(obj instanceof Polygon3V) {
+                } else if(obj.kind == RenderObject.KIND_POLY3) {
                     Polygon3V pol = (Polygon3V) obj;
                     centerY = (pol.a.y + pol.b.y + pol.c.y) / 3;
                 }
@@ -382,10 +422,10 @@ public class Room {
         
         if(renderMesh != null) {
             int zz;
-            int xx = (x - minx) / chunkSizeRender - 1;
-            int zstart = (z - minz) / chunkSizeRender - 1;
-            int xend = (x - minx) / chunkSizeRender + 1;
-            int zend = (z - minz) / chunkSizeRender + 1;
+            int xx = divChunkRender(x - minx) - 1;
+            int zstart = divChunkRender(z - minz) - 1;
+            int xend = divChunkRender(x - minx) + 1;
+            int zend = divChunkRender(z - minz) + 1;
             
             if(xx > renderMesh.length - 1) return;
             if(zstart > renderMesh[0].length - 1) return;
@@ -433,10 +473,10 @@ public class Room {
             Vector3D start = ray.getStart();
             Vector3D end = ray.getDir();
             
-            int minx = (Math.min(start.x, start.x + end.x) - this.minx) / chunkSize;
-            int minz = (Math.min(start.z, start.z + end.z) - this.minz) / chunkSize;
-            int maxx = (Math.max(start.x, start.x + end.x) - this.minx) / chunkSize;
-            int maxz = (Math.max(start.z, start.z + end.z) - this.minz) / chunkSize;
+            int minx = divChunk(Math.min(start.x, start.x + end.x) - this.minx);
+            int minz = divChunk(Math.min(start.z, start.z + end.z) - this.minz);
+            int maxx = divChunk(Math.max(start.x, start.x + end.x) - this.minx);
+            int maxz = divChunk(Math.max(start.z, start.z + end.z) - this.minz);
             
             minx = Math.min(Math.max(minx, 0), mesh.length - 1);
             minz = Math.min(Math.max(minz, 0), mesh[0].length - 1);
@@ -467,10 +507,10 @@ public class Room {
             int xend = mesh.length - 1;
             int zend = mesh[0].length - 1;
 
-            xx = (pos.x - rad - minx) / chunkSize;
-            zstart = (pos.z - rad - minz) / chunkSize;
-            xend = (pos.x + rad - minx) / chunkSize;
-            zend = (pos.z + rad - minz) / chunkSize;
+            xx = divChunk(pos.x - rad - minx);
+            zstart = divChunk(pos.z - rad - minz);
+            xend = divChunk(pos.x + rad - minx);
+            zend = divChunk(pos.z + rad - minz);
             
             if(xx > mesh.length - 1) return false;
             if(zstart > mesh[0].length - 1) return false;
@@ -512,8 +552,8 @@ public class Room {
         Mesh testMesh = fullMesh;
         
         if(mesh != null) {
-            int xx = (x - minx) / chunkSize;
-            int zz = (z - minz) / chunkSize;
+            int xx = divChunk(x - minx);
+            int zz = divChunk(z - minz);
             
             if(xx >= mesh.length || xx < 0) return -1;
             if(zz >= mesh[0].length || zz < 0) return -1;
@@ -535,8 +575,8 @@ public class Room {
     public void computeHeight(Height height) {
         Vector3D pos = height.getPosition();
         if(mesh != null) {
-            int xx = (pos.x - minx) / chunkSize;
-            int zz = (pos.z - minz) / chunkSize;
+            int xx = divChunk(pos.x - minx);
+            int zz = divChunk(pos.z - minz);
             if(xx >= mesh.length || xx < 0) return;
             if(zz >= mesh[0].length || zz < 0) return;
             
@@ -556,7 +596,7 @@ public class Room {
         Vertex v3;
         Vertex v4;
         
-        if(obj instanceof Polygon4V) {
+        if(obj.kind == RenderObject.KIND_POLY4) {
             Polygon4V p = (Polygon4V) obj;
             v1 = p.a;
             v2 = p.b;
@@ -568,7 +608,7 @@ public class Room {
                     v3.x, v3.z,
                     v4.x, v4.z,
                     p.ny);
-        } else if(obj instanceof Polygon3V) {
+        } else if(obj.kind == RenderObject.KIND_POLY3) {
             Polygon3V p = (Polygon3V) obj;
             v1 = p.a;
             v2 = p.b;
@@ -589,7 +629,7 @@ public class Room {
         Vertex v3;
         Vertex v4;
         
-        if(obj instanceof Polygon4V) {
+        if(obj.kind == RenderObject.KIND_POLY4) {
             Polygon4V p = (Polygon4V) obj;
             if(p.ny >= 0) {
                 return false;
@@ -603,7 +643,7 @@ public class Room {
             }
 
             return false;
-        } else if(obj instanceof Polygon3V) {
+        } else if(obj.kind == RenderObject.KIND_POLY3) {
             Polygon3V p = (Polygon3V) obj;
             if(p.ny >= 0) {
                 return false;

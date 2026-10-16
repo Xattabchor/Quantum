@@ -4,6 +4,7 @@ import code.Gameplay.Map.House;
 import code.Gameplay.Map.Portal;
 import code.Gameplay.Map.Scene;
 import code.Gameplay.Objects.GameObject;
+import code.Math.FastMath;
 import code.Math.MathUtils;
 import code.Math.Matrix;
 import code.Math.Vector3D;
@@ -13,6 +14,7 @@ import code.Rendering.Meshes.MeshImage;
 import code.Rendering.Meshes.Sprite;
 import code.Rendering.MultyTexture;
 import code.Rendering.Vertex;
+import code.utils.FrameClock;
 import java.util.Vector;
 
 public final class NPC extends Bot {
@@ -158,8 +160,8 @@ public final class NPC extends Bot {
             if(boundingBox != null && !boundingBox.isVisible(g3d, fmat, x1, y1, x2, y2)) return;
 
             if(mat.m11 == 16384) { //if not falling
-                if(state == WALK_STATE) meshImage.setFrame(getFrameInter() * animspeed / 100);
-                if(state == ATTACK_STATE) meshImage.setFrame(getFrameInter() * attackanimspeed / 100);
+                if(state == WALK_STATE) meshImage.setFrame(FastMath.div100(getFrameInter() * animspeed));
+                if(state == ATTACK_STATE) meshImage.setFrame(FastMath.div100(getFrameInter() * attackanimspeed));
             }
 
             meshImage.setMatrix(fmat);
@@ -185,9 +187,9 @@ public final class NPC extends Bot {
             }
         }
         
-        if(muzzleFlash != null && System.currentTimeMillis() - lastAttack <= muzzleFlashTimer) {
+        if(muzzleFlash != null && FrameClock.time() - lastAttack <= muzzleFlashTimer) {
             muzzleFlashPos.transform(character.transform);
-            muzzleFlash.pos.set(muzzleFlashPos.sx, muzzleFlashPos.sy - muzzleFlash.getHeight() / 2, muzzleFlashPos.rz);
+            muzzleFlash.pos.set(muzzleFlashPos.sx, muzzleFlashPos.sy - FastMath.div2(muzzleFlash.getHeight()), muzzleFlashPos.rz);
             muzzleFlash.project(g3d.getInvCamera(), g3d);
             g3d.addRenderObject(muzzleFlash, x1, y1, x2, y2);
             muzzleFlash.sz += character.getRadius();
@@ -225,9 +227,9 @@ public final class NPC extends Bot {
                  currentSprite == attackFront || currentSprite == attackSide || currentSprite == attackBack)
                 && !
                 (nextSpr == damageFront || nextSpr == damageSide || nextSpr == damageBack)) {//Checking for animation end
-            if((long) (currentSprite.animationBegin - System.currentTimeMillis()) 
+            if((long) (currentSprite.animationBegin - FrameClock.time()) 
                     >= 
-                    -currentSprite.textures.length * 1000 / currentSprite.animation_speed) return;  
+                    -currentSprite.getPeriodMs()) return;  
         }
 
         if(nextSpr == null || nextSpr == currentSprite) return;
@@ -237,9 +239,13 @@ public final class NPC extends Bot {
     }
 
     protected final void action(Scene scene) {
-        if (System.currentTimeMillis() - lastDamage < damageSleepTime) return;
+        if (FrameClock.time() - lastDamage < damageSleepTime) return;
         
-        if (Math.abs(getFrameInterDiv()) % reacttimer == 2) {
+        // AI-LOD: далёкому боту искать цель и перестраивать маршрут достаточно
+        // вдвое реже - на экране он занимает несколько пикселов, а этот блок
+        // тянет findBot() по всем объектам сцены и проверку видимости.
+        final int react = aiFar ? (reacttimer << 1) : reacttimer;
+        if (Math.abs(getFrameInterDiv()) % react == 2) {
             House house = scene.getHouse();
             Vector objs = house.getObjects();
             
@@ -397,7 +403,7 @@ public final class NPC extends Bot {
             if(!(currentSprite == deathFront || currentSprite == deathSide || currentSprite == deathBack) && isDead()) {
                 setSprite(deathFront, deathSide, deathBack);
             }
-            if(currentSprite.animationBegin - System.currentTimeMillis() < -currentSprite.textures.length * 1000 / currentSprite.animation_speed
+            if(currentSprite.animationBegin - FrameClock.time() < -currentSprite.getPeriodMs()
                     && (currentSprite == deathFront || currentSprite == deathSide || currentSprite == deathBack)) {
                 return isDead();
             }

@@ -23,6 +23,38 @@ public final class House {
     private final Vector tVec = new Vector();
     private final Vector tVec2 = new Vector();
     private final Vector tmpObj = new Vector();
+    /**
+     * Отдельный буфер для списка объектов, обновляемых в кадре.
+     * getNearObjects() возвращает tVec, а tVec внутри кадра перезаполняется
+     * физикой (sphereCast/rayCast/computeHeightFull), поэтому итерировать его
+     * в Scene.recomputePart() при Main.updateOnlyNear нельзя.
+     */
+    private final Vector tVec3 = new Vector();
+
+    /**
+     * Номер кадра физики. Инкрементируется один раз за кадр из
+     * Scene.recomputePart(); нужен, чтобы кэшировать список близких объектов:
+     * раньше getNearObjects() вызывался трижды на каждого персонажа за кадр
+     * (sphereCast, computeHeightFull, rayCast) и каждый раз перестраивал
+     * Vector обходом комнаты и всех соседей.
+     */
+    public int physicsFrame = 0;
+    private int nearObjPart = -2;
+    private int nearObjFrame = -1;
+
+    /**
+     * Сброс кэша близких объектов: состав списка меняется при добавлении/
+     * удалении объекта и при переезде объекта между комнатами, поэтому кэш
+     * живёт ровно до такого события (или до следующего кадра).
+     */
+    private void invalidateNearObjects() {
+        nearObjPart = -2;
+        nearObjFrame = -1;
+    }
+
+    /** Кэш номеров "комната + соседи" (структура соседей после загрузки не меняется). */
+    private int[][] nearPartsCache = new int[0][];
+    private static final int[] NO_PARTS = new int[0];
 
     public House(Room[] rooms, Room[][] neighbours) {
         this.rooms = rooms;
@@ -46,8 +78,11 @@ public final class House {
             skybox.destroy();
             skybox = null;
         }
+        invalidateNearObjects();
+        nearPartsCache = new int[0][];
         tVec.removeAllElements();
         tVec2.removeAllElements();
+        tVec3.removeAllElements();
         tmpObj.removeAllElements();
     }
 
@@ -100,11 +135,11 @@ public final class House {
             }
         }
 
-        getNearObjects(tVec, part); //Spherecast meshobjects
-        if(tVec.size() >= 1) {
-            for(int i = 0; i < tVec.size(); i++) {
+        Vector nearObj = getNearObjectsCached(part); //Spherecast meshobjects
+        if(nearObj.size() >= 1) {
+            for(int i = 0; i < nearObj.size(); i++) {
 
-                Object obj = tVec.elementAt(i);
+                Object obj = nearObj.elementAt(i);
                 if(obj instanceof MeshObject) {
                     MeshObject point = (MeshObject) obj;
                     if(point.precCol) {
@@ -140,11 +175,11 @@ public final class House {
 
         }
 
-        getNearObjects(tVec, parts[0]); //Spherecast meshobjects only in one part cause other SHOULD be nighbour
-        if(tVec.size() >= 1) {
-            for(int i = 0; i < tVec.size(); i++) {
+        Vector nearObj = getNearObjectsCached(parts[0]); //Spherecast meshobjects only in one part cause other SHOULD be nighbour
+        if(nearObj.size() >= 1) {
+            for(int i = 0; i < nearObj.size(); i++) {
 
-                Object obj = tVec.elementAt(i);
+                Object obj = nearObj.elementAt(i);
                 if(obj instanceof MeshObject) {
                     MeshObject point = (MeshObject) obj;
                     if(point.precCol) {
@@ -166,9 +201,9 @@ public final class House {
             ((Room) nearRms.elementAt(i)).rayCast(ray);
         }
 
-        getNearObjects(tVec, part); //Raycast meshobjects
-        for(int i = 0; i < tVec.size(); i++) {
-            Object obj = tVec.elementAt(i);
+        Vector nearObj = getNearObjectsCached(part); //Raycast meshobjects
+        for(int i = 0; i < nearObj.size(); i++) {
+            Object obj = nearObj.elementAt(i);
 
             if(obj instanceof MeshObject) {
                 MeshObject point = (MeshObject) obj;
@@ -203,9 +238,9 @@ public final class House {
         if(part == -1) return;
         computeHeight(part, height);
 
-        getNearObjects(tVec, part);
-        for(int i = 0; i < tVec.size(); i++) {
-            Object obj = tVec.elementAt(i);
+        Vector nearObj = getNearObjectsCached(part);
+        for(int i = 0; i < nearObj.size(); i++) {
+            Object obj = nearObj.elementAt(i);
 
             if(obj instanceof MeshObject) {
                 MeshObject point = (MeshObject) obj;
@@ -214,6 +249,50 @@ public final class House {
                 }
             }
         }
+    }
+
+    /**
+     * То же, что getNearObjects(tVec, part), но результат кэшируется на кадр:
+     * в пределах одного кадра состав близких объектов не меняется, а вызовов
+     * на персонажа бывает три.
+     */
+    public final Vector getNearObjectsCached(int part) {
+        if(part == nearObjPart && physicsFrame == nearObjFrame) return tVec;
+        getNearObjects(tVec, part);
+        nearObjPart = part;
+        nearObjFrame = physicsFrame;
+        return tVec;
+    }
+
+    /**
+     * Номера комнаты part и её соседей. Используется вместо
+     * Vector.contains() в квадратичном цикле проверки пар персонажей
+     * (contains - это линейный поиск, то есть O(N^3) на кадр).
+     */
+    public final int[] getNearParts(int part) {
+        if(part == -1 || part < 0) return NO_PARTS;
+        if(part >= nearPartsCache.length) {
+            int[][] grown = new int[part + 8][];
+            System.arraycopy(nearPartsCache, 0, grown, 0, nearPartsCache.length);
+            nearPartsCache = grown;
+        }
+        int[] cached = nearPartsCache[part];
+        if(cached != null) return cached;
+
+        Room[] near = neighbours[part];
+        int count = 1;
+        for(int i = 0; i < near.length; i++) if(near[i] != null) count++;
+        int[] out = new int[count];
+        out[0] = part;
+        count = 1;
+        for(int i = 0; i < near.length; i++) if(near[i] != null) out[count++] = near[i].getId();
+        nearPartsCache[part] = out;
+        return out;
+    }
+
+    public static boolean containsPart(int[] parts, int part) {
+        for(int i = 0; i < parts.length; i++) if(parts[i] == part) return true;
+        return false;
     }
 
     public final void getNearObjects(Vector buf, int part) {
@@ -238,6 +317,14 @@ public final class House {
                 near[i].getObjects(buf);
             }
         }
+    }
+
+    /**
+     * Близкие объекты в отдельном буфере - для обхода в Scene.recomputePart().
+     */
+    public final Vector getNearObjectsForUpdate(int part) {
+        getNearObjects(tVec3, part);
+        return tVec3;
     }
 
     public final Vector getNearObjects(int part) {
@@ -397,6 +484,7 @@ public final class House {
     }
 
     public void addObject(RoomObject obj) {
+        invalidateNearObjects();
         recomputePart(obj);
         
         if(obj.getPart() == -1) recomputePart(obj, false);
@@ -411,6 +499,7 @@ public final class House {
         if(obj.getPart() == -1) return;
         
         rooms[obj.getPart()].removeObject(obj);
+        invalidateNearObjects();
     }
 
     public void recomputePart(RoomObject obj) {
@@ -438,6 +527,7 @@ public final class House {
                 
                 rooms[newPart].addObject(obj);
                 obj.setPart(newPart);
+                invalidateNearObjects();
             }
         }
 
@@ -474,12 +564,41 @@ public final class House {
         return -1;
     }
 
+    /**
+     * Кэш буферов под getParts(): раньше на каждый кадр создавалось два int[],
+     * причём второй был точной копией первого. Метод вызывается один раз за
+     * кадр из GameScreen.paint(), результат используется сразу и нигде не
+     * сохраняется (House.render() только читает его), поэтому
+     * переиспользование массива безопасно.
+     */
+    private static final int[][] partsCache = new int[16][];
+
+    private static int[] partsBuffer(int len) {
+        if(len < partsCache.length) {
+            int[] buf = partsCache[len];
+            if(buf == null) {
+                buf = new int[len];
+                partsCache[len] = buf;
+            }
+            return buf;
+        }
+        return new int[len];
+    }
+
     public static int[] getParts(House house, int part, Matrix cam) {
-        if(part == -1) return new int[]{0};
+        if(part == -1) {
+            int[] out0 = partsBuffer(1);
+            out0[0] = 0;
+            return out0;
+        }
         Room[] rooms = house.getNeighbourRooms(part);
-        if(rooms == null || rooms.length==0) return new int[]{part};
+        if(rooms == null || rooms.length==0) {
+            int[] out1 = partsBuffer(1);
+            out1[0] = part;
+            return out1;
+        }
         
-        int[] out = new int[rooms.length+1];
+        int[] out = partsBuffer(rooms.length+1);
         out[0] = part;
         int roomsCount = 1;
 
@@ -499,7 +618,7 @@ public final class House {
             } 
         }
 
-        int[] out2 = new int[roomsCount];
+        int[] out2 = partsBuffer(roomsCount);
         System.arraycopy(out, 0, out2, 0, roomsCount);
         
         return out2;

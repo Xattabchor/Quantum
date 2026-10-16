@@ -1,6 +1,7 @@
 package code.Rendering;
 import code.Gameplay.Map.LightMapper;
 import code.HUD.DeveloperMenu;
+import code.Math.FastMath;
 import code.Math.MathUtils;
 import code.utils.Main;
 import code.Rendering.Texture;
@@ -208,9 +209,9 @@ x1++;
         }
         
         if (LightMapper.cameraVectorLight && texture.drawmode == 6) {
-            af = af * MathUtils.calcLight(nx, ny, nz, a.x - g3d.getCamera().m03, a.y - g3d.getCamera().m13, a.z - g3d.getCamera().m23) / 255;
-            bf = bf * MathUtils.calcLight(nx, ny, nz, b.x - g3d.getCamera().m03, b.y - g3d.getCamera().m13, b.z - g3d.getCamera().m23) / 255;
-            cf = cf * MathUtils.calcLight(nx, ny, nz, c.x - g3d.getCamera().m03, c.y - g3d.getCamera().m13, c.z - g3d.getCamera().m23) / 255;
+            af = af * MathUtils.calcLightRender(nx, ny, nz, a.x - g3d.getCamera().m03, a.y - g3d.getCamera().m13, a.z - g3d.getCamera().m23) / 255;
+            bf = bf * MathUtils.calcLightRender(nx, ny, nz, b.x - g3d.getCamera().m03, b.y - g3d.getCamera().m13, b.z - g3d.getCamera().m23) / 255;
+            cf = cf * MathUtils.calcLightRender(nx, ny, nz, c.x - g3d.getCamera().m03, c.y - g3d.getCamera().m13, c.z - g3d.getCamera().m23) / 255;
         }
         if ((dmode == 5 || dmode == 6 || dmode == 9) && af < 1 && bf < 1 && cf < 1) {
             TexturingAffine.paintFill(g3d, a, b, c, 0);
@@ -705,8 +706,8 @@ x1++;
             vz_a = vz_start; vz_b = vz_end;
             wz_a = wz_start; wz_b = wz_end;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -841,8 +842,8 @@ y++
             vz_a = vz_start; vz_b = vz_end;
             wz_a = wz_start; wz_b = wz_end;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -989,8 +990,8 @@ y++
             vz_a = vz_start; vz_b = vz_end;
             wz_a = wz_start; wz_b = wz_end;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -1169,8 +1170,8 @@ y++
             vz_a = vz_start; vz_b = vz_end;
             wz_a = wz_start; wz_b = wz_end;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -1315,8 +1316,8 @@ y++
             wz_a = wz_start; wz_b = wz_end;
             f=f_start;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -1450,8 +1451,8 @@ y++
             vz_a = vz_start; vz_b = vz_end;
             wz_a = wz_start; wz_b = wz_end;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -1639,8 +1640,8 @@ y++
             vz_a = vz_start; vz_b = vz_end;
             wz_a = wz_start; wz_b = wz_end;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -1797,8 +1798,8 @@ y++
             wz_a = wz_start; wz_b = wz_end;
             f=f_start;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -1992,8 +1993,8 @@ static final void paintMiniTrianglePers_13(final DirectX7 g3d, final Texture tex
             wz_a = wz_start; wz_b = wz_end;
             rC=r_start; gC=g_start; bC=b_start;
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
@@ -2148,8 +2149,8 @@ y++
                 wz_a = wz_start; wz_b = wz_end;
             }
 
-            subtexel_a = x1%FP;
-            subtexel_b = x2%FP;
+            subtexel_a = FastMath.modFP(x1);
+            subtexel_b = FastMath.modFP(x2);
 
             uz_a -= (duz * subtexel_a) >> fp;//
             vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������

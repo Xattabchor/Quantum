@@ -4,6 +4,7 @@ import code.AI.Player;
 import code.Collision.Height;
 import code.Collision.HeightComputer;
 import code.Gameplay.Map.Scene;
+import code.Math.FastMath;
 import code.Math.Matrix;
 import code.Collision.Ray;
 import code.Collision.RayCast;
@@ -19,6 +20,9 @@ import code.Gameplay.Map.House;
 import code.Rendering.Meshes.BoundingBox;
 
 public final class MeshObject extends GameObject {
+
+/** Буфер для расчёта позиции лифта (см. update()). */
+private final Vector3D liftPos = new Vector3D();
     
 public static final int OPEN = 1, CLOSE = 2, LOOP = 0; //Типы состояние анимации
 public static final int STAY_BEGIN = 0, DRIVE = 1, STAY_END = 2, DRIVE_BACK = 3; //Типы состояния лифта
@@ -152,10 +156,10 @@ private int distPerSec=1000; //Скорость лифта в секунду? В
         Matrix pos = this.getCharacter().getTransform();
 
         dir.set(pos.m03 - x, 0, pos.m23 - z); 
-        dir.setLength(-Matrix.FP);
+        dir.setLengthFast(-Matrix.FP);
 
         tVec.set(pos.m02, 0, pos.m22); 
-        tVec.setLength(Matrix.FP);
+        tVec.setLengthFast(Matrix.FP);
 
         tVec.interpolation(dir, 5);
 
@@ -168,7 +172,7 @@ private int distPerSec=1000; //Скорость лифта в секунду? В
         Matrix pos = this.getCharacter().getTransform();
 
         dir.set(pos.m03-x, 0, pos.m23-z); 
-        dir.setLength( -Matrix.FP );
+        dir.setLengthFast( -Matrix.FP );
 
         setDir(pos, dir.x, dir.z);
     }
@@ -177,13 +181,13 @@ private int distPerSec=1000; //Скорость лифта в секунду? В
     //Нужно для работы lookAt
     private void setDir(Matrix m, int dirX, int dirZ) {
         dir.set(dirX, 0, dirZ);
-        dir.setLength(Matrix.FP);
+        dir.setLengthFast(Matrix.FP);
         if (equals(dir.x, dir.y, dir.z, m.m02, m.m12, m.m22)) return;
         
         up.set(0, Matrix.FP, 0);
 
         side.cross(up, dir, Matrix.fp);
-        side.setLength(Matrix.FP);
+        side.setLengthFast(Matrix.FP);
 
         if (dir.lengthSquared() != 0 && side.lengthSquared() != 0) {
             m.setDir(dir.x, dir.y, dir.z);
@@ -259,20 +263,23 @@ private int distPerSec=1000; //Скорость лифта в секунду? В
         else {
             if(LIFT_STATE==DRIVE_BACK) coof=summ-coof;
         int a=0;
-        Vector3D tmp = new Vector3D();
+        Vector3D tmp = liftPos;   // общий буфер: new Vector3D() на каждый лифт каждый кадр
         
         getNewPos(tmp,coof,summ);
         character.transform.setPosition(tmp);
         
         if(liftSmoothMove!=0) {
         getNewPos(tmp,coof+((LIFT_STATE==DRIVE_BACK)?-1000:1000),summ);
-        Vector3D oldP=new Vector3D(tmp.x,tmp.y,tmp.z);
-        int distPerSec2=(int)Math.sqrt(
-                (tmp.x-oldP.x)*(tmp.x-oldP.x)+
-                (tmp.y-oldP.y)*(tmp.y-oldP.y)+
-                (tmp.z-oldP.z)*(tmp.z-oldP.z));
-        
-        if(distPerSec2!=0) distPerSec=liftSmoothMove*1000/distPerSec2;
+        // Здесь было:
+        //   Vector3D oldP = new Vector3D(tmp.x, tmp.y, tmp.z);
+        //   int distPerSec2 = (int)Math.sqrt((tmp.x-oldP.x)*(tmp.x-oldP.x) + ...);
+        //   if(distPerSec2!=0) distPerSec = liftSmoothMove*1000/distPerSec2;
+        // oldP - копия tmp, снятая сразу после getNewPos(), поэтому
+        // distPerSec2 ВСЕГДА равен 0, ветка if не выполнялась и distPerSec
+        // не менялся. Аллокация и Math.sqrt на каждый кадр каждого лифта
+        // удалены, поведение сохранено полностью. Если понадобится настоящая
+        // скорость лифта, сравнивать нужно позицию на coof+/-1000 с позицией
+        // на coof (первый getNewPos выше), а не tmp с его же копией.
         
         getNewPos(tmp,coof+((LIFT_STATE==DRIVE_BACK)?-distPerSec:distPerSec),summ);
         character.transform.addPosition(tmp);
@@ -325,6 +332,8 @@ private int distPerSec=1000; //Скорость лифта в секунду? В
 
     public void setFrame() {
         if (state == LOOP) {
+            // animSpeed здесь float, поэтому деление остаётся прежним:
+            // FastMath.div100 применим только к целочисленному выражению.
             animation.setFrame((int) ((float) (getFrameInter() * animSpeed / 100)));
 
         } else if (state == OPEN) {

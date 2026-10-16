@@ -27,6 +27,7 @@ private static int addmip,fog;
 
 
     public Polygon3V(Polygon3V p) {
+        kind = KIND_POLY3;
         nx=p.nx;
         ny=p.ny;
         nz=p.nz;
@@ -49,6 +50,7 @@ private static int addmip,fog;
             byte bu, byte bv,
             byte cu, byte cv) {
         super(a2, b2, c2);
+        kind = KIND_POLY3;   // после super(): вызов конструктора предка обязан быть первым
         this.a = a2;
         this.au = au & 0xff;
         this.av = av & 0xff;
@@ -71,8 +73,14 @@ public final void szCalcfogAdd() {
 sz = a.rz;
 if (c.rz<sz) sz=c.rz;
 if (b.rz<sz) sz=b.rz;
-sz2=-sz/255;
-if(DirectX7.fDist/255!=0) sz2=-sz/(DirectX7.fDist/255);
+int fstep = DirectX7.fDist;
+if(fstep != DirectX7.fDist255Key) {
+DirectX7.fDist255Key = fstep;
+DirectX7.fDist255 = fstep / 255;
+}
+fstep = DirectX7.fDist255;
+if(fstep!=0) sz2=-sz/fstep;
+else sz2=-sz/255;
 
 if(sz2>255) sz2=255;
 if(sz2<0) sz2=0;
@@ -123,7 +131,7 @@ sizex=size(a.sx, b.sx, c.sx);
 sizey=size(a.sy, b.sy, c.sy);
 }
 
-if(fog==5) sz2=0xff-(int)MathUtils.calcLight(nx, ny, nz,(int)DirectX7.lightdirx,(int)DirectX7.lightdiry,(int)DirectX7.lightdirz);
+if(fog==5) sz2=0xff-dirLight(nx, ny, nz);
 else if(fog==1) szCalcfogAdd();
 
 
@@ -179,7 +187,7 @@ if(pers) pers=((sizex>(Main.persQ<3?30:15) || sizey>(Main.persQ<3?30:15) )&& tex
     
 public void renderFast(DirectX7 g3d, Texture texture) {
 
-if(texture.drawmode==5) sz2=0xff-(int)MathUtils.calcLight(nx, ny, nz,(int)DirectX7.lightdirx,(int)DirectX7.lightdiry,(int)DirectX7.lightdirz);
+if(texture.drawmode==5) sz2=0xff-dirLight(nx, ny, nz);
 else if(texture.drawmode==1) szCalcfogAdd();
 
             TexturingAffine.paint(g3d,

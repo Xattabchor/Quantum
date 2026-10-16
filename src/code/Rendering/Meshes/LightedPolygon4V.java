@@ -61,7 +61,7 @@ public class LightedPolygon4V extends Polygon4V {
         int ld2 = getLight(d, ld, g3d);
 
         if(fog == 5) {
-            sz2 = 0xff - MathUtils.calcLight(nx, ny, nz, DirectX7.lightdirx, DirectX7.lightdiry, DirectX7.lightdirz);
+            sz2 = 0xff - dirLight(nx, ny, nz);
         } else if(fog == 1) {
             szCalcfogAdd();
         }
@@ -130,7 +130,7 @@ public class LightedPolygon4V extends Polygon4V {
     public final void renderFast(DirectX7 g3d, Texture texture) {
 
         if(texture.drawmode == 5) {
-            sz2 = 0xff - MathUtils.calcLight(nx, ny, nz, DirectX7.lightdirx, DirectX7.lightdiry, DirectX7.lightdirz);
+            sz2 = 0xff - dirLight(nx, ny, nz);
             if(sz2 < 0) {
                 sz2 = 0;
             }

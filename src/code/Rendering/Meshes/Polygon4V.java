@@ -29,6 +29,7 @@ public class Polygon4V extends RenderObject {
     private static Random r;
 
     public Polygon4V(Polygon4V p) {
+        kind = KIND_POLY4;
         nx = p.nx;
         ny = p.ny;
         nz = p.nz;
@@ -59,8 +60,8 @@ public class Polygon4V extends RenderObject {
             byte cu, byte cv, 
             byte du, byte dv
             ) {
-
         super(a2, b2, c2);
+        kind = KIND_POLY4;   // после super(): вызов конструктора предка обязан быть первым
         int oldnx = nx, oldny = ny, oldnz = nz;
         calculateNormals(a2, c2, d2);
         
@@ -91,8 +92,14 @@ public class Polygon4V extends RenderObject {
         if(c.rz < sz) sz = c.rz;
         if(b.rz < sz) sz = b.rz;
         
-        sz2 = -sz / 255;
-        if(DirectX7.fDist / 255 != 0) sz2 = -sz / (DirectX7.fDist / 255);
+        int fstep = DirectX7.fDist;
+        if(fstep != DirectX7.fDist255Key) {
+            DirectX7.fDist255Key = fstep;
+            DirectX7.fDist255 = fstep / 255;
+        }
+        fstep = DirectX7.fDist255;
+        if(fstep != 0) sz2 = -sz / fstep;
+        else sz2 = -sz / 255;
 
         if(sz2 > 255) sz2 = 255;
         if(sz2 < 0) sz2 = 0;
@@ -156,7 +163,7 @@ public class Polygon4V extends RenderObject {
 
 
         if(fog == 5) {
-            sz2 = 0xff - MathUtils.calcLight(nx, ny, nz, DirectX7.lightdirx, DirectX7.lightdiry, DirectX7.lightdirz);
+            sz2 = 0xff - dirLight(nx, ny, nz);
         } else if(fog == 1) {
             szCalcfogAdd();
         }
@@ -256,7 +263,7 @@ public class Polygon4V extends RenderObject {
 
     public void renderFast(DirectX7 g3d, Texture texture) {
         if(texture.drawmode == 5) {
-            sz2 = 0xff - MathUtils.calcLight(nx, ny, nz, DirectX7.lightdirx, DirectX7.lightdiry, DirectX7.lightdirz);
+            sz2 = 0xff - dirLight(nx, ny, nz);
         }
 
         if(texture.drawmode == 1) {

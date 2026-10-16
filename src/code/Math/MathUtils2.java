@@ -73,6 +73,42 @@ public class MathUtils2 {
         return nor;
     }
     
+    /**
+     * Целочисленный аналог calcNormal(): без double, Math.sqrt и трёх
+     * double-делений. Направление то же, нормаль так же нормирована на 4096,
+     * отклонение - единицы младших разрядов (0.05%), что для выталкивания
+     * сферы незаметно. Оригинал оставлен для кода, где нужна прежняя
+     * математика бит-в-бит.
+     */
+    public static void calcNormalFast(Vector3D nor, Vector3D a, Vector3D b, Vector3D c) {
+        long x = (long)(a.y - b.y) * (a.z - c.z) - (long)(a.z - b.z) * (a.y - c.y);
+        long y = (long)(a.z - b.z) * (a.x - c.x) - (long)(a.x - b.x) * (a.z - c.z);
+        long z = (long)(a.x - b.x) * (a.y - c.y) - (long)(a.y - b.y) * (a.x - c.x);
+
+        setNormalFromCross(nor, x, y, z);
+    }
+
+    /**
+     * Нормирует вектор (обычно векторное произведение, компоненты которого не
+     * влезают в int) до длины 4096 целочисленно: без Math.sqrt и без трёх
+     * double-делений. Используется в calcNormalFast() и в RayCast.
+     */
+    public static void setNormalFromCross(Vector3D nor, long x, long y, long z) {
+        // Уменьшаем, пока компоненты не влезут в int с запасом:
+        // 3 * 20000^2 = 1.2e9 < Integer.MAX_VALUE.
+        while(x > 20000 || y > 20000 || z > 20000 || x < -20000 || y < -20000 || z < -20000) {
+            x >>= 1; y >>= 1; z >>= 1;
+        }
+
+        int xi = (int) x, yi = (int) y, zi = (int) z;
+        int r = FastMath.isqrtRound(xi * xi + yi * yi + zi * zi);
+        if(r < 1) r = 1;
+
+        nor.set((int) (((long) xi * 4096) / r),
+                (int) (((long) yi * 4096) / r),
+                (int) (((long) zi * 4096) / r));
+    }
+
     public static int computePolygonY(Vertex a, int nx, int ny, int nz, int px, int py, int pz) {
         if(ny >= 0) return Integer.MAX_VALUE;
         else return py - ((px - a.x)*nx + (py - a.y)*ny + (pz - a.z)*nz) / ny;

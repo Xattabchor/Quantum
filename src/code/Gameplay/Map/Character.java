@@ -1,5 +1,6 @@
 package code.Gameplay.Map;
 import code.Collision.Height;
+import code.Math.FastMath;
 import code.HUD.DeveloperMenu;
 import code.Math.MathUtils2;
 import code.Math.Matrix;
@@ -10,8 +11,11 @@ import code.utils.QFPS;
 public final class Character {
    private Matrix matrix =new Matrix();
    private static Vector3D tmpVec = new Vector3D(); // ? collisionPoint из Ray
+   private static final Vector3D colDir = new Vector3D(); // буфер collisionTest(body1, body2)
    private int player_radius; // ?
    private int player_height; // ?
+   /** (int)((float)player_radius * 0.8F) - кэш, чтобы не гонять float каждый кадр. */
+   private int radLimit;
    public Matrix transform = new Matrix();
    public Vector3D speed = new Vector3D();
    public Vector3D speedNoFriction = new Vector3D();
@@ -38,16 +42,19 @@ public final class Character {
    public final void set(int radius, int height) {
       this.player_radius = radius;
       this.player_height = height;
+      this.radLimit = (int) ((float) radius * 0.8F);
    }
    public final void set(int radius,int radiusz, int height) {
       this.player_radius = radius;
       this.player_height = height;
+      this.radLimit = (int) ((float) radius * 0.8F);
    }
 
 public final void splitRadHeight() {
 int tmp= this.player_radius;
       this.player_radius = this.player_height;
-      this.player_height = tmp;   }
+      this.player_height = tmp;
+      this.radLimit = (int) ((float) this.player_radius * 0.8F);   }
 
 
    public final void reset() {
@@ -144,18 +151,22 @@ public static void collisionTest(Character body1, Character body2) {
         long r = (long)dx*dx + (long)dy*dy + (long)dz*dz;
         if (r < rSum*rSum) {
             if(r != 0) {
-                r = (int) (1 / MathUtils2.invSqrt(r));
+                // было (int)(1 / MathUtils2.invSqrt(r)): float-трюк + float-деление
+                // 1/x на каждую столкнувшуюся пару каждый кадр. isqrt точнее и
+                // в разы дешевле. r ограничено rSum*rSum, поэтому влезает в int.
+                r = FastMath.isqrt(r > 0x7FFFFFFFL ? 0x7FFFFFFF : (int) r);
             } else {
                 dx = 1;
             }
 
             int dis = (int) (rSum - r);
-            Vector3D dir = new Vector3D(dx, dy, dz);
-            dir.setLength(dis / 2);
+            // Общий буфер вместо new Vector3D(): метод вызывается для каждой
+            // пары персонажей каждый кадр, а на ARM9 мусор в кадре = пауза GC.
+            colDir.set(dx, dy, dz);
+            colDir.setLengthFast(dis / 2);
 
-
-            if(body1.isCollider()) body1.speedNoFriction.add(dir.x, dir.y, dir.z);
-            if(body2.isCollider()) body2.speedNoFriction.add(-dir.x, -dir.y, -dir.z);
+            if(body1.isCollider()) body1.speedNoFriction.add(colDir.x, colDir.y, colDir.z);
+            if(body2.isCollider()) body2.speedNoFriction.add(-colDir.x, -colDir.y, -colDir.z);
         }
     }
     
@@ -232,8 +243,10 @@ public static void collisionTest(Character body1, Character body2) {
 
             speedNoFriction.set(0, 0, 0);
 
-            int rad = (int) ((float) player_radius * 0.8F);
-            if(tmpVec.lengthSquared() > rad * rad) tmpVec.setLength(rad);
+            int rad = radLimit;   // кэш (int)((float)player_radius * 0.8F)
+            // setLengthFast: целочисленный аналог (без Math.sqrt и трёх
+            // double-делений), отклонение не больше единицы на компоненту.
+            if(tmpVec.lengthSquared() > rad * rad) tmpVec.setLengthFast(rad);
 
             transform.m03 += tmpVec.x;
             transform.m13 += tmpVec.y;

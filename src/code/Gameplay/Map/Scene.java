@@ -222,7 +222,7 @@ if(this.enemies[var3].respa==true) this.enemies[var3].mode=-127;
        
       int playerPart = player.getPart();
       Vector objects;
-      if(Main.updateOnlyNear) objects= house.getNearObjects(player.getPart());
+      if(Main.updateOnlyNear) objects= house.getNearObjectsForUpdate(player.getPart());
       else objects= house.getObjects();
       int i;
       GameObject obj;
@@ -286,7 +286,7 @@ if(!(obj instanceof Player)) house.removeObject(obj);
       }
 
       i = 0;
-if(Main.updateOnlyNear) objects= house.getNearObjects(player.getPart());
+if(Main.updateOnlyNear) objects= house.getNearObjectsForUpdate(player.getPart());
       else objects= house.getObjects();
       // Уборка трупов, если подошло убирать
       while(i < objects.size()) {
@@ -335,7 +335,7 @@ if(npc.meshImage!=null) {
          
       }
       
-if(Main.updateOnlyNear) objects= house.getNearObjects(player.getPart());
+if(Main.updateOnlyNear) objects= house.getNearObjectsForUpdate(player.getPart());
       else objects= house.getObjects();
 
       // Расстановка ботов
@@ -410,32 +410,46 @@ house.addObject((RoomObject)bot);
    public final void recomputePart(Player player, GameScreen gs) {
         
         house.recomputePart(player);//Recompute part for player
+        // Новый кадр физики: House кэширует список близких объектов на кадр
+        // (раньше он перестраивался трижды на каждого персонажа).
+        house.physicsFrame++;
+
         Vector objects;
-        if (Main.updateOnlyNear) objects = house.getNearObjects(player.getPart());
+        if (Main.updateOnlyNear) objects = house.getNearObjectsForUpdate(player.getPart());
         else objects = house.getObjects();
 
-        if (objects.size() > 0) {
+        // Vector внутри этого цикла не меняется (комнаты перекладывают объекты
+        // по своим спискам, а не по tVec2/tVec3), поэтому размер можно
+        // закэшировать: objects.size() вызывался на каждой паре.
+        final int objCount = objects.size();
+
+        if (objCount > 0) {
 
             // recomputePart
-            for (int i=0; i<objects.size(); i++) {
+            for (int i=0; i<objCount; i++) {
                 RoomObject ob = (RoomObject) objects.elementAt(i);
 
                 if (!(ob instanceof Player)) house.recomputePart(ob); //Recompute part for every object except player
-                Vector nearObjects = null;
-                if(Main.updateOnlyNearPhysics) nearObjects = house.getNearObjects(ob.getPart()); //Get near objects list for far objects test
+                // Номера "близких" комнат вместо списка объектов: проверка
+                // nearObjects.contains(obj2) была линейным поиском на каждой
+                // паре, то есть O(N^3) за кадр.
+                int[] nearParts = null;
+                if(Main.updateOnlyNearPhysics) nearParts = house.getNearParts(ob.getPart());
                 
                 // collisionTest
 
-                if (objects.elementAt(i) instanceof GameObject) {
-                    GameObject obj = (GameObject) objects.elementAt(i);
+                if (ob instanceof GameObject) {
+                    GameObject obj = (GameObject) ob;
+                    final Character objChar = obj.getCharacter();
                     
-                    for (int i2 = i + 1; i2 < objects.size(); ++i2) {
-                        if (objects.elementAt(i2) instanceof GameObject) {
-                            GameObject obj2 = (GameObject) objects.elementAt(i2);
+                    for (int i2 = i + 1; i2 < objCount; ++i2) {
+                        Object el2 = objects.elementAt(i2);
+                        if (el2 instanceof GameObject) {
+                            GameObject obj2 = (GameObject) el2;
                             
-                            if(Main.updateOnlyNearPhysics && !nearObjects.contains(obj2)) continue; //Skip far objects
+                            if(nearParts != null && !House.containsPart(nearParts, obj2.getPart())) continue; //Skip far objects
                             
-                            if(obj2!=obj) Character.collisionTest(obj2.getCharacter(), obj.getCharacter());
+                            if(obj2!=obj) Character.collisionTest(obj2.getCharacter(), objChar);
                         }
 
                     }
@@ -520,7 +534,7 @@ return false;
 
 public RoomObject findObject(boolean isclickable2,Player player,int yy,GameScreen gs) {
 Vector objs;
-if(Main.updateOnlyNear) objs= house.getNearObjects(player.getPart());
+if(Main.updateOnlyNear) objs= house.getNearObjectsForUpdate(player.getPart());
       else objs= house.getObjects();
 
 for(int i=0;i<objs.size();i++) {
@@ -549,7 +563,7 @@ return null;
 
 	public RoomObject activateObject(boolean isclickable2, Player player, int yy, GameScreen gs) {
 		Vector objs;
-		if(Main.updateOnlyNear) objs = house.getNearObjects(player.getPart());
+		if(Main.updateOnlyNear) objs = house.getNearObjectsForUpdate(player.getPart());
 		else objs = house.getObjects();
 		RoomObject used = null;
 		for(int i = 0; i < objs.size(); i++) {

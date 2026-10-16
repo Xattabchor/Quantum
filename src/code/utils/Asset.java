@@ -69,6 +69,8 @@ public class Asset {
                     rImg.h /= 2;
                     rImg.scale = 1;
                 }
+                // img и его длина изменились - флаги индекса нужно обновить
+                rImg.refreshFlags();
                 return true;
             }
             
