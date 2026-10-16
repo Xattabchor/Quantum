@@ -1,0 +1,26 @@
+{
+  "classes": 126,
+  "code_methods": 1648,
+  "stackmap_attributes": 879,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "jar_sha256": "fcc15ae1579badf109b952e35c551647b41e03cd3f6ceaeadabc7a5b6d1bf888",
+  "resource_files": 0,
+  "source_files": 120,
+  "preverifier": "ProGuard -microedition (CLDC StackMap)",
+  "tools_sha256": {
+    "ecj-legacy.jar": "01971245e470f07cb9f9730325d9c57b58782f57c1df396d6ed74c5619a4db39",
+    "proguard.jar": "bd9b6c58daf01e5088b86fc8aa99ae9af53d3821c622e5e01d68db97ee82f2eb",
+    "cldc11.jar": "1c3ec9a7057bd3b4daf7a6474cf508676b51066b4e56cbebbe7b326a90efe87a",
+    "midp21.jar": "0a0bc48207dd8bedea027968c3c9bdcf5dadd37be42e356d0802c81a8fa2c43f",
+    "nokiaui.jar": "cbd77d48199825a9ccddf4367da8f56120083d23ff014436bf6b1039a0fe0a9a",
+    "jsr135.jar": "34fb379affaa83b7941307c51071eb363ce15ddf451510866cdb54f009defca5",
+    "jsr184.jar": "161a49bb715dd732f75ff1a39fbf524cae307e7b4596feb2c6830315da75165b",
+    "jsr75_file.jar": "b66a74c215f48d3f319757d1a5f1d7773016defe17344631682be4051c7802f3"
+  },
+  "runtime_tested": false
+}
