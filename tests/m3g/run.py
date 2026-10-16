@@ -15,10 +15,11 @@ APP = ROOT / "build/cldc/Quantum-unverified.jar"
 API = ROOT / "build/cldc/api.jar"
 JAVA = os.environ.get("JAVA", "java")
 
-# The sky queue must be submitted as one original CPU pass, not per-face M3G
-# fallbacks around the camera. Behavioral renderSoftware tests are in M3GTest.
+# Mesh skies use a transactional native submission, not forced CPU rasterization.
 house = (ROOT / "src/code/Gameplay/Map/House.java").read_text()
-assert "skybox.render(g, g3d);" in house and "g3d.renderSoftware();" in house
+assert "g3d.renderSoftware();" not in house
+skybox = (ROOT / "src/code/Gameplay/Map/Skybox.java").read_text()
+assert "g3d.addRenderObjectDT(nativeMesh, null);" in skybox
 
 # Only the API subset under test. These sources never enter the MIDlet.
 STUBS = {
@@ -46,7 +47,7 @@ public class Graphics {
 "javax/microedition/m3g/Transform.java": '''package javax.microedition.m3g;
 public class Transform { public float[] matrix; public void set(float[] m){matrix=m;} }''',
 "javax/microedition/m3g/Camera.java": '''package javax.microedition.m3g;
-public class Camera {public void setGeneric(Transform t){
+public class Camera {public Transform projection;public void setGeneric(Transform t){projection=t;
  if(t.matrix[14]!=-1 || t.matrix[11]==0)throw new AssertionError("projection");
 }}''',
 "javax/microedition/m3g/CompositingMode.java": '''package javax.microedition.m3g;
@@ -58,7 +59,7 @@ public class CompositingMode {
 }''',
 "javax/microedition/m3g/PolygonMode.java": '''package javax.microedition.m3g;
 public class PolygonMode {public static final int CULL_NONE=162,SHADE_SMOOTH=165;
- public void setCulling(int n){} public void setShading(int n){} }''',
+ public void setCulling(int n){} public void setPerspectiveCorrectionEnable(boolean b){} public void setShading(int n){} }''',
 "javax/microedition/m3g/Appearance.java": '''package javax.microedition.m3g;
 public class Appearance {public Texture2D tex;public CompositingMode comp;public Fog fog;
  public void setFog(Fog f){fog=f;}
@@ -77,9 +78,10 @@ public class VertexArray {public short[] shorts;public byte[] bytes;int componen
  public void set(int start,int count,byte[] p){bytes=new byte[count*components];System.arraycopy(p,0,bytes,0,bytes.length);}
 }''',
 "javax/microedition/m3g/VertexBuffer.java": '''package javax.microedition.m3g;
-public class VertexBuffer {public VertexArray colors,coords,positions;public float scale;
+public class VertexBuffer {public VertexArray colors,coords,positions;public float scale,uvScale;
  public void setColors(VertexArray a){colors=a;}
- public void setTexCoords(int n,VertexArray a,float s,float[] b){coords=a;}
+ public void setDefaultColor(int c){colors=new VertexArray(3,4,1);colors.bytes=new byte[12];java.util.Arrays.fill(colors.bytes,(byte)255);}
+ public void setTexCoords(int n,VertexArray a,float s,float[] b){coords=a;uvScale=s;}
  public void setPositions(VertexArray a,float s,float[] b){positions=a;scale=s;}
 }''',
 "javax/microedition/m3g/TriangleStripArray.java": '''package javax.microedition.m3g;
@@ -101,10 +103,10 @@ public class Graphics3D {
  private static final Graphics3D INSTANCE=new Graphics3D();
  public static int calls,uploads,binds,releases,failAt,before;
  public static VertexBuffer lastVertices; public static TriangleStripArray lastIndices;public static Appearance lastAppearance;
- public static Graphics target;
+ public static Graphics target; public static Camera camera;
  public static class Draw {
   public int blend,function,fogColor,textureAlpha;public float near,far;public boolean fog;
-  public byte[] colors;public int[] indices;
+  public byte[] colors;public int[] indices; public short[] positions,coords;public float scale,uvScale;public float[] projection;
  }
  public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
  public static Graphics3D getInstance(){return INSTANCE;}
@@ -113,7 +115,7 @@ public class Graphics3D {
   if(target!=null)throw new AssertionError("target leak");target=(Graphics)g;binds++;
  }
  public void releaseTarget(){if(target==null)throw new AssertionError("double release");target=null;releases++;}
- public void setViewport(int x,int y,int w,int h){} public void setCamera(Camera c,Transform t){} public void resetLights(){}
+ public void setViewport(int x,int y,int w,int h){} public void setCamera(Camera c,Transform t){camera=c;} public void resetLights(){}
  public void render(VertexBuffer v,TriangleStripArray i,Appearance a,Transform t){
   if(target==null || a.comp.depth)throw new AssertionError("target/depth");
   if(Boolean.getBoolean("m3g.oom"))throw new OutOfMemoryError("native memory");
@@ -121,6 +123,8 @@ public class Graphics3D {
   byte[] p=a.tex.image.pixels;byte[] c=v.colors.bytes;
   Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex.function;
   draw.colors=c.clone();draw.indices=i.indices.clone();draw.textureAlpha=p[3]&255;
+  draw.positions=v.positions.shorts.clone();draw.coords=v.coords.shorts.clone();draw.scale=v.scale;draw.uvScale=v.uvScale;
+  draw.projection=camera.projection.matrix.clone();
   draw.fog=a.fog!=null;
   if(draw.fog){draw.fogColor=a.fog.color;draw.near=a.fog.near;draw.far=a.fog.far;}
   history.add(draw);
@@ -160,7 +164,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     sources += sorted(TEST.glob("*.java"))
     # Compile the current adapter against the doubles, not copies of its logic.
     sources += [ROOT / "src/code/Rendering" / name for name in
-                ("M3GSceneRenderer.java", "ProjectedGeometry.java")]
+                ("M3GSceneRenderer.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java")]
     if os.environ.get("ECJ_JAR"):
         compiler = [JAVA, "-jar", os.environ["ECJ_JAR"], "-8", "-proc:none", "-nowarn"]
     else:
@@ -171,6 +175,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GeometryTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyTest"], check=True)
     # Remove the optional API for a real class-loading fallback test.
     shutil.rmtree(classes / "javax/microedition/m3g")
     no_m3g_api = temp / "api-without-m3g.jar"

@@ -8,6 +8,15 @@ public final class MissingM3GTest {
         M3GTest.check(!g.isM3GActive(), "Missing JSR-184 did not fall back");
         M3GTest.check(g.getRendererError() != null, "Missing JSR-184 not diagnosed");
         g.destroy();
+        // SkyMesh must also remain loadable and replayable without any JSR-184.
+        g=M3GTest.renderer();
+        code.Rendering.Meshes.Polygon3V p=M3GTest.triangle();
+        MultyTexture textures=new MultyTexture();textures.textures=new Texture[]{M3GTest.texture(0xffffffff)};
+        code.Rendering.Meshes.Mesh mesh=new code.Rendering.Meshes.Mesh(new Vertex[]{p.a,p.b,p.c},new RenderObject[]{p},textures);
+        code.Rendering.Meshes.SkyMesh sky=new code.Rendering.Meshes.SkyMesh(mesh);
+        sky.set(new code.Math.Matrix(),0,0,32,32);M3GTest.submit(g,sky,null,0);g.render();
+        M3GTest.check(!g.isM3GActive() && g.getRendererError()!=null,"Sky requires optional API to fall back");
+        g.destroy();
         System.out.println("PASS missing JSR-184 API at runtime");
     }
 }

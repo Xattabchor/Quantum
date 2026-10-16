@@ -5,7 +5,7 @@ import code.Math.MathUtils;
 import code.Math.Matrix;
 import code.Rendering.MultyTexture;
 import code.Rendering.DirectX7;
-import code.Rendering.Meshes.M3GParser;
+import code.Rendering.Meshes.SkyMesh;
 import code.Rendering.Meshes.Mesh;
 import code.Rendering.Texture;
 import code.utils.Asset;
@@ -17,6 +17,7 @@ public class Skybox {
 	
     private Matrix matrix;
     private Mesh mesh;
+    private SkyMesh nativeMesh;
     public MultyTexture texture;
 	
     private int color, groundColor;
@@ -98,6 +99,7 @@ public class Skybox {
         
         if (mesh != null) mesh.destroy();
         mesh = null;
+        nativeMesh = null;
 
         tex = null;
 
@@ -144,9 +146,15 @@ public class Skybox {
 			matrix.setPosition(g3d.getCamera().m03, g3d.getCamera().m13, g3d.getCamera().m23);
 			Matrix fm = g3d.computeFinalMatrix(matrix);
 			
-			g3d.transformAndProjectVertices(mesh, fm);
 			mesh.getTexture().updateAnimation();
-			g3d.addMesh(mesh, x1, y1, x2, y2);
+            if(g3d.getRenderer() == DirectX7.M3G) {
+                if(nativeMesh == null) nativeMesh = new SkyMesh(mesh);
+                nativeMesh.set(fm, x1, y1, x2, y2);
+                g3d.addRenderObjectDT(nativeMesh, null);
+            } else {
+                g3d.transformAndProjectVertices(mesh, fm);
+                g3d.addMesh(mesh, x1, y1, x2, y2);
+            }
 			
 		} else if(mode == 1) {
 			g3d.clearDisplay(color);

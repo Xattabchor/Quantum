@@ -29,9 +29,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final TriangleStripArray[] baseQuadTriangles = new TriangleStripArray[2];
     private final TriangleStripArray[] alternateQuadTriangles = new TriangleStripArray[2];
     private final TriangleStripArray baseQuad, alternateQuad;
-    private static final int OPAQUE_TEXTURE = 0, ALPHA_TEXTURE = 1, FOG_MASK = 2;
+    static final int OPAQUE_TEXTURE = 0, ALPHA_TEXTURE = 1, FOG_MASK = 2;
     private final Vector textures = new Vector();
     private Image surface;
+    private M3GSkyRenderer skyRenderer;
     private boolean bound;
     private int cachedPixels;
     private final int maxTexture;
@@ -78,7 +79,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         fog.setMode(Fog.LINEAR);
     }
 
-    private void bind(DirectX7 g) {
+    void bind(DirectX7 g) {
         if(bound) return;
         if(surface == null || surface.getWidth() != g.width || surface.getHeight() != g.height)
             surface = Image.createImage(g.width, g.height);
@@ -99,6 +100,18 @@ public final class M3GSceneRenderer implements SceneRenderer {
         graphics.resetLights();
     }
 
+    void restoreCamera(DirectX7 g) {
+        if(!bound) return;
+        graphics.setViewport(0,0,g.width,g.height);
+        graphics.setCamera(camera,null);
+    }
+
+    boolean supportsTexture(RawImage raw) {
+        return raw != null && powerOfTwo(raw.w) && powerOfTwo(raw.h)
+                && raw.w <= maxTexture && raw.h <= maxTexture
+                && (long)raw.w * raw.h <= CACHE_PIXELS;
+    }
+
     public void finish(DirectX7 g) {
         if(!bound) return;
         try { graphics.releaseTarget(); }
@@ -112,12 +125,17 @@ public final class M3GSceneRenderer implements SceneRenderer {
         } finally {
             bound = false;
             surface = null;
+            skyRenderer = null;
             textures.removeAllElements();
             cachedPixels = 0;
         }
     }
 
     public boolean draw(DirectX7 g, RenderObject object, Texture texture, boolean fast) {
+        if(object instanceof SkyMesh) {
+            if(skyRenderer == null) skyRenderer = new M3GSkyRenderer(this, graphics);
+            return skyRenderer.draw(g, (SkyMesh)object);
+        }
         if(texture == null) return false;
         int mode = texture.drawmode;
         // Legacy fog modes are handled below; glass, water and dithering stay CPU.
@@ -157,9 +175,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 distance, perspective, positions, work);
         if(scale == 0) return false;
         RawImage raw = selectImage(texture, object, count, fastPath);
-        if(raw == null || !powerOfTwo(raw.w) || !powerOfTwo(raw.h)
-                || raw.w > maxTexture || raw.h > maxTexture
-                || (long)raw.w * raw.h > CACHE_PIXELS) return false;
+        if(!supportsTexture(raw)) return false;
         RawImage base = texture.mip != null && texture.mip.length > 0 ? texture.mip[0] : raw;
         if(base == null) return false;
         for(int i = 0; i < count; i++) {
@@ -237,7 +253,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         graphics.render(buffers[slot], triangles, appearance, null);
     }
 
-    private Texture2D texture(DirectX7 g, RawImage raw, int kind) {
+    Texture2D texture(DirectX7 g, RawImage raw, int kind) {
         Texture2D result = findTexture(raw, kind);
         if(result == null) {
             finish(g);
