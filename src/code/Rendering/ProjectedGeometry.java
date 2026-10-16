@@ -23,18 +23,21 @@ public final class ProjectedGeometry {
             for(int j = 0; j < 3; j++) max = Math.max(max, Math.abs(work[i * 3 + j]));
         }
         float scale = max / 30000.0f;
-        for(int i = 0; i < count * 3; i++) {
-            float value = work[i] / scale;
-            positions[i] = (short)(int)(value + (value < 0 ? -0.5f : 0.5f));
-        }
-        // Do not send an unstable/degenerate quantization to a short-only API.
+        // Quantize the homogeneous weight FIRST, then derive X/Y from it.
+        // Independent rounding of X/Y/Z moves shared endpoints differently in
+        // adjacent polygons (each has its own scale), opening visible cracks.
+        // Integer screen offsets times the same integer weight project exactly
+        // back to the original endpoints, regardless of the polygon's scale.
         for(int i = 0; i < count; i++) {
-            float z = positions[i * 3 + 2];
-            if(z >= 0) return 0;
-            float sx = cx - positions[i * 3] / z;
-            float sy = cy + positions[i * 3 + 1] / z;
-            if(Math.abs(sx - vertices[i].sx) > 0.75f
-                    || Math.abs(sy - vertices[i].sy) > 0.75f) return 0;
+            float w = -work[i * 3 + 2];
+            int q = (int)(w / scale + 0.5f);
+            if(q <= 0 || q > 32767 || Math.abs(q * scale - w) > w / 128.0f) return 0;
+            long x = ((long)vertices[i].sx - cx) * q;
+            long y = ((long)cy - vertices[i].sy) * q;
+            if(x < -32767 || x > 32767 || y < -32767 || y > 32767) return 0;
+            positions[i * 3] = (short)x;
+            positions[i * 3 + 1] = (short)y;
+            positions[i * 3 + 2] = (short)-q;
         }
         return scale;
     }

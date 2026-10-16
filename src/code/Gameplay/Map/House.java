@@ -271,7 +271,9 @@ public final class House {
     private final void renderSkybox(Graphics g, DirectX7 g3d) {
         if(skybox != null && (skybox.draw || skybox.skyboxAlways)) {
             skybox.render(g, g3d);
-            g3d.render();
+            // Sky meshes surround/cross the camera. Keep the whole sky pass on
+            // the original clipper, not alternating CPU and M3G sky triangles.
+            g3d.renderSoftware();
             skybox.resetViewport();
         }
     }

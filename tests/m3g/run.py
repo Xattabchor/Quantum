@@ -15,6 +15,11 @@ APP = ROOT / "build/cldc/Quantum-unverified.jar"
 API = ROOT / "build/cldc/api.jar"
 JAVA = os.environ.get("JAVA", "java")
 
+# The sky queue must be submitted as one original CPU pass, not per-face M3G
+# fallbacks around the camera. Behavioral renderSoftware tests are in M3GTest.
+house = (ROOT / "src/code/Gameplay/Map/House.java").read_text()
+assert "skybox.render(g, g3d);" in house and "g3d.renderSoftware();" in house
+
 # Only the API subset under test. These sources never enter the MIDlet.
 STUBS = {
 "javax/microedition/media/Manager.java": """package javax.microedition.media;
@@ -165,6 +170,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     classpath = os.pathsep.join(map(str, (classes, APP, API)))
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GeometryTest"], check=True)
     # Remove the optional API for a real class-loading fallback test.
     shutil.rmtree(classes / "javax/microedition/m3g")
     no_m3g_api = temp / "api-without-m3g.jar"

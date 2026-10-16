@@ -170,12 +170,61 @@ public final class M3GTest {
         check(counter.calls==1,"nested queue retained entries after native failure");g.destroy();
         System.out.println("PASS MeshImage failure queue cleanup");
 
+        // A whole CPU sky pass must not instantiate/disable M3G, retain stale
+        // queue entries, or evict the already active level texture cache.
+        g=renderer();t=texture(0xffbbaa99);calls=Graphics3D.calls;
+        Marker skyMarker=new Marker(false);
+        submit(g,triangle(),t,-300);submit(g,skyMarker,null,-200);g.renderSoftware();
+        check(Graphics3D.calls==calls && !g.isM3GActive(),"CPU sky initialized M3G");
+        check(skyMarker.calls==1 && g.getRenderer()==DirectX7.M3G,"CPU pass changed renderer/queue");
+        submit(g,triangle(),t,0);g.render();
+        check(Graphics3D.calls==calls+1 && g.isM3GActive(),"level did not resume M3G");
+        check(Graphics3D.before==0xff00ff00,"CPU sky pixels not copied before level");
+        uploads=Graphics3D.uploads;
+        submit(g,triangle(),t,-300);submit(g,skyMarker,null,-200);g.renderSoftware();
+        check(Graphics3D.calls==calls+1 && skyMarker.calls==2,"active sky reached native rasterizer");
+        submit(g,triangle(),t,0);g.render();g.render();
+        check(Graphics3D.calls==calls+2 && Graphics3D.uploads==uploads,"sky lost cache or retained queue");
+        check(Graphics3D.before==0xff00ff00,"cached native target lost updated CPU sky");
+        check(g.getRendererError()==null,"CPU sky marked M3G failed");g.destroy();
+        System.out.println("PASS whole software sky pass / unchanged M3G mode / level cache reuse");
+
+        // Match the original size thresholds, including strict > at the limit.
+        g=renderer();t=texture(0xffffffff);
+        for(int quality=1;quality<=4;quality++) {
+            Main.persQ=quality;
+            for(int count=3;count<=4;count++) {
+                int limit=count==3?(quality<3?30:15):(quality<3?70:50);
+                for(int span=limit;span<=limit+1;span++) {
+                    Vertex va=vertex(2,2,-100),vb=vertex(2+span,2,-200),vc=vertex(2,10,-300);
+                    RenderObject poly=count==3?new Polygon3V(va,vb,vc,(byte)0,(byte)0,(byte)1,(byte)0,(byte)0,(byte)1)
+                        :new Polygon4V(va,vb,vertex(2+span,10,-200),vc,(byte)0,(byte)0,(byte)1,(byte)0,(byte)1,(byte)1,(byte)0,(byte)1);
+                    submit(g,poly,t,0);g.render();
+                    short[] pp=Graphics3D.lastVertices.positions.shorts;
+                    boolean affine=pp[2]==pp[5] && pp[5]==pp[8];
+                    check(affine==(quality!=4 && span==limit),"perspective size threshold");
+                }
+            }
+        }
+        Main.persQ=4; t.perspectiveCorrection=false;submit(g,triangle(),t,0);g.render();
+        check(Graphics3D.lastVertices.positions.shorts[2]!=Graphics3D.lastVertices.positions.shorts[8],"quality 4 override");
+        // The weight ratio follows TexturingPers.move, independent of camera FOV.
+        t.perspectiveCorrection=true;submit(g,triangle(),t,0);g.render();
+        float z0=-Graphics3D.lastVertices.positions.shorts[2]*Graphics3D.lastVertices.scale;
+        float z2=-Graphics3D.lastVertices.positions.shorts[8]*Graphics3D.lastVertices.scale;
+        check(Math.abs(z2/z0-450.0f/250)<0.02,"perspective used focal length instead of move");
+        g.updateFov(40);submit(g,triangle(),t,0);g.render();
+        check(Math.abs(-Graphics3D.lastVertices.positions.shorts[2]*Graphics3D.lastVertices.scale-z0)<0.001,"FOV changed UV weights");
+        check(Math.abs(-Graphics3D.lastVertices.positions.shorts[8]*Graphics3D.lastVertices.scale-z2)<0.001,"FOV changed UV ratios");
+        g.destroy();
+        System.out.println("PASS legacy perspective thresholds / move weights / FOV independence");
+
         Vertex[] v={vertex(1,3,-100),vertex(31,5,-300),vertex(2,29,-1000)};
         short[] packed=new short[9];float[] work=new float[9];
         check(ProjectedGeometry.pack(v,3,16,16,21,true,packed,work)>0,"homogeneous pack");
         for(int i=0;i<3;i++) {
-            check(Math.abs(16-packed[i*3]/(float)packed[i*3+2]-v[i].sx)<0.75,"project x");
-            check(Math.abs(16+packed[i*3+1]/(float)packed[i*3+2]-v[i].sy)<0.75,"project y");
+            check(Math.abs(16-packed[i*3]/(float)packed[i*3+2]-v[i].sx)<0.00001,"project x");
+            check(Math.abs(16+packed[i*3+1]/(float)packed[i*3+2]-v[i].sy)<0.00001,"project y");
         }
         v[0].rz=1;check(ProjectedGeometry.pack(v,3,16,16,21,true,packed,work)==0,"near fallback");
         System.out.println("PASS projection reconstruction / near fallback");

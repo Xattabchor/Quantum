@@ -55,7 +55,7 @@ public final class FogTest {
             submit(g, flat(depth), t);
             check(Graphics3D.calls == calls + 1, "HQ perspective fog should be one native pass");
             check(last().fog && last().fogColor == DirectX7.fogc, "M3G Fog not attached");
-            check(last().near == 1 && Math.abs(last().far - (1 + 1000.0f / g.distY)) < 0.001f,
+            check(last().near == 1 && Math.abs(last().far - (1 + 1000.0f / TexturingPers.move)) < 0.001f,
                     "Fog distance uses raw rather than reconstructed camera units");
             colorNear(g.display[0], mix(0xd06020, DirectX7.fogc, Math.min(255, depth * 255 / 1000)), 2,
                     "Native fog progression");
@@ -129,6 +129,27 @@ public final class FogTest {
                 "BCD flat fog must use depth 900 / legacy divisor 10");
         int[] abd = {0,1,3}, bcd = {1,2,3};
         for(int i=0;i<3;i++) check(draw(first).indices[i] == abd[i] && draw(first+2).indices[i] == bcd[i], "LQ quad diagonal");
+        Polygon4V alternate=quad(); alternate.b.rz=-900;alternate.c.rz=-200;
+        first=Graphics3D.history.size(); submit(g,alternate,texture(3,0xffd06020));
+        check(Graphics3D.history.size()==first+4,"alternate LQ quad pass count");
+        int[] abc={0,1,2},acd={0,2,3};
+        for(int i=0;i<3;i++) check(draw(first).indices[i]==abc[i] && draw(first+2).indices[i]==acd[i],"ABC/ACD fog diagonal");
+        check((draw(first).colors[0]&255)==165 && (draw(first+2).colors[0]&255)==215,"alternate diagonal fog depths");
+        // Ordinary materials and subclasses retain ABD/BCD even for these depths.
+        submit(g,alternate,texture(0,0xffd06020));
+        int[] baseIndices={0,1,3,1,2,3};
+        for(int i=0;i<6;i++) check(last().indices[i]==baseIndices[i],"alternate diagonal leaked to plain material");
+        LightedPolygon4V litQuad=new LightedPolygon4V(alternate.a,alternate.b,alternate.c,alternate.d,
+                (byte)0,(byte)0,(byte)255,(byte)0,(byte)255,(byte)255,(byte)0,(byte)255);
+        first=Graphics3D.history.size();submit(g,litQuad,texture(3,0xffd06020));
+        for(int i=0;i<3;i++) check(draw(first).indices[i]==abd[i] && draw(first+2).indices[i]==bcd[i],"lit subclass diagonal changed");
+        Main.fogQ=2;
+        for(int mode:new int[]{3,6}) {
+            submit(g,alternate,texture(mode,0xffd06020));
+            int[] altIndices={0,1,2,0,2,3};
+            check(last().fog,"alternate HQ diagonal lost native fog");
+            for(int i=0;i<6;i++) check(last().indices[i]==altIndices[i],"HQ fog alternate diagonal");
+        }
         Main.fogQ = 2; Main.forceLQFog = true;
         first = Graphics3D.history.size(); submit(g, quad(), texture(3, 0xffd06020));
         check(Graphics3D.history.size() == first + 4 && !last().fog, "LQFOG flag ignored");

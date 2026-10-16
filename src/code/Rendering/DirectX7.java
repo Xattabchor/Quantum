@@ -195,6 +195,15 @@ this.buffer.resetTex();
    }
 
    public final void render() {
+       render(true);
+   }
+
+   /** Original rasterizer for a complete pass, without changing backend/cache. */
+   public final void renderSoftware() {
+       render(false);
+   }
+
+   private void render(boolean allowM3G) {
        lx = camera.m03;
        ly = camera.m13;
        lz = camera.m23;
@@ -202,7 +211,7 @@ this.buffer.resetTex();
        if(DeveloperMenu.renderPolygonsOverwrite) clearDisplay(0);
        // Mutable LCDUI Images do not preserve framebuffer alpha. Keep these
        // paths entirely on the original rasterizer rather than change semantics.
-       boolean useM3G = rendererMode == M3G && !rendererFailed && !flushAlpha
+       boolean useM3G = allowM3G && rendererMode == M3G && !rendererFailed && !flushAlpha
                && !DeveloperMenu.renderPolygonsOverwrite && buffer.getSize() > 0;
        try {
            if(useM3G) {

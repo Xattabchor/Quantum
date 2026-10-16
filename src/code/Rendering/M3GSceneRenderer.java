@@ -26,7 +26,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final VertexArray[] uvArrays = new VertexArray[2];
     private final VertexArray[] colorArrays = new VertexArray[2];
     private final TriangleStripArray[] indices = new TriangleStripArray[2];
-    private final TriangleStripArray[] quadTriangles = new TriangleStripArray[2];
+    private final TriangleStripArray[] baseQuadTriangles = new TriangleStripArray[2];
+    private final TriangleStripArray[] alternateQuadTriangles = new TriangleStripArray[2];
+    private final TriangleStripArray baseQuad, alternateQuad;
     private static final int OPAQUE_TEXTURE = 0, ALPHA_TEXTURE = 1, FOG_MASK = 2;
     private final Vector textures = new Vector();
     private Image surface;
@@ -65,10 +67,14 @@ public final class M3GSceneRenderer implements SceneRenderer {
             buffers[i].setTexCoords(0, uvArrays[i], 1.0f / 256, null);
         }
         indices[0] = new TriangleStripArray(0, new int[]{3});
-        // Same diagonal as Polygon4V.render/renderFast: ABD and BCD.
+        // Default diagonal; Polygon4V fog can select ABC/ACD instead.
         indices[1] = new TriangleStripArray(new int[]{0, 1, 3, 1, 2, 3}, new int[]{3, 3});
-        quadTriangles[0] = new TriangleStripArray(new int[]{0, 1, 3}, new int[]{3});
-        quadTriangles[1] = new TriangleStripArray(new int[]{1, 2, 3}, new int[]{3});
+        baseQuad = indices[1];
+        alternateQuad = new TriangleStripArray(new int[]{0, 1, 2, 0, 2, 3}, new int[]{3, 3});
+        alternateQuadTriangles[0] = new TriangleStripArray(new int[]{0, 1, 2}, new int[]{3});
+        alternateQuadTriangles[1] = new TriangleStripArray(new int[]{0, 2, 3}, new int[]{3});
+        baseQuadTriangles[0] = new TriangleStripArray(new int[]{0, 1, 3}, new int[]{3});
+        baseQuadTriangles[1] = new TriangleStripArray(new int[]{1, 2, 3}, new int[]{3});
         fog.setMode(Fog.LINEAR);
     }
 
@@ -138,11 +144,19 @@ public final class M3GSceneRenderer implements SceneRenderer {
             uv[4] = p.cu; uv[5] = p.cv; uv[6] = p.du; uv[7] = p.dv;
             count = 4;
         }
-        boolean perspective = !fast && Main.persQ > 0 && (texture.perspectiveCorrection || Main.persQ == 4);
+        boolean fastPath = fast || (Main.persQ == 0 && !Main.mipMapping);
+        boolean alternate = count == 4 && type == Polygon4V.class && !fastPath
+                && (mode == 3 || mode == 6) && Main.fogQ > 0 && alternateDiagonal();
+        indices[1] = alternate ? alternateQuad : baseQuad;
+        TriangleStripArray[] quadTriangles = alternate ? alternateQuadTriangles : baseQuadTriangles;
+        boolean perspective = usePerspective(texture, count, fastPath);
+        // TexturingPers interpolates 1 / (move - rz), not 1 / (distY - rz).
+        // distY only controls screen projection and changes with the FOV.
+        int distance = TexturingPers.move;
         float scale = ProjectedGeometry.pack(vertices, count, g.centreX, g.centreY,
-                g.distY, perspective, positions, work);
+                distance, perspective, positions, work);
         if(scale == 0) return false;
-        RawImage raw = selectImage(texture, object, count);
+        RawImage raw = selectImage(texture, object, count, fastPath);
         if(raw == null || !powerOfTwo(raw.w) || !powerOfTwo(raw.h)
                 || raw.w > maxTexture || raw.h > maxTexture
                 || (long)raw.w * raw.h > CACHE_PIXELS) return false;
@@ -160,7 +174,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         boolean highQuality = Main.fogQ == 2 && !Main.forceLQFog;
         // Affine mode 6 historically ignores forceLQFog, unlike its perspective path.
         if(mode == 6 && !perspective) highQuality = Main.fogQ == 2;
-        float fogFar = 1.0f + (float)DirectX7.fDist / g.distY;
+        float fogFar = 1.0f + (float)DirectX7.fDist / distance;
         boolean nativeFog = (mode == 3 || mode == 6) && Main.fogQ > 0 && highQuality
                 && perspective && fogFar > 1.0f
                 && (mode != 6 || !LightMapper.cameraVectorLight);
@@ -190,7 +204,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             if(nativeFog) {
                 uniformColors(count, 0xffffff, 255);
                 colorArrays[slot].set(0, count, colors);
-                // Packed eye distance = 1 - rz/distY, NOT the original -rz.
+                // Packed eye distance = 1 - rz/move, NOT the original -rz.
                 // Mapping both endpoints cancels the engine's projection offset.
                 fog.setLinear(1.0f, fogFar);
                 fog.setColor(mode == 3 ? DirectX7.fogc & 0xffffff : 0);
@@ -198,11 +212,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 render(g, slot, indices[slot]);
                 appearance.setFog(null);
             } else if(!highQuality && count == 4) {
-                // Flat LQ fog uses a separate farthest depth for ABD and BCD.
+                // Flat LQ fog follows the same chosen diagonal as the CPU path.
                 legacyFog(g, object, slot, count, quadTriangles[0], mode, perspective,
-                        false, Math.min(vertices[0].rz, Math.min(vertices[1].rz, vertices[3].rz)), nativeTexture, mask);
+                        false, Math.min(vertices[0].rz, Math.min(vertices[1].rz, vertices[alternate ? 2 : 3].rz)), nativeTexture, mask);
                 legacyFog(g, object, slot, count, quadTriangles[1], mode, perspective,
-                        false, Math.min(vertices[1].rz, Math.min(vertices[2].rz, vertices[3].rz)), nativeTexture, mask);
+                        false, Math.min(vertices[alternate ? 0 : 1].rz, Math.min(vertices[2].rz, vertices[3].rz)), nativeTexture, mask);
             } else {
                 int farthest = vertices[0].rz;
                 for(int i = 1; i < count; i++) farthest = Math.min(farthest, vertices[i].rz);
@@ -345,9 +359,31 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
     }
 
-    private RawImage selectImage(Texture texture, RenderObject object, int count) {
+    private boolean usePerspective(Texture texture, int count, boolean fast) {
+        if(fast || Main.persQ == 0) return false;
+        if(Main.persQ == 4) return true;
+        if(!texture.perspectiveCorrection) return false;
+        int minX = vertices[0].sx, maxX = minX, minY = vertices[0].sy, maxY = minY;
+        for(int i = 1; i < count; i++) {
+            minX = Math.min(minX, vertices[i].sx); maxX = Math.max(maxX, vertices[i].sx);
+            minY = Math.min(minY, vertices[i].sy); maxY = Math.max(maxY, vertices[i].sy);
+        }
+        int xLimit = count == 3 ? (Main.persQ < 3 ? 30 : 15) : (Main.persQ < 3 ? 70 : 50);
+        int yLimit = count == 3 ? xLimit : (Main.persQ < 3 ? 100 : 70);
+        return (long)maxX - minX > xLimit || (long)maxY - minY > yLimit;
+    }
+
+    private boolean alternateDiagonal() {
+        int a = vertices[0].rz, b = vertices[1].rz, c = vertices[2].rz, d = vertices[3].rz;
+        // Preserve Polygon4V.min's equal-depth special case as well.
+        int farthest = a == b || b == d || b == c || d == c
+                ? Math.min(a, Math.min(c, d)) : Math.min(Math.min(a, b), Math.min(c, d));
+        return farthest != Math.min(a, c);
+    }
+
+    private RawImage selectImage(Texture texture, RenderObject object, int count, boolean fast) {
         RawImage raw = texture.rImg;
-        if(Main.mipMapping && texture.mip != null && texture.mip.length > 0) {
+        if(!fast && Main.mipMapping && texture.mip != null && texture.mip.length > 0) {
             raw = texture.mip[0];
             int minX = vertices[0].sx, maxX = minX, minY = vertices[0].sy, maxY = minY;
             int minU = uv[0], maxU = minU, minV = uv[1], maxV = minV;
