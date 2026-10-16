@@ -6,14 +6,40 @@ Toolkit не нужны.
 
 ```sh
 export T=~/tools/j2me            # куда положить инструменты
-export JAVA=java                 # путь к java (можно JRE)
+export JAVA=java                 # путь к java (достаточно JRE)
+export SRC=$(cd ../.. && pwd)    # корень репозитория
 
-sh get-toolchain.sh              # скачать ECJ, ProGuard, банки CLDC/MIDP/JSR
-T=$T SRC=$(cd ../.. && pwd) JAVA=$JAVA sh build-j2me.sh
+sh get-toolchain.sh                       # ECJ, ProGuard, банки CLDC/MIDP/JSR
+T=$T SRC=$SRC JAVA=$JAVA sh build-j2me.sh  # сборка
 ```
 
-Результат: `dist/Quantum.jar` и `dist/Quantum.jad` (имена и атрибуты манифеста
-берутся из `nbproject/project.properties`).
+Если в системе вообще нет Java, её ставит pip-пакет `jdk4py` (он же даёт `java`):
+
+```sh
+python3 -m venv ~/.venv && ~/.venv/bin/pip install jdk4py
+export JAVA=~/.venv/lib/python3.11/site-packages/jdk4py/java-runtime/bin/java
+```
+
+`get-toolchain.sh` качает банки через GitHub API: файлы меньше 1 МиБ приходят
+base64-содержимым в ответе contents API, большие (ProGuard 10 МБ, ECJ 1.5 МБ) -
+через blob API с `Accept: application/vnd.github.raw`. Запасной путь - тарбол
+репозитория. Вся загрузка занимает несколько секунд.
+
+Результат:
+
+| путь | содержимое |
+|------|-----------|
+| `build/<config>/compiled/` | классы после ECJ (class file version 48) |
+| `build/<config>/preverified/` | классы после препроверки (атрибуты `StackMap`) |
+| `dist/Quantum.jar`, `dist/Quantum.jad` | готовый MIDlet; атрибуты манифеста берутся из `nbproject/project.properties` |
+
+`build/` и `dist/` уже в `.gitignore`. Скрипт сам проверяет собранный JAR:
+манифест первой записью, все классы версии 48, нет атрибутов `StackMapTable`
+(их KVM не понимает), класс MIDlet на месте, размер в JAD совпадает.
+
+Препроверка настоящая, а не номинальная: в собранном JAR 920 атрибутов
+`StackMap` на 126 классов и 0 атрибутов `StackMapTable`. Сама заглушка JSR-75 в
+JAR не попадает (проверка: в архиве нет записей `javax/`).
 
 Важно про ресурсы: в этом репозитории каталог `res/` пуст, поэтому JAR содержит
 только код. Перед установкой положите в `res/` файлы оригинального дистрибутива
@@ -26,3 +52,7 @@ T=$T SRC=$(cd ../.. && pwd) JAVA=$JAVA sh build-j2me.sh
 реализация JSR-75, формат `lightmap.vla` не меняется.
 
 Подробности и обоснования — в `docs/ARM9.md`, раздел 8.
+
+Готовые артефакты текущей сборки лежат в `artifacts/` (тоже в `.gitignore`):
+`Quantum.jar`, `Quantum.jad` и `preverified-classes.zip` — каталог
+`build/<config>/preverified/` одним файлом.

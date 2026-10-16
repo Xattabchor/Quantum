@@ -1,17 +1,21 @@
 #!/bin/sh
 # Загрузка тулчейна для сборки J2ME (CLDC-1.1 / MIDP-2.0) без WTK и без JDK.
 #
-# Нужны только: curl и python3 (JDK не нужен - компилятор ECJ и препроверка
-# ProGuard сами написаны на Java и работают на JRE).
+# Нужны только curl, python3 и java (JRE достаточно: ECJ и ProGuard сами
+# написаны на Java). JDK не нужен.
 #
-# Все файлы берутся из публичных репозиториев GitHub, где они лежат в дереве:
-#   phd051199/MIDPlay          (ветка main)   lib/cldc_1.1.jar, midp_2.0.jar,
-#                                             jsr234_1.0.jar, proguard-ant.jar
+# Все банки берутся из публичных репозиториев GitHub, где они лежат в дереве:
+#   phd051199/MIDPlay           (ветка main)   lib/cldc_1.1.jar, midp_2.0.jar,
+#                                              jsr234_1.0.jar, proguard-ant.jar
 #   alanvoss/neo4j_openshift_v2 (ветка master) usr/lib/java/ecj.jar  (ECJ 3.8.2)
 #   vsenger/things-api          (ветка master) apps/Things.Mobile/res/
-#                                             jsr184_1.1.jar, jsr135_1.2.jar
+#                                              jsr184_1.1.jar, jsr135_1.2.jar
 #
-# Запуск:  T=/home/user/tools/j2me sh $T/get-toolchain.sh
+# Загрузка идёт через GitHub API: для файлов меньше 1 МиБ содержимое приходит
+# сразу в ответе contents API (base64), для больших - через blob API с
+# Accept: application/vnd.github.raw. Запасной путь - тарбол всего репозитория.
+#
+# Запуск:  T=~/tools/j2me JAVA=java sh get-toolchain.sh
 set -e
 
 T=${T:-/home/user/tools/j2me}
@@ -19,51 +23,68 @@ JAVA=${JAVA:-java}
 DL=$T/dl
 mkdir -p "$T/lib" "$DL"
 
-api_get() {   # api_get <путь API> <куда сохранить>  (учитывает GITHUB_TOKEN)
-    if [ -n "$GITHUB_TOKEN" ]; then
-        curl -sSL -H "Authorization: Bearer $GITHUB_TOKEN" \
-             -H "Accept: application/vnd.github.raw+json" "$1" -o "$2"
-    else
-        curl -sSL -H "Accept: application/vnd.github.raw+json" "$1" -o "$2"
-    fi
-}
-
 fetch() {   # fetch <owner/repo> <branch> <путь в репозитории> <имя в lib>
-    repo=$1; branch=$2; path=$3; out=$4
-    if [ -f "$T/lib/$out" ]; then
-        echo "уже есть: $out"
+    if [ -f "$T/lib/$4" ]; then
+        echo "уже есть: $4"
         return 0
     fi
-    echo "качаем $repo:$path -> $out"
+    echo "качаем $1:$3 -> $4"
+    if python3 - "$1" "$2" "$3" "$T/lib/$4" <<'PY'
+import base64, json, os, sys, urllib.request
 
-    # 1) sha файла через contents API
-    meta="$DL/$(basename "$path").json"
-    api_get "https://api.github.com/repos/$repo/contents/$path?ref=$branch" "$meta"
-    sha=$(python3 -c "import json,sys;print(json.load(open('$meta'))['sha'])" 2>/dev/null || echo "")
+repo, branch, path, out = sys.argv[1:5]
+token = os.environ.get('GITHUB_TOKEN', '')
+API = 'https://api.github.com'
 
-    # 2) сам файл через blob API (без ограничения contents API в 1 МиБ)
-    if [ -n "$sha" ]; then
-        api_get "https://api.github.com/repos/$repo/git/blobs/$sha" "$T/lib/$out"
-    fi
-    if python3 -c "
-import sys
-b = open('$T/lib/$out', 'rb').read(4)
-sys.exit(0 if b[:2] == b'PK' else 1)" 2>/dev/null; then
-        rm -f "$meta"
-        echo "  -> $T/lib/$out ($(wc -c < "$T/lib/$out") байт)"
+
+def get(url, raw=False):
+    req = urllib.request.Request(url)
+    req.add_header('Accept', 'application/vnd.github.raw+json' if raw
+                   else 'application/vnd.github+json')
+    req.add_header('User-Agent', 'quantum-j2me-toolchain')
+    if token:
+        req.add_header('Authorization', 'Bearer ' + token)
+    return urllib.request.urlopen(req, timeout=120).read()
+
+
+def ok(data):
+    return len(data) > 100 and data[:2] == b'PK'
+
+
+data = None
+try:
+    meta = json.loads(get('%s/repos/%s/contents/%s?ref=%s' % (API, repo, path, branch)))
+    # файлы меньше 1 МиБ приходят сразу в base64
+    if meta.get('encoding') == 'base64' and meta.get('content'):
+        cand = base64.b64decode(meta['content'])
+        if ok(cand):
+            data = cand
+    # иначе (или если содержимое не приложено) - blob API без ограничения в 1 МиБ
+    if data is None and meta.get('sha'):
+        cand = get('%s/repos/%s/git/blobs/%s' % (API, repo, meta['sha']), raw=True)
+        if ok(cand):
+            data = cand
+except Exception as e:
+    print('  GitHub API: %s' % e)
+
+if data is None:
+    sys.exit(3)          # вызывающий скрипт скачает тарбол
+
+open(out, 'wb').write(data)
+print('  -> %s (%d байт)' % (out, len(data)))
+PY
+    then
         return 0
     fi
 
-    # 3) запасной путь: tarball всего репозитория
-    echo "  blob API не сработал, качаем тарбол"
-    rm -f "$T/lib/$out"
-    tarball="$DL/$(echo "$repo" | tr '/' '_').tgz"
+    # запасной путь: тарбол всего репозитория
+    echo "  API не отдал файл, качаем тарбол"
+    tarball="$DL/$(echo "$1" | tr '/' '_').tgz"
     if [ ! -f "$tarball" ]; then
-        curl -sSL -o "$tarball" \
-            "https://codeload.github.com/$repo/tar.gz/refs/heads/$branch"
+        curl -sSL -o "$tarball" "https://codeload.github.com/$1/tar.gz/refs/heads/$2"
     fi
-    python3 - "$tarball" "$repo" "$path" "$T/lib/$out" <<'PY'
-import sys, tarfile, shutil
+    python3 - "$tarball" "$1" "$3" "$T/lib/$4" <<'PY'
+import os, sys, tarfile, shutil
 tarball, repo, path, out = sys.argv[1:5]
 prefix = repo.split('/')[1] + '/'
 with tarfile.open(tarball, 'r:gz') as t:
@@ -71,7 +92,7 @@ with tarfile.open(tarball, 'r:gz') as t:
         if m.name == prefix + path or m.name.endswith('/' + path):
             with t.extractfile(m) as src, open(out, 'wb') as dst:
                 shutil.copyfileobj(src, dst)
-            print('  ->', out)
+            print('  -> %s (%d байт)' % (out, os.path.getsize(out)))
             break
     else:
         raise SystemExit('не найден %s в %s' % (path, tarball))
@@ -86,7 +107,7 @@ fetch alanvoss/neo4j_openshift_v2 master usr/lib/java/ecj.jar    ecj.jar
 fetch vsenger/things-api          master apps/Things.Mobile/res/jsr184_1.1.jar jsr184_1.1.jar
 fetch vsenger/things-api          master apps/Things.Mobile/res/jsr135_1.2.jar jsr135_1.2.jar
 
-# Заглушка JSR-75 (FileConnection) - в платформенных банках её нет, а
+# Заглушка JSR-75 (FileConnection): в платформенных банках её нет, а
 # LightMapper.java её импортирует. В JAR не попадает, нужна только компилятору.
 mkdir -p "$T/stubsrc/javax/microedition/io/file" "$T/stubclasses"
 cat > "$T/stubsrc/javax/microedition/io/file/FileConnection.java" <<'EOF'
@@ -123,7 +144,7 @@ for dirpath, dirs, files in os.walk(root):
         p = os.path.join(dirpath, f)
         z.write(p, os.path.relpath(p, root))
 z.close()
-print('  ->', jar)
+print('  -> %s (%d байт)' % (jar, os.path.getsize(jar)))
 PY
 
 echo

@@ -611,8 +611,19 @@ T=~/tools/j2me JAVA=java sh docs/j2me-build/get-toolchain.sh   # скачать 
 T=~/tools/j2me SRC=. JAVA=java sh docs/j2me-build/build-j2me.sh # собрать dist/Quantum.jar
 ```
 
-`get-toolchain.sh` качает банки из публичных репозиториев GitHub (адреса и ветки
-перечислены в шапке скрипта) и собирает заглушку `javax.microedition.io.file.FileConnection`:
+Проверка собранного JAR встроена в скрипт: манифест должен быть первой записью,
+все классы — версии 48, атрибутов `StackMapTable` (Java 6+, KVM их не понимает)
+быть не должно, класс MIDlet обязан присутствовать, размер в JAD — совпадать.
+Фактически в собранном JAR 920 атрибутов `StackMap` на 126 классов и 0
+`StackMapTable`, записей `javax/` нет (заглушка JSR-75 в архив не попала).
+
+Готовые артефакты складываются в `artifacts/` (`Quantum.jar`, `Quantum.jad`,
+`preverified-classes.zip`); `build/`, `dist/` и `artifacts/` — в `.gitignore`.
+
+`get-toolchain.sh` качает банки из публичных репозиториев GitHub через API:
+файлы меньше 1 МиБ приходят base64-содержимым в ответе contents API, большие —
+через blob API с `Accept: application/vnd.github.raw`, запасной путь — тарбол
+(адреса и ветки перечислены в шапке скрипта) и собирает заглушку `javax.microedition.io.file.FileConnection`:
 в платформенных банках JSR-75 нет, а `LightMapper.java` её импортирует. Заглушка
 нужна **только компилятору** и в JAR не попадает — на устройстве работает
 настоящая реализация JSR-75, поэтому формат `lightmap.vla` не меняется.
