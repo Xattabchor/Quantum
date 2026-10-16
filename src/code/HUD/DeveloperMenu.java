@@ -1,6 +1,7 @@
 package code.HUD;
 
 import code.HUD.Base.Selectable;
+import code.Rendering.PixelBlitter;
 import code.utils.IniFile;
 import code.utils.Main;
 import code.utils.canvas.MyCanvas;
@@ -68,7 +69,7 @@ public final class DeveloperMenu extends Selectable {
         if(background instanceof Image) {
             g.drawImage((Image) background, 0, 0, 0);
         } else if(this.background instanceof int[]) {
-            g.drawRGB((int[]) background, 0, getWidth(), 0, backgroundH, getWidth(), h, false);
+            PixelBlitter.drawRGB(g, (int[]) background, 0, getWidth(), 0, backgroundH, getWidth(), h, false);
         }
 
         if(this.menu instanceof PauseScreen) {
