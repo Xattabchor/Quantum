@@ -3,8 +3,7 @@ package javax.microedition.lcdui;
 /** Test double only. Never include tests in the MIDlet source path. */
 public class Graphics {
     public final int[] surface = new int[64];
-    public int midpCalls, directCalls;
-    public boolean supportsDirect = true;
+    public int midpCalls;
     public int translateX = 1, translateY = 2;
     public int clipX = 2, clipY = 1, clipWidth = 4, clipHeight = 5;
     public int[] lastPixels;

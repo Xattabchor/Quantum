@@ -18,7 +18,7 @@ import subprocess
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-API_NAMES = ("cldc11.jar", "midp21.jar", "nokiaui.jar", "jsr135.jar",
+API_NAMES = ("cldc11.jar", "midp21.jar", "jsr135.jar",
              "jsr184.jar", "jsr75_file.jar")
 
 
@@ -178,7 +178,7 @@ def main():
             for path in resources:
                 jar.write(path, path.relative_to(ROOT / "res").as_posix())
 
-    # Keep every class/method/name, especially the reflection-loaded Nokia adapter.
+    # Keep every class/method/name, especially the reflection-loaded M3G backend.
     # No -dontpreverify / -ignorewarnings: preverification failures are build failures.
     config = work / "preverify.pro"
     config.write_text("-injars Quantum-unverified.jar\n-outjars Quantum.jar\n"

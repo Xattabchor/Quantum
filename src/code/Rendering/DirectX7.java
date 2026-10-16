@@ -285,7 +285,7 @@ this.buffer.resetTex();
            else if(c==4) display[i]=0xff0000;
            else if(c==5) display[i]=0x880000;
        }
-PixelBlitter.drawRGB(g, display, 0, width, x, y, width, height, flushAlpha);
+g.drawRGB(display, 0, width, x, y, width, height, flushAlpha);
    }
 
 

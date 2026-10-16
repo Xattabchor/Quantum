@@ -1,7 +1,6 @@
 package code.HUD;
 
 import code.HUD.Base.Selectable;
-import code.Rendering.PixelBlitter;
 import code.HUD.Base.Font;
 import code.Gameplay.GameScreen;
 import code.utils.IniFile;
@@ -64,7 +63,7 @@ public final class PauseScreen extends Selectable {
         g.fillRect(0, 0, getWidth(), getHeight());
 
         if(background instanceof int[]) {
-            PixelBlitter.drawRGB(g, (int[]) background, 0, getWidth(), 0, height3D, getWidth(), backgroundH, false);
+            g.drawRGB((int[]) background, 0, getWidth(), 0, height3D, getWidth(), backgroundH, false);
         }
         
         g.setColor(0xffffff);

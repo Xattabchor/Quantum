@@ -170,8 +170,9 @@ Image и резервный int[] кадра. Ускорение и побито
 ## Сборка и тесты
 
 Используется тот же `scripts/build_cldc.py`, что описан в
-[инструкции сборки](nokia-directgraphics.md). В API classpath нужен JSR-184.
-Nokia DirectGraphics остаётся независимым слоем вывода и MIDP fallback сохранён.
+[инструкции сборки](build-cldc.md). В API classpath нужен JSR-184.
+Вывод обоих backend использует исходный MIDP `Graphics.drawRGB`.
+Nokia DirectGraphics удалён, Nokia UI API для сборки и работы не требуется.
 Обфускация выключена; при её включении дополнительно сохраните имя/конструктор:
 
 ```text
@@ -182,7 +183,7 @@ Nokia DirectGraphics остаётся независимым слоем выво
 
 ```sh
 python3 tests/m3g/run.py
-python3 tests/pixel_blitter/run.py
+python3 tests/framebuffer/run.py
 ```
 
 Поддерживаются `JAVA`/`JAVAC` или `JAVA`/`ECJ_JAR`. M3G-тесты используют
