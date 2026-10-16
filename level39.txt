@@ -1,0 +1,72 @@
+WORLD_MODEL=/maps/weird/weird.3d
+WORLD_SCALE=10
+LIGHTMAP=/maps/weird/lightmap.vla
+
+DMODE=13
+START=0,5,0
+
+OBSERVER=1
+Если будет 1 то камера будет следить за ботом
+
+SKYBOX_GRADIENT=/skies/gradientsky.png,0.4,-10
+Текстура градиента
+Размер градиента (float, опционально, стд значение 1)
+Угол камеры, при котором отсекается градиент (int, опционально, стд значение -91 т.е. отсечение отключено)
+Смещение градиента вверх-вниз в градусах (float, опционально, стд значение 0, от -90 до 90)
+
+[WTEX_BEGIN]
+/maps/weird/brick.jpg
+/maps/weird/tile.jpg
+[WTEX_END]
+
+L2D_ROOM_RENDERING=1
+Включает физику столкновений игрока и рендеринг только у текущей комнаты(игрок может находится сразу в нескольких комнатах за раз, если не указать это)
+UPDATE_ONLY_NEAR_PHYSICS=1
+Включает проверку физики только в соседних комнатах за раз
+LIGHTMAPPER_ALLROOMS=0
+Отключает проверку столкновения света со всей картой(проверяет только соседние комнаты)
+
+AMBIENT_LIGHT=0
+SKY_LIGHT_INTENSITY=520,652,732
+
+[LIGHT]
+Источники света в коридоре
+POS=0,2500,-4500;18000,2500,-4500;0,2500,13500;18000,2500,13500
+BRIGHTNESS=350
+
+
+Источники света в комнатах:
+Номера их комнат: 10 4 2 11
+[LIGHT]
+POS=9000,5400,4500
+COLOR=255,255,0
+ROOM_ID=10
+BRIGHTNESS=650
+
+[LIGHT]
+POS=9000,5400,4500
+COLOR=0,255,255
+ROOM_ID=4
+BRIGHTNESS=650
+
+[LIGHT]
+POS=9000,5400,4500
+COLOR=255,0,255
+ROOM_ID=2
+BRIGHTNESS=650
+
+[LIGHT]
+POS=9000,5400,4500
+COLOR=255,255,255
+ROOM_ID=11
+BRIGHTNESS=650
+
+[NPC]
+ROOM_ID=4
+POS=9000,2,4500
+MODEL=/bots/odn/big_zombie.3d
+TEX=/bots/odn/big_zombie.png
+SCALE=50
+OBSERVABLE=200,1600,300
+ATTACK=0
+FOLLOW=-1

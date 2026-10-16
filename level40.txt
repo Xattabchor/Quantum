@@ -1,0 +1,15 @@
+WORLD_MODEL=/maps/dead city/map.3d
+WORLD_TEXTURE=/maps/dead city/map.png
+WORLD_SCALE=5
+
+SKYBOX_2D=/skies/metro dead city.png,0.5,-10,45
+SKYBOX_REPEAT_X=2
+SKYBOX_REPEAT_Y=1
+
+DELETE_IN_DISTANCE=1
+
+DMODE=6
+FOGD=35500
+DIST=35500
+
+START=-76553,0,98128;

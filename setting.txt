@@ -1,0 +1,162 @@
+PRICE_MEDICINE_CHEST=50
+Стандартная цена аптечки
+
+DEFAULT_ARSENAL=-1,0,5,6
+арсенал игрока на старте игры
+Пустая рука
+Пистолет
+Кулак
+Топор (работает только при виде от третьего лица)
+
+ORIGINAL_SIGHT=1
+Отключает растягивание прицела
+
+WORLD_SCALE=5
+Стандартный шасштаб уровней
+VISIBILITY_CHECK=1
+
+OPEN_LEVELS=ALL
+Открытые уровни
+COUNT_LEVELS=1
+Добавляет цифры перед названиями уровней
+ALWAYS_EXIT=1
+Выход с уровней без убийства всех ENEMIES
+NEW_EXIT=1
+Переход на следующий уровень без задержки и без подписи
+SAVE_NAME=QUANTUM
+Название сохранений
+PAUSE_SCREEN_SAVE=1
+Пункт для сохранения игры в меню паузы
+
+MENU_MUSIC=/music/Yamaoka_Akira-EndOfSmallSanctuary.mid
+MUSIC=/music/sh.amr
+Стандартная музыка в меню и в игре
+
+
+WALK_SOUND=/sounds/fx_step1.wav,/sounds/fx_step2.wav,/sounds/fx_step3.wav
+JUMP_SOUND=/sounds/fx_jump.wav
+Звуки игрока
+
+
+BLOOD_TEX=/bots/decal_blood.png
+
+LIFE_ZOMBIE=500
+ZOMBIE_MODEL=/bots/evil/monster.3d
+ZOMBIE_TEXTURE=/bots/evil/monster.png
+ZOMBIE_SCALE=5
+ZOMBIE_DAMAGE=3
+ZOMBIE_ATTACKRADIUS=1.5
+ZOMBIE_ATTACKANIMSPEED=700
+ZOMBIE_ANIMSPEED=210
+
+LIFE_BIG_ZOMBIE=2000
+BIGZOMBIE_SCALE=5
+BIGZOMBIE_MODEL=/bots/evil/monster.3d
+BIGZOMBIE_TEXTURE=/bots/evil/monster.png
+BIGZOMBIE_DAMAGE=3
+BIGZOMBIE_ATTACKRADIUS=1.5
+BIGZOMBIE_ATTACKANIMSPEED=700
+BIGZOMBIE_ANIMSPEED=210
+
+PLAYER_HAS_INVENTORY=1
+У игрока есть инвентарь
+INVENTORY_PROPORTIONAL=1
+Пропорциональное растягивание спрайтов в инвентаре
+если отключить, то кол-во предметов будет снизу
+
+BAG_MESH=/meshes/computer.3d
+BAG_TEXTURE=/meshes/computer.png
+BAG_SCALE=2
+Настройки мешка с предметами
+
+TITLE_SCREEN_MUSIC=/music/thunderforce/TF4Staff.mid
+
+SHOP_PROPORTIONAL=1
+Пропорциональное растягивание спрайтов в магазине
+SPLINTER_SCALE=1
+Размер искр от попадания в стену
+BLOOD_SCALE=0.3
+Размер крови вылетающей из ботов
+
+
+SPLINTER_SPRITE=/images/splinter.png
+Искры от попадания в стену
+BLOOD_SPRITE=/bots/blood.png
+Кровь из ботов
+
+LIFE_ICON=/images/life.png
+LOW_LIFE_ICON=/images/life_low.png
+MONEY_ICON=/images/money.png
+PATRON_NO_WEAPON_ICON
+/images/hand.png
+PATRON_ICON=/images/patron.png
+LOW_PATRON_ICON=/images/patron_low.png
+SIGHT_ICON=/images/sight.png
+SKULL_ICON=/images/skull.png
+HAND_ICON=/images/hand.png
+BACKGROUND_LOGO=/images/background.png
+BACKGROUND=/images/background2.png
+SPLASH=/images/splash.png
+SHOP_PATRON_ICON=/shop/icon_patron.png
+SHOP_MEDKIT_ICON=/shop/icon_medicine_chest.png
+
+TEXT_BCK=/images/text_bck.png
+DIALOG_BCK=/images/message_bck.png
+
+ENGLISH=English
+RUSSIAN=Русский
+
+PLAYER_SHOP=OFF
+Отключает магазин на левый софт
+
+PLAYER_ZOOM=74,44,1
+//Minimal Zoom, Maximal Zoom, Ability to use zoom
+
+[DROZH_ENEMY]
+//SPEED,SCALE,IMAGES
+DAMAGE_ANIM=4,30,/bots/shiver bot/damage.png
+DEATH_ANIM=5,30,/bots/shiver bot/death0.png,/bots/shiver bot/death1.png
+ATTACK_ANIM=10,30,/bots/shiver bot/shoot0.png,/bots/shiver bot/shoot1.png
+STAY_ANIM=2,60,/bots/shiver bot/walk_back0.png
+WALK_ANIM=6,30,/bots/shiver bot/walk0.png,/bots/shiver bot/walk1.png
+WALK_SIDE_ANIM=6,60,/bots/shiver bot/walk_side0.png,/bots/shiver bot/walk_side1.png
+WALK_BACK_ANIM=6,60,/bots/shiver bot/walk_back0.png,/bots/shiver bot/walk_back1.png
+
+SCALE=5
+FOLLOW=-1
+ATTACK=0
+FRAGSONDEATH=1
+MONEYONDEATH=15
+DAMAGE=3
+ATTACKRADIUS=1.5
+ATTACKANIMSPEED=700
+REACTTIMER=10
+SPEED=150
+HP=480
+MONEYONDEATH=10
+FRAGSONDEATH=1
+SLEEPONDAMAGE=220
+
+[CAR]
+HP=9999999
+MODEL=/meshes/cars/car_down.3d
+TEX=/meshes/cars/carNagib.png
+MODEL_SCALE=6
+ADDSZ=4000
+PRECISE_COLLISION=1
+COLLISION_SCALE_X=1
+COLLISION_SCALE_Y=1
+PHYSICS=0
+COLLIDER=0
+RADIUS=5000
+
+LIFT_CAN_BE_PAUSED=1
+LIFT_REUSE=0
+LIFT_PLAYER_FOLLOW=0,386,0
+LIFT_SPEED=12000
+LIFT_DISACTIVABLE_ON_END=1
+LIFT_SMOOTH_MOVE=8000
+LIFT_SMOOTH_ROTATE=1
+
+ACTIVATE_ONLY_THIS=1
+За одно нажатие проходит активация только одного объекта

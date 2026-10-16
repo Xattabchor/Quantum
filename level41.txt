@@ -1,0 +1,46 @@
+WORLD_MODEL=/maps/shooter_final/L3D_new.3d
+WORLD_SCALE=6
+LIGHTMAP=/maps/shooter_final/lightmap.vla
+
+[WTEX_BEGIN]
+/maps/shooter_final/forestOrig.png,std,-20000
+/maps/shooter_final/map-selo.png
+/maps/shooter_final/map-selo.png,std,-3500
+/maps/shooter_final/map-selo.png,std,-7000
+8:/maps/shooter_final/river0.png:/maps/shooter_final/river1.png:/maps/shooter_final/river2.png:/maps/shooter_final/river3.png
+[WTEX_END]
+
+Настройки WTEX:
+Путь к текстуре
+Тип материала (std стандартный)
+Z смещение для сортировки
+0/1 отключение искажений
+
+Анимация текстур:
+Перечисление через :
+Первое число - ФПС (число может быть с плавающей запятой)
+Остальное - кадры анимации
+
+SKYBOX_MODEL=/skies/skybox8.3d
+SKYBOX_TEXTURE=/skies/skybox5-2.jpg
+
+DIST=80000
+CHUNK_SIZE=78000
+Дальность отрисовки
+
+DMODE=9
+SUN_LIGHT=0
+SKY_LIGHT_INTENSITY=510
+AMBIENT_LIGHT=40
+
+
+[OBJECT]
+POS=0,0,0
+CLICKABLE=1
+ON_ACTIVATE=player:give(FLASHLIGHT)
+MESSAGE=Подобрал фонарик
+MESSAGETYPE=1
+MESSAGETIMEOUT=2000
+RADIUS=1500
+DESTROYONUSE=1
+DESTROY_ON_LEVEL_RELOAD=1

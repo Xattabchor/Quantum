@@ -1,0 +1,18 @@
+WORLD_MODEL=/maps/shrip/ERFFFE.3d
+
+[WTEX_BEGIN]
+/maps/shrip/SHH.png, std, 500, 0
+/maps/shrip/SH1.png, std, -1000, 0
+/maps/shrip/SH2.png, std, -1000, 0
+/maps/shrip/SH1.png, std, 500, 0
+/maps/shrip/SHH.png, std, 500, 0
+/maps/shrip/SHH.png, std, -1000, 0
+/maps/shrip/SH2.png, std, 500, 0
+[WTEX_END]
+Путь к текстуре (обязательно, остальное опционально)
+Режим рендеринга (std - это стандартный режим рендеринга карты)
+Смещение во время сортировки
+Перспективная коррекция (0/1)
+
+WORLD_SCALE=4
+START=1418,22,32

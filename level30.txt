@@ -1,0 +1,10 @@
+WORLD_MODEL=/maps/l2d/metro.3d
+WORLD_TEXTURE=/maps/l2d/metro.png
+WORLD_SCALE=25
+
+START=475, 0, -1773;
+FINISH=117221, -14075, 37467;
+
+MUSIC=/music/l2d.mid
+
+UPDATE_ONLY_NEAR=1

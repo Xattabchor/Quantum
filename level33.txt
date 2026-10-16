@@ -1,0 +1,6 @@
+WORLD_MODEL=/maps/2flat/baked2.3d
+WORLD_TEXTURE=/maps/2flat/clock.png,/maps/2flat/computer.png,/maps/2flat/energy.png,/maps/2flat/cei.png,/maps/2flat/audio.png,/maps/2flat/black.png,/maps/2flat/tv.png,/maps/2flat/furniture.png,/maps/2flat/other.png,/maps/2flat/wind.png,/maps/2flat/jink.png,/maps/2flat/colonk.png,/maps/2flat/furniture2.png,/maps/2flat/door.png,/maps/2flat/chair.png,/maps/2flat/floor.png,/maps/2flat/table.png,/maps/2flat/table.png
+WORLD_SCALE=0.9
+DRAW_MODES=0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,0,0,0
+MAP_ADDSZ=0,0,0,-45000,0,1500,0,1500,-40000,0,2500,2500,1500,0,1500,-40000,0,0
+START=100,0,0

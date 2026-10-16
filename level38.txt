@@ -1,0 +1,57 @@
+WORLD_MODEL=/frontrooms/map.3d
+WORLD_SCALE=2.95
+DMODE=13
+LIGHTMAP=/frontrooms/lightmap.vla
+
+[WTEX_BEGIN]
+/frontrooms/door.png
+/frontrooms/lamp.png,0
+/frontrooms/planks.png
+/frontrooms/wallpaper0up.png
+/frontrooms/wallpaper1down.png
+/frontrooms/wallpaper1up.png
+/frontrooms/wood_floor.png
+[WTEX_END]
+
+START=0,1,0
+
+AMBIENT_LIGHT=0
+SKY_LIGHT_INTENSITY=0
+GI_RAYS=1
+GI_BW=1
+
+[LIGHT]
+POS=-1327,2301,0;1327,2301,0;-1327,2301,-4425;1327,2301,-4425;-1327,2301,4425;1327,2301,4425;4867,2301,4425;4867,2301,1770;4867,2301,-1770;4867,2301,-4425
+
+BRIGHTNESS=32
+
+[OBJECT]
+POS=-2694,0,0
+CLICKABLE=1
+MESSAGE=/languages/ru/testing genchoice.txt
+RADIUS=800
+
+[OBJECT]
+POS=-2697,0,4496
+CLICKABLE=1
+MESSAGE=/languages/ru/dialog door1-38lvl.txt
+RADIUS=800
+
+[OBJECT]
+POS=-2697,0,-4496
+CLICKABLE=1
+RADIUS=800
+
+
+так-же работает с ERRMSG ON_ACTIVATE ON_SPAWN ON_DEATH
+[MESSAGE]
+А это третья дверь!!!!!!!!!
+$question 2
+Слышишь меня?
+Да!
+Нет(((
+$go да
+жаль жаль(
+$end
+$да:
+клас!!!

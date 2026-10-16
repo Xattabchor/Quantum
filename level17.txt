@@ -1,0 +1,24 @@
+WORLD_MODEL=/maps/polylands/notex.3d
+WORLD_TEXTURE=/maps/polylands/palette.png,/maps/polylands/fence.png
+
+DRAW_MODES=8,0
+
+WORLD_SCALE=5
+
+SKYBOX_COLOR=141,215,212
+
+START=0, 1000, 0;
+
+
+MUSIC=/music/polylands.mid
+
+[PLAYER]
+MODEL=/meshes/polylands/player.3d
+TEX=/maps/polylands/palette.png
+DRAW_MODES=8
+SCALE=5
+
+CAM_X=500
+CAM_Y=1400
+CAM_Z=1000
+CAM_ANGLE=-8

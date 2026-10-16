@@ -1,0 +1,24 @@
+WORLD_MODEL=/maps/evildead/evildead.3d
+WORLD_TEXTURE=/maps/evildead/evildead.png
+WORLD_SCALE=5
+SKYBOX_MODEL=/skies/skybox.3d
+SKYBOX_TEXTURE=/skies/sky_night2.png
+
+
+START=55800, 1500, 58800;
+
+MUSIC=/music/SkyTwn.mp3
+
+[LEVELCHANGE]
+POS=1,300,5255;
+LEVEL=22
+START_POS=6956,1500,-5900;
+CLICKABLE=1
+RADIUS=1500
+SAVEMUSIC=1
+[SPRITE]
+TEX=/meshes/lock.png
+SCALE=8
+POS=1,1800,5255;
+ADDSZ=2000
+OFFSET=MID

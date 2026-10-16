@@ -1,0 +1,8 @@
+WORLD_MODEL=/maps/bar/testing_ingame.3d
+
+WORLD_TEXTURE=/maps/bar/bar.png,/maps/bar/club_tex.png,/maps/bar/hellsideman.png,/maps/bar/floor_lighted.png
+WORLD_SCALE=5
+
+
+START=200,-7495,0;
+

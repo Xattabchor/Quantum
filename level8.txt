@@ -1,0 +1,13 @@
+WORLD_MODEL=/maps/bridge/bridge_blender.3d
+WORLD_TEXTURE=/maps/bridge/bridge_light.png,/maps/bridge/bridge_shadows.png
+WORLD_SCALE=18
+
+SKYBOX_MODEL=/skies/skybox5.3d
+SKYBOX_TEXTURE=/skies/skybox4.jpg
+
+START=-2919,-44982,-793;
+FINISH=-26018, -1440, -35347;
+
+
+DIST=152255
+MUSIC=/music/wheels.mp3

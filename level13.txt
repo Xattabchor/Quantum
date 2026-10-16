@@ -1,0 +1,26 @@
+WORLD_MODEL=/maps/grasstown/grasstown.3d
+WORLD_TEXTURE=/maps/grasstown/bricks.png,/maps/grasstown/grasstown.png,/maps/grasstown/car2.png,/maps/grasstown/inside.png,/maps/grasstown/inside.png
+WORLD_SCALE=5
+MAP_ADDSZ=0,0,4000,0,3000
+LIGHTMAP=/maps/grasstown/lightmap_hq.vla
+
+#SKYBOX_COLOR=184,219,214
+
+SKYBOX_GRADIENT=/skies/gradient-grasstown.png,0.5,-25
+
+START=0, -35000, 0;
+
+BOX_ROOM_TESTING=1
+Чтобы на стыках комнат не мерцало
+
+DMODE=13
+LIGHT_X=-4097
+LIGHT_Y=-4095
+LIGHT_Z=4092
+
+SUN_LIGHT=228,186,80
+SKY_LIGHT=99,99,102
+AMBIENT_LIGHT=0
+AO_INTENSITY=128
+GI_RAYS=4
+GI_INTENSITY=255

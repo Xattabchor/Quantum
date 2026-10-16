@@ -1,0 +1,20 @@
+WORLD_MODEL=/maps/city_tesy/greattownexport2.3d
+WORLD_TEXTURE=/maps/city_tesy/citymoderd23.png
+WORLD_SCALE=20
+
+SKYBOX_2D=/skies/sky2.png,2,-91
+SKYBOX_REPEAT_X=8
+SKYBOX_REPEAT_Y=8
+
+START=-4200, -28460, 21840;
+
+DIST=25500
+MUSIC=/music/est2.mid
+
+
+[NPC]
+MODEL=/bots/journalist.3d
+TEX=/bots/journalist.png
+POS=-4200,-28560,23840
+SCALE=5.0
+

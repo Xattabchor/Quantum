@@ -1,0 +1,28 @@
+WORLD_MODEL=/frontrooms/weird house.3d
+#LIGHTMAP=/frontrooms/lightmap wh.vla
+
+SKYBOX_GRADIENT=/skies/gradient-grasstown.png,0.5
+SKYBOX_ALWAYS=1
+
+[WTEX_BEGIN]
+/frontrooms/i/birch_planks.png
+/frontrooms/i/redstone_lamp.png
+/frontrooms/i/redstone_lamp_on.png,0
+/frontrooms/i/spruce_planks.png
+/frontrooms/i/stripped_birch_log.png
+/frontrooms/i/white_stained_glass.png,std,0,1,0
+[WTEX_END]
+
+DMODE=13
+LIGHT_X=4097
+LIGHT_Y=-4095
+LIGHT_Z=1500
+
+SUN_LIGHT=228,186,80
+SKY_LIGHT=198,198,204
+SKY_LIGHT_CHEAP=1
+AMBIENT_LIGHT=0
+
+GI_RAYS=2
+GI_INTENSITY=255
+GI_LUM_FROM_TEXTURES=580

@@ -1,0 +1,81 @@
+WORLD_MODEL=/maps/town_1.3d
+WORLD_TEXTURE=/maps/town.qct,/maps/noise_tiles/32grass.png,/maps/noise_tiles/64asphalt.png
+WORLD_SCALE=5
+LIGHTMAP=/maps/town_1.vla
+
+#SKYBOX_GRADIENT=/skies/citysky.png,0.8,0
+#SKYBOX_MODEL=/skies/nagibator.3d
+#SKYBOX_TEXTURE=/skies/city.png
+#SKYBOX_PERS=0
+
+SKYBOX_2D=/skies/city.png, 0.25, -20, 20.5
+Текстура градиента
+Размер градиента (float, опционально, стд значение 1)
+Угол камеры, при котором отсекается градиент (int, опционально, стд значение -91 т.е. отсечение отключено)
+Смещение градиента вверх-вниз в градусах (float, опционально, стд значение 0, от -90 до 90)
+SKYBOX_REPEAT_X=4
+стд значение 2
+#SKYBOX_REPEAT_Y=1
+стд значение 1
+
+SKYBOX_COLOR=116,164,196
+SKYBOX_GROUND_COLOR=35,59,81
+
+DIST=40000
+
+DMODE=9
+DRAW_MODES=9,10,10
+
+LIGHT_X=0 
+LIGHT_Y=-128 
+LIGHT_Z=-4096 
+AMBIENT_LIGHT=26,30,34
+AO_DISTANCE=3000 
+AO_INTENSITY=256
+512 
+
+SUN_LIGHT_INTENSITY=255,124,122 
+SKY_LIGHT_INTENSITY=0
+260,300,340
+выглядит пластиково обычный ambient лучше на скрине
+
+
+
+
+START=0,0,5;
+
+
+[MESH]
+POS=7727,0,17204;
+LIFT_POS=7694,0,-30032;68593,0,-30032
+PRESET=CAR
+Машина справа от Братислава
+
+[MESH]
+POS=70593,0,-33030;
+LIFT_POS=4096,0,-33030;4128,0,14205
+PRESET=CAR
+Машина слева от Братислава
+
+[MESH]
+MODEL=/meshes/cars/car_down.3d
+POS=37276,0,-24032;
+LIFT_POS=37249,0,3398;70276,0,3398;70276,0,-28791;37276,0,-28791
+PRESET=CAR
+LIFT_LOOP=1
+Машина у клуба
+
+[MESH]
+MODEL=/meshes/cars/car_down.3d
+POS=72427,0,-28382;
+LIFT_POS=72427,0,38787
+PRESET=CAR
+Машина на юг
+
+[MESH]
+MODEL=/meshes/cars/car_down.3d
+POS=74286,0,6044;
+LIFT_POS=74286,0,-71274
+PRESET=CAR
+Машина на север
+

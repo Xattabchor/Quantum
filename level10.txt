@@ -1,0 +1,10 @@
+WORLD_MODEL=/maps/reflection_house/housefinal.3d
+WORLD_TEXTURE=/maps/reflection_house/housefinal.png,/maps/reflection_house/housefinal.png,/maps/reflection_house/housefinal_reflect.png,/maps/reflection_house/housefinal_reflect.png
+WORLD_SCALE=5
+
+DRAW_MODES=0,2,0,2
+FLOOR_OFFSETSZ=5000
+
+START=0,-2995,0
+
+MUSIC=/music/SkyTwn.mp3

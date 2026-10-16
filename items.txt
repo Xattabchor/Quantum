@@ -1,0 +1,67 @@
+[MEDKIT_ITEM]
+
+MEDKIT_ITEM - Это название предмета
+Можно и в языковом файле написать а можно и чисто название отсюда использовать
+
+ON_ACTIVATE=player:hp=100;player:take(MEDKIT_ITEM)
+По активации добавить здоровья и забрать аптечку
+
+ICON=/shop/icon_medicine_chest.png
+Иконка в инвентаре
+
+ON_PICKUP Скрипт после подбора предмета
+ON_THROW Скрипт после выкидывании предмета
+ON_GIVE Скрипт после выдачи предмета скриптом
+ON_TAKE Скрипт после забирания предмета скриптом
+ON_BUY Скрипт после покупки предмета
+
+CAN_THROW 0/(1) - Можно ли выкинуть предмет
+
+Добавлены команды в скриптовой движок
+drop_item(имя айтема, x, y, z, количество)
+Бросает предмет на пол
+если рядом есть мешок, то кладёт в него
+количество указывать не обязательно
+
+Таки образом можно к примеру добавлять выпадающий лут при смерти врагов через опцию ON_DEATH и подобный код:
+if random_1=1;drop_item(FLASHLIGHT,self:x,self:y,self:z,random_10)
+
+player:give(имя айтема, количество)
+player:take(имя айтема, количество)
+количество указывать не обязательно
+первая команда вызывает скрипт ON_GIVE, вторая ON_TAKE
+
+player:item_count_"название айтема"
+возвращает количество предметов в инвентаре
+название айтема записывается без кавычек
+
+Добавлены опции в setting
+PLAYER_HAS_INVENTORY (0/1)
+У игрока есть инвентарь
+INVENTORY_PROPORTIONAL (0/1)
+Пропорциональное растягивание спрайтов в инвентаре
+если отключить, то кол-во предметов будет снизу
+
+BAG_MESH Меш
+BAG_SCALE Масштаб
+BAG_TEXTURE Текстура
+BAG_ADDSZ Смещение по близости
+Если не указывать меш, то будет спрайт
+масштаб указывать не обязательно
+
+В языковые файлы добавлены строки 
+USE Использовать предмет
+ITEMS_COUNT Кол-во предмета
+THROW_ITEM Выбросить предмет
+ITEMS_PICKEDUP Предметов подобрано:
+HEALTH Здоровье
+EMPTY_INVENTORY - Когда инвентарь пуст
+
+[JUNK]
+ICON=/shop/screwdriver.png
+
+[FLASHLIGHT]
+ICON=/shop/flashlight.png
+ON_ACTIVATE=player:toggle_flashlight
+ON_THROW=if(player:item_count_FLASHLIGHT<1);!player:flashlight
+ON_TAKE=if(player:item_count_FLASHLIGHT<1);!player:flashlight

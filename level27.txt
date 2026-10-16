@@ -1,0 +1,48 @@
+WORLD_MODEL=/maps/village/village.3d
+WORLD_TEXTURE=/maps/village/village.png
+LIGHTMAP=/maps/village/lightmap.vla
+FLOOR_OFFSETSZ=-8000
+
+DIST=30000
+
+SKYBOX_2D=/skies/village_sky.png, 0.25, -20, 20.5
+SKYBOX_REPEAT_X=4
+
+SKYBOX_COLOR=137,167,215
+SKYBOX_GROUND_COLOR=75,85,62
+
+START=0,2,0
+DMODE=9
+LIGHT_X=0
+LIGHT_Y=-4096
+LIGHT_Z=4096
+
+[MESH]
+NAME=minusMedkit
+POS=1233,0,0
+MODEL=/meshes/computer.3d
+TEX=/meshes/computer.png
+MODEL_SCALE=3.5
+ANIMATION_SPEED=100
+ADDSZ=4000
+ANIMATION_TYPE=1
+COLLISION_SCALE_X=0.6
+COLLISION_SCALE_Y=1.0
+PHYSICS=0
+ACTIVABLE=1
+CLICKABLE=1
+NEEDTOPOINT=2
+REUSETIMER=6666
+
+[minusMedkit_ON_ACTIVATE]
+player:hp-=5
+
+if player:hp<=90 {
+weapon_1
+ammo_1=20//Стандартом в оружии 100 патронов
+}
+
+if (player:hp<=90 & ammo_1<10)
+player:hp=50
+
+exec /scripts/symOrNot.txt

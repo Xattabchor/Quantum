@@ -1,0 +1,16 @@
+WORLD_MODEL=/maps/enedtown/enedtown.3d
+WORLD_TEXTURE=/maps/enedtown/enedtown.png,/maps/enedtown/glass.png
+WORLD_SCALE=25
+DRAW_MODES=0,7
+
+SKYBOX_MODEL=/skies/skybox.3d
+SKYBOX_TEXTURE=/skies/sky3.png
+
+LIGHT_X=-4096
+LIGHT_Y=-4096
+LIGHT_Z=4096
+
+START=0,-29850,0;
+
+MUSIC=/music/SkyTwn.mp3
+

@@ -1,0 +1,20 @@
+WORLD_MODEL=/maps/city_quver/city_quver.3d
+WORLD_TEXTURE=/maps/city_quver/city_quver.png
+LIGHTMAP=/maps/city_quver/lightmap.vla
+WORLD_SCALE=20
+
+SKYBOX_COLOR=0,0,0
+
+BOX_ROOM_TESTING=1
+Чтобы на стыках комнат не мерцало
+
+START=9000, -29235, -15000;
+
+DMODE=9
+
+MUSIC=/music/SkyTwn.mp3
+
+LIGHT_X=-4096
+LIGHT_Y=-4096
+LIGHT_Z=4096
+

@@ -1,0 +1,8 @@
+WORLD_MODEL=/maps/test/test.3d
+WORLD_TEXTURE=/maps/multylang/gfy_rus.png
+WORLD_SCALE=5
+
+
+MUSIC=/music/SkyTwn.mp3
+
+

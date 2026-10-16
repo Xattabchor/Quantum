@@ -1,0 +1,15 @@
+WORLD_MODEL=/maps/map_home/map_home_1.3d
+WORLD_TEXTURE=/maps/map_home/room.png
+[WTEX_BEGIN]
+/maps/map_home/room.png
+/maps/map_home/black.png, 8, -2000
+/maps/map_home/room.png, std, -5000
+/maps/map_home/room2.png
+/maps/map_home/room2.png, std, -5000
+/maps/map_home/room.png, std, 3000
+/maps/map_home/stairs.png, std, 3000
+[WTEX_END]
+
+WORLD_SCALE=3.5
+
+START=0, 10, 0;
