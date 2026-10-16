@@ -2,6 +2,7 @@ package code.HUD;
 
 import code.HUD.Base.Selectable;
 import code.Rendering.PixelBlitter;
+import code.Rendering.DirectX7;
 import code.utils.IniFile;
 import code.utils.Main;
 import code.utils.canvas.MyCanvas;
@@ -25,7 +26,7 @@ public final class Setting extends Selectable {
 
         IniFile lang = Main.getGameText();
 		
-        String[] options = new String[20 + (hasLangSelect() ? 1 : 0)];
+        String[] options = new String[21 + (hasLangSelect() ? 1 : 0)];
         boolean[] center = new boolean[options.length];
         set(Main.getFont(), options, null, lang.get("BACK"), center);
         setItems();
@@ -136,6 +137,11 @@ public final class Setting extends Selectable {
         ms[i] = false;
         i++;
         var2[i] = lang.get("DEBUG") + ":" + (DeveloperMenu.debugMode ? lang.get("ON") : lang.get("OFF"));
+        ms[i] = false;
+        i++;
+        String rendererLabel = lang.get("RENDERER");
+        if(rendererLabel == null) rendererLabel = "Renderer";
+        var2[i] = rendererLabel + ": " + (Main.renderer == DirectX7.M3G ? "M3G (experimental)" : "Software");
         ms[i] = false;
         i++;
     }
@@ -272,6 +278,7 @@ public final class Setting extends Selectable {
             if(menu instanceof PauseScreen) ((PauseScreen) menu).reloadText();
 		}
         id++;
+        if(var1 == id) Main.renderer = Main.renderer == DirectX7.M3G ? DirectX7.SOFTWARE : DirectX7.M3G;
         this.setItems();
         this.repaint();
     }
@@ -351,6 +358,7 @@ public final class Setting extends Selectable {
             if(menu instanceof PauseScreen) ((PauseScreen) menu).reloadText();
         }
         id++;
+        if(var1 == id) Main.renderer = Main.renderer == DirectX7.M3G ? DirectX7.SOFTWARE : DirectX7.M3G;
         this.setItems();
         this.repaint();
     }

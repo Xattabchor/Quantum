@@ -338,6 +338,7 @@ public final class GameScreen extends MyCanvas {
         boolean playerDied = player.isDead();
         int playerHeight = player.getEyesHeight();
 
+        g3d.setRenderer(Main.renderer);
         Matrix playerMat = player.getCharacter().getTransform();
         int renderFrom;
         player.setCamera(g3d);

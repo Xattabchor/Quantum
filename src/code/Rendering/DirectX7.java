@@ -7,6 +7,13 @@ import javax.microedition.lcdui.Graphics;
 
 public final class DirectX7 {
 
+   public static final int SOFTWARE = 0, M3G = 1;
+   private int rendererMode = SOFTWARE;
+   private SceneRenderer sceneRenderer;
+   private boolean rendererFailed, nativePass;
+   private int[] frameBackup;
+   private String rendererError;
+
    public int width, height;
    public int[] display;
    public boolean flushAlpha = false;
@@ -45,6 +52,9 @@ lx=ly=lz=0;
 }
    
 public void resize(int width, int height) {
+releaseRenderer();
+rendererFailed = false;
+rendererError = null;
 this.width = width;
 this.height = height;
 
@@ -65,6 +75,7 @@ fovY=fov;
 fovX=fov*width/height;
 }
    public final void destroy() {
+releaseRenderer();
 
 DirectX7.fDist = 1;
 DirectX7.drDist = 30000000;
@@ -132,37 +143,103 @@ this.buffer.resetTex();
     }
 
 
+   /** Changing the requested mode also permits a fresh attempt after a failure. */
+   public void setRenderer(int mode) {
+       if(mode != SOFTWARE && mode != M3G) throw new IllegalArgumentException("renderer");
+       if(mode == rendererMode) return;
+       releaseRenderer();
+       rendererMode = mode;
+       rendererFailed = false;
+       rendererError = null;
+   }
+
+   public int getRenderer() { return rendererMode; }
+   public String getRendererError() { return rendererError; }
+   public boolean isM3GActive() { return sceneRenderer != null && !rendererFailed; }
+
+   /** Also call after modifying a texture's public pixel array in place. */
+   public void releaseRenderer() {
+       nativePass = false;
+       if(sceneRenderer != null) {
+           try { sceneRenderer.dispose(); }
+           catch(RuntimeException ex) { }
+           catch(NoClassDefFoundError ex) { }
+       }
+       sceneRenderer = null;
+       frameBackup = null;
+   }
+
+   private void failRenderer(String message) {
+       releaseRenderer();
+       rendererFailed = true;
+       rendererError = message;
+       System.out.println("M3G disabled: " + message);
+   }
+
+   /** Shared dispatch, including the polygons of animated MeshImage objects. */
+   public void drawRenderObject(RenderObject object, Texture texture, boolean fast) {
+       if(nativePass) {
+           if(sceneRenderer.draw(this, object, texture, fast)) return;
+           // CPU materials/sprites must see all previously rendered M3G pixels.
+           sceneRenderer.finish(this);
+       }
+       if(fast) object.renderFast(this, texture);
+       else object.render(this, texture);
+   }
+
+   private void drawBuffer() {
+       TMPElement[] elements = buffer.getBuffer();
+       for(int i = buffer.getSize() - 1; i >= 0; i--) {
+           drawRenderObject(elements[i].obj, elements[i].tex, false);
+       }
+   }
+
    public final void render() {
        lx = camera.m03;
        ly = camera.m13;
        lz = camera.m23;
-        buffer.sort(0,buffer.getSize()-1);
-        if(DeveloperMenu.renderPolygonsOverwrite) clearDisplay(0);
-        TMPElement[] buffer2 = buffer.getBuffer();
-
-        int i = buffer.getSize()-1;
-        
-        for(; i>=5; i-=5) {
-            TMPElement element = buffer2[i];
-            element.obj.render(this, element.tex);
-            element = buffer2[i-1];
-            element.obj.render(this, element.tex);
-            element = buffer2[i-2];
-            element.obj.render(this, element.tex);
-            element = buffer2[i-3];
-            element.obj.render(this, element.tex);
-            element = buffer2[i-4];
-            element.obj.render(this, element.tex);
-        }
-        
-        for(; i>=0; i--) {
-            TMPElement element = buffer2[i];
-            element.obj.render(this, element.tex);
-        }
-        
-        buffer.reset();
+       buffer.sort(0, buffer.getSize() - 1);
+       if(DeveloperMenu.renderPolygonsOverwrite) clearDisplay(0);
+       // Mutable LCDUI Images do not preserve framebuffer alpha. Keep these
+       // paths entirely on the original rasterizer rather than change semantics.
+       boolean useM3G = rendererMode == M3G && !rendererFailed && !flushAlpha
+               && !DeveloperMenu.renderPolygonsOverwrite && buffer.getSize() > 0;
+       try {
+           if(useM3G) {
+               boolean saved = false;
+               try {
+                   if(sceneRenderer == null) sceneRenderer = (SceneRenderer)
+                           Class.forName("code.Rendering.M3GSceneRenderer").newInstance();
+                   if(frameBackup == null || frameBackup.length != display.length)
+                       frameBackup = new int[display.length];
+                   System.arraycopy(display, 0, frameBackup, 0, display.length);
+                   saved = true;
+                   nativePass = true;
+                   drawBuffer();
+                   sceneRenderer.finish(this);
+                   return;
+               } catch(Exception ex) {
+                   // Includes missing optional class and unsupported native targets.
+                   rendererError = ex.toString();
+               } catch(NoClassDefFoundError ex) {
+                   rendererError = ex.toString();
+               } catch(OutOfMemoryError ex) {
+                   rendererError = "not enough memory for M3G";
+               } finally {
+                   nativePass = false;
+               }
+               // A failed batch can include both CPU and M3G objects. Restore
+               // the pre-pass pixels and replay the complete sorted queue once.
+               if(saved) System.arraycopy(frameBackup, 0, display, 0, display.length);
+               failRenderer(rendererError);
+           }
+           drawBuffer();
+       } finally {
+           nativePass = false;
+           buffer.reset();
+       }
    }
-   
+
    public final void drawLine(int x1, int y1, int x2, int y2, int fat, int col) {
        int tmp;
        if(y1>y2) {tmp=y1; y1=y2; y2=tmp;tmp=x1; x1=x2; x2=tmp;}

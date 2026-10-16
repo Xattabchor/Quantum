@@ -10,6 +10,7 @@ import code.Gameplay.Shop;
 import code.HUD.Base.Font;
 import code.AI.Player;
 import code.Rendering.Texture;
+import code.Rendering.DirectX7;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -81,6 +82,7 @@ public final class Main extends MIDlet {
     public static boolean hidesight;
     public static int fogQ = 2; //0-off 1 - lq 2 - hq
     public static int pixelsQ = 2; //0-4xmax 1 - 2xmax 2 - 1xmax
+    public static int renderer = DirectX7.SOFTWARE;
     public static int persQ = 2;
     public static int availableLevel = 1; // номер доступного уровня
     public static boolean forceLQFog = false;
@@ -241,6 +243,13 @@ public final class Main extends MIDlet {
         } catch (Exception exc) {
             defaultSettings();
         }
+
+        // Keep the original settings/save record layout byte-for-byte compatible.
+        renderer = "M3G".equals(settings.getNoLang("RENDERER")) ? DirectX7.M3G : DirectX7.SOFTWARE;
+        byte[] rendererSetting = RmsUtils.openStore("Quantum.Renderer");
+        if(rendererSetting != null && rendererSetting.length == 1
+                && (rendererSetting[0] == DirectX7.SOFTWARE || rendererSetting[0] == DirectX7.M3G))
+            renderer = rendererSetting[0];
 
         tmp = settings.getNoLang("OPEN_LEVELS");
         if(tmp != null) {
@@ -424,6 +433,8 @@ public final class Main extends MIDlet {
     }
 
     public final void saveSettingToStore() {
+        RmsUtils.removeStore("Quantum.Renderer");
+        RmsUtils.saveStore("Quantum.Renderer", new byte[]{(byte)renderer});
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream dos = new DataOutputStream(baos);
