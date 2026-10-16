@@ -33,6 +33,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final Vector textures = new Vector();
     private Image surface;
     private M3GSkyRenderer skyRenderer;
+    private M3GScreenLines screenLines;
     private boolean bound;
     private int cachedPixels;
     private final int maxTexture;
@@ -126,12 +127,17 @@ public final class M3GSceneRenderer implements SceneRenderer {
             bound = false;
             surface = null;
             skyRenderer = null;
+            screenLines = null;
             textures.removeAllElements();
             cachedPixels = 0;
         }
     }
 
     public boolean draw(DirectX7 g, RenderObject object, Texture texture, boolean fast) {
+        if(object instanceof ScreenLines) {
+            if(screenLines == null) screenLines = new M3GScreenLines(this,graphics);
+            return screenLines.draw(g,(ScreenLines)object);
+        }
         if(object instanceof SkyMesh) {
             if(skyRenderer == null) skyRenderer = new M3GSkyRenderer(this, graphics);
             return skyRenderer.draw(g, (SkyMesh)object);

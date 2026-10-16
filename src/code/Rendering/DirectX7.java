@@ -249,6 +249,40 @@ this.buffer.resetTex();
        }
    }
 
+   public boolean canRenderM3G() {
+       return rendererMode == M3G && !rendererFailed && !flushAlpha
+               && !DeveloperMenu.renderPolygonsOverwrite;
+   }
+
+   /** Post-effect overlay before LCDUI flush. False means use original LCDUI
+    * weather; this method never consumes/replays the scene's object queue. */
+   public boolean renderScreenLines(ScreenLines lines) {
+       if(!canRenderM3G() || nativePass) return false;
+       if(lines.count == 0) return true;
+       boolean saved = false;
+       try {
+           if(sceneRenderer == null) sceneRenderer = (SceneRenderer)
+                   Class.forName("code.Rendering.M3GSceneRenderer").newInstance();
+           if(frameBackup == null || frameBackup.length != display.length)
+               frameBackup = new int[display.length];
+           System.arraycopy(display,0,frameBackup,0,display.length);
+           saved = true;
+           boolean drawn = sceneRenderer.draw(this,lines,null,false);
+           sceneRenderer.finish(this);
+           if(!drawn) System.arraycopy(frameBackup,0,display,0,display.length);
+           return drawn;
+       } catch(Exception ex) {
+           rendererError = ex.toString();
+       } catch(NoClassDefFoundError ex) {
+           rendererError = ex.toString();
+       } catch(OutOfMemoryError ex) {
+           rendererError = "not enough memory for M3G effects";
+       }
+       if(saved) System.arraycopy(frameBackup,0,display,0,display.length);
+       failRenderer(rendererError);
+       return false;
+   }
+
    public final void drawLine(int x1, int y1, int x2, int y2, int fat, int col) {
        int tmp;
        if(y1>y2) {tmp=y1; y1=y2; y2=tmp;tmp=x1; x1=x2; x2=tmp;}

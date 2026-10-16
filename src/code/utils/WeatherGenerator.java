@@ -6,11 +6,13 @@ package code.utils;
  */
 import code.AI.Player;
 import code.Rendering.DirectX7;
+import code.Rendering.ScreenLines;
 import java.util.Random;
 import javax.microedition.lcdui.Graphics;
 
 public class WeatherGenerator {
     
+  private ScreenLines nativeParticles;
   public byte generate; 
 /*
  * 0 - Nothing 
@@ -294,6 +296,33 @@ float yy=y*1.3f*3*frameTime/80/50;
       if(lightingTwice) nextLighting = lastLighting + 200+r.nextInt(175)-(oldLightingTwice?75:0);
   }
   
+  /** Weather remains after postprocessing, before LCDUI flush/HUD. Coordinates
+   * are framebuffer-local: the letterbox screenY offset is applied only by flush. */
+  public boolean paintM3G(DirectX7 g) {
+      if(!g.canRenderM3G() || code.HUD.DeveloperMenu.drawPortals) return false;
+      try {
+          if(nativeParticles == null) nativeParticles = new ScreenLines();
+          nativeParticles.clear();
+          boolean light = lighting && System.currentTimeMillis()-lastLighting<135;
+          for(int i=0;i<coords.length/2;i++) {
+              int type=info[i*2],depth=info[i*2+1];
+              if(type != 1 && type != 2) continue;
+              int base=type==1?rainSize:snowSize;
+              int size=(base*(100-depth)+depth)/100;
+              if(depth<0) size=base*(100-depth)/100;
+              depth=Math.max(0,Math.min(100,depth));
+              int color=light?0xffffff:mixColor(type==1?rainColorNear:snowColorNear,type==1?rainColorFar:snowColorFar,depth);
+              int x=(int)coords[i*2],y=(int)coords[i*2+1];
+              if(type==1) nativeParticles.line(x,y,x-size/4,y+size,1,color,false);
+              else if(size>1) nativeParticles.rect(x-size/2,y-size/2,size-1,size-1,color);
+              else nativeParticles.rect(x,y,1,1,color);
+          }
+          return g.renderScreenLines(nativeParticles);
+      } catch(OutOfMemoryError ex) {
+          return false; // Allocation before native submission: original LCDUI fallback.
+      }
+  }
+
   public void paint(Graphics g,int xx) {
       
       /*int light = 0;

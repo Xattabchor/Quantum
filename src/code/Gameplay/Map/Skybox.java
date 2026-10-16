@@ -8,6 +8,7 @@ import code.Rendering.DirectX7;
 import code.Rendering.Meshes.SkyMesh;
 import code.Rendering.Meshes.Mesh;
 import code.Rendering.Texture;
+import code.Rendering.ScreenLines;
 import code.utils.Asset;
 import javax.microedition.lcdui.Graphics;
 
@@ -18,6 +19,7 @@ public class Skybox {
     private Matrix matrix;
     private Mesh mesh;
     private SkyMesh nativeMesh;
+    private ScreenLines lightningLines;
     public MultyTexture texture;
 	
     private int color, groundColor;
@@ -100,6 +102,7 @@ public class Skybox {
         if (mesh != null) mesh.destroy();
         mesh = null;
         nativeMesh = null;
+        lightningLines = null;
 
         tex = null;
 
@@ -401,10 +404,19 @@ public class Skybox {
     }
     
     public void drawLighting(DirectX7 g3d) {
+        try { drawLighting(g3d,g3d.canRenderM3G()); }
+        catch(OutOfMemoryError ex) { drawLighting(g3d,false); }
+    }
+
+    private void drawLighting(DirectX7 g3d,boolean nativeLines) {
         MathUtils.randomCall = 0;
         
         if(MathUtils.preudoRandom(lastLighting,8)==0) return;
         
+        if(nativeLines) {
+            if(lightningLines == null) lightningLines = new ScreenLines();
+            lightningLines.clear();
+        }
         int horizonY = (int) (g3d.height/2 + rotateX*g3d.height/g3d.fovY );
         horizonY = (horizonY-g3d.centreY) *g3d.distY/(11 + g3d.distY) + g3d.centreY;
             
@@ -419,10 +431,10 @@ public class Skybox {
         int mx = bx + (MathUtils.preudoRandom(lastLighting,100) - 50)*deg20/100;
         int my = horizonY - ySize/3 + MathUtils.preudoRandom(lastLighting,100)*g3d.height*10/g3d.fovY/100;
         
-        g3d.drawLine(bx, by, mx, my, fat, 0xffffff);
+        lightningLine(g3d, nativeLines, bx, by, mx, my, fat, 0xffffff);
         if(MathUtils.preudoRandom(lastLighting,4)==0) {
             int rnd = (MathUtils.preudoRandom(lastLighting,100) - 50)*deg20/25;
-            g3d.drawLine(mx/2+bx/2, my/2+by/2, mx+rnd, horizonY, fat, 0xffffff); //Additional spark idk
+            lightningLine(g3d, nativeLines, mx/2+bx/2, my/2+by/2, mx+rnd, horizonY, fat, 0xffffff); //Additional spark idk
         }
         
         int sparksCount = 2 + MathUtils.preudoRandom(lastLighting,3); //Lightings count
@@ -432,12 +444,17 @@ public class Skybox {
             int rnd = (MathUtils.preudoRandom(lastLighting,100) - 50)*deg20/50; //Lighting direction
             if(MathUtils.preudoRandom(lastLighting,4)==0) { //Subdiv lighting
                 int rnd2 = (MathUtils.preudoRandom(lastLighting,100) - 50)*deg20/150; //Small lightings direction
-                g3d.drawLine(mx,my,mx+rnd/2,horizonY/2+my/2,fat2,0xfdfdfd);
+                lightningLine(g3d, nativeLines, mx,my,mx+rnd/2,horizonY/2+my/2,fat2,0xfdfdfd);
                 
-                g3d.drawLine(mx+rnd/2,horizonY/2+my/2,mx+rnd/2+rnd2/2,horizonY,fat2,0xfdfdfd);
-                g3d.drawLine(mx+rnd/2,horizonY/2+my/2,mx+rnd/2-rnd2/2,horizonY,fat2,0xfdfdfd);
-            } else g3d.drawLine(mx,my,mx+rnd,horizonY,fat2,0xfdfdfd); //One lighting
+                lightningLine(g3d, nativeLines, mx+rnd/2,horizonY/2+my/2,mx+rnd/2+rnd2/2,horizonY,fat2,0xfdfdfd);
+                lightningLine(g3d, nativeLines, mx+rnd/2,horizonY/2+my/2,mx+rnd/2-rnd2/2,horizonY,fat2,0xfdfdfd);
+            } else lightningLine(g3d, nativeLines, mx,my,mx+rnd,horizonY,fat2,0xfdfdfd); //One lighting
         }
-        
+        if(nativeLines && lightningLines.count > 0) g3d.addRenderObjectDT(lightningLines,null);
+    }
+
+    private void lightningLine(DirectX7 g,boolean nativeLines,int x1,int y1,int x2,int y2,int fat,int color) {
+        if(nativeLines) lightningLines.line(x1,y1,x2,y2,fat,color,true);
+        else g.drawLine(x1,y1,x2,y2,fat,color);
     }
 }

@@ -452,6 +452,7 @@ public final class GameScreen extends MyCanvas {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
         }
         
+        boolean nativeWeather = wg != null && wg.paintM3G(g3d);
         try {
             scene.flush(g, 0, screenY);
         } catch (Exception ext) {
@@ -462,7 +463,8 @@ public final class GameScreen extends MyCanvas {
 
         if(wg != null) {
             g.clipRect(0, screenY, g3d.getWidth(), g3d.getHeight());
-            wg.paint(g, screenY);
+            if(!nativeWeather) wg.paint(g, screenY);
+            else g.setColor(0xffffff);
             g.clipRect(0, 0, width, height);
             if(!redrawInfo) g.setClip(0, screenY, width, g3d.getHeight());
         }

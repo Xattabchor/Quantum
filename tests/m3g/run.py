@@ -21,6 +21,13 @@ assert "g3d.renderSoftware();" not in house
 skybox = (ROOT / "src/code/Gameplay/Map/Skybox.java").read_text()
 assert "g3d.addRenderObjectDT(nativeMesh, null);" in skybox
 
+# Weather is composited after image effects but before flush/HUD; the original
+# LCDUI paint remains the fallback and is skipped on native success.
+game = (ROOT / "src/code/Gameplay/GameScreen.java").read_text()
+assert game.index("wg.paintM3G(g3d)") > game.index("if(doubleBright)")
+assert game.index("wg.paintM3G(g3d)") < game.index("scene.flush(g, 0, screenY)")
+assert "if(!nativeWeather) wg.paint(g, screenY);" in game
+
 # Only the API subset under test. These sources never enter the MIDlet.
 STUBS = {
 "javax/microedition/media/Manager.java": """package javax.microedition.media;
@@ -40,6 +47,10 @@ public class Image {
 "javax/microedition/lcdui/Graphics.java": '''package javax.microedition.lcdui;
 public class Graphics {
  public Image image; Graphics(Image i){image=i;}
+ public int color,lineCalls,rectCalls,lastX,lastY,lastX2,lastY2;
+ public void setColor(int c){color=c;}
+ public void drawLine(int x,int y,int x2,int y2){lineCalls++;lastX=x;lastY=y;lastX2=x2;lastY2=y2;}
+ public void fillRect(int x,int y,int w,int h){rectCalls++;lastX=x;lastY=y;lastX2=x+w;lastY2=y+h;}
  public void drawRGB(int[] p,int o,int s,int x,int y,int w,int h,boolean a){
   for(int j=0;j<h;j++)System.arraycopy(p,o+j*s,image.pixels,(y+j)*image.w+x,w);
  }
@@ -85,9 +96,9 @@ public class VertexBuffer {public VertexArray colors,coords,positions;public flo
  public void setPositions(VertexArray a,float s,float[] b){positions=a;scale=s;}
 }''',
 "javax/microedition/m3g/TriangleStripArray.java": '''package javax.microedition.m3g;
-public class TriangleStripArray {public int[] indices;
+public class TriangleStripArray {public int[] indices,lengths;
  public TriangleStripArray(int start,int[] lengths){indices=new int[]{0,1,2};}
- public TriangleStripArray(int[] indices,int[] lengths){this.indices=indices;}
+ public TriangleStripArray(int[] indices,int[] lengths){this.indices=indices;this.lengths=lengths;}
 }''',
 "javax/microedition/m3g/Image2D.java": '''package javax.microedition.m3g;
 public class Image2D {public static final int RGBA=100; public byte[] pixels;
@@ -106,7 +117,7 @@ public class Graphics3D {
  public static Graphics target; public static Camera camera;
  public static class Draw {
   public int blend,function,fogColor,textureAlpha;public float near,far;public boolean fog;
-  public byte[] colors;public int[] indices; public short[] positions,coords;public float scale,uvScale;public float[] projection;
+  public byte[] colors;public int[] indices,lengths; public short[] positions,coords;public float scale,uvScale;public float[] projection;
  }
  public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
  public static Graphics3D getInstance(){return INSTANCE;}
@@ -122,7 +133,7 @@ public class Graphics3D {
   before=target.image.pixels[0];calls++;lastVertices=v;lastIndices=i;lastAppearance=a;
   byte[] p=a.tex.image.pixels;byte[] c=v.colors.bytes;
   Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex.function;
-  draw.colors=c.clone();draw.indices=i.indices.clone();draw.textureAlpha=p[3]&255;
+  draw.colors=c.clone();draw.indices=i.indices.clone();draw.lengths=i.lengths;draw.textureAlpha=p[3]&255;
   draw.positions=v.positions.shorts.clone();draw.coords=v.coords.shorts.clone();draw.scale=v.scale;draw.uvScale=v.uvScale;
   draw.projection=camera.projection.matrix.clone();
   draw.fog=a.fog!=null;
@@ -164,7 +175,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     sources += sorted(TEST.glob("*.java"))
     # Compile the current adapter against the doubles, not copies of its logic.
     sources += [ROOT / "src/code/Rendering" / name for name in
-                ("M3GSceneRenderer.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java")]
+                ("M3GSceneRenderer.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "M3GScreenLines.java", "ScreenLineGeometry.java")]
     if os.environ.get("ECJ_JAR"):
         compiler = [JAVA, "-jar", os.environ["ECJ_JAR"], "-8", "-proc:none", "-nowarn"]
     else:
@@ -176,6 +187,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GeometryTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.LinesTest"], check=True)
     # Remove the optional API for a real class-loading fallback test.
     shutil.rmtree(classes / "javax/microedition/m3g")
     no_m3g_api = temp / "api-without-m3g.jar"
