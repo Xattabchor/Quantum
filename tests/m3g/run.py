@@ -46,7 +46,7 @@ public class Camera {public void setGeneric(Transform t){
 }}''',
 "javax/microedition/m3g/CompositingMode.java": '''package javax.microedition.m3g;
 public class CompositingMode {
- public static final int ALPHA=64,REPLACE=68;
+ public static final int ALPHA=64,ALPHA_ADD=65,REPLACE=68;
  public boolean depth; public int blend; public float threshold;
  public void setDepthTestEnable(boolean b){depth=b;} public void setDepthWriteEnable(boolean b){}
  public void setBlending(int b){blend=b;} public void setAlphaThreshold(float f){threshold=f;}
@@ -55,9 +55,16 @@ public class CompositingMode {
 public class PolygonMode {public static final int CULL_NONE=162,SHADE_SMOOTH=165;
  public void setCulling(int n){} public void setShading(int n){} }''',
 "javax/microedition/m3g/Appearance.java": '''package javax.microedition.m3g;
-public class Appearance {public Texture2D tex;public CompositingMode comp;
+public class Appearance {public Texture2D tex;public CompositingMode comp;public Fog fog;
+ public void setFog(Fog f){fog=f;}
  public void setPolygonMode(PolygonMode p){} public void setCompositingMode(CompositingMode c){comp=c;}
  public void setTexture(int n,Texture2D t){tex=t;} }''',
+"javax/microedition/m3g/Fog.java": '''package javax.microedition.m3g;
+public class Fog {public static final int LINEAR=81;public int color;public float near,far;
+ public void setMode(int m){if(m!=LINEAR)throw new AssertionError("fog mode");}
+ public void setColor(int c){color=c;}
+ public void setLinear(float n,float f){if(f<=n)throw new IllegalArgumentException("fog range");near=n;far=f;}
+}''',
 "javax/microedition/m3g/VertexArray.java": '''package javax.microedition.m3g;
 public class VertexArray {public short[] shorts;public byte[] bytes;int components;
  public VertexArray(int count,int components,int size){this.components=components;}
@@ -65,10 +72,10 @@ public class VertexArray {public short[] shorts;public byte[] bytes;int componen
  public void set(int start,int count,byte[] p){bytes=new byte[count*components];System.arraycopy(p,0,bytes,0,bytes.length);}
 }''',
 "javax/microedition/m3g/VertexBuffer.java": '''package javax.microedition.m3g;
-public class VertexBuffer {public VertexArray colors,coords,positions;
+public class VertexBuffer {public VertexArray colors,coords,positions;public float scale;
  public void setColors(VertexArray a){colors=a;}
  public void setTexCoords(int n,VertexArray a,float s,float[] b){coords=a;}
- public void setPositions(VertexArray a,float s,float[] b){positions=a;}
+ public void setPositions(VertexArray a,float s,float[] b){positions=a;scale=s;}
 }''',
 "javax/microedition/m3g/TriangleStripArray.java": '''package javax.microedition.m3g;
 public class TriangleStripArray {public int[] indices;
@@ -79,9 +86,9 @@ public class TriangleStripArray {public int[] indices;
 public class Image2D {public static final int RGBA=100; public byte[] pixels;
  public Image2D(int f,int w,int h,byte[] p){pixels=p;Graphics3D.uploads++;} }''',
 "javax/microedition/m3g/Texture2D.java": '''package javax.microedition.m3g;
-public class Texture2D {public static final int FILTER_BASE_LEVEL=208,FILTER_NEAREST=210,WRAP_REPEAT=241,FUNC_MODULATE=227;
- public Image2D image;public Texture2D(Image2D i){image=i;}
- public void setFiltering(int a,int b){} public void setWrapping(int a,int b){} public void setBlending(int n){} }''',
+public class Texture2D {public static final int FILTER_BASE_LEVEL=208,FILTER_NEAREST=210,WRAP_REPEAT=241,FUNC_MODULATE=227,FUNC_ADD=224;
+ public Image2D image;public int function;public Texture2D(Image2D i){image=i;}
+ public void setFiltering(int a,int b){} public void setWrapping(int a,int b){} public void setBlending(int n){function=n;} }''',
 "javax/microedition/m3g/Graphics3D.java": '''package javax.microedition.m3g;
 import java.util.Hashtable;
 import javax.microedition.lcdui.Graphics;
@@ -90,6 +97,11 @@ public class Graphics3D {
  public static int calls,uploads,binds,releases,failAt,before;
  public static VertexBuffer lastVertices; public static TriangleStripArray lastIndices;public static Appearance lastAppearance;
  public static Graphics target;
+ public static class Draw {
+  public int blend,function,fogColor,textureAlpha;public float near,far;public boolean fog;
+  public byte[] colors;public int[] indices;
+ }
+ public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
  public static Graphics3D getInstance(){return INSTANCE;}
  public static Hashtable getProperties(){Hashtable p=new Hashtable();p.put("maxTextureDimension",Integer.valueOf(256));return p;}
  public void bindTarget(Object g,boolean depth,int hints){
@@ -101,8 +113,30 @@ public class Graphics3D {
   if(target==null || a.comp.depth)throw new AssertionError("target/depth");
   if(Boolean.getBoolean("m3g.oom"))throw new OutOfMemoryError("native memory");
   before=target.image.pixels[0];calls++;lastVertices=v;lastIndices=i;lastAppearance=a;
-  byte[] p=a.tex.image.pixels;
-  target.image.pixels[0]=0xff000000|((p[0]&255)<<16)|((p[1]&255)<<8)|(p[2]&255);
+  byte[] p=a.tex.image.pixels;byte[] c=v.colors.bytes;
+  Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex.function;
+  draw.colors=c.clone();draw.indices=i.indices.clone();draw.textureAlpha=p[3]&255;
+  draw.fog=a.fog!=null;
+  if(draw.fog){draw.fogColor=a.fog.color;draw.near=a.fog.near;draw.far=a.fog.far;}
+  history.add(draw);
+  // Sample only the first vertex/texel to test blending equations. This is NOT
+  // triangle rasterization or a visual substitute for a JSR-184 implementation.
+  int alpha=(p[3]&255)*(c[3]&255)/255;
+  if(alpha/255.0f>=a.comp.threshold){
+   int out=0xff000000;
+   for(int k=0;k<3;k++){
+    int src=a.tex.function==Texture2D.FUNC_ADD?Math.min(255,(p[k]&255)+(c[k]&255)):(p[k]&255)*(c[k]&255)/255;
+    if(draw.fog){float z=-v.positions.shorts[2]*v.scale;
+     float f=Math.max(0,Math.min(1,(z-draw.near)/(draw.far-draw.near)));
+     src=Math.round(src*(1-f)+((draw.fogColor>>(16-k*8))&255)*f);
+    }
+    int dst=(before>>(16-k*8))&255;
+    int value=a.comp.blend==CompositingMode.ALPHA_ADD?Math.min(255,dst+src*alpha/255)
+      :a.comp.blend==CompositingMode.ALPHA?(src*alpha+dst*(255-alpha))/255:src;
+    out|=value<<(16-k*8);
+   }
+   target.image.pixels[0]=out;
+  }
   if(calls==failAt)throw new IllegalStateException("native render failure");
  }
 }'''
@@ -130,6 +164,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                               "-d", str(classes)] + list(map(str, sources)), check=True)
     classpath = os.pathsep.join(map(str, (classes, APP, API)))
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
     # Remove the optional API for a real class-loading fallback test.
     shutil.rmtree(classes / "javax/microedition/m3g")
     no_m3g_api = temp / "api-without-m3g.jar"

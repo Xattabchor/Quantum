@@ -1,6 +1,8 @@
 package code.Rendering;
 
 import code.Rendering.Meshes.*;
+import code.Gameplay.Map.LightMapper;
+import code.Math.MathUtils;
 import code.utils.Main;
 import java.util.Hashtable;
 import java.util.Vector;
@@ -13,16 +15,19 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final javax.microedition.m3g.Camera camera = new javax.microedition.m3g.Camera();
     private final Appearance appearance = new Appearance();
     private final CompositingMode composite = new CompositingMode();
+    private final Fog fog = new Fog();
     private final Vertex[] vertices = new Vertex[4];
     private final int[] uv = new int[8];
     private final short[] positions = new short[12], coords = new short[8];
-    private final byte[] colors = new byte[12];
+    private final byte[] colors = new byte[16];
     private final float[] work = new float[12];
     private final VertexBuffer[] buffers = new VertexBuffer[2];
     private final VertexArray[] posArrays = new VertexArray[2];
     private final VertexArray[] uvArrays = new VertexArray[2];
     private final VertexArray[] colorArrays = new VertexArray[2];
     private final TriangleStripArray[] indices = new TriangleStripArray[2];
+    private final TriangleStripArray[] quadTriangles = new TriangleStripArray[2];
+    private static final int OPAQUE_TEXTURE = 0, ALPHA_TEXTURE = 1, FOG_MASK = 2;
     private final Vector textures = new Vector();
     private Image surface;
     private boolean bound;
@@ -34,7 +39,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         RawImage image;
         int[] pixels;
         int width, height;
-        boolean alpha;
+        int kind;
         Texture2D texture;
     }
 
@@ -55,13 +60,16 @@ public final class M3GSceneRenderer implements SceneRenderer {
             buffers[i] = new VertexBuffer();
             posArrays[i] = new VertexArray(count, 3, 2);
             uvArrays[i] = new VertexArray(count, 2, 2);
-            colorArrays[i] = new VertexArray(count, 3, 1);
+            colorArrays[i] = new VertexArray(count, 4, 1);
             buffers[i].setColors(colorArrays[i]);
             buffers[i].setTexCoords(0, uvArrays[i], 1.0f / 256, null);
         }
         indices[0] = new TriangleStripArray(0, new int[]{3});
         // Same diagonal as Polygon4V.render/renderFast: ABD and BCD.
         indices[1] = new TriangleStripArray(new int[]{0, 1, 3, 1, 2, 3}, new int[]{3, 3});
+        quadTriangles[0] = new TriangleStripArray(new int[]{0, 1, 3}, new int[]{3});
+        quadTriangles[1] = new TriangleStripArray(new int[]{1, 2, 3}, new int[]{3});
+        fog.setMode(Fog.LINEAR);
     }
 
     private void bind(DirectX7 g) {
@@ -106,8 +114,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
     public boolean draw(DirectX7 g, RenderObject object, Texture texture, boolean fast) {
         if(texture == null) return false;
         int mode = texture.drawmode;
-        // Do not silently approximate glass, water, fog, additive/dither modes.
-        if(mode != 0 && mode != 4 && mode != 9) return false;
+        // Legacy fog modes are handled below; glass, water and dithering stay CPU.
+        if(mode != 0 && mode != 1 && mode != 3 && mode != 4 && mode != 6 && mode != 9) return false;
+        // The original paths disagree on these degenerate distance values.
+        // Preserve their behavior instead of passing invalid ranges to M3G Fog.
+        if((mode == 3 || mode == 6) && Main.fogQ > 0 && DirectX7.fDist <= 1) return false;
         Class type = object.getClass();
         if(type != Polygon3V.class && type != Polygon4V.class
                 && type != LightedPolygon3V.class && type != LightedPolygon4V.class
@@ -146,27 +157,154 @@ public final class M3GSceneRenderer implements SceneRenderer {
             coords[i * 2] = (short)u;
             coords[i * 2 + 1] = (short)v;
         }
-        setColors(g, object, count, mode == 9 && Main.fogQ > 0,
-                fast || (Main.persQ == 0 && !Main.mipMapping));
-        // Cache eviction/texture uploads can be illegal while a target is bound
-        // on some implementations. Finish before a cache miss, not every polygon.
-        Texture2D nativeTexture = findTexture(raw, mode == 4 && raw.alphaMixing);
-        if(nativeTexture == null) {
-            finish(g);
-            nativeTexture = createTexture(raw, mode == 4 && raw.alphaMixing);
-        }
+        boolean highQuality = Main.fogQ == 2 && !Main.forceLQFog;
+        // Affine mode 6 historically ignores forceLQFog, unlike its perspective path.
+        if(mode == 6 && !perspective) highQuality = Main.fogQ == 2;
+        float fogFar = 1.0f + (float)DirectX7.fDist / g.distY;
+        boolean nativeFog = (mode == 3 || mode == 6) && Main.fogQ > 0 && highQuality
+                && perspective && fogFar > 1.0f
+                && (mode != 6 || !LightMapper.cameraVectorLight);
+        int kind = mode == 4 && raw.alphaMixing ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
+        // Cache eviction/uploads are done outside a bound target. A white alpha
+        // mask is needed only for the colored fog's legacy two-pass variant.
+        Texture2D nativeTexture = texture(g, raw, kind);
+        Texture2D mask = mode == 3 && Main.fogQ > 0 && !nativeFog ? texture(g, raw, FOG_MASK) : null;
         int slot = count - 3;
         posArrays[slot].set(0, count, positions);
         uvArrays[slot].set(0, count, coords);
-        colorArrays[slot].set(0, count, colors);
         buffers[slot].setPositions(posArrays[slot], scale, null);
+        appearance.setFog(null);
         appearance.setTexture(0, nativeTexture);
-        boolean alpha = mode == 4 && raw.alphaMixing;
-        composite.setBlending(alpha ? CompositingMode.ALPHA : CompositingMode.REPLACE);
-        composite.setAlphaThreshold(alpha ? 0 : 0.5f);
-        bind(g);
-        graphics.render(buffers[slot], indices[slot], appearance, null);
+        nativeTexture.setBlending(Texture2D.FUNC_MODULATE);
+        composite.setBlending(kind == ALPHA_TEXTURE ? CompositingMode.ALPHA : CompositingMode.REPLACE);
+        composite.setAlphaThreshold(kind == ALPHA_TEXTURE ? 0 : 0.5f);
+
+        if(mode == 1 && Main.fogQ > 0) {
+            // Legacy ADD fog is saturation of texture + constant fog RGB, not
+            // conventional linear fog. Texture ADD performs that operation in M3G.
+            uniformColors(count, additiveFog(count), 255);
+            colorArrays[slot].set(0, count, colors);
+            nativeTexture.setBlending(Texture2D.FUNC_ADD);
+            render(g, slot, indices[slot]);
+        } else if((mode == 3 || mode == 6) && Main.fogQ > 0) {
+            if(nativeFog) {
+                uniformColors(count, 0xffffff, 255);
+                colorArrays[slot].set(0, count, colors);
+                // Packed eye distance = 1 - rz/distY, NOT the original -rz.
+                // Mapping both endpoints cancels the engine's projection offset.
+                fog.setLinear(1.0f, fogFar);
+                fog.setColor(mode == 3 ? DirectX7.fogc & 0xffffff : 0);
+                appearance.setFog(fog);
+                render(g, slot, indices[slot]);
+                appearance.setFog(null);
+            } else if(!highQuality && count == 4) {
+                // Flat LQ fog uses a separate farthest depth for ABD and BCD.
+                legacyFog(g, object, slot, count, quadTriangles[0], mode, perspective,
+                        false, Math.min(vertices[0].rz, Math.min(vertices[1].rz, vertices[3].rz)), nativeTexture, mask);
+                legacyFog(g, object, slot, count, quadTriangles[1], mode, perspective,
+                        false, Math.min(vertices[1].rz, Math.min(vertices[2].rz, vertices[3].rz)), nativeTexture, mask);
+            } else {
+                int farthest = vertices[0].rz;
+                for(int i = 1; i < count; i++) farthest = Math.min(farthest, vertices[i].rz);
+                legacyFog(g, object, slot, count, indices[slot], mode, perspective,
+                        highQuality, farthest, nativeTexture, mask);
+            }
+        } else {
+            setColors(g, object, count, mode == 9 && Main.fogQ > 0,
+                    fast || (Main.persQ == 0 && !Main.mipMapping));
+            colorArrays[slot].set(0, count, colors);
+            render(g, slot, indices[slot]);
+        }
         return true;
+    }
+
+    private void render(DirectX7 g, int slot, TriangleStripArray triangles) {
+        bind(g);
+        graphics.render(buffers[slot], triangles, appearance, null);
+    }
+
+    private Texture2D texture(DirectX7 g, RawImage raw, int kind) {
+        Texture2D result = findTexture(raw, kind);
+        if(result == null) {
+            finish(g);
+            result = createTexture(raw, kind);
+        }
+        return result;
+    }
+
+    private void uniformColors(int count, int rgb, int alpha) {
+        for(int i = 0; i < count; i++) {
+            colors[i * 4] = (byte)(rgb >> 16);
+            colors[i * 4 + 1] = (byte)(rgb >> 8);
+            colors[i * 4 + 2] = (byte)rgb;
+            colors[i * 4 + 3] = (byte)alpha;
+        }
+    }
+
+    private static int clamp(long value) { return (int)Math.max(0L, Math.min(255L, value)); }
+
+    private int additiveFog(int count) {
+        int farthest = vertices[0].rz;
+        for(int i = 1; i < count; i++) farthest = Math.min(farthest, vertices[i].rz);
+        int divisor = DirectX7.fDist / 255;
+        int amount = clamp(-(long)farthest / (divisor != 0 ? divisor : 255));
+        int shade = 255 - amount;
+        int r = Math.max(0, ((DirectX7.fogc >> 16) & 255) - shade);
+        int green = Math.max(0, ((DirectX7.fogc >> 8) & 255) - shade);
+        int b = Math.max(0, (DirectX7.fogc & 255) - shade);
+        return ((r << 16) | (green << 8) | b) & 0xfefefe;
+    }
+
+    private int visibility(DirectX7 g, RenderObject object, Vertex vertex,
+            int mode, boolean perspective, boolean highQuality, int farthest) {
+        int result;
+        if(highQuality) result = 255 - clamp(-(long)vertex.rz * 255 / DirectX7.fDist);
+        else {
+            int divisor = DirectX7.fDist / 255;
+            // When the legacy integer divisor vanishes its LQ fog amount stays 0.
+            result = 255 - (divisor == 0 ? 0 : clamp(-(long)farthest / divisor));
+        }
+        if(mode == 6 && highQuality && perspective && LightMapper.cameraVectorLight) {
+            result = result * MathUtils.calcLight(object.nx, object.ny, object.nz,
+                    vertex.x - g.camera.m03, vertex.y - g.camera.m13, vertex.z - g.camera.m23) / 255;
+        }
+        return clamp(result);
+    }
+
+    private void legacyFog(DirectX7 g, RenderObject object, int slot, int count,
+            TriangleStripArray triangles, int mode, boolean perspective, boolean highQuality,
+            int farthest, Texture2D nativeTexture, Texture2D mask) {
+        // First pass: texture * visibility. M3G interpolates and modulates; no
+        // texture pixels are recolored on the CPU, including in the affine path.
+        appearance.setTexture(0, nativeTexture);
+        composite.setBlending(CompositingMode.REPLACE);
+        composite.setAlphaThreshold(0.5f);
+        for(int i = 0; i < count; i++) {
+            int visible = visibility(g, object, vertices[i], mode, perspective, highQuality, farthest);
+            colors[i * 4] = colors[i * 4 + 1] = colors[i * 4 + 2] = (byte)visible;
+            colors[i * 4 + 3] = (byte)255;
+        }
+        colorArrays[slot].set(0, count, colors);
+        render(g, slot, triangles);
+        if(mode == 3) {
+            // Add C_fog * (1 - visibility) in M3G. The alpha mask prevents fog
+            // from filling the original texture's transparent holes. Using ALPHA
+            // here would attenuate the already darkened first pass a second time.
+            for(int i = 0; i < count; i++) {
+                colors[i * 4 + 3] = (byte)(255 - (colors[i * 4] & 255));
+                colors[i * 4] = (byte)(DirectX7.fogc >> 16);
+                colors[i * 4 + 1] = (byte)(DirectX7.fogc >> 8);
+                colors[i * 4 + 2] = (byte)DirectX7.fogc;
+            }
+            colorArrays[slot].set(0, count, colors);
+            appearance.setTexture(0, mask);
+            composite.setBlending(CompositingMode.ALPHA_ADD);
+            composite.setAlphaThreshold(0);
+            render(g, slot, triangles);
+            appearance.setTexture(0, nativeTexture);
+            composite.setBlending(CompositingMode.REPLACE);
+            composite.setAlphaThreshold(0.5f);
+        }
     }
 
     private void setColors(DirectX7 g, RenderObject object, int count, boolean lit, boolean fast) {
@@ -200,9 +338,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
                     r = rgb[0]; green = rgb[1]; b = rgb[2];
                 }
             }
-            colors[i * 3] = (byte)Math.max(0, Math.min(255, r));
-            colors[i * 3 + 1] = (byte)Math.max(0, Math.min(255, green));
-            colors[i * 3 + 2] = (byte)Math.max(0, Math.min(255, b));
+            colors[i * 4] = (byte)Math.max(0, Math.min(255, r));
+            colors[i * 4 + 1] = (byte)Math.max(0, Math.min(255, green));
+            colors[i * 4 + 2] = (byte)Math.max(0, Math.min(255, b));
+            colors[i * 4 + 3] = (byte)255;
         }
     }
 
@@ -232,16 +371,16 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     private static boolean powerOfTwo(int n) { return n > 0 && (n & (n - 1)) == 0; }
 
-    private Texture2D findTexture(RawImage image, boolean alpha) {
+    private Texture2D findTexture(RawImage image, int kind) {
         for(int i = 0; i < textures.size(); i++) {
             CachedTexture cached = (CachedTexture)textures.elementAt(i);
             if(cached.image == image && cached.pixels == image.img && cached.width == image.w
-                    && cached.height == image.h && cached.alpha == alpha) return cached.texture;
+                    && cached.height == image.h && cached.kind == kind) return cached.texture;
         }
         return null;
     }
 
-    private Texture2D createTexture(RawImage image, boolean alpha) {
+    private Texture2D createTexture(RawImage image, int kind) {
         int size = image.w * image.h;
         while(textures.size() > 0 && (textures.size() >= CACHE_ENTRIES || cachedPixels + size > CACHE_PIXELS)) {
             CachedTexture oldest = (CachedTexture)textures.elementAt(0);
@@ -251,14 +390,14 @@ public final class M3GSceneRenderer implements SceneRenderer {
         byte[] rgba = new byte[size * 4];
         for(int i = 0; i < size; i++) {
             int pixel = image.img[i];
-            rgba[i * 4] = (byte)(pixel >> 16);
-            rgba[i * 4 + 1] = (byte)(pixel >> 8);
-            rgba[i * 4 + 2] = (byte)pixel;
-            rgba[i * 4 + 3] = alpha ? (byte)(pixel >>> 24) : (byte)(pixel == 0 ? 0 : 255);
+            rgba[i * 4] = kind == FOG_MASK ? (byte)255 : (byte)(pixel >> 16);
+            rgba[i * 4 + 1] = kind == FOG_MASK ? (byte)255 : (byte)(pixel >> 8);
+            rgba[i * 4 + 2] = kind == FOG_MASK ? (byte)255 : (byte)pixel;
+            rgba[i * 4 + 3] = kind == ALPHA_TEXTURE ? (byte)(pixel >>> 24) : (byte)(pixel == 0 ? 0 : 255);
         }
         CachedTexture cached = new CachedTexture();
         cached.image = image; cached.pixels = image.img; cached.width = image.w; cached.height = image.h;
-        cached.alpha = alpha;
+        cached.kind = kind;
         cached.texture = new Texture2D(new Image2D(Image2D.RGBA, image.w, image.h, rgba));
         cached.texture.setFiltering(Texture2D.FILTER_BASE_LEVEL, Texture2D.FILTER_NEAREST);
         cached.texture.setWrapping(Texture2D.WRAP_REPEAT, Texture2D.WRAP_REPEAT);
