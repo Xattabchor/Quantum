@@ -26,6 +26,13 @@ assert "g3d.addRenderObjectDT(nativeMesh, null);" in skybox
 # Weather is composited after image effects but before flush/HUD; the original
 # LCDUI paint remains the fallback and is skipped on native success.
 game = (ROOT / "src/code/Gameplay/GameScreen.java").read_text()
+# BLOOM remains a level/settings key, but only the requested Software backend
+# runs it. Do not clear the flag: switching back must restore the level choice.
+assert "if(bloom && g3d.getRenderer()==DirectX7.SOFTWARE) fastbloomScr(g3d);" in game
+assert game.count("fastbloomScr(g3d);")==1
+loader = (ROOT / "src/code/Gameplay/LevelLoader.java").read_text()
+assert 'GameScreen.bloom = getBoolean("BLOOM", lvl, setting, false);' in loader
+
 assert game.index("wg.paintM3G(g3d)") > game.index("if(doubleBright)")
 assert game.index("wg.paintM3G(g3d)") < game.index("scene.flush(g, 0, screenY)")
 assert "wg.paintAfterScene(g, screenY, g3d.getRenderer(), nativeWeather);" in game

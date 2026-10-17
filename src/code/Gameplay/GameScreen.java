@@ -447,7 +447,7 @@ public final class GameScreen extends MyCanvas {
         try {
             if(playerDied) deathScr(g3d.getDisplay());
             if(player.isDamaged()) damageScr(g3d.getDisplay());
-            if(bloom) fastbloomScr(g3d);
+            if(bloom && g3d.getRenderer()==DirectX7.SOFTWARE) fastbloomScr(g3d);
             if(doubleBright) applySub(scene.getG3D().display);
         } catch (Exception ext) {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
