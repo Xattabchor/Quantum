@@ -339,7 +339,20 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
         compiler = [os.environ.get("JAVAC", "javac"), "-source", "8", "-target", "8"]
     subprocess.run(compiler + ["-classpath", os.pathsep.join(map(str, (APP, API))),
                               "-d", str(classes)] + list(map(str, sources)), check=True)
-    classpath = os.pathsep.join(map(str, (classes, APP, API)))
+    resource_jar = os.environ.get("QUANTUM_RESOURCE_JAR")
+    paths = [classes, APP, API]
+    if resource_jar:
+        resource_jar = Path(resource_jar).resolve()
+        with zipfile.ZipFile(resource_jar) as assets:
+            if any(n.lower().endswith(".class") for n in assets.namelist()):
+                raise ValueError("QUANTUM_RESOURCE_JAR must contain assets only; run scripts/game_resources.py")
+        # Assets take precedence even if the latest APP was built with a
+        # different game archive; the verified resource JAR contains no code.
+        paths.insert(1, resource_jar)
+    classpath = os.pathsep.join(map(str, paths))
+    if resource_jar:
+        subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
+                        "code.Rendering.GameResourcesTest", str(resource_jar)], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModeOptimizationAuditTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteTest"], check=True)

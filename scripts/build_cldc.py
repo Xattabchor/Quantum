@@ -16,6 +16,7 @@ from pathlib import Path
 import struct
 import subprocess
 import zipfile
+from game_resources import read_resources
 
 ROOT = Path(__file__).resolve().parents[1]
 API_NAMES = ("cldc11.jar", "midp21.jar", "jsr135.jar",
@@ -122,7 +123,10 @@ def main():
     parser.add_argument("--api-dir", type=Path, required=True)
     parser.add_argument("--proguard-jar", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, default=ROOT / "artifacts")
+    parser.add_argument("--resource-archive", type=Path,
+                        help="Optional user game ZIP/JAR; assets only, never its classes or manifest")
     args = parser.parse_args()
+    archive_resources = read_resources(args.resource_archive) if args.resource_archive else {}
     ecj, proguard = args.ecj_jar.resolve(), args.proguard_jar.resolve()
     apis = [(args.api_dir / name).resolve() for name in API_NAMES]
     for path in [ecj, proguard] + apis:
@@ -169,14 +173,18 @@ def main():
                     "MIDlet-1: Quantum,,code.utils.Main\r\n"
                     "MicroEdition-Configuration: CLDC-1.1\r\n"
                     "MicroEdition-Profile: MIDP-2.0\r\n\r\n")
-        resources = sorted(p for p in (ROOT / "res").rglob("*") if p.is_file()
-                           and p.name != "README.md")
+        resources = dict(archive_resources)
+        # Explicit repository resources override the optional archive. Neither
+        # source is edited, and archive executable classes never enter the JAR.
+        for path in sorted((ROOT / "res").rglob("*")):
+            if path.is_file() and path.name != "README.md":
+                resources[path.relative_to(ROOT / "res").as_posix()] = path.read_bytes()
         with zipfile.ZipFile(work / "Quantum-unverified.jar", "w", zipfile.ZIP_DEFLATED) as jar:
             jar.writestr("META-INF/MANIFEST.MF", manifest)
             for path in sorted(classes.rglob("*.class")):
                 jar.write(path, path.relative_to(classes).as_posix())
-            for path in resources:
-                jar.write(path, path.relative_to(ROOT / "res").as_posix())
+            for name, data in sorted(resources.items()):
+                jar.writestr(name, data)
 
     # Keep every class/method/name, especially the reflection-loaded M3G backend.
     # No -dontpreverify / -ignorewarnings: preverification failures are build failures.
@@ -195,6 +203,7 @@ def main():
                    "resource_files": len(resources), "source_files": len(sources),
                    "preverifier": "ProGuard -microedition (CLDC StackMap)",
                    "tools_sha256": {p.name: sha256(p) for p in [ecj, proguard] + apis},
+                   "resource_archive_sha256": sha256(args.resource_archive) if args.resource_archive else None,
                    "runtime_tested": False})
     (output / "build-report.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))
