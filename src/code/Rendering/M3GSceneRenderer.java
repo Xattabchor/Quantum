@@ -15,6 +15,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final javax.microedition.m3g.Camera camera = new javax.microedition.m3g.Camera();
     private final Appearance appearance = new Appearance();
     private final PolygonMode polygon = new PolygonMode();
+    private final PolygonMode screenPolygon = new PolygonMode();
+    private boolean screenMode;
     private boolean hardwarePerspective = Main.m3gPerspective;
     private final Vector polygonModes = new Vector();
     private final CompositingMode composite = new CompositingMode();
@@ -62,7 +64,13 @@ public final class M3GSceneRenderer implements SceneRenderer {
         Object limit = properties.get("maxTextureDimension");
         maxTexture = limit instanceof Integer ? ((Integer)limit).intValue() : 256;
         registerPolygonMode(polygon);
-        polygon.setCulling(PolygonMode.CULL_NONE);
+        // ProjectedGeometry flips screen Y: the original front faces become
+        // clockwise in M3G. Keep GPU backface rejection for all mesh polygons.
+        polygon.setCulling(PolygonMode.CULL_BACK);
+        polygon.setWinding(PolygonMode.WINDING_CW);
+        registerPolygonMode(screenPolygon);
+        screenPolygon.setCulling(PolygonMode.CULL_NONE);
+        screenPolygon.setShading(PolygonMode.SHADE_SMOOTH);
         polygon.setShading(PolygonMode.SHADE_SMOOTH);
         appearance.setPolygonMode(polygon);
         composite.setDepthTestEnable(false);
@@ -94,6 +102,13 @@ public final class M3GSceneRenderer implements SceneRenderer {
     void registerPolygonMode(PolygonMode mode) {
         mode.setPerspectiveCorrectionEnable(hardwarePerspective);
         polygonModes.addElement(mode);
+    }
+
+    private void setScreenMode(boolean screen) {
+        if(screenMode!=screen) {
+            appearance.setPolygonMode(screen?screenPolygon:polygon);
+            screenMode=screen;
+        }
     }
 
     void bind(DirectX7 g) { bind(g,true); }
@@ -162,7 +177,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             spriteRenderer = null;
             panoramaRenderer = null;
             flashBackground = null;
-            polygonModes.removeAllElements();polygonModes.addElement(polygon);
+            polygonModes.removeAllElements();polygonModes.addElement(polygon);polygonModes.addElement(screenPolygon);
             textures.removeAllElements();
             cachedPixels = 0;
         }
@@ -175,6 +190,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 ((PolygonMode)polygonModes.elementAt(i)).setPerspectiveCorrectionEnable(hardwarePerspective);
         }
         if(object instanceof SolidSky) {
+            setScreenMode(true);
             SolidSky sky=(SolidSky)object;
             sky.prepare(g);
             float scale=ProjectedGeometry.pack(sky.vertices,4,g.centreX,g.centreY,
@@ -237,6 +253,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 && type != LightedPolygon3V.class && type != LightedPolygon4V.class
                 && type != ColorLightedPolygon3V.class && type != ColorLightedPolygon4V.class)
             return false;
+        // Screen-space muzzle glow shares buffers/material state, not mesh culling.
+        setScreenMode(glow!=null);
         int count;
         if(object instanceof Polygon3V) {
             Polygon3V p = (Polygon3V)object;

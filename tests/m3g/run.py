@@ -92,9 +92,9 @@ public class CompositingMode {
  public void setBlending(int b){blend=b;} public void setAlphaThreshold(float f){threshold=f;}
 }''',
 "javax/microedition/m3g/PolygonMode.java": '''package javax.microedition.m3g;
-public class PolygonMode {public static final int CULL_NONE=162,SHADE_SMOOTH=165;
- public boolean perspective=true;public static int perspectiveCalls;
- public void setCulling(int n){} public void setPerspectiveCorrectionEnable(boolean b){perspective=b;perspectiveCalls++;} public void setShading(int n){} }''',
+public class PolygonMode {public static final int CULL_BACK=160,CULL_FRONT=161,CULL_NONE=162,SHADE_SMOOTH=165,WINDING_CCW=168,WINDING_CW=169;
+ public boolean perspective=true;public int cull=CULL_BACK,winding=WINDING_CCW;public static int perspectiveCalls;
+ public void setCulling(int n){cull=n;} public void setWinding(int n){winding=n;} public void setPerspectiveCorrectionEnable(boolean b){perspective=b;perspectiveCalls++;} public void setShading(int n){} }''',
 "javax/microedition/m3g/Appearance.java": '''package javax.microedition.m3g;
 public class Appearance {public Texture2D tex;public CompositingMode comp;public Fog fog;public PolygonMode polygon;
  public void setFog(Fog f){fog=f;}
@@ -140,7 +140,7 @@ public class Graphics3D {
  public static VertexBuffer lastVertices; public static TriangleStripArray lastIndices;public static Appearance lastAppearance;
  public static Graphics target; public static Camera camera;
  public static class Draw {
-  public int blend,function,fogColor,textureAlpha,filter,colorComponents;public boolean textured,perspective;public float near,far;public boolean fog;
+  public int blend,function,fogColor,textureAlpha,filter,colorComponents,cull,winding;public boolean textured,perspective;public float near,far;public boolean fog;
   public byte[] colors;public int[] indices,lengths; public short[] positions,coords;public float scale,uvScale;public float[] projection;
  }
  public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
@@ -168,6 +168,7 @@ public class Graphics3D {
   }
   Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex==null?Texture2D.FUNC_MODULATE:a.tex.function;draw.filter=a.tex==null?0:a.tex.filter;
   draw.colorComponents=v.colors.components;draw.textured=a.tex!=null;draw.perspective=a.polygon==null || a.polygon.perspective;
+  draw.cull=a.polygon==null?PolygonMode.CULL_BACK:a.polygon.cull;draw.winding=a.polygon==null?PolygonMode.WINDING_CCW:a.polygon.winding;
   draw.colors=c.clone();draw.indices=i.indices.clone();draw.lengths=i.lengths;draw.textureAlpha=p[3]&255;
   draw.positions=v.positions.shorts.clone();draw.coords=v.coords==null || v.coords.shorts==null?null:v.coords.shorts.clone();draw.scale=v.scale;draw.uvScale=v.uvScale;
   draw.projection=camera.projection.matrix.clone();
@@ -221,6 +222,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.PerspectiveToggleTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BackfaceTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GlassTest"], check=True)
