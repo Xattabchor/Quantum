@@ -121,7 +121,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     static int spriteDimension(int n) {
         if(n<=0 || n>16384) return 0;
-        int result=1;while(result<n) result*=2;return result;
+        // Keep POT assets unchanged; shrink NPOT copies instead of padding up.
+        int result=1;while(result<=n/2) result*=2;return result;
     }
 
     boolean supportsSpriteTexture(RawImage raw) {
@@ -584,10 +585,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
         byte[] rgba = new byte[size * 4];
         for(int i = 0; i < size; i++) {
-            // Sprite-only padding permits original non-power-of-two assets.
-            // Extend edge texels; UVs still cover only the original image.
-            int pixel = image.img[sprite?Math.min(i/width,image.h-1)*image.w
-                    +Math.min(i%width,image.w-1):i];
+            // Sprite-only nearest-neighbor reduction, done once per cache miss.
+            // Sample texel centers; color and fog masks use the identical source.
+            // POT images pass through unchanged. Never mutate the original asset.
+            int pixel = image.img[sprite?((2*(i/width)+1)*image.h/(2*height))*image.w
+                    +(2*(i%width)+1)*image.w/(2*width):i];
             // Legacy additive source discards channel low bits. Hardware cannot
             // mask destination low bits; native ADD may differ by one per channel.
             int rgb = kind == ADD_TEXTURE || kind == SPRITE_ADD ? pixel & 0xfefefe : pixel;

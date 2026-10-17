@@ -45,16 +45,14 @@ final class M3GSpriteRenderer {
         if(precision<1) return false;
         // Clip geometry AND UVs before packing, avoiding overflow for huge near
         // billboards while keeping texture scale and mirroring unchanged.
-        float maxU=(float)raw.w/M3GSceneRenderer.spriteDimension(raw.w);
-        float maxV=(float)raw.h/M3GSceneRenderer.spriteDimension(raw.h);
         float u1=((float)x1-left)/((float)right-left),u2=((float)x2-left)/((float)right-left);
         float v1=((float)y1-top)/((float)bottom-top),v2=((float)y2-top)/((float)bottom-top);
         if(sprite.mirX) {u1=1-u1;u2=1-u2;}
         if(sprite.mirY) {v1=1-v1;v2=1-v2;}
-        vertex(0,x1,y1,u1*maxU,v1*maxV,g,precision);
-        vertex(1,x2,y1,u2*maxU,v1*maxV,g,precision);
-        vertex(2,x2,y2,u2*maxU,v2*maxV,g,precision);
-        vertex(3,x1,y2,u1*maxU,v2*maxV,g,precision);
+        vertex(0,x1,y1,u1,v1,g,precision);
+        vertex(1,x2,y1,u2,v1,g,precision);
+        vertex(2,x2,y2,u2,v2,g,precision);
+        vertex(3,x1,y2,u1,v2,g,precision);
         boolean alpha=sprite.mode==3 && raw.alphaMixing;
         int kind=sprite.mode==1?M3GSceneRenderer.SPRITE_ADD:
                 alpha?M3GSceneRenderer.SPRITE_ALPHA:M3GSceneRenderer.SPRITE_CUTOUT;

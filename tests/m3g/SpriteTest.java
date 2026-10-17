@@ -68,15 +68,15 @@ public final class SpriteTest {
         int[] pixels=new int[15];for(int i=0;i<15;i++) pixels[i]=0xff000000|i*0x010203;
         RawImage raw=new RawImage(pixels,3,5);int[] untouched=pixels.clone();t=new Texture(raw,true,null);s=sprite(t,0);g=M3GTest.renderer();submit(g,s);
         Texture2D image=Graphics3D.lastAppearance.tex;
-        check(image.image.width==4 && image.image.height==8,"NPOT sprite wasn't padded to POT");
-        check(image.wrapS==Texture2D.WRAP_CLAMP && image.wrapT==Texture2D.WRAP_CLAMP,"sprite padding repeats");
-        check(last().coords[2]==3072 && last().coords[5]==2560,"NPOT UVs cover padding");
-        for(int y=0;y<8;y++) for(int x=0;x<4;x++) {
-            int pixel=pixels[Math.min(y,4)*3+Math.min(x,2)],i=(x+y*4)*4;
-            check((image.image.pixels[i]&255)==((pixel>>16)&255) && (image.image.pixels[i+2]&255)==(pixel&255),"NPOT edge padding/source stride");
+        check(image.image.width==2 && image.image.height==4,"NPOT sprite wasn't reduced to lower POT");
+        check(image.wrapS==Texture2D.WRAP_CLAMP && image.wrapT==Texture2D.WRAP_CLAMP,"sprite resampling repeats");
+        check(last().coords[2]==4096 && last().coords[5]==4096,"reduced sprite UVs do not cover full image");
+        for(int y=0;y<4;y++) for(int x=0;x<2;x++) {
+            int pixel=pixels[((2*y+1)*5/8)*3+(2*x+1)*3/4],i=(x+y*2)*4;
+            check((image.image.pixels[i]&255)==((pixel>>16)&255) && (image.image.pixels[i+2]&255)==(pixel&255),"NPOT center sampling/source stride");
         }
         check(Arrays.equals(pixels,untouched) && raw.w==3 && raw.h==5,"native sprite changed original asset");
-        Object backend=field(g,"sceneRenderer");check(((Integer)field(backend,"cachedPixels")).intValue()==32,"cache charges raw instead of padded dimensions");
+        Object backend=field(g,"sceneRenderer");check(((Integer)field(backend,"cachedPixels")).intValue()==8,"cache must charge reduced dimensions");
         uploads=Graphics3D.uploads;for(int i=0;i<4;i++) submit(g,s);check(Graphics3D.uploads==uploads,"sprite texture uploaded every frame");
         raw.img=raw.img.clone();submit(g,s);check(Graphics3D.uploads==uploads+1,"replaced pixels reused stale texture");
         s.textures=new Texture[]{t,M3GTest.texture(0xff00ff00)};s.anim_index=1;submit(g,s);check((g.display[0]&0xffffff)==0x00ff00,"sprite animation frame ignored");
@@ -84,7 +84,36 @@ public final class SpriteTest {
         RawImage base=new RawImage(new int[]{0xffff0000,0xffff0000,0xffff0000,0xffff0000},2,2);
         t.mip=new RawImage[]{base,new RawImage(new int[]{0xff0000ff},1,1)};submit(g,s);
         check((g.display[0]&0xffffff)==0xff0000 && t.rImg==raw,"sprite selected polygon mip or mutated rImg");g.destroy();
-        System.out.println("PASS NPOT padding+edge extension / original assets unchanged / padded cache accounting / upload reuse / pixel replacement / animation / base mip");
+        System.out.println("PASS NPOT nearest reduction / original assets unchanged / reduced cache accounting / upload reuse / pixel replacement / animation / base mip");
+
+        for(int[] dims:new int[][]{{1,1,1,1},{2,2,2,2},{32,64,32,64},{64,64,64,64},
+                {128,128,128,128},{70,90,64,64},{127,65,64,64},{256,256,256,256},{257,1,256,1}}) {
+            int[] data=new int[dims[0]*dims[1]];Arrays.fill(data,0xffabcdef);
+            g=M3GTest.renderer();s=sprite(new Texture(new RawImage(data,dims[0],dims[1]),false,null),0);submit(g,s);
+            image=Graphics3D.lastAppearance.tex;
+            check(image.image.width==dims[2] && image.image.height==dims[3],"lower POT policy: "+dims[0]+"x"+dims[1]);
+            check(Math.abs(last().positions[6]*last().scale+g.centreX-32)<0.01
+                    && Math.abs(g.centreY-last().positions[7]*last().scale-32)<0.01,"resampling changed screen size");
+            g.destroy();
+        }
+        for(int mode:new int[]{0,1,3}) for(boolean fog:new boolean[]{false,true}) {
+            int[] data=new int[70*90];
+            for(int i=0;i<data.length;i++) data[i]=((i%3==0?0:i%3==1?128:255)<<24)|((i*7919)&0xffffff);
+            raw=new RawImage(data,70,90);untouched=data.clone();g=M3GTest.renderer();s=sprite(new Texture(raw,false,null),mode);s.fog=fog;submit(g,s);
+            image=Graphics3D.lastAppearance.tex;check(image.image.width==64 && image.image.height==64,"70x90 must become 64x64");
+            boolean mask=fog && mode!=1;
+            for(int y=0;y<64;y++) for(int x=0;x<64;x++) {
+                int src=data[((2*y+1)*90/128)*70+(2*x+1)*70/128],i=(y*64+x)*4;
+                int expectedAlpha=mode==1?255:mode==3?src>>>24:src==0?0:255;
+                int rgb=mask?0xffffff:mode==1?src&0xfefefe:src;
+                check((image.image.pixels[i]&255)==((rgb>>16)&255) && (image.image.pixels[i+1]&255)==((rgb>>8)&255)
+                        && (image.image.pixels[i+2]&255)==(rgb&255) && (image.image.pixels[i+3]&255)==expectedAlpha,
+                        "reduced cutout/ADD/alpha/fog mask mismatch");
+            }
+            check(Arrays.equals(data,untouched) && raw.w==70 && raw.h==90,"reduction modified source image");
+            uploads=Graphics3D.uploads;submit(g,s);check(Graphics3D.uploads==uploads,"reduction repeated on cache hit");g.destroy();
+        }
+        System.out.println("PASS 70x90 -> 64x64 / POT assets unchanged / original screen size / cutout+ADD+alpha+fog sample alignment / cached reduction");
 
         // Warm the two material-specific cache entries, then interleave sprites
         // and polygons without a CPU barrier or an additional target transaction.
@@ -124,18 +153,18 @@ public final class SpriteTest {
             check(Arrays.equals(cpu.display,g.display) && Graphics3D.target==null,"sprite failure wasn't completely replayed "+failure);
             g.destroy();cpu.destroy();
         }
-        g=M3GTest.renderer();int[] big=new int[257];Arrays.fill(big,0xffabcdef);s=sprite(new Texture(new RawImage(big,257,1),false,null),0);
+        g=M3GTest.renderer();int[] big=new int[513];Arrays.fill(big,0xffabcdef);s=sprite(new Texture(new RawImage(big,513,1),false,null),0);
         calls=Graphics3D.calls;submit(g,s);check(Graphics3D.calls==calls && (g.display[0]&0xffffff)==0xabcdef,"oversize sprite CPU fallback");g.destroy();
-        // Source dimensions and padded area, rather than raw area, govern
-        // eviction. Five 255x255 images cannot fit the four-image pixel budget.
+        // Reduced dimensions, rather than raw area, govern eviction.
+        // Five 511x511 sources become five 256x256 uploads: only four fit.
         g=M3GTest.renderer();
         for(int i=0;i<5;i++) {
-            int[] data=new int[255*255];Arrays.fill(data,0xff203040+i);
-            submit(g,sprite(new Texture(new RawImage(data,255,255),false,null),0));
+            int[] data=new int[511*511];Arrays.fill(data,0xff203040+i);
+            submit(g,sprite(new Texture(new RawImage(data,511,511),false,null),0));
         }
         backend=field(g,"sceneRenderer");
         check(((Integer)field(backend,"cachedPixels")).intValue()==262144 && ((java.util.Vector)field(backend,"textures")).size()==4,
-                "padded sprite cache didn't evict at pixel budget");g.destroy();
+                "reduced sprite cache didn't evict at pixel budget");g.destroy();
         for(int mode:new int[]{0,1,3}) {
             g=new DirectX7(32,32);DirectX7 cpu=new DirectX7(32,32);g.clearDisplay(0x123456);cpu.clearDisplay(0x123456);
             s=sprite(M3GTest.texture(0x804181f1),mode);s.fog=true;s.mirX=true;s.mirY=true;
@@ -148,7 +177,7 @@ public final class SpriteTest {
         g.setRenderer(DirectX7.SOFTWARE);calls=Graphics3D.calls;M3GTest.submit(g,s,null,0);g.render();
         check(Graphics3D.calls==calls,"sprite renderer selection ignored");
         g.setRenderer(DirectX7.M3G);submit(g,s);check(Graphics3D.uploads==uploads+2,"sprite mode switch reused disposed state");g.destroy();
-        System.out.println("PASS padded cache budget+eviction / unchanged original Software sprites / resize+renderer lifecycle");
+        System.out.println("PASS reduced cache budget+eviction / unchanged original Software sprites / resize+renderer lifecycle");
         System.out.println("PASS exact MUL/color+oversize fallback / draw+fog-pass+readback+OOM rollback / alpha+debug safety");
     }
 }
