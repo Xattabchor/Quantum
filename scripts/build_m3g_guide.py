@@ -64,7 +64,7 @@ def main():
     h3 = ParagraphStyle('H3', parent=h2, fontSize=11, leading=15, spaceBefore=10)
     soup = BeautifulSoup(markdown.markdown((ROOT / 'docs/m3g-modes-guide.md').read_text(), extensions=['tables', 'fenced_code']), 'html.parser')
     width = A4[0] - 32 * mm
-    story = [Paragraph('QUANTUM / M3G / 17.10.2026', h3), Paragraph(inline(soup.h1), h1),
+    story = [Paragraph('QUANTUM / M3G / 18.10.2026', h3), Paragraph(inline(soup.h1), h1),
              Paragraph('Режимы материалов, спрайты, небо и восстановление кадра', body),
              Spacer(1, 9 * mm), Paragraph('Содержание', h2)]
     for i, heading in enumerate(soup.find_all('h2')):
@@ -90,7 +90,9 @@ def main():
         elif node.name == 'table':
             rows = [[Paragraph(inline(cell), small) for cell in row.find_all(['td', 'th'], recursive=False)] for row in node.find_all('tr')]
             count = len(rows[0])
-            if count == 2:
+            if count == 3 and 'R,G,B' in rows[0][1].getPlainText():
+                widths = [width * 0.28, width * 0.20, width * 0.52]
+            elif count == 2:
                 widths = [width * 0.36, width * 0.64]
             elif count == 3:
                 widths = [width * 0.15, width * 0.52, width * 0.33]
