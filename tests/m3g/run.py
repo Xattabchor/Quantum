@@ -188,6 +188,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GeometryTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.LinesTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.StaticLightTest"], check=True)
     # Remove the optional API for a real class-loading fallback test.
     shutil.rmtree(classes / "javax/microedition/m3g")
     no_m3g_api = temp / "api-without-m3g.jar"

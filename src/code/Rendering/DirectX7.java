@@ -11,6 +11,7 @@ public final class DirectX7 {
    private int rendererMode = SOFTWARE;
    private SceneRenderer sceneRenderer;
    private boolean rendererFailed, nativePass;
+   private boolean staticLightmapPass;
    private int[] frameBackup;
    private String rendererError;
 
@@ -183,8 +184,23 @@ this.buffer.resetTex();
            // CPU materials/sprites must see all previously rendered M3G pixels.
            sceneRenderer.finish(this);
        }
-       if(fast) object.renderFast(this, texture);
-       else object.render(this, texture);
+       boolean previous = staticLightmapPass;
+       staticLightmapPass = rendererMode == M3G && texture != null
+               && (texture.drawmode == 9 || texture.drawmode == 13);
+       try {
+           if(fast) object.renderFast(this, texture);
+           else object.render(this, texture);
+       } finally { staticLightmapPass = previous; }
+   }
+
+   public boolean isStaticLightmapPass() { return staticLightmapPass; }
+
+   /** Static baked brightness plus distance fade; no camera or weapon inputs. */
+   public int lightmapColor(int value, int rz) {
+       value = Math.max(0,Math.min(255,value));
+       if(fDist <= 1) return value;
+       int fade = (int)Math.max(0L,Math.min(255L,-(long)rz*255/fDist));
+       return value*(255-fade)/255;
    }
 
    private void drawBuffer() {

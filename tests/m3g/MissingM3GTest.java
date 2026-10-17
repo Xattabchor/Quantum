@@ -20,6 +20,12 @@ public final class MissingM3GTest {
         g=M3GTest.renderer();ScreenLines lines=new ScreenLines();lines.line(2,2,4,20,1,0xffffff,false);
         M3GTest.check(!g.renderScreenLines(lines) && g.getRendererError()!=null,"weather overlay needs optional API to fall back");
         g.destroy();
+        g=M3GTest.renderer();code.utils.Main.persQ=4;code.utils.Main.fogQ=2;code.utils.Main.mipMapping=false;
+        code.Rendering.Meshes.ColorLightedPolygon3V baked=new code.Rendering.Meshes.ColorLightedPolygon3V(
+                p.a,p.b,p.c,(byte)0,(byte)0,(byte)255,(byte)0,(byte)0,(byte)255);
+        Texture bakedTexture=M3GTest.texture(0xffffffff);bakedTexture.drawmode=13;
+        g.shootIntensity=100;g.shootLength=0;M3GTest.submit(g,baked,bakedTexture,0);g.render();
+        M3GTest.check(!g.isM3GActive() && !g.isStaticLightmapPass(),"missing API lost static fallback/scope");g.destroy();
         System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay");
     }
 }

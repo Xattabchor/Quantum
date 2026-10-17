@@ -138,9 +138,9 @@ public final class M3GTest {
         LightedPolygon3V lit=new LightedPolygon3V(base.a,base.b,base.c,(byte)0,(byte)0,(byte)255,(byte)0,(byte)0,(byte)255);lit.la=20;lit.lb=100;lit.lc=200;
         t=texture(0xffffffff);t.drawmode=9;
         submit(g,lit,t,0);g.render();
-        check((Graphics3D.lastVertices.colors.bytes[0]&255)==lit.getLight(lit.a,20,g),"vertex lighting");
+        check((Graphics3D.lastVertices.colors.bytes[0]&255)==g.lightmapColor(20,lit.a.rz),"static vertex lighting");
         g.destroy();
-        System.out.println("PASS alpha / quad diagonal / original light function");
+        System.out.println("PASS alpha / quad diagonal / static baked light");
 
         g=renderer();calls=Graphics3D.calls;
         t=texture(0xff888888);t.drawmode=7;submit(g,triangle(),t,0);g.render();

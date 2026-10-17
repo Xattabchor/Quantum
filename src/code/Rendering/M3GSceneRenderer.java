@@ -145,7 +145,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(texture == null) return false;
         int mode = texture.drawmode;
         // Legacy fog modes are handled below; glass, water and dithering stay CPU.
-        if(mode != 0 && mode != 1 && mode != 3 && mode != 4 && mode != 6 && mode != 9) return false;
+        if(mode != 0 && mode != 1 && mode != 3 && mode != 4 && mode != 6 && mode != 9 && mode != 13) return false;
         // The original paths disagree on these degenerate distance values.
         // Preserve their behavior instead of passing invalid ranges to M3G Fog.
         if((mode == 3 || mode == 6) && Main.fogQ > 0 && DirectX7.fDist <= 1) return false;
@@ -246,8 +246,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
                         highQuality, farthest, nativeTexture, mask);
             }
         } else {
-            setColors(g, object, count, mode == 9 && Main.fogQ > 0,
-                    fast || (Main.persQ == 0 && !Main.mipMapping));
+            setColors(g, object, count, mode);
             colorArrays[slot].set(0, count, colors);
             render(g, slot, indices[slot]);
         }
@@ -343,7 +342,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
     }
 
-    private void setColors(DirectX7 g, RenderObject object, int count, boolean lit, boolean fast) {
+    private void setColors(DirectX7 g, RenderObject object, int count, int mode) {
+        boolean lit = (mode == 9 || mode == 13) && Main.fogQ > 0;
         for(int i = 0; i < count; i++) {
             int r = 255, green = 255, b = 255;
             if(lit) {
@@ -366,13 +366,18 @@ public final class M3GSceneRenderer implements SceneRenderer {
                     green = i == 0 ? p.ag : i == 1 ? p.bg : i == 2 ? p.cg : p.dg;
                     b = i == 0 ? p.ab : i == 1 ? p.bb : i == 2 ? p.cb : p.db;
                 }
-                if(!fast && (object instanceof LightedPolygon3V || object instanceof LightedPolygon4V)) {
-                    r = object.getLight(vertices[i], r, g);
-                    green = b = r;
-                } else if(!fast && (object instanceof ColorLightedPolygon3V || object instanceof ColorLightedPolygon4V)) {
-                    int[] rgb = object.getLight(vertices[i], r, green, b, g);
-                    r = rgb[0]; green = rgb[1]; b = rgb[2];
+                // Baked lightmap data only. No getLight(), camera-vector light,
+                // flashlight or muzzle flash is evaluated for native vertex RGB.
+                boolean baked = object instanceof LightedPolygon3V || object instanceof LightedPolygon4V
+                        || object instanceof ColorLightedPolygon3V || object instanceof ColorLightedPolygon4V;
+                if(baked) {
+                    int visible = g.lightmapColor(255, vertices[i].rz);
+                    r = clamp(r) * visible / 255;
+                    green = clamp(green) * visible / 255;
+                    b = clamp(b) * visible / 255;
                 }
+                if(mode == 9) green = b = r;
+                else if(Main.fogQ == 1) r = green = b = (r + green + b) / 3;
             }
             colors[i * 4] = (byte)Math.max(0, Math.min(255, r));
             colors[i * 4 + 1] = (byte)Math.max(0, Math.min(255, green));
