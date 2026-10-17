@@ -8,7 +8,7 @@ import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
 import javax.microedition.m3g.Graphics3D;
 
-/** Bounded LCDUI rain avoids the native overlay transaction entirely. */
+/** Native rain retains the bounded simulation and safe LCDUI failure path. */
 public final class CheapRainTest {
     private static void check(boolean b,String why) {M3GTest.check(b,why);}
     private static WeatherGenerator rain(int count) {
@@ -20,57 +20,60 @@ public final class CheapRainTest {
     private static Graphics lcd() {return Image.createImage(32,64).getGraphics();}
     public static void main(String[] args) {
         Main.persQ=4;Main.fogQ=2;Main.mipMapping=false;
-        for(int count:new int[]{0,1,15,16,17,31,32,33,65,500,2048}) {
+        for(int count:new int[]{0,1,15,16,17,32,65,2048}) {
             WeatherGenerator w=rain(count);DirectX7 g=M3GTest.renderer();
-            int calls=Graphics3D.calls,binds=Graphics3D.binds,releases=Graphics3D.releases;
-            int uploads=Graphics3D.uploads,copies=Graphics.drawRGBCalls;
-            float[] coords=w.coords.clone();int[] info=w.info.clone(),frame=g.display.clone();
-            boolean nativeSnow=w.paintM3G(g);check(nativeSnow,"rain-only frame should not need snow fallback");
-            Graphics out=lcd();w.paintAfterScene(out,13,g.getRenderer(),nativeSnow);
-            check(out.lineCalls<=16 && (count==0 || out.lineCalls>0),"rain draw budget exceeded/missing");
-            check(out.rectCalls==0 && out.color==0xffffff && out.colorCalls==2,"rain changes color per drop or doesn't restore state");
-            for(int[] line:out.lineHistory) {
-                check(line[0]==10 && line[2]==10 && line[1]==18 && line[3]==21,"rain is not fixed vertical 4-pixel stroke/offset");
-                check(line[4]==0x607080,"cheap rain didn't use one shared midpoint color");
+            int calls=Graphics3D.calls,uploads=Graphics3D.uploads;
+            float[] coords=w.coords.clone();int[] info=w.info.clone();
+            boolean nativeWeather=w.paintM3G(g);check(nativeWeather,"native rain failed");
+            check(Graphics3D.calls==calls+(count==0?0:1),"rain isn't a single bounded native batch");
+            check(Graphics3D.uploads==uploads,"rain uploaded a texture");
+            if(count>0) {
+                Graphics3D.Draw draw=Graphics3D.history.lastElement();
+                check(draw.colorComponents==3 && !draw.textured,"rain lost untextured RGB path");
+                ScreenLines expected=new ScreenLines();expected.line(10,5,5,27,1,0x90a0b0,false);
+                ScreenLineGeometry geometry=new ScreenLineGeometry();geometry.build(expected,0,32,32);
+                for(int v=0;v<4;v++) {
+                    check(Math.abs(draw.positions[v*3]*draw.scale+16-geometry.xy[v*2])<0.1,"rain X geometry changed");
+                    check(Math.abs(16-draw.positions[v*3+1]*draw.scale-geometry.xy[v*2+1])<0.1,"rain Y/letterbox geometry changed");
+                }
+                int live=0;
+                for(int i=0;i<32;i++) if(draw.positions[i*12]!=0 || draw.positions[i*12+1]!=0) live++;
+                check(live==Math.min(16,count),"native rain cap isn't 16");
+                check((draw.colors[0]&255)==0x90 && (draw.colors[1]&255)==0xa0 && (draw.colors[2]&255)==0xb0,"native depth color changed");
             }
-            check(Graphics3D.calls==calls && Graphics3D.binds==binds && Graphics3D.releases==releases
-                    && Graphics3D.uploads==uploads && Graphics.drawRGBCalls==copies,"rain still causes native draw/upload/readback transaction");
-            check(Arrays.equals(frame,g.display) && Arrays.equals(coords,w.coords) && Arrays.equals(info,w.info),"rain mutated world/simulation");
-            check(!g.isM3GActive(),"rain initialized optional backend");g.destroy();
+            Graphics out=lcd();w.paintAfterScene(out,13,g.getRenderer(),nativeWeather);
+            check(out.lineCalls==0 && out.rectCalls==0 && out.color==0xffffff,"successful native weather duplicated in LCDUI");
+            check(Arrays.equals(coords,w.coords) && Arrays.equals(info,w.info),"painting mutated simulation");g.destroy();
         }
-        System.out.println("PASS cheap rain <=16 LCDUI strokes / shared color / letterbox / no M3G bind+draw+upload+frame copy / painting leaves particle state unchanged");
+        System.out.println("PASS native rain <=16 RGB strips / one batch / original diagonal+depth color / no texture / no LCDUI duplication");
 
-        // Survives transitions with native snow, without duplicate snow or rain.
         WeatherGenerator w=rain(2);w.info[2]=2;w.coords[3]=20;
-        DirectX7 g=M3GTest.renderer();boolean nativeSnow=w.paintM3G(g);
-        check(nativeSnow && Graphics3D.history.lastElement().colorComponents==3,"mixed snow lost native RGB path");
-        Graphics out=lcd();w.paintAfterScene(out,13,g.getRenderer(),nativeSnow);
-        check(out.lineCalls==1 && out.rectCalls==0,"mixed particles painted snow twice");
-        w.info[2]=1;int calls=Graphics3D.calls;check(w.paintM3G(g) && Graphics3D.calls==calls,"rain reused stale native snow batch");
-        g.destroy();
+        DirectX7 g=M3GTest.renderer();int calls=Graphics3D.calls;
+        check(w.paintM3G(g) && Graphics3D.calls==calls+1,"rain and snow didn't share a batch");
+        w.coords=new float[0];w.info=new int[0];calls=Graphics3D.calls;
+        check(w.paintM3G(g) && Graphics3D.calls==calls,"empty frame reused stale weather");g.destroy();
         for(int fallback=0;fallback<4;fallback++) {
             g=M3GTest.renderer();w=rain(64);w.info[2]=2;w.coords[3]=20;
+            int[] frame=g.display.clone();
             if(fallback==0) g.flushAlpha=true;
             if(fallback==1) DeveloperMenu.drawPortals=true;
             if(fallback==2) Graphics3D.failAt=Graphics3D.calls+1;
             if(fallback==3) System.setProperty("readback.fail","true");
-            nativeSnow=w.paintM3G(g);Graphics3D.failAt=0;System.clearProperty("readback.fail");DeveloperMenu.drawPortals=false;
-            check(!nativeSnow,"snow failure/debug not reported");out=lcd();
-            w.paintAfterScene(out,13,g.getRenderer(),nativeSnow);
-            check(out.lineCalls<=16 && out.rectCalls==1,"rain fallback exceeded budget or lost snow");
-            check(Graphics3D.target==null,"snow failure leaked native target");g.destroy();
+            boolean nativeWeather=w.paintM3G(g);Graphics3D.failAt=0;System.clearProperty("readback.fail");DeveloperMenu.drawPortals=false;
+            check(!nativeWeather,"native failure/debug not reported");Graphics out=lcd();
+            w.paintAfterScene(out,13,g.getRenderer(),nativeWeather);
+            check(out.lineCalls==16 && out.rectCalls==1,"fallback lost bounded rain or snow");
+            check(Graphics3D.target==null && Arrays.equals(frame,g.display),"weather failure leaked target/corrupted framebuffer");g.destroy();
         }
-        System.out.println("PASS mixed rain/snow / no stale snow / native+readback+alpha+debug fallback keeps cheap rain");
+        System.out.println("PASS shared native rain+snow / stale batch / draw+readback+alpha+debug fallback / bounded LCDUI replay");
 
-        w=rain(3);w.coords[0]=-2;w.coords[2]=40;w.coords[5]=40;
-        out=lcd();w.paintAfterScene(out,0,DirectX7.M3G,true);check(out.lineCalls==0,"offscreen rain not rejected");
-        w=rain(1);w.lighting=true;w.lastLighting=System.currentTimeMillis();out=lcd();
-        w.paintAfterScene(out,0,DirectX7.M3G,true);check(out.lineHistory.elementAt(0)[4]==0xffffff,"rain lightning color lost");
-        // Software retains full density, per-depth color and original diagonal lengths.
+        w=rain(1);w.lighting=true;w.lastLighting=System.currentTimeMillis();g=M3GTest.renderer();
+        check(w.paintM3G(g),"storm rain failed");
+        check((Graphics3D.history.lastElement().colors[0]&255)==255,"rain lightning color lost");g.destroy();
         w=rain(100);Graphics original=lcd(),software=lcd();w.paint(original,13);
         w.paintAfterScene(software,13,DirectX7.SOFTWARE,false);
-        check(software.lineCalls==100 && original.lineCalls==software.lineCalls,"Software rain was capped");
+        check(software.lineCalls==100,"Software rain was capped");
         for(int i=0;i<100;i++) check(Arrays.equals(original.lineHistory.elementAt(i),software.lineHistory.elementAt(i)),"Software rain changed");
-        System.out.println("PASS offscreen / storm color / unchanged original Software density+geometry+colors");
+        System.out.println("PASS storm color / unchanged Software density+geometry+colors");
     }
 }

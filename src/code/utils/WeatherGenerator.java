@@ -361,17 +361,29 @@ float yy=y*1.3f*3*frameTime/80/50;
       if(lightingTwice) nextLighting = lastLighting + 200+r.nextInt(175)-(oldLightingTwice?75:0);
   }
   
-  /** Only snow uses the native overlay. Cheap rain is drawn with LCDUI after
-   * flush, avoiding another full-frame upload/backup/readback for rain. */
+  /** Rain and snow share one native RGB overlay. Rain simulation stays bounded. */
   public boolean paintM3G(DirectX7 g) {
       setRenderer(g.getRenderer());
       if(!g.canRenderM3G() || code.HUD.DeveloperMenu.drawPortals) return false;
       try {
           if(nativeParticles != null) nativeParticles.clear();
           boolean light = lighting && System.currentTimeMillis()-lastLighting<135;
+          int rain=0;
           for(int slot=0,count=particleCount();slot<count;slot++) {
               int i=particleIndex(slot);
               int type=info[i*2];
+              if(type==1) {
+                  if(rain++>=RAIN_LIMIT) continue;
+                  int depth=info[i*2+1];
+                  int size=(rainSize*(100-depth)+depth)/100;
+                  if(depth<0) size=rainSize*(100-depth)/100;
+                  depth=Math.max(0,Math.min(100,depth));
+                  int color=light?0xffffff:mixColor(rainColorNear,rainColorFar,depth);
+                  if(nativeParticles==null) nativeParticles=new ScreenLines();
+                  int x=(int)coords[i*2],y=(int)coords[i*2+1];
+                  nativeParticles.line(x,y,x-size/4,y+size,1,color,false);
+                  continue;
+              }
               if(type != 2) continue;
               int depth=info[i*2+1];
               if(nativeParticles == null) nativeParticles = new ScreenLines();
@@ -390,15 +402,12 @@ float yy=y*1.3f*3*frameTime/80/50;
       }
   }
 
-  /** M3G keeps only a bounded, texture-free LCDUI rain overlay. Software is original. */
-  public void paintAfterScene(Graphics g,int xx,int renderer,boolean nativeSnow) {
+  /** Successful native weather is never duplicated after flush. */
+  public void paintAfterScene(Graphics g,int xx,int renderer,boolean nativeWeather) {
       setRenderer(renderer);
-      if(renderer != DirectX7.M3G) {
-          if(!nativeSnow) paint(g,xx);
-          else g.setColor(0xffffff);
-          return;
-      }
-      if(!nativeSnow) paint(g,xx,false); // Original snow only, not full-cost rain.
+      if(nativeWeather) {g.setColor(0xffffff);return;}
+      if(renderer != DirectX7.M3G) {paint(g,xx);return;}
+      paint(g,xx,false); // Original snow fallback, bounded cheap rain fallback.
       paintCheapRain(g,xx);
   }
 

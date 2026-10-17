@@ -50,7 +50,7 @@ public final class RainSimulationTest {
 
         WeatherGenerator w=rain(100);float old=w.coords[98];w.moveX2(1,50);
         check(w.coords[98]==old,"dormant slot moved in M3G");
-        Graphics drawn=Image.createImage(32,32).getGraphics();w.paintAfterScene(drawn,0,DirectX7.M3G,true);
+        Graphics drawn=Image.createImage(32,32).getGraphics();w.paintAfterScene(drawn,0,DirectX7.M3G,false);
         check(drawn.lineCalls==16,"active rain wasn't drawn");
         for(int[] line:drawn.lineHistory) check(line[0]==14,"painter sampled dormant/unmoved rain");
         w.setRenderer(DirectX7.SOFTWARE);w.moveX2(1,50);

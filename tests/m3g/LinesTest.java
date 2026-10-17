@@ -84,11 +84,11 @@ public final class LinesTest {
 
         g=M3GTest.renderer();WeatherGenerator w=weather();calls=Graphics3D.calls;
         check(w.paintM3G(g) && Graphics3D.calls==calls+1,"weather did not use native strips");
-        check((last().colors[0]&255)==0xff && (last().colors[1]&255)==0xff,"native snow color");
+        check((last().colors[12]&255)==0xff && (last().colors[13]&255)==0xff,"native snow color");
         float scale=last().scale;
-        // Only the second particle enters M3G: a 3x3 snow rectangle at (10,18), framebuffer-local.
-        check(Math.abs(last().positions[0]*scale+16-10)<0.01
-                && Math.abs(16-last().positions[1]*scale-18)<0.01,"snow coordinates / letterbox offset");
+        // The second strip is snow: a 3x3 snow rectangle at (10,18), framebuffer-local.
+        check(Math.abs(last().positions[12]*scale+16-10)<0.01
+                && Math.abs(16-last().positions[13]*scale-18)<0.01,"snow coordinates / letterbox offset");
         w.coords=new float[0];w.info=new int[0];calls=Graphics3D.calls;
         check(w.paintM3G(g) && Graphics3D.calls==calls,"empty weather drew stale particles");
         w=weather();g.flushAlpha=true;check(!w.paintM3G(g),"ARGB framebuffer must keep LCDUI weather");g.flushAlpha=false;
@@ -97,7 +97,7 @@ public final class LinesTest {
         Graphics lcd=Image.createImage(32,64).getGraphics();w.paint(lcd,13);
         check(lcd.lineCalls==1 && lcd.rectCalls==1 && lcd.color==0xffffff,"original LCDUI weather changed");
         check(lcd.lastY==18+13,"original LCDUI letterbox offset changed");g.destroy();
-        System.out.println("PASS native snow only / frame-local coordinates / LCDUI fallback / debug+alpha");
+        System.out.println("PASS native rain+snow / frame-local coordinates / LCDUI fallback / debug+alpha");
 
         g=new DirectX7(240,320);g.setRenderer(DirectX7.M3G);Skybox sky=new Skybox();
         int first=Graphics3D.history.size();
