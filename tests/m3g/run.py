@@ -263,6 +263,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     classpath = os.pathsep.join(map(str, (classes, APP, API)))
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MulSpriteTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.PerspectiveToggleTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BackfaceTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BatchTest"], check=True)

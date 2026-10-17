@@ -231,6 +231,27 @@ this.buffer.resetTex();
                | Math.min(255, (source & 255) * (background & 255) * 2 / 255);
    }
 
+   /** MUL assets store brightness in blue; 69 is their legacy neutral key. */
+   static int spriteModulateSource(int pixel, int color) {
+       int value=pixel&255;
+       if(pixel==0 || value==69) return 0xffffff;
+       int mask=0xffffff;
+       switch(color) {
+           case 1: mask=0xff0000;break;
+           case 2: mask=0x00ff00;break;
+           case 3: mask=0x0000ff;break;
+           case 4: mask=0xff00ff;break;
+           case 5: mask=0xffff00;break;
+           case 6: mask=0x00ffff;break;
+       }
+       return ((value*0x010101)&mask) | (0xffffff^mask);
+   }
+
+   /** Selected-M3G sprite recovery, without reviving the legacy saturating MUL. */
+   public static int modulateSpritePixel(int pixel, int background, int color) {
+       return modulateColor(spriteModulateSource(pixel,color),background);
+   }
+
    /** Shared dispatch, including the polygons of animated MeshImage objects. */
    public void drawRenderObject(RenderObject object, Texture texture, boolean fast) {
        if(nativePass) {

@@ -139,13 +139,6 @@ public final class SpriteTest {
         check(last().uvScale==1.0f/256 && last().blend==CompositingMode.REPLACE && !last().fog,"sprite state contaminated polygons");g.destroy();
         System.out.println("PASS sprite/polygon single warm transaction / painter+CPU barrier / isolated blend+fog+UV state");
 
-        // MUL/color variants are deliberately exact software fallbacks.
-        for(int color=0;color<=6;color++) {
-            g=M3GTest.renderer();DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
-            s=sprite(M3GTest.texture(0xff505050),2);s.color=color;calls=Graphics3D.calls;
-            s.render(cpu,null);submit(g,s);
-            check(Graphics3D.calls==calls && Arrays.equals(cpu.display,g.display),"MUL/color CPU fallback changed");g.destroy();cpu.destroy();
-        }
         for(int failure=0;failure<6;failure++) {
             g=M3GTest.renderer();DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
             s=sprite(M3GTest.texture(0x804181f1),3);s.fog=true;s.render(cpu,null);
@@ -174,7 +167,7 @@ public final class SpriteTest {
         backend=field(g,"sceneRenderer");
         check(((Integer)field(backend,"cachedPixels")).intValue()==262144 && ((java.util.Vector)field(backend,"textures")).size()==4,
                 "reduced sprite cache didn't evict at pixel budget");g.destroy();
-        for(int mode:new int[]{0,1,3}) {
+        for(int mode:new int[]{0,1,2,3}) {
             g=new DirectX7(32,32);DirectX7 cpu=new DirectX7(32,32);g.clearDisplay(0x123456);cpu.clearDisplay(0x123456);
             s=sprite(M3GTest.texture(0x804181f1),mode);s.fog=true;s.mirX=true;s.mirY=true;
             calls=Graphics3D.calls;s.render(cpu,null);M3GTest.submit(g,s,null,0);g.render();
@@ -187,6 +180,6 @@ public final class SpriteTest {
         check(Graphics3D.calls==calls,"sprite renderer selection ignored");
         g.setRenderer(DirectX7.M3G);submit(g,s);check(Graphics3D.uploads==uploads+2,"sprite mode switch reused disposed state");g.destroy();
         System.out.println("PASS reduced cache budget+eviction / unchanged original Software sprites / resize+renderer lifecycle");
-        System.out.println("PASS exact MUL/color+oversize fallback / draw+partial-frame+readback+OOM rollback / alpha+debug safety");
+        System.out.println("PASS oversize fallback / draw+partial-frame+readback+OOM rollback / alpha+debug safety");
     }
 }

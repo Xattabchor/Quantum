@@ -30,9 +30,9 @@ final class M3GSpriteRenderer {
     }
 
     boolean draw(DirectX7 g,Sprite sprite) {
-        // MUL uses a custom saturating brightness/channel operator, not ordinary
-        // destination*source. Keep it (and unknown modes) on the exact CPU path.
-        if(sprite.mode!=0 && sprite.mode!=1 && sprite.mode!=3) return false;
+        // Replace legacy MUL with native MODULATE, retaining its neutral key
+        // and selected channel mask. Unknown modes/colors retain CPU dispatch.
+        if(sprite.mode<0 || sprite.mode>3 || (sprite.mode==2 && (sprite.color<0 || sprite.color>6))) return false;
         if(sprite.textures==null || sprite.anim_index<0 || sprite.anim_index>=sprite.textures.length) return false;
         Texture texture=sprite.textures[sprite.anim_index];
         if(texture==null || sprite.pos==null || sprite.size==null) return false;
@@ -57,11 +57,12 @@ final class M3GSpriteRenderer {
         vertex(2,x2,y2,u2,v2,g,precision);
         vertex(3,x1,y2,u1,v2,g,precision);
         boolean alpha=sprite.mode==3 && raw.alphaMixing;
-        int kind=sprite.mode==1?M3GSceneRenderer.SPRITE_ADD:
+        int kind=sprite.mode==2?M3GSceneRenderer.SPRITE_MUL+sprite.color:
+                sprite.mode==1?M3GSceneRenderer.SPRITE_ADD:
                 alpha?M3GSceneRenderer.SPRITE_ALPHA:M3GSceneRenderer.SPRITE_CUTOUT;
-        // ADD sprites keep their original no-fog semantics; fDist=0 disables
+        // ADD/MUL sprites keep their original no-fog semantics; fDist=0 disables
         // sprite fog as before. No CPU visibility or white mask texture remains.
-        boolean fogged=sprite.fog && sprite.mode!=1 && DirectX7.fDist!=0;
+        boolean fogged=sprite.fog && sprite.mode!=1 && sprite.mode!=2 && DirectX7.fDist!=0;
         float eye=1.0f,far=0;
         if(fogged) {
             if(DirectX7.fDist<0 || TexturingPers.move<=0) return false;
@@ -81,7 +82,8 @@ final class M3GSpriteRenderer {
         }
         appearance.setFog(fogged?fog:null);appearance.setTexture(0,image);
         image.setBlending(Texture2D.FUNC_MODULATE);
-        composite.setBlending(sprite.mode==1?CompositingMode.ALPHA_ADD:
+        composite.setBlending(sprite.mode==2?CompositingMode.MODULATE:
+                sprite.mode==1?CompositingMode.ALPHA_ADD:
                 alpha?CompositingMode.ALPHA:CompositingMode.REPLACE);
         composite.setAlphaThreshold(alpha || sprite.mode==1?0:cutoutThreshold);
         color(0xffffff,255);

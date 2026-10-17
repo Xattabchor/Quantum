@@ -46,7 +46,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final TriangleStripArray baseQuad, alternateQuad;
     static final int OPAQUE_TEXTURE = 0, ALPHA_TEXTURE = 1, ADD_TEXTURE = 3;
     static final int SPRITE_CUTOUT=4, SPRITE_ALPHA=5, SPRITE_ADD=6;
-    static final int PANORAMA_TEXTURE=9;
+    static final int PANORAMA_TEXTURE=9, SPRITE_MUL=16;
     private final Vector textures = new Vector();
     private Image surface;
     private M3GSkyRenderer skyRenderer;
@@ -626,7 +626,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private Texture2D createTexture(DirectX7 g,RawImage image,int kind) {return createTexture(g,image,kind,true);}
 
     private Texture2D createTexture(DirectX7 g,RawImage image, int kind,boolean pooled) {
-        boolean sprite=kind>=SPRITE_CUTOUT && kind<=SPRITE_ADD;
+        boolean mul=kind>=SPRITE_MUL && kind<=SPRITE_MUL+6;
+        boolean sprite=(kind>=SPRITE_CUTOUT && kind<=SPRITE_ADD) || mul;
         int width=sprite?spriteDimension(image.w):image.w;
         int height=sprite?spriteDimension(image.h):image.h;
         int size = width * height;
@@ -645,12 +646,13 @@ public final class M3GSceneRenderer implements SceneRenderer {
                     +(2*(i%width)+1)*image.w/(2*width):i];
             // Legacy additive source discards channel low bits. Hardware cannot
             // mask destination low bits; native ADD may differ by one per channel.
-            int rgb = kind == ADD_TEXTURE || kind == SPRITE_ADD ? pixel & 0xfefefe : pixel;
+            int rgb = mul?DirectX7.spriteModulateSource(pixel,kind-SPRITE_MUL)
+                    :kind == ADD_TEXTURE || kind == SPRITE_ADD ? pixel & 0xfefefe : pixel;
             rgba[i * 4] = (byte)(rgb >> 16);
             rgba[i * 4 + 1] = (byte)(rgb >> 8);
             rgba[i * 4 + 2] = (byte)rgb;
             rgba[i * 4 + 3] = kind==ALPHA_TEXTURE || kind==SPRITE_ALPHA
-                    ? (byte)(pixel >>> 24) : (byte)(kind==SPRITE_ADD || kind==PANORAMA_TEXTURE || pixel!=0 ? 255 : 0);
+                    ? (byte)(pixel >>> 24) : (byte)(mul || kind==SPRITE_ADD || kind==PANORAMA_TEXTURE || pixel!=0 ? 255 : 0);
             // Inspect the actual uploaded alpha, including reduced sprite copies,
             // in this existing conversion loop. No extra scan on cache hits.
             if((rgba[i*4+3]&255)!=255) opaque=false;
