@@ -34,6 +34,8 @@ public final class DirectX7 {
    public static short lightdirz = 0;
    
    private final RenderObjectBuffer buffer;
+   private RenderObjectBuffer backgroundBuffer;
+   private boolean backgroundPending;
    public int lx,ly,lz = 0;
    public int shootIntensity = 0;
    public int shootLength = 0;
@@ -54,6 +56,7 @@ lx=ly=lz=0;
 }
    
 public void resize(int width, int height) {
+resetQueues();
 releaseRenderer();
 rendererFailed = false;
 rendererError = null;
@@ -77,7 +80,9 @@ fovY=fov;
 fovX=fov*width/height;
 }
    public final void destroy() {
+resetQueues();
 releaseRenderer();
+backgroundBuffer = null;
 
 DirectX7.fDist = 1;
 DirectX7.drDist = 30000000;
@@ -216,11 +221,47 @@ this.buffer.resetTex();
        return value*(255-fade)/255;
    }
 
-   private void drawBuffer() {
-       TMPElement[] elements = buffer.getBuffer();
-       for(int i = buffer.getSize() - 1; i >= 0; i--) {
-           drawRenderObject(elements[i].obj, elements[i].tex, false);
+   /** Keep sky as an ordered prefix, never mixed into world depth sorting.
+    * Software/debug/alpha retain the original immediate sky pass. */
+   public void renderBackground() {
+       if(!canRenderM3G() || backgroundPending) {render();return;}
+       if(buffer.getSize()==0) return; // CPU gradient already painted its pixels.
+       TMPElement[] items=buffer.getBuffer();
+       int count=buffer.getSize();
+       try {
+           if(backgroundBuffer==null) backgroundBuffer=new RenderObjectBuffer();
+           for(int i=0;i<count;i++)
+               backgroundBuffer.addRenderObjectDT(items[i].obj,items[i].tex,0,0,width,height);
+       } catch(OutOfMemoryError ex) {
+           clearBackground();
+           render();return; // Original immediate pass if deferral cannot allocate.
        }
+       // Do not retain a duplicate sky/texture in the now-empty world pool.
+       // Clear only after the entire copy succeeds, so OOM can render the original.
+       for(int i=0;i<count;i++) {items[i].obj=null;items[i].tex=null;}
+       buffer.reset();
+       backgroundPending=true;
+   }
+
+   private void clearBackground() {
+       backgroundPending=false;
+       if(backgroundBuffer==null) return;
+       TMPElement[] items=backgroundBuffer.getBuffer();
+       for(int i=0;i<backgroundBuffer.getSize();i++) {items[i].obj=null;items[i].tex=null;}
+       backgroundBuffer.reset();
+   }
+
+   private void resetQueues() {buffer.reset();clearBackground();}
+
+   private void drawQueue(RenderObjectBuffer queue) {
+       TMPElement[] elements = queue.getBuffer();
+       for(int i = queue.getSize() - 1; i >= 0; i--)
+           drawRenderObject(elements[i].obj, elements[i].tex, false);
+   }
+
+   private void drawBuffer() {
+       if(backgroundPending) drawQueue(backgroundBuffer);
+       drawQueue(buffer);
    }
 
    public final void render() {
@@ -237,11 +278,12 @@ this.buffer.resetTex();
        ly = camera.m13;
        lz = camera.m23;
        buffer.sort(0, buffer.getSize() - 1);
+       if(backgroundPending) backgroundBuffer.sort(0,backgroundBuffer.getSize()-1);
        if(DeveloperMenu.renderPolygonsOverwrite) clearDisplay(0);
        // Mutable LCDUI Images do not preserve framebuffer alpha. Keep these
        // paths entirely on the original rasterizer rather than change semantics.
        boolean useM3G = allowM3G && rendererMode == M3G && !rendererFailed && !flushAlpha
-               && !DeveloperMenu.renderPolygonsOverwrite && buffer.getSize() > 0;
+               && !DeveloperMenu.renderPolygonsOverwrite && (buffer.getSize()>0 || backgroundPending);
        try {
            if(useM3G) {
                boolean saved = false;
@@ -274,7 +316,7 @@ this.buffer.resetTex();
            drawBuffer();
        } finally {
            nativePass = false;
-           buffer.reset();
+           resetQueues();
        }
    }
 

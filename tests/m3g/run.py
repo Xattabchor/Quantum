@@ -18,6 +18,8 @@ JAVA = os.environ.get("JAVA", "java")
 # Mesh skies use a transactional native submission, not forced CPU rasterization.
 house = (ROOT / "src/code/Gameplay/Map/House.java").read_text()
 assert "g3d.renderSoftware();" not in house
+sky_stage=house[house.index("private final void renderSkybox("):house.index("public final int render(",house.index("private final void renderSkybox("))]
+assert "g3d.renderBackground();" in sky_stage and "g3d.render();" not in sky_stage
 skybox = (ROOT / "src/code/Gameplay/Map/Skybox.java").read_text()
 assert "g3d.addRenderObjectDT(nativeMesh, null);" in skybox
 
@@ -46,11 +48,13 @@ public final class Manager {public static String[] getSupportedContentTypes(Stri
 """,
 "javax/microedition/lcdui/Image.java": '''package javax.microedition.lcdui;
 public class Image {
+ public static int getRGBCalls;
  public int[] pixels; int w,h;
  public static Image createImage(int w,int h) { Image i=new Image(); i.w=w;i.h=h;i.pixels=new int[w*h];return i; }
  public int getWidth(){return w;} public int getHeight(){return h;}
  public Graphics getGraphics(){return new Graphics(this);}
  public void getRGB(int[] p,int o,int s,int x,int y,int w,int h){
+  getRGBCalls++;
   if(Boolean.getBoolean("readback.fail"))throw new IllegalStateException("readback");
   for(int j=0;j<h;j++)System.arraycopy(pixels,(y+j)*this.w+x,p,o+j*s,w);
  }
@@ -221,6 +225,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyFlashTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SolidSkyTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.PanoramaTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.CombinedPassTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.DitherDisabledTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GeometryTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyTest"], check=True)

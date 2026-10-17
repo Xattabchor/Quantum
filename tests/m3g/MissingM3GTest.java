@@ -86,6 +86,17 @@ public final class MissingM3GTest {
         reference.render(null,panoCPU);panorama.render(null,g);g.render();
         M3GTest.check(!g.isM3GActive() && g.getRendererError()!=null && java.util.Arrays.equals(panoCPU.display,g.display),
                 "panorama wrapper requires optional API or replay changed sampling");panoCPU.destroy();g.destroy();
-        System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay / sprite+panorama class safety+replay");
+        for(boolean pano:new boolean[]{false,true}) {
+            g=M3GTest.renderer();DirectX7 combinedCPU=new DirectX7(32,32);combinedCPU.setRenderer(DirectX7.M3G);combinedCPU.clearDisplay(0x123456);
+            code.Gameplay.Map.Skybox bg=pano?new code.Gameplay.Map.Skybox(panoTexture,2,1,-91,0.2f,0,0x334455,0x667788):new code.Gameplay.Map.Skybox(0x123456);
+            bg.skyboxAlways=true;bg.render(null,combinedCPU);combinedCPU.renderBackground();
+            Texture world=M3GTest.texture(0xffc08040);M3GTest.submit(combinedCPU,M3GTest.triangle(),world,Integer.MIN_VALUE);combinedCPU.renderSoftware();
+            bg.render(null,g);g.renderBackground();M3GTest.submit(g,M3GTest.triangle(),world,Integer.MIN_VALUE);g.render();
+            M3GTest.check(!g.isM3GActive() && g.getRendererError()!=null && java.util.Arrays.equals(combinedCPU.display,g.display),
+                    "missing API lost combined background/world replay");
+            int[] once=g.display.clone();g.render();M3GTest.check(java.util.Arrays.equals(once,g.display),"missing API retained stale sky prefix");
+            combinedCPU.destroy();g.destroy();
+        }
+        System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay / sprite+panorama class safety / combined queue replay");
     }
 }

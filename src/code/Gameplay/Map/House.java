@@ -291,7 +291,7 @@ public final class House {
     private final void renderSkybox(Graphics g, DirectX7 g3d) {
         if(skybox != null && (skybox.draw || skybox.skyboxAlways)) {
             skybox.render(g, g3d);
-            g3d.render();
+            g3d.renderBackground();
             skybox.resetViewport();
         }
     }
