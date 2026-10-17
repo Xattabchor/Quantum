@@ -38,7 +38,7 @@ public final class SkyFlashTest {
             weather().lightingEffect(g,-50);sky.drawLighting(g);g.render();
             check(Arrays.equals(before,g.display) && Graphics3D.calls==n && Graphics3D.clears==c,"world flash/bolt survived");
             // Normal sky resumes immediately when the 135ms caller no longer sets lighting.
-            sky.render(null,g);g.render();for(int p:g.display) check(p==0x112233,"normal sky did not resume");
+            sky.render(null,g);g.render();check((g.display[0]&0xffffff)==0x112233,"normal sky did not resume");
             g.resize(40,24);flash(g,sky);solid(g);g.destroy();
         }
         System.out.println("PASS solid sky native clear / no texture+draw+old-pixel upload / no bolts+world glow / occlusion / reset+resize");

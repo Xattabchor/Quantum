@@ -10,6 +10,7 @@ import code.Rendering.Meshes.Mesh;
 import code.Rendering.Texture;
 import code.Rendering.ScreenLines;
 import code.Rendering.SkyFlash;
+import code.Rendering.SolidSky;
 import code.utils.Asset;
 import javax.microedition.lcdui.Graphics;
 
@@ -22,6 +23,7 @@ public class Skybox {
     private SkyMesh nativeMesh;
     private ScreenLines lightningLines;
     private SkyFlash skyFlash;
+    private SolidSky nativeSolidSky;
     public MultyTexture texture;
 	
     private int color, groundColor;
@@ -106,6 +108,7 @@ public class Skybox {
         nativeMesh = null;
         lightningLines = null;
         skyFlash = null;
+        nativeSolidSky = null;
 
         tex = null;
 
@@ -170,7 +173,10 @@ public class Skybox {
             }
 			
 		} else if(mode == 1) {
-			g3d.clearDisplay(color);
+            if(g3d.getRenderer() == DirectX7.M3G) {
+                if(nativeSolidSky == null) nativeSolidSky = new SolidSky(color);
+                g3d.addRenderObjectDT(nativeSolidSky,null);
+            } else g3d.clearDisplay(color);
 			
 		} else if(mode == 2) {
 			render2DSkybox(g3d);

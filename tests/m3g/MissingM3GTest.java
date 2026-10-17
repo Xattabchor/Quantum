@@ -56,6 +56,10 @@ public final class MissingM3GTest {
         for(int pixel:g.display) M3GTest.check((pixel&0xffffff)==SkyFlash.COLOR,"missing API lost solid sky flash");
         M3GTest.check(!g.isM3GActive(),"missing API sky clear didn't fall back");
         g.destroy();flashCPU.destroy();
+        g=M3GTest.renderer();code.Gameplay.Map.Skybox solidSky=new code.Gameplay.Map.Skybox(0x345678);
+        solidSky.render(null,g);g.render();
+        for(int pixel:g.display) M3GTest.check(pixel==0x345678,"missing API lost solid mode1 sky");
+        M3GTest.check(!g.isM3GActive(),"solid sky requires optional API to fall back");g.destroy();
         System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay");
     }
 }

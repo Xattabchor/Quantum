@@ -138,6 +138,23 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     public boolean draw(DirectX7 g, RenderObject object, Texture texture, boolean fast) {
+        if(object instanceof SolidSky) {
+            SolidSky sky=(SolidSky)object;
+            sky.prepare(g);
+            float scale=ProjectedGeometry.pack(sky.vertices,4,g.centreX,g.centreY,
+                    TexturingPers.move,false,positions,work);
+            if(scale==0) return false;
+            posArrays[1].set(0,4,positions);
+            buffers[1].setPositions(posArrays[1],scale,null);
+            uniformColors(4,sky.color,255);
+            colorArrays[1].set(0,4,colors);
+            appearance.setTexture(0,null);appearance.setFog(null);
+            composite.setBlending(CompositingMode.REPLACE);composite.setAlphaThreshold(0);
+            // Full-frame opaque background; old pixels cannot contribute.
+            bind(g,false);restoreCamera(g);
+            graphics.render(buffers[1],baseQuad,appearance,null);
+            return true;
+        }
         if(object instanceof SkyFlash) {
             if(flashBackground == null) {
                 flashBackground = new Background();
