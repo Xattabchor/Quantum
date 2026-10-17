@@ -136,9 +136,9 @@ public final class M3GTest {
         for(int i=0;i<6;i++)check(Graphics3D.lastIndices.indices[i]==expected[i],"quad diagonal");
         Polygon3V base=triangle();
         LightedPolygon3V lit=new LightedPolygon3V(base.a,base.b,base.c,(byte)0,(byte)0,(byte)255,(byte)0,(byte)0,(byte)255);lit.la=20;lit.lb=100;lit.lc=200;
-        t=texture(0xffffffff);t.drawmode=9;
+        DirectX7.fDist=1000;t=texture(0xffffffff);t.drawmode=9;
         submit(g,lit,t,0);g.render();
-        check((Graphics3D.lastVertices.colors.bytes[0]&255)==g.lightmapColor(20,lit.a.rz),"static vertex lighting");
+        check((Graphics3D.lastVertices.colors.bytes[0]&255)==20 && Graphics3D.lastAppearance.fog!=null,"static baked light + native Fog");
         g.destroy();
         System.out.println("PASS alpha / quad diagonal / static baked light");
 

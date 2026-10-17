@@ -32,13 +32,22 @@ public final class SpriteTest {
         for(int mode:new int[]{0,1,3}) for(int pixel:new int[]{0,0xff000000,0xff4181f1,0x804181f1}) {
             Texture t=M3GTest.texture(pixel);t.drawmode=99;Sprite s=sprite(t,mode);
             DirectX7 g=M3GTest.renderer(),cpu=new DirectX7(32,32);
+            int textureUploads=-1;
             for(boolean fog:new boolean[]{false,true}) for(int fogMode:new int[]{0,6}) for(int distance:new int[]{0,1000}) {
                 DirectX7.standartDrawmode=(byte)fogMode;DirectX7.fDist=distance;s.fog=fog;
                 cpu.clearDisplay(0x123457);s.render(cpu,null);g.clearDisplay(0x123457);
                 int calls=Graphics3D.calls;submit(g,s);
                 check(Graphics3D.calls>calls,"sprite still rendered on CPU");
                 near(cpu.display[0],g.display[0],2,"sprite blend/fog equation mode "+mode);
-                check(last().textured && !last().fog,"sprite relies on depth fog instead of flat legacy distance");
+                check(Graphics3D.calls==calls+1 && last().textured && last().fog==(fog && mode!=1 && distance!=0),"sprite native single-pass Fog state");
+                for(byte c:last().colors) check((c&255)==255,"sprite CPU fog colors remain");
+                if(textureUploads>=0) check(Graphics3D.uploads==textureUploads,"sprite Fog uploaded a mask or rebuilt pixels");
+                textureUploads=Graphics3D.uploads;
+                if(last().fog) {
+                    float eye=1.0f-(float)s.pos.rz/TexturingPers.move;
+                    check(Math.abs(-last().positions[2]*last().scale-eye)<0.001,"sprite Fog used artificial eye depth");
+                    check((double)last().positions[0]/-last().positions[2]==-g.centreX,"fog changed sprite projection");
+                }
                 check(t.drawmode==99,"sprite changed shared texture material");
             }
             g.destroy();cpu.destroy();
@@ -101,14 +110,13 @@ public final class SpriteTest {
             for(int i=0;i<data.length;i++) data[i]=((i%3==0?0:i%3==1?128:255)<<24)|((i*7919)&0xffffff);
             raw=new RawImage(data,70,90);untouched=data.clone();g=M3GTest.renderer();s=sprite(new Texture(raw,false,null),mode);s.fog=fog;submit(g,s);
             image=Graphics3D.lastAppearance.tex;check(image.image.width==64 && image.image.height==64,"70x90 must become 64x64");
-            boolean mask=fog && mode!=1;
             for(int y=0;y<64;y++) for(int x=0;x<64;x++) {
                 int src=data[((2*y+1)*90/128)*70+(2*x+1)*70/128],i=(y*64+x)*4;
                 int expectedAlpha=mode==1?255:mode==3?src>>>24:src==0?0:255;
-                int rgb=mask?0xffffff:mode==1?src&0xfefefe:src;
+                int rgb=mode==1?src&0xfefefe:src;
                 check((image.image.pixels[i]&255)==((rgb>>16)&255) && (image.image.pixels[i+1]&255)==((rgb>>8)&255)
                         && (image.image.pixels[i+2]&255)==(rgb&255) && (image.image.pixels[i+3]&255)==expectedAlpha,
-                        "reduced cutout/ADD/alpha/fog mask mismatch");
+                        "reduced cutout/ADD/alpha texture mismatch");
             }
             check(Arrays.equals(data,untouched) && raw.w==70 && raw.h==90,"reduction modified source image");
             uploads=Graphics3D.uploads;submit(g,s);check(Graphics3D.uploads==uploads,"reduction repeated on cache hit");g.destroy();
@@ -141,14 +149,15 @@ public final class SpriteTest {
         for(int failure=0;failure<6;failure++) {
             g=M3GTest.renderer();DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
             s=sprite(M3GTest.texture(0x804181f1),3);s.fog=true;s.render(cpu,null);
+            if(failure==5) s.render(cpu,null);
             if(failure==0) Graphics3D.failAt=Graphics3D.calls+1;
             if(failure==1) System.setProperty("readback.fail","true");
             if(failure==2) System.setProperty("m3g.oom","true");
             if(failure==3) g.flushAlpha=true;
             if(failure==4) DeveloperMenu.renderPolygonsOverwrite=true;
-            if(failure==5) Graphics3D.failAt=Graphics3D.calls+2; // Second fog pass.
+            if(failure==5) Graphics3D.failAt=Graphics3D.calls+2; // Second sprite after a successful fogged draw.
             if(failure==4) {cpu.clearDisplay(0);s.render(cpu,null);}
-            M3GTest.submit(g,s,null,0);g.render();
+            M3GTest.submit(g,s,null,0);if(failure==5) M3GTest.submit(g,s,null,1);g.render();
             Graphics3D.failAt=0;System.clearProperty("readback.fail");System.clearProperty("m3g.oom");DeveloperMenu.renderPolygonsOverwrite=false;
             check(Arrays.equals(cpu.display,g.display) && Graphics3D.target==null,"sprite failure wasn't completely replayed "+failure);
             g.destroy();cpu.destroy();
@@ -178,6 +187,6 @@ public final class SpriteTest {
         check(Graphics3D.calls==calls,"sprite renderer selection ignored");
         g.setRenderer(DirectX7.M3G);submit(g,s);check(Graphics3D.uploads==uploads+2,"sprite mode switch reused disposed state");g.destroy();
         System.out.println("PASS reduced cache budget+eviction / unchanged original Software sprites / resize+renderer lifecycle");
-        System.out.println("PASS exact MUL/color+oversize fallback / draw+fog-pass+readback+OOM rollback / alpha+debug safety");
+        System.out.println("PASS exact MUL/color+oversize fallback / draw+partial-frame+readback+OOM rollback / alpha+debug safety");
     }
 }

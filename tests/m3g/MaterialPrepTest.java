@@ -10,7 +10,6 @@ import java.util.Random;
 public final class MaterialPrepTest {
     private static void check(boolean b,String why) {M3GTest.check(b,why);}
     private static int clamp(long value) {return (int)Math.max(0L,Math.min(255L,value));}
-    private static int visible(int rz,int distance) {return distance<=1?255:255-clamp(-(long)rz*255/distance);}
     private static Object field(Object object,String name) throws Exception {
         Field f=object.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(object);
     }
@@ -53,45 +52,17 @@ public final class MaterialPrepTest {
         return raw;
     }
     public static void main(String[] args) throws Exception {
-        for(int value=-1;value<=256;value++) for(int visibility=0;visibility<=255;visibility++)
-            check(M3GMaterialMath.shade(value,visibility)==clamp(value)*visibility/255,"divide-by-255 mismatch");
-        for(int value:new int[]{Integer.MIN_VALUE,Integer.MAX_VALUE}) for(int visibility=0;visibility<=255;visibility++)
-            check(M3GMaterialMath.shade(value,visibility)==clamp(value)*visibility/255,"clamp overflow");
-        System.out.println("PASS exhaustive 256x256 exact shade / clamped out-of-range public light values / integer divide-by-255 eliminated");
-
         Random random=new Random(1417);M3GMaterialMath math=new M3GMaterialMath();
         int[] distances={Integer.MIN_VALUE,-1000,-1,0,1,2,3,254,255,256,1000,65535,Integer.MAX_VALUE,1000};
         for(int distance:distances) {
             DirectX7.fDist=distance;
-            for(int n=0;n<3000;n++) {
-                int z=n%3==0?random.nextInt():n%3==1?-random.nextInt(5000):new int[]{0,-1,Integer.MIN_VALUE,Integer.MAX_VALUE}[n%4];
-                check(math.visibility(z)==visible(z,distance),"cached fade mismatch distance="+distance+" rz="+z);
-                if(distance!=0) check(math.fogVisibility(z)==255-clamp(-(long)z*255/distance),"HQ fog mismatch");
-                else {
-                    boolean threw=false;
-                    try {math.fogVisibility(z);} catch(ArithmeticException expected) {threw=true;}
-                    check(threw,"HQ zero-distance division contract changed");
-                }
-                int divisor=distance/255;
-                check(math.flatVisibility(z)==(divisor==0?255:255-clamp(-(long)z/divisor)),"flat visibility mismatch");
-                check(math.additiveAmount(z)==clamp(-(long)z/(divisor==0?255:divisor)),"additive fog mismatch");
-            }
             for(int move:new int[]{0,1,20,200,Integer.MAX_VALUE}) {
                 float expected=1.0f+(float)distance/move;
                 check(Float.floatToIntBits(math.fogFar(move))==Float.floatToIntBits(expected),"cached Fog far mismatch");
                 check(Float.floatToIntBits(math.fogFar(move))==Float.floatToIntBits(expected),"warm Fog far mismatch");
             }
         }
-        DirectX7.fDist=1000;math.visibility(-100);int[] keys=(int[])field(math,"depths"),values=(int[])field(math,"visibility");
-        check(keys.length==64 && values.length==64,"unbounded fade cache");
-        int slot=(-100^(-100>>>4))&63;
-        for(int i=0;i<100;i++) check(math.visibility(-100)==230 && values[slot]==231,"shared depth cache");
-        int collision=-101;while(((collision^(collision>>>4))&63)!=slot) collision--;
-        check(math.visibility(collision)==visible(collision,1000) && keys[slot]==collision,"collision didn't replace key");
-        check(math.visibility(-100)==230 && keys[slot]==-100,"collision reused stale value");
-        DirectX7.fDist=2000;check(math.visibility(-100)==visible(-100,2000),"distance change didn't invalidate");
-        int occupied=0;for(int value:values) if(value!=0) occupied++;check(occupied==1,"old distance entries survived invalidation");
-        System.out.println("PASS exact distance+flat+additive fog / extreme depths+distance / bounded 64-slot reuse+collision+invalidation / cached float Fog endpoints");
+        System.out.println("PASS cached native Fog float endpoints / distance+move changes / extreme values");
 
         M3GSceneRenderer renderer=new M3GSceneRenderer();DirectX7 g=new DirectX7(32,32);
         Vertex[] v=(Vertex[])field(renderer,"vertices");for(int i=0;i<4;i++) v[i]=new Vertex();
@@ -139,8 +110,7 @@ public final class MaterialPrepTest {
                 for(int i=0;i<count;i++) {
                     int r=255,green=255,b=255;
                     if(kind>=2 && (mode==9 || mode==13) && Main.fogQ>0) {
-                        int visibility=visible(v[i].rz,DirectX7.fDist);
-                        r=clamp(channels[i][0])*visibility/255;green=clamp(channels[i][1])*visibility/255;b=clamp(channels[i][2])*visibility/255;
+                        r=clamp(channels[i][0]);green=clamp(channels[i][1]);b=clamp(channels[i][2]);
                         if(mode==9) green=b=r;else if(Main.fogQ==1) r=green=b=(r+green+b)/3;
                     }
                     check((rgba[i*4]&255)==r && (rgba[i*4+1]&255)==green && (rgba[i*4+2]&255)==b && (rgba[i*4+3]&255)==255,"optimized baked colors differ from original");
@@ -148,6 +118,6 @@ public final class MaterialPrepTest {
             }
         }
         renderer.dispose();g.destroy();
-        System.out.println("PASS 2400 live-mutated polygon color fixtures / six types / original RGB+gray+LQ rounding / distance changes / no stale baked-light cache");
+        System.out.println("PASS 2400 live-mutated polygon color fixtures / six types / baked RGB+gray+LQ / no CPU distance fade / no stale baked-light cache");
     }
 }

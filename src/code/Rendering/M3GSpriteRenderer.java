@@ -15,6 +15,7 @@ final class M3GSpriteRenderer {
             new int[]{0,1,3,1,2,3},new int[]{3,3});
     private final Appearance appearance=new Appearance();
     private final CompositingMode composite=new CompositingMode();
+    private final Fog fog=new Fog();
     private final short[] xyz=new short[12],uv=new short[8];
     private final byte[] rgba=new byte[16];
 
@@ -24,6 +25,7 @@ final class M3GSpriteRenderer {
         owner.registerPolygonMode(polygon);
         appearance.setPolygonMode(polygon);appearance.setCompositingMode(composite);
         composite.setDepthTestEnable(false);composite.setDepthWriteEnable(false);
+        fog.setMode(Fog.LINEAR);
         buffer.setTexCoords(0,coords,1.0f/4096,null);buffer.setColors(colors);
     }
 
@@ -57,32 +59,33 @@ final class M3GSpriteRenderer {
         boolean alpha=sprite.mode==3 && raw.alphaMixing;
         int kind=sprite.mode==1?M3GSceneRenderer.SPRITE_ADD:
                 alpha?M3GSceneRenderer.SPRITE_ALPHA:M3GSceneRenderer.SPRITE_CUTOUT;
-        int power=sprite.fog && sprite.mode!=1 && DirectX7.fDist!=0?
-                (int)Math.max(0L,Math.min(255L,-(long)sprite.pos.rz*255/DirectX7.fDist)):0;
-        int fogColor=DirectX7.standartDrawmode==6?0:DirectX7.fogc&0xffffff;
-        // Acquire both cached textures before submitting either pass. Uploads
-        // are never performed with a bound native target.
+        // ADD sprites keep their original no-fog semantics; fDist=0 disables
+        // sprite fog as before. No CPU visibility or white mask texture remains.
+        boolean fogged=sprite.fog && sprite.mode!=1 && DirectX7.fDist!=0;
+        float eye=1.0f,far=0;
+        if(fogged) {
+            if(DirectX7.fDist<0 || TexturingPers.move<=0) return false;
+            eye=1.0f-(float)sprite.pos.rz/TexturingPers.move;
+            far=owner.fogFar(TexturingPers.move);
+            if(!(eye>0) || !(far>1)) return false;
+        }
         Texture2D image=owner.texture(g,raw,kind);
         float cutoutThreshold=owner.textureCutoutThreshold();
-        Texture2D mask=power>0 && fogColor!=0?owner.texture(g,raw,
-                alpha?M3GSceneRenderer.SPRITE_ALPHA_MASK:M3GSceneRenderer.SPRITE_MASK):null;
         positions.set(0,4,xyz);coords.set(0,4,uv);
-        buffer.setPositions(positions,1.0f/precision,null);
-        appearance.setFog(null);appearance.setTexture(0,image);
+        // All four vertices share the same Z. Scaling XYZ together preserves
+        // the original screen rectangle/UV interpolation but gives Fog real Z.
+        buffer.setPositions(positions,eye/precision,null);
+        if(fogged) {
+            fog.setLinear(1.0f,far);
+            fog.setColor(DirectX7.standartDrawmode==6?0:DirectX7.fogc&0xffffff);
+        }
+        appearance.setFog(fogged?fog:null);appearance.setTexture(0,image);
         image.setBlending(Texture2D.FUNC_MODULATE);
         composite.setBlending(sprite.mode==1?CompositingMode.ALPHA_ADD:
                 alpha?CompositingMode.ALPHA:CompositingMode.REPLACE);
         composite.setAlphaThreshold(alpha || sprite.mode==1?0:cutoutThreshold);
-        int visible=255-power;
-        color((visible<<16)|(visible<<8)|visible,255);
+        color(0xffffff,255);
         render(g);
-        if(mask!=null) {
-            // Source fog precedes alpha blending. Add the fog contribution only
-            // through the same alpha mask, without attenuating destination twice.
-            appearance.setTexture(0,mask);mask.setBlending(Texture2D.FUNC_MODULATE);
-            composite.setBlending(CompositingMode.ALPHA_ADD);composite.setAlphaThreshold(0);
-            color(fogColor,power);render(g);
-        }
         return true;
     }
 

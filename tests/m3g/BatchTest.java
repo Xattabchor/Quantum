@@ -90,21 +90,22 @@ public final class BatchTest {
             Main.m3gPerspective=flag;
             geometry(64,false,0,false,1);geometry(128,false,0,false,2);
             geometry(100,false,0,false,2);geometry(100,true,0,false,4);
-            geometry(65,false,13,false,2);geometry(65,true,7,false,3);
+            geometry(65,false,13,true,2);geometry(65,false,13,false,-1);geometry(65,true,7,false,3);
             geometry(65,false,3,true,2);geometry(65,false,6,true,2);
             geometry(65,false,3,false,-1); // Different physical scales: don't distort native Fog.
-            for(int mode:new int[]{1,2,4,5,8,9,10,11,12}) geometry(17,false,mode,false,1);
+            for(int mode:new int[]{1,9,13}) {geometry(17,false,mode,true,1);geometry(17,false,mode,false,-1);}
+            for(int mode:new int[]{2,4,5,8,10,11,12}) geometry(17,false,mode,false,1);
         }
         System.out.println("PASS 100 triangles -> 2 draws / 100 quads -> 4 draws / ordered geometry+relative W+UV+colors+materials / exact native Fog scales / PC ON+OFF");
         System.out.println("PASS 64-triangle capacity+partial packets / warm native buffers+indices+texture reuse / one frame transfer / no per-frame batch buffers");
 
-        RenderObject[] mixed=new RenderObject[12];for(int i=0;i<mixed.length;i++) mixed[i]=face(i,(i&1)!=0,false);
+        RenderObject[] mixed=new RenderObject[12];for(int i=0;i<mixed.length;i++) mixed[i]=face(i,(i&1)!=0,true);
         Texture mixedTex=M3GTest.texture(0xff7090b0);mixedTex.drawmode=13;
         List<String> mixedReference=reference(mixed,new Texture[]{mixedTex});DirectX7 mixedRenderer=renderer();int mixedStart=Graphics3D.history.size();
         queue(mixedRenderer,mixed,new Texture[]{mixedTex});check(Graphics3D.history.size()==mixedStart+1
                 && mixedReference.equals(triangles(mixedStart)),"mixed tri/quad/static RGB stream changed");mixedRenderer.destroy();
 
-        // Same RawImage/Texture2D with ADD vs MODULATE: capture state before flush.
+        // Same RawImage/Texture2D with native Fog vs no Fog: capture state before flush.
         Texture add=M3GTest.texture(0xff405060),normal=new Texture(add.rImg,true,null);add.drawmode=1;
         RenderObject[] objects=faces(9,false,false);Texture[] materials={add,add,normal,normal,add,normal};
         List<String> expected=reference(objects,materials);DirectX7 g=renderer();int start=Graphics3D.history.size();queue(g,objects,materials);
@@ -114,7 +115,7 @@ public final class BatchTest {
         materials=new Texture[]{alpha,alpha,other,alpha,alpha};objects=faces(5,true,false);expected=reference(objects,materials);
         g=renderer();start=Graphics3D.history.size();queue(g,objects,materials);
         check(expected.equals(triangles(start)) && Graphics3D.history.size()==start+3,"alpha run moved past another texture");g.destroy();
-        System.out.println("PASS adjacent runs only / alpha painter order / same native texture ADD<->MODULATE snapshot / no texture sorting");
+        System.out.println("PASS adjacent runs only / alpha painter order / same native texture Fog<->no Fog snapshot / no texture sorting");
 
         // A CPU barrier must see all pending geometry, and a sprite/sky cannot
         // overtake a delayed polygon. The existing marker checks readback order.

@@ -38,9 +38,9 @@ public final class StaticLightTest {
     private static void colors(byte[] colors,boolean rgb,int count,int quality,int distance) {
         int[][] values={{20,100,200},{80,160,240},{255,64,0},{50,60,70}};
         for(int i=0;i<count;i++) {
-            int r=expected(values[i][0],(i+1)*100,distance);
-            int g=rgb?expected(values[i][1],(i+1)*100,distance):r;
-            int b=rgb?expected(values[i][2],(i+1)*100,distance):r;
+            int r=values[i][0];
+            int g=rgb?values[i][1]:r;
+            int b=rgb?values[i][2]:r;
             if(quality==0) r=g=b=255;
             else if(rgb && quality==1) r=g=b=(r+g+b)/3;
             check((colors[i*4]&255)==r && (colors[i*4+1]&255)==g && (colors[i*4+2]&255)==b,
@@ -70,12 +70,16 @@ public final class StaticLightTest {
             check(Graphics3D.uploads==uploads+1,"lighting state caused texture reuploads");
             Main.fogQ=2;Main.persQ=4;Main.mipMapping=false;
             for(int distance:new int[]{-1,0,1,200,2000}) {
-                DirectX7.fDist=distance;submit(g,p,t);
-                colors(Graphics3D.history.lastElement().colors,rgb,quad?4:3,2,distance);
+                DirectX7.fDist=distance;int calls=Graphics3D.calls;submit(g,p,t);
+                if(distance<=1) check(Graphics3D.calls==calls,"invalid native range must use CPU fallback");
+                else {
+                    check(Graphics3D.history.lastElement().fog,"lightmap distance fade must use native Fog");
+                    colors(Graphics3D.history.lastElement().colors,rgb,quad?4:3,2,distance);
+                }
             }
             g.destroy();
         }
-        System.out.println("PASS static grayscale9 / RGB13 / triangle+quad / quality+fast / no muzzle+torch+camera / distance fade");
+        System.out.println("PASS static grayscale9 / RGB13 / triangle+quad / quality+fast / no muzzle+torch+camera / raw baked RGB + native distance Fog");
 
         DirectX7 cutout=M3GTest.renderer();Main.fogQ=2;Main.persQ=4;Main.mipMapping=false;
         Texture hole=M3GTest.texture(0);hole.drawmode=13;cutout.clearDisplay(0xff123456);

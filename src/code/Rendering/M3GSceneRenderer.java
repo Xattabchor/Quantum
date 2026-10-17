@@ -1,7 +1,6 @@
 package code.Rendering;
 
 import code.Rendering.Meshes.*;
-import code.Gameplay.Map.LightMapper;
 import code.Math.MathUtils;
 import code.utils.Main;
 import java.util.Hashtable;
@@ -16,7 +15,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final Appearance appearance = new Appearance();
     private final PolygonMode polygon = new PolygonMode();
     private final PolygonMode screenPolygon = new PolygonMode();
-    private boolean screenMode;
+    // Fog needs real eye Z even when legacy UV interpolation is affine.
+    // This mode deliberately stays affine; the normal modes still follow HW PC.
+    private final PolygonMode affineFogPolygon = new PolygonMode();
+    private PolygonMode activePolygon;
     private M3GPolygonBatch batch;
     private final M3GMaterialMath materialMath=new M3GMaterialMath();
     private final M3GPolygonBatch.State batchState=new M3GPolygonBatch.State();
@@ -42,9 +44,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final TriangleStripArray[] baseQuadTriangles = new TriangleStripArray[2];
     private final TriangleStripArray[] alternateQuadTriangles = new TriangleStripArray[2];
     private final TriangleStripArray baseQuad, alternateQuad;
-    static final int OPAQUE_TEXTURE = 0, ALPHA_TEXTURE = 1, FOG_MASK = 2, ADD_TEXTURE = 3;
-    static final int SPRITE_CUTOUT=4, SPRITE_ALPHA=5, SPRITE_ADD=6,
-            SPRITE_MASK=7, SPRITE_ALPHA_MASK=8;
+    static final int OPAQUE_TEXTURE = 0, ALPHA_TEXTURE = 1, ADD_TEXTURE = 3;
+    static final int SPRITE_CUTOUT=4, SPRITE_ALPHA=5, SPRITE_ADD=6;
     static final int PANORAMA_TEXTURE=9;
     private final Vector textures = new Vector();
     private Image surface;
@@ -82,7 +83,12 @@ public final class M3GSceneRenderer implements SceneRenderer {
         screenPolygon.setCulling(PolygonMode.CULL_NONE);
         screenPolygon.setShading(PolygonMode.SHADE_SMOOTH);
         polygon.setShading(PolygonMode.SHADE_SMOOTH);
+        affineFogPolygon.setCulling(PolygonMode.CULL_BACK);
+        affineFogPolygon.setWinding(PolygonMode.WINDING_CW);
+        affineFogPolygon.setShading(PolygonMode.SHADE_SMOOTH);
+        affineFogPolygon.setPerspectiveCorrectionEnable(false);
         appearance.setPolygonMode(polygon);
+        activePolygon=polygon;
         batchState.polygon=polygon;
         composite.setDepthTestEnable(false);
         composite.setDepthWriteEnable(false);
@@ -116,11 +122,12 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     private void setScreenMode(boolean screen) {
-        batchState.polygon=screen?screenPolygon:polygon;
-        if(screenMode!=screen) {
-            appearance.setPolygonMode(screen?screenPolygon:polygon);
-            screenMode=screen;
-        }
+        selectPolygonMode(screen?screenPolygon:polygon);
+    }
+
+    private void selectPolygonMode(PolygonMode mode) {
+        batchState.polygon=mode;
+        if(activePolygon!=mode) {appearance.setPolygonMode(mode);activePolygon=mode;}
     }
 
     // Plain Java state snapshots: no per-polygon native getters. Queued draws
@@ -282,9 +289,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
         // Mode 7 is an untextured tint; modes 10/11/12 are aliases of 0.
         if(mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4
                 && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 13) return false;
-        // The original paths disagree on these degenerate distance values.
-        // Preserve their behavior instead of passing invalid ranges to M3G Fog.
-        if((mode == 3 || mode == 6) && Main.fogQ > 0 && DirectX7.fDist <= 1) return false;
+        boolean nativeFog=glow==null && Main.fogQ>0
+                && (mode==1 || mode==3 || mode==6 || mode==9 || mode==13);
+        // Invalid native ranges retain the original CPU material fallback.
+        if(nativeFog && DirectX7.fDist<=1) return false;
         Class type = object.getClass();
         if(type != Polygon3V.class && type != Polygon4V.class
                 && type != LightedPolygon3V.class && type != LightedPolygon4V.class
@@ -316,8 +324,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
         // TexturingPers interpolates 1 / (move - rz), not 1 / (distY - rz).
         // distY only controls screen projection and changes with the FOV.
         int distance = TexturingPers.move;
+        float fogFar=nativeFog?materialMath.fogFar(distance):0;
+        if(nativeFog && !(fogFar>1.0f)) return false;
+        if(nativeFog && !perspective) selectPolygonMode(affineFogPolygon);
         float scale = ProjectedGeometry.pack(vertices, count, g.centreX, g.centreY,
-                distance, mode != 8 && perspective, positions, work);
+                distance, nativeFog || (mode != 8 && perspective), positions, work);
         if(scale == 0) return false;
         buffersScale=scale;
         if(mode == 7) {
@@ -373,23 +384,14 @@ public final class M3GSceneRenderer implements SceneRenderer {
             coords[i * 2] = (short)u;
             coords[i * 2 + 1] = (short)v;
         }
-        boolean highQuality = Main.fogQ == 2 && !Main.forceLQFog;
-        // Affine mode 6 historically ignores forceLQFog, unlike its perspective path.
-        if(mode == 6 && !perspective) highQuality = Main.fogQ == 2;
-        boolean nativeFog = (mode == 3 || mode == 6) && Main.fogQ > 0 && highQuality
-                && perspective && (mode != 6 || !LightMapper.cameraVectorLight);
-        float fogFar=nativeFog?materialMath.fogFar(distance):0;
-        nativeFog=nativeFog && fogFar>1.0f;
-        // Multi-pass/flat per-triangle legacy fog retains its immediate order.
-        batchable=glow==null && ((mode!=3 && mode!=6) || Main.fogQ==0 || nativeFog);
+        // Standard native fog is a single pass for HQ/LQ and affine UVs alike.
+        batchable=glow==null;
         if(!batchable) flushBatch(g);
         int kind = mode == 2 ? ADD_TEXTURE : mode == 4 && raw.alphaMixing ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
-        // Cache eviction/uploads are done outside a bound target. A white alpha
-        // mask is needed only for the colored fog's legacy two-pass variant.
+        // Cache eviction/uploads are done outside a bound target.
         Texture2D nativeTexture = texture(g, raw, kind);
         CachedTexture nativeEntry=lastTexture;
         batchState.imageFilter=nativeEntry.filter;
-        Texture2D mask = mode == 3 && Main.fogQ > 0 && !nativeFog ? texture(g, raw, FOG_MASK) : null;
         int slot = count - 3;
         if(!batchable) posArrays[slot].set(0, count, positions);
         if(!batchable) uvArrays[slot].set(0, count, coords);
@@ -418,40 +420,19 @@ public final class M3GSceneRenderer implements SceneRenderer {
             uniformColors(count, (shade << 16) | (shade << 8) | shade, 255);
             if(!batchable) colorArrays[slot].set(0, count, colors);
             render(g, slot, indices[slot]);
-        } else if(mode == 1 && Main.fogQ > 0) {
-            // Legacy ADD fog is saturation of texture + constant fog RGB, not
-            // conventional linear fog. Texture ADD performs that operation in M3G.
-            uniformColors(count, additiveFog(count), 255);
-            if(!batchable) colorArrays[slot].set(0, count, colors);
-            setFunction(nativeTexture,Texture2D.FUNC_ADD);
-            render(g, slot, indices[slot]);
-        } else if((mode == 3 || mode == 6) && Main.fogQ > 0) {
-            if(nativeFog) {
-                uniformColors(count, 0xffffff, 255);
-                if(!batchable) colorArrays[slot].set(0, count, colors);
-                // Packed eye distance = 1 - rz/move, NOT the original -rz.
-                // Mapping both endpoints cancels the engine's projection offset.
-                batchState.near=1.0f;batchState.far=fogFar;
-                batchState.fogColor=mode==3?DirectX7.fogc&0xffffff:0;
-                setFog(fog);
-                render(g, slot, indices[slot]);
-                setFog(null);
-            } else if(!highQuality && count == 4) {
-                // Flat LQ fog follows the same chosen diagonal as the CPU path.
-                legacyFog(g, object, slot, count, quadTriangles[0], mode, perspective,
-                        false, Math.min(vertices[0].rz, Math.min(vertices[1].rz, vertices[alternate ? 2 : 3].rz)), nativeTexture, mask, nativeEntry.cutoutThreshold);
-                legacyFog(g, object, slot, count, quadTriangles[1], mode, perspective,
-                        false, Math.min(vertices[alternate ? 0 : 1].rz, Math.min(vertices[2].rz, vertices[3].rz)), nativeTexture, mask, nativeEntry.cutoutThreshold);
-            } else {
-                int farthest = vertices[0].rz;
-                for(int i = 1; i < count; i++) farthest = Math.min(farthest, vertices[i].rz);
-                legacyFog(g, object, slot, count, indices[slot], mode, perspective,
-                        highQuality, farthest, nativeTexture, mask, nativeEntry.cutoutThreshold);
-            }
         } else {
+            // Only baked RGB is prepared on the CPU. Distance attenuation is
+            // applied once by Fog, after texture/lightmap modulation in M3G.
             setColors(g, object, count, mode);
             if(!batchable) colorArrays[slot].set(0, count, colors);
+            if(nativeFog) {
+                // Packed eye distance = 1 - rz/move, not raw engine depth.
+                batchState.near=1.0f;batchState.far=fogFar;
+                batchState.fogColor=(mode==1 || mode==3)?DirectX7.fogc&0xffffff:0;
+                setFog(fog);
+            }
             render(g, slot, indices[slot]);
+            setFog(null);
         }
         return true;
     }
@@ -508,65 +489,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
     }
 
-    private static int clamp(long value) { return (int)Math.max(0L, Math.min(255L, value)); }
-
-    private int additiveFog(int count) {
-        int farthest = vertices[0].rz;
-        for(int i = 1; i < count; i++) farthest = Math.min(farthest, vertices[i].rz);
-        int amount = materialMath.additiveAmount(farthest);
-        int shade = 255 - amount;
-        int r = Math.max(0, ((DirectX7.fogc >> 16) & 255) - shade);
-        int green = Math.max(0, ((DirectX7.fogc >> 8) & 255) - shade);
-        int b = Math.max(0, (DirectX7.fogc & 255) - shade);
-        return ((r << 16) | (green << 8) | b) & 0xfefefe;
-    }
-
-    private int visibility(DirectX7 g, RenderObject object, Vertex vertex,
-            int mode, boolean perspective) {
-        int result=materialMath.fogVisibility(vertex.rz);
-        if(mode == 6 && perspective && LightMapper.cameraVectorLight) {
-            result = result * MathUtils.calcLight(object.nx, object.ny, object.nz,
-                    vertex.x - g.camera.m03, vertex.y - g.camera.m13, vertex.z - g.camera.m23) / 255;
-        }
-        return clamp(result);
-    }
-
-    private void legacyFog(DirectX7 g, RenderObject object, int slot, int count,
-            TriangleStripArray triangles, int mode, boolean perspective, boolean highQuality,
-            int farthest, Texture2D nativeTexture, Texture2D mask, float cutoutThreshold) {
-        // First pass: texture * visibility. M3G interpolates and modulates; no
-        // texture pixels are recolored on the CPU, including in the affine path.
-        appearance.setTexture(0, nativeTexture);
-        composite.setBlending(CompositingMode.REPLACE);
-        composite.setAlphaThreshold(cutoutThreshold);
-        int flatVisible=highQuality?0:materialMath.flatVisibility(farthest);
-        for(int i = 0; i < count; i++) {
-            int visible = highQuality?visibility(g, object, vertices[i], mode, perspective):flatVisible;
-            colors[i * 4] = colors[i * 4 + 1] = colors[i * 4 + 2] = (byte)visible;
-            colors[i * 4 + 3] = (byte)255;
-        }
-        colorArrays[slot].set(0, count, colors);
-        render(g, slot, triangles);
-        if(mode == 3) {
-            // Add C_fog * (1 - visibility) in M3G. The alpha mask prevents fog
-            // from filling the original texture's transparent holes. Using ALPHA
-            // here would attenuate the already darkened first pass a second time.
-            for(int i = 0; i < count; i++) {
-                colors[i * 4 + 3] = (byte)(255 - (colors[i * 4] & 255));
-                colors[i * 4] = (byte)(DirectX7.fogc >> 16);
-                colors[i * 4 + 1] = (byte)(DirectX7.fogc >> 8);
-                colors[i * 4 + 2] = (byte)DirectX7.fogc;
-            }
-            colorArrays[slot].set(0, count, colors);
-            appearance.setTexture(0, mask);
-            composite.setBlending(CompositingMode.ALPHA_ADD);
-            composite.setAlphaThreshold(0);
-            render(g, slot, triangles);
-            appearance.setTexture(0, nativeTexture);
-            composite.setBlending(CompositingMode.REPLACE);
-            composite.setAlphaThreshold(cutoutThreshold);
-        }
-    }
+    private static int clamp(int value) {return Math.max(0,Math.min(255,value));}
 
     private void setColors(DirectX7 g, RenderObject object, int count, int mode) {
         boolean lit=(mode==9 || mode==13) && Main.fogQ>0;
@@ -589,12 +512,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 ColorLightedPolygon4V p=(ColorLightedPolygon4V)object;r=i==0?p.ar:i==1?p.br:i==2?p.cr:p.dr;
                 if(!gray) {green=i==0?p.ag:i==1?p.bg:i==2?p.cg:p.dg;b=i==0?p.ab:i==1?p.bb:i==2?p.cb:p.db;}
             }
-            int visible=materialMath.visibility(vertices[i].rz);
-            r=M3GMaterialMath.shade(r,visible);
+            r=clamp(r);
             if(gray) green=b=r;
             else {
-                green=M3GMaterialMath.shade(green,visible);b=M3GMaterialMath.shade(b,visible);
-                // Preserve separate channel rounding BEFORE the LQ average.
+                green=clamp(green);b=clamp(b);
+                // Keep the configured LQ grayscale lightmap; Fog is independent.
                 if(Main.fogQ==1) r=green=b=(r+green+b)/3;
             }
             colors[i*4]=(byte)r;colors[i*4+1]=(byte)green;colors[i*4+2]=(byte)b;colors[i*4+3]=(byte)255;
@@ -652,11 +574,13 @@ public final class M3GSceneRenderer implements SceneRenderer {
         return null;
     }
 
-    // Capture immediately after texture(): a later mask lookup changes lastTexture.
+    float fogFar(int move) {return materialMath.fogFar(move);}
+
+    // Capture immediately after texture(): a later lookup changes lastTexture.
     float textureCutoutThreshold() {return lastTexture.cutoutThreshold;}
 
     private Texture2D createTexture(RawImage image, int kind) {
-        boolean sprite=kind>=SPRITE_CUTOUT && kind<=SPRITE_ALPHA_MASK;
+        boolean sprite=kind>=SPRITE_CUTOUT && kind<=SPRITE_ADD;
         int width=sprite?spriteDimension(image.w):image.w;
         int height=sprite?spriteDimension(image.h):image.h;
         int size = width * height;
@@ -669,18 +593,17 @@ public final class M3GSceneRenderer implements SceneRenderer {
         boolean opaque=true;
         for(int i = 0; i < size; i++) {
             // Sprite-only nearest-neighbor reduction, done once per cache miss.
-            // Sample texel centers; color and fog masks use the identical source.
+            // Sample texel centers; Fog does not need a separate mask upload.
             // POT images pass through unchanged. Never mutate the original asset.
             int pixel = image.img[sprite?((2*(i/width)+1)*image.h/(2*height))*image.w
                     +(2*(i%width)+1)*image.w/(2*width):i];
             // Legacy additive source discards channel low bits. Hardware cannot
             // mask destination low bits; native ADD may differ by one per channel.
             int rgb = kind == ADD_TEXTURE || kind == SPRITE_ADD ? pixel & 0xfefefe : pixel;
-            boolean mask=kind==FOG_MASK || kind==SPRITE_MASK || kind==SPRITE_ALPHA_MASK;
-            rgba[i * 4] = mask ? (byte)255 : (byte)(rgb >> 16);
-            rgba[i * 4 + 1] = mask ? (byte)255 : (byte)(rgb >> 8);
-            rgba[i * 4 + 2] = mask ? (byte)255 : (byte)rgb;
-            rgba[i * 4 + 3] = kind==ALPHA_TEXTURE || kind==SPRITE_ALPHA || kind==SPRITE_ALPHA_MASK
+            rgba[i * 4] = (byte)(rgb >> 16);
+            rgba[i * 4 + 1] = (byte)(rgb >> 8);
+            rgba[i * 4 + 2] = (byte)rgb;
+            rgba[i * 4 + 3] = kind==ALPHA_TEXTURE || kind==SPRITE_ALPHA
                     ? (byte)(pixel >>> 24) : (byte)(kind==SPRITE_ADD || kind==PANORAMA_TEXTURE || pixel!=0 ? 255 : 0);
             // Inspect the actual uploaded alpha, including reduced sprite copies,
             // in this existing conversion loop. No extra scan on cache hits.

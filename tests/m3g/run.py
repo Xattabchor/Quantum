@@ -48,6 +48,12 @@ weapon = (ROOT / "src/code/Gameplay/Weapon.java").read_text()
 assert "if(shootLight) {" in weapon and "g3d.startMuzzleGlow();" in weapon
 assert weapon.index("g3d.startMuzzleGlow();") > weapon.index("if (magazine.rounds > 0)")
 
+# Successful native material/sprite fog must not reintroduce CPU fading/masks.
+scene_source=(ROOT / "src/code/Rendering/M3GSceneRenderer.java").read_text()
+sprite_source=(ROOT / "src/code/Rendering/M3GSpriteRenderer.java").read_text()
+for forbidden in ("legacyFog(", "additiveFog(", "lightmapColor(", "FOG_MASK", "SPRITE_MASK", "SPRITE_ALPHA_MASK"):
+    assert forbidden not in scene_source+sprite_source
+
 # Only the API subset under test. These sources never enter the MIDlet.
 STUBS = {
 "javax/microedition/media/Manager.java": """package javax.microedition.media;
