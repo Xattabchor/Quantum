@@ -34,7 +34,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private Image surface;
     private M3GSkyRenderer skyRenderer;
     private M3GScreenLines screenLines;
-    private M3GStormFlash stormFlash;
+    private Background flashBackground;
     private boolean bound;
     private int cachedPixels;
     private final int maxTexture;
@@ -81,12 +81,14 @@ public final class M3GSceneRenderer implements SceneRenderer {
         fog.setMode(Fog.LINEAR);
     }
 
-    void bind(DirectX7 g) {
+    void bind(DirectX7 g) { bind(g,true); }
+
+    private void bind(DirectX7 g,boolean preserve) {
         if(bound) return;
         if(surface == null || surface.getWidth() != g.width || surface.getHeight() != g.height)
             surface = Image.createImage(g.width, g.height);
         // Copy the CPU background, skybox, and any earlier software segment.
-        surface.getGraphics().drawRGB(g.display, 0, g.width, 0, 0, g.width, g.height, false);
+        if(preserve) surface.getGraphics().drawRGB(g.display, 0, g.width, 0, 0, g.width, g.height, false);
         Transform projection = new Transform();
         projection.set(new float[]{
             2.0f / g.width, 0, -(2.0f * g.centreX / g.width - 1), 0,
@@ -129,16 +131,24 @@ public final class M3GSceneRenderer implements SceneRenderer {
             surface = null;
             skyRenderer = null;
             screenLines = null;
-            stormFlash = null;
+            flashBackground = null;
             textures.removeAllElements();
             cachedPixels = 0;
         }
     }
 
     public boolean draw(DirectX7 g, RenderObject object, Texture texture, boolean fast) {
-        if(object instanceof StormFlash) {
-            if(stormFlash == null) stormFlash = new M3GStormFlash(this,graphics);
-            return stormFlash.draw(g,(StormFlash)object);
+        if(object instanceof SkyFlash) {
+            if(flashBackground == null) {
+                flashBackground = new Background();
+                flashBackground.setColor(0xff000000 | SkyFlash.COLOR);
+                flashBackground.setColorClearEnable(true);
+                flashBackground.setDepthClearEnable(false);
+            }
+            // The clear overwrites the complete target; don't upload old pixels.
+            bind(g,false);
+            graphics.clear(flashBackground);
+            return true;
         }
         if(object instanceof ScreenLines) {
             if(screenLines == null) screenLines = new M3GScreenLines(this,graphics);

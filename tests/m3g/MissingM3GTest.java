@@ -49,8 +49,12 @@ public final class MissingM3GTest {
         }
         g=M3GTest.renderer();DirectX7 flashCPU=new DirectX7(32,32);flashCPU.clearDisplay(0x123456);
         code.utils.WeatherGenerator flashWeather=new code.utils.WeatherGenerator(32,32,0,0,0,0,0,true,null,1,1,16,16,1,1);
-        flashWeather.lightingEffect(flashCPU,-10);flashWeather.lightingEffect(g,-10);
-        M3GTest.check(!g.isM3GActive() && java.util.Arrays.equals(g.display,flashCPU.display),"missing API lost storm flash fallback");
+        int[] untouched=g.display.clone();flashWeather.lightingEffect(g,-10);
+        M3GTest.check(java.util.Arrays.equals(g.display,untouched),"missing API re-enabled world flash");
+        code.Gameplay.Map.Skybox flashingSky=new code.Gameplay.Map.Skybox(0x112233);flashingSky.lighting=true;
+        flashingSky.render(null,g);g.render();
+        for(int pixel:g.display) M3GTest.check((pixel&0xffffff)==SkyFlash.COLOR,"missing API lost solid sky flash");
+        M3GTest.check(!g.isM3GActive(),"missing API sky clear didn't fall back");
         g.destroy();flashCPU.destroy();
         System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay");
     }

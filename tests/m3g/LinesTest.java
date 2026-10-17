@@ -77,16 +77,14 @@ public final class LinesTest {
 
         g=new DirectX7(240,320);g.setRenderer(DirectX7.M3G);Skybox sky=new Skybox();
         int first=Graphics3D.history.size();
-        for(int seed=1;seed<100 && Graphics3D.history.size()==first;seed++) {
-            sky.lastLighting=seed;sky.drawLighting(g);g.render();
-        }
-        check(Graphics3D.history.size()>first && !last().fog,"real Skybox lightning not submitted as strips");g.destroy();
+        for(int seed=1;seed<100;seed++) {sky.lastLighting=seed;sky.drawLighting(g);g.render();}
+        check(Graphics3D.history.size()==first,"M3G storm still generated bolts");g.destroy();
         DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
         g=M3GTest.renderer();b=new ScreenLines();b.line(10,0,20,31,3,0xffffff,true);b.render(cpu,null);
         Graphics3D.failAt=Graphics3D.calls+1;M3GTest.submit(g,b,null,0);g.render();Graphics3D.failAt=0;
         check(java.util.Arrays.equals(cpu.display,g.display) && !g.isM3GActive(),"lightning failed to replay original CPU lines");
         cpu.destroy();g.destroy();
-        System.out.println("PASS real lightning dispatch / original CPU line replay after native failure");
+        System.out.println("PASS M3G bolt suppression / legacy line batch CPU replay after native failure");
 
         g=M3GTest.renderer();int[] before=g.display.clone();
         Graphics3D.failAt=Graphics3D.calls+2;

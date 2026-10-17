@@ -9,6 +9,7 @@ import code.Rendering.Meshes.SkyMesh;
 import code.Rendering.Meshes.Mesh;
 import code.Rendering.Texture;
 import code.Rendering.ScreenLines;
+import code.Rendering.SkyFlash;
 import code.utils.Asset;
 import javax.microedition.lcdui.Graphics;
 
@@ -20,6 +21,7 @@ public class Skybox {
     private Mesh mesh;
     private SkyMesh nativeMesh;
     private ScreenLines lightningLines;
+    private SkyFlash skyFlash;
     public MultyTexture texture;
 	
     private int color, groundColor;
@@ -103,6 +105,7 @@ public class Skybox {
         mesh = null;
         nativeMesh = null;
         lightningLines = null;
+        skyFlash = null;
 
         tex = null;
 
@@ -137,6 +140,13 @@ public class Skybox {
 		}
 
 		if(lighting) {
+            if(g3d.getRenderer() == DirectX7.M3G) {
+                // Cheapest storm: replace the sky only, no bolts or world glow.
+                if(skyFlash == null) skyFlash = new SkyFlash();
+                g3d.addRenderObjectDT(skyFlash,null);
+                lighting = false;
+                return;
+            }
 			if(skyLighting == null) g3d.clearDisplay(0xe5e5e5);
 			else if(mode == 3) renderGradient(g3d, skyLighting, lowestDegree, horizonScale, horizonOffset);
 			else renderGradient(g3d, skyLighting, -91, 1, 0);
@@ -404,6 +414,7 @@ public class Skybox {
     }
     
     public void drawLighting(DirectX7 g3d) {
+        if(g3d.getRenderer() == DirectX7.M3G) return;
         try { drawLighting(g3d,g3d.canRenderM3G()); }
         catch(OutOfMemoryError ex) { drawLighting(g3d,false); }
     }

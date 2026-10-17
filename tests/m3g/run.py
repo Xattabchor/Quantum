@@ -31,7 +31,8 @@ assert game.index("if(doubleBright)") < game.index("g3d.renderMuzzleGlow(") < ga
 assert game.index("g3d.renderMuzzleGlow(") < game.index("player.arsenal.drawWeapon(")
 assert "if(!playerDied) g3d.renderMuzzleGlow" in game
 assert game.index("g3d.render();") < game.index("wg.lightingEffect(") < game.index("if(vignette != null)")
-assert "if(lighting && !player.character.underRoof && wg != null)" in game
+assert "if(lighting && !player.character.underRoof && wg != null && g3d.getRenderer() != DirectX7.M3G)" in game
+assert "System.currentTimeMillis() - wg.lastLighting) < 135" in game
 weapon = (ROOT / "src/code/Gameplay/Weapon.java").read_text()
 assert "if(shootLight) {" in weapon and "g3d.startMuzzleGlow();" in weapon
 assert weapon.index("g3d.startMuzzleGlow();") > weapon.index("if (magazine.rounds > 0)")
@@ -54,14 +55,21 @@ public class Image {
 }''',
 "javax/microedition/lcdui/Graphics.java": '''package javax.microedition.lcdui;
 public class Graphics {
- public Image image; Graphics(Image i){image=i;}
+ public Image image; public static int drawRGBCalls; Graphics(Image i){image=i;}
  public int color,lineCalls,rectCalls,lastX,lastY,lastX2,lastY2;
  public void setColor(int c){color=c;}
  public void drawLine(int x,int y,int x2,int y2){lineCalls++;lastX=x;lastY=y;lastX2=x2;lastY2=y2;}
  public void fillRect(int x,int y,int w,int h){rectCalls++;lastX=x;lastY=y;lastX2=x+w;lastY2=y+h;}
  public void drawRGB(int[] p,int o,int s,int x,int y,int w,int h,boolean a){
+  drawRGBCalls++;
   for(int j=0;j<h;j++)System.arraycopy(p,o+j*s,image.pixels,(y+j)*image.w+x,w);
  }
+}''',
+"javax/microedition/m3g/Background.java": '''package javax.microedition.m3g;
+public class Background {
+ public int color; public boolean colorClear,depthClear;
+ public void setColor(int c){color=c;} public void setColorClearEnable(boolean b){colorClear=b;}
+ public void setDepthClearEnable(boolean b){depthClear=b;}
 }''',
 "javax/microedition/m3g/Transform.java": '''package javax.microedition.m3g;
 public class Transform { public float[] matrix; public void set(float[] m){matrix=m;} }''',
@@ -120,7 +128,7 @@ import java.util.Hashtable;
 import javax.microedition.lcdui.Graphics;
 public class Graphics3D {
  private static final Graphics3D INSTANCE=new Graphics3D();
- public static int calls,uploads,binds,releases,failAt,before;
+ public static int calls,uploads,binds,releases,failAt,before,clears;
  public static VertexBuffer lastVertices; public static TriangleStripArray lastIndices;public static Appearance lastAppearance;
  public static Graphics target; public static Camera camera;
  public static class Draw {
@@ -135,6 +143,12 @@ public class Graphics3D {
  }
  public void releaseTarget(){if(target==null)throw new AssertionError("double release");target=null;releases++;}
  public void setViewport(int x,int y,int w,int h){} public void setCamera(Camera c,Transform t){camera=c;} public void resetLights(){}
+ public void clear(Background b){
+  if(target==null || !b.colorClear || b.depthClear)throw new AssertionError("sky clear state");
+  if(Boolean.getBoolean("m3g.oom"))throw new OutOfMemoryError("native clear memory");
+  clears++;java.util.Arrays.fill(target.image.pixels,b.color);
+  if(Boolean.getBoolean("clear.fail"))throw new IllegalStateException("native clear failure");
+ }
  public void render(VertexBuffer v,TriangleStripArray i,Appearance a,Transform t){
   if(target==null || a.comp.depth)throw new AssertionError("target/depth");
   if(Boolean.getBoolean("m3g.oom"))throw new OutOfMemoryError("native memory");
@@ -187,7 +201,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     sources += sorted(TEST.glob("*.java"))
     # Compile the current adapter against the doubles, not copies of its logic.
     sources += [ROOT / "src/code/Rendering" / name for name in
-                ("M3GSceneRenderer.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GStormFlash.java")]
+                ("M3GSceneRenderer.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "M3GScreenLines.java", "ScreenLineGeometry.java")]
     if os.environ.get("ECJ_JAR"):
         compiler = [JAVA, "-jar", os.environ["ECJ_JAR"], "-8", "-proc:none", "-nowarn"]
     else:
@@ -199,7 +213,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GlassTest"], check=True)
-    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.StormFlashTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyFlashTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.DitherDisabledTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GeometryTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyTest"], check=True)

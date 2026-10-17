@@ -432,7 +432,7 @@ public final class GameScreen extends MyCanvas {
             g3d.shootIntensity -= QFPS.frameTime;
             if(g3d.shootIntensity < 0) g3d.shootIntensity = 0;
             
-            if(lighting && !player.character.underRoof && wg != null) {
+            if(lighting && !player.character.underRoof && wg != null && g3d.getRenderer() != DirectX7.M3G) {
 				Camera cam = player.getCamera();
 				wg.lightingEffect(g3d, cam != null ? cam.currentRotX : player.rotateX);
 			}
