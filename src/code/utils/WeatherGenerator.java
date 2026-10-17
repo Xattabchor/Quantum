@@ -13,6 +13,57 @@ import javax.microedition.lcdui.Graphics;
 public class WeatherGenerator {
     
   private ScreenLines nativeParticles;
+  private static final int RAIN_LIMIT=16;
+  private int rendererMode=Main.renderer;
+  private int[] activeParticles;
+  private int activeCount,rainSlots;
+  private float[] indexedCoords;
+  private int[] indexedInfo;
+  private Random rainRandom;
+
+  public void setRenderer(int renderer) {
+      if(rendererMode!=renderer) {
+          rendererMode=renderer;activeParticles=null;
+      }
+  }
+
+  // Build once on entering M3G rain or replacing the public particle arrays.
+  // Keep all live snow, but only 16 rain/emitter slots. Other rain is dormant.
+  private int particleCount() {
+      if(rendererMode!=DirectX7.M3G || generate==2) {
+          activeParticles=null;return coords.length/2;
+      }
+      if(activeParticles!=null && indexedCoords==coords && indexedInfo==info) return activeCount;
+      int total=coords.length/2,snow=0;
+      for(int i=0;i<total;i++) if(info[i*2]==2) snow++;
+      rainSlots=Math.min(RAIN_LIMIT,total-snow);
+      activeParticles=new int[rainSlots+snow];
+      int rain=0,tail=rainSlots;
+      for(int i=0;i<total;i++) {
+          if(info[i*2]==2) activeParticles[tail++]=i;
+          else if(rain<rainSlots) activeParticles[rain++]=i;
+      }
+      activeCount=tail;indexedCoords=coords;indexedInfo=info;
+      if(rainRandom==null) rainRandom=new Random();
+      return activeCount;
+  }
+
+  private int particleIndex(int slot) {return activeParticles==null?slot:activeParticles[slot];}
+  private boolean canEmit(int slot) {return activeParticles==null || slot<rainSlots;}
+  private Random particleRandom() {return activeParticles==null?new Random():rainRandom;}
+
+  private void retireSnow() {
+      if(activeParticles==null) return;
+      for(int slot=rainSlots;slot<activeCount;) {
+          int index=activeParticles[slot];
+          if(info[index*2]==2) {slot++;continue;}
+          if(rainSlots<RAIN_LIMIT) {
+              activeParticles[slot]=activeParticles[rainSlots];
+              activeParticles[rainSlots++]=index;
+              if(slot<rainSlots) slot=rainSlots;
+          } else activeParticles[slot]=activeParticles[--activeCount];
+      }
+  }
   public byte generate; 
 /*
  * 0 - Nothing 
@@ -77,6 +128,7 @@ public class WeatherGenerator {
   }
   
   public void clearBuffers() {
+      activeParticles=null;
       
       for(int i=0;i<coords.length;i++) {coords[i]=0F;}
       for(int i=0;i<info.length;i++) {info[i]=0;}
@@ -84,10 +136,12 @@ public class WeatherGenerator {
   }
   
   public void createParticles() {
-      Random r = new Random();
-      for(int i=0;i<coords.length/2;i++) { 
+      int count=particleCount();
+      Random r = particleRandom();
+      for(int slot=0;slot<count;slot++) {
+          int i=particleIndex(slot);
           
-          if(info[i*2]==0) { // Генерируем новые партиклы
+          if(info[i*2]==0 && canEmit(slot)) { // Генерируем новые партиклы
               coords[i*2+1]=r.nextInt(screenHeight);
               coords[i*2]=r.nextInt(screenWidth);
               info[i*2]=generate;
@@ -99,7 +153,8 @@ public class WeatherGenerator {
   
     public void moveX(int x,int frameTime) {
         float xx=x*3*frameTime/50;
-      for(int i=0;i<coords.length/2;i++) { 
+      for(int slot=0,count=particleCount();slot<count;slot++) {
+          int i=particleIndex(slot);
           
               int depth=info[i*2+1]/22;
               if(depth<=0) depth=1;
@@ -113,7 +168,8 @@ public class WeatherGenerator {
     
         public void moveX2(int x,int frameTime) {
 float xx=x*4*frameTime/50;
-      for(int i=0;i<coords.length/2;i++) { 
+      for(int slot=0,count=particleCount();slot<count;slot++) {
+          int i=particleIndex(slot);
           if(info[i*2]!=0) { 
               coords[i*2]+=xx;
           }
@@ -122,7 +178,8 @@ float xx=x*4*frameTime/50;
     
     public void moveY(int y,int frameTime) {
 float yy=y*1.3f*4*frameTime/50;
-      for(int i=0;i<coords.length/2;i++) { 
+      for(int slot=0,count=particleCount();slot<count;slot++) {
+          int i=particleIndex(slot);
           
               /*int depth=info[i*2+1]/25;
               if(depth<=0) depth=1;
@@ -135,7 +192,8 @@ float yy=y*1.3f*4*frameTime/50;
   }
         public void moveY2(int y,int frameTime) {
 float yy=y*1.3f*3*frameTime/80/50;
-      for(int i=0;i<coords.length/2;i++) { 
+      for(int slot=0,count=particleCount();slot<count;slot++) {
+          int i=particleIndex(slot);
           
               int depth=info[i*2+1]/25;
               if(depth<=0) depth=1;
@@ -151,9 +209,11 @@ float yy=y*1.3f*3*frameTime/80/50;
       float zz=z*2.75f*frameTime/50;
       isZoom=true;
       float mz=1.0F+0.05F*z/5*frameTime/50;
-      Random r = new Random();
+      int count=particleCount();
+      Random r = particleRandom();
       int centerY2=centerY*(90+diry*7/5)/90;
-      for(int i=0;i<coords.length/2;i++) { 
+      for(int slot=0;slot<count;slot++) {
+          int i=particleIndex(slot);
           
               
           if(info[i*2]!=0) { 
@@ -168,7 +228,7 @@ float yy=y*1.3f*3*frameTime/80/50;
               info[i*2+1]=100;
           }
           }
-          else if(info[i*2]==0) {             
+          else if(info[i*2]==0 && canEmit(slot)) {
               coords[i*2]=r.nextInt(screenWidth);
               coords[i*2+1]=r.nextInt(screenHeight);
               info[i*2+1]=100;
@@ -183,9 +243,11 @@ float yy=y*1.3f*3*frameTime/80/50;
     public void moveB(int z,int frameTime,int diry) {
       float zz=z*2.75f*frameTime/50;
       float mz=1.0F-0.05F*z/5*frameTime/50;
-      Random r = new Random();
+      int count=particleCount();
+      Random r = particleRandom();
       int centerY2=centerY*(90+diry*7/5)/90;
-      for(int i=0;i<coords.length/2;i++) { 
+      for(int slot=0;slot<count;slot++) {
+          int i=particleIndex(slot);
           
               
           if(info[i*2]!=0) { 
@@ -211,10 +273,12 @@ float yy=y*1.3f*3*frameTime/80/50;
   
   public void update(int frameTime,int diry, boolean underRoof) {
       
-      Random r = new Random();
+      int count=particleCount();
+      Random r = particleRandom();
       
       
-      for(int i=0;i<coords.length/2;i++) { // Удаляем партиклы за экраном
+      for(int slot=0;slot<count;slot++) {
+          int i=particleIndex(slot); // Удаляем партиклы за экраном
           
           
           if(coords[i*2+1]<-2) coords[i*2+1]+=screenHeight-1;
@@ -230,7 +294,7 @@ float yy=y*1.3f*3*frameTime/80/50;
          
           
           
-          if(info[i*2]==0 && !underRoof) { // Генерируем новые партиклы
+          if(info[i*2]==0 && !underRoof && canEmit(slot)) { // Генерируем новые партиклы
               if(!lastUnderRoof) {
                   coords[i*2+1] = 0;
                   coords[i*2] = r.nextInt(screenWidth);
@@ -276,6 +340,7 @@ float yy=y*1.3f*3*frameTime/80/50;
           
       }
       
+      retireSnow();
       if( lighting && System.currentTimeMillis()>=nextLighting ) {
           lastLighting = System.currentTimeMillis();
           genNewLighting(r);
@@ -299,11 +364,13 @@ float yy=y*1.3f*3*frameTime/80/50;
   /** Only snow uses the native overlay. Cheap rain is drawn with LCDUI after
    * flush, avoiding another full-frame upload/backup/readback for rain. */
   public boolean paintM3G(DirectX7 g) {
+      setRenderer(g.getRenderer());
       if(!g.canRenderM3G() || code.HUD.DeveloperMenu.drawPortals) return false;
       try {
           if(nativeParticles != null) nativeParticles.clear();
           boolean light = lighting && System.currentTimeMillis()-lastLighting<135;
-          for(int i=0;i<coords.length/2;i++) {
+          for(int slot=0,count=particleCount();slot<count;slot++) {
+              int i=particleIndex(slot);
               int type=info[i*2];
               if(type != 2) continue;
               int depth=info[i*2+1];
@@ -325,6 +392,7 @@ float yy=y*1.3f*3*frameTime/80/50;
 
   /** M3G keeps only a bounded, texture-free LCDUI rain overlay. Software is original. */
   public void paintAfterScene(Graphics g,int xx,int renderer,boolean nativeSnow) {
+      setRenderer(renderer);
       if(renderer != DirectX7.M3G) {
           if(!nativeSnow) paint(g,xx);
           else g.setColor(0xffffff);
@@ -335,12 +403,13 @@ float yy=y*1.3f*3*frameTime/80/50;
   }
 
   private void paintCheapRain(Graphics g,int xx) {
-      final int limit=32;
-      int count=coords.length/2;
-      int step=Math.max(1,(count+limit-1)/limit);
+      particleCount();
+      int count=activeParticles==null?coords.length/2:rainSlots;
+      int step=activeParticles==null?Math.max(1,(count+RAIN_LIMIT-1)/RAIN_LIMIT):1;
       boolean light=lighting && System.currentTimeMillis()-lastLighting<135;
       g.setColor(light?0xffffff:mixColor(rainColorNear,rainColorFar,50));
-      for(int i=0;i<count;i+=step) {
+      for(int slot=0;slot<count;slot+=step) {
+          int i=particleIndex(slot);
           if(info[i*2]!=1) continue;
           int x=(int)coords[i*2],y=(int)coords[i*2+1];
           if(x<0 || x>=screenWidth || y>=screenHeight || y+3<0) continue;
@@ -363,7 +432,8 @@ float yy=y*1.3f*3*frameTime/80/50;
       
       boolean light = lighting && System.currentTimeMillis()-lastLighting<135;
       
-      for(int i=0;i<coords.length/2;i++) { // Рендерим партиклы
+      for(int slot=0,count=particleCount();slot<count;slot++) {
+          int i=particleIndex(slot); // Рендерим партиклы
           if(info[i*2]==2) {
               
               int depth=info[i*2+1];

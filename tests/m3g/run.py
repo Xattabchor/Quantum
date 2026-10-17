@@ -34,6 +34,7 @@ assert "if(!playerDied) g3d.renderMuzzleGlow" in game
 assert game.index("g3d.render();") < game.index("wg.lightingEffect(") < game.index("if(vignette != null)")
 assert "if(lighting && !player.character.underRoof && wg != null && g3d.getRenderer() != DirectX7.M3G)" in game
 assert "System.currentTimeMillis() - wg.lastLighting) < 135" in game
+assert game.index("wg.setRenderer(Main.renderer)") < game.index("wg.moveY((int) -yRot")
 weapon = (ROOT / "src/code/Gameplay/Weapon.java").read_text()
 assert "if(shootLight) {" in weapon and "g3d.startMuzzleGlow();" in weapon
 assert weapon.index("g3d.startMuzzleGlow();") > weapon.index("if (magazine.rounds > 0)")
@@ -223,6 +224,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.LinesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.CheapRainTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.RainSimulationTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.StaticLightTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MuzzleGlowTest"], check=True)
     # Remove the optional API for a real class-loading fallback test.

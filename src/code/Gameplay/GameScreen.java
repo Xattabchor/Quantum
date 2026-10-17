@@ -308,6 +308,7 @@ public final class GameScreen extends MyCanvas {
         finishDraw = false;
         
         DirectX7 g3d = scene.getG3D();
+        if(wg != null) wg.setRenderer(Main.renderer);
         
         boolean redrawInfo = changed;
         if(!redrawInfo) g.setClip(0, height / 2 - g3d.getHeight() / 2, width, g3d.getHeight());

@@ -20,14 +20,14 @@ public final class CheapRainTest {
     private static Graphics lcd() {return Image.createImage(32,64).getGraphics();}
     public static void main(String[] args) {
         Main.persQ=4;Main.fogQ=2;Main.mipMapping=false;
-        for(int count:new int[]{0,1,31,32,33,65,500,2048}) {
+        for(int count:new int[]{0,1,15,16,17,31,32,33,65,500,2048}) {
             WeatherGenerator w=rain(count);DirectX7 g=M3GTest.renderer();
             int calls=Graphics3D.calls,binds=Graphics3D.binds,releases=Graphics3D.releases;
             int uploads=Graphics3D.uploads,copies=Graphics.drawRGBCalls;
             float[] coords=w.coords.clone();int[] info=w.info.clone(),frame=g.display.clone();
             boolean nativeSnow=w.paintM3G(g);check(nativeSnow,"rain-only frame should not need snow fallback");
             Graphics out=lcd();w.paintAfterScene(out,13,g.getRenderer(),nativeSnow);
-            check(out.lineCalls<=32 && (count==0 || out.lineCalls>0),"rain draw budget exceeded/missing");
+            check(out.lineCalls<=16 && (count==0 || out.lineCalls>0),"rain draw budget exceeded/missing");
             check(out.rectCalls==0 && out.color==0xffffff && out.colorCalls==2,"rain changes color per drop or doesn't restore state");
             for(int[] line:out.lineHistory) {
                 check(line[0]==10 && line[2]==10 && line[1]==18 && line[3]==21,"rain is not fixed vertical 4-pixel stroke/offset");
@@ -38,7 +38,7 @@ public final class CheapRainTest {
             check(Arrays.equals(frame,g.display) && Arrays.equals(coords,w.coords) && Arrays.equals(info,w.info),"rain mutated world/simulation");
             check(!g.isM3GActive(),"rain initialized optional backend");g.destroy();
         }
-        System.out.println("PASS cheap rain <=32 LCDUI strokes / shared color / letterbox / no M3G bind+draw+upload+frame copy / simulation unchanged");
+        System.out.println("PASS cheap rain <=16 LCDUI strokes / shared color / letterbox / no M3G bind+draw+upload+frame copy / painting leaves particle state unchanged");
 
         // Survives transitions with native snow, without duplicate snow or rain.
         WeatherGenerator w=rain(2);w.info[2]=2;w.coords[3]=20;
@@ -57,7 +57,7 @@ public final class CheapRainTest {
             nativeSnow=w.paintM3G(g);Graphics3D.failAt=0;System.clearProperty("readback.fail");DeveloperMenu.drawPortals=false;
             check(!nativeSnow,"snow failure/debug not reported");out=lcd();
             w.paintAfterScene(out,13,g.getRenderer(),nativeSnow);
-            check(out.lineCalls<=32 && out.rectCalls==1,"rain fallback exceeded budget or lost snow");
+            check(out.lineCalls<=16 && out.rectCalls==1,"rain fallback exceeded budget or lost snow");
             check(Graphics3D.target==null,"snow failure leaked native target");g.destroy();
         }
         System.out.println("PASS mixed rain/snow / no stale snow / native+readback+alpha+debug fallback keeps cheap rain");
