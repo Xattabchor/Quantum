@@ -12,7 +12,7 @@ public class TitleScreen extends GUIScreen {
     Menu menu;
     TextView text;
 
-    private static final long TITLE_FADE_DURATION = 1000L;
+    private static final long TITLE_FADE_DURATION = 4000L;
 
     private Image title;
     private int[] titlePixels;
@@ -68,7 +68,9 @@ public class TitleScreen extends GUIScreen {
         }
         if(elapsed < 0) elapsed = 0;
 
-        int fade = (int) (elapsed * 255 / TITLE_FADE_DURATION);
+        // Smoothstep easing starts and finishes gently, like a cinematic fade.
+        int progress = (int) (elapsed * 255L / TITLE_FADE_DURATION);
+        int fade = progress * progress * (765 - 2 * progress) / 65025;
         int pixelCount = w * h;
         if(titlePixels == null || titlePixels.length != pixelCount) {
             titlePixels = new int[pixelCount];
