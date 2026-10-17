@@ -123,9 +123,9 @@ public class TriangleStripArray {public int[] indices,lengths;
 public class Image2D {public static final int RGBA=100; public byte[] pixels;public int width,height;
  public Image2D(int f,int w,int h,byte[] p){pixels=p;width=w;height=h;Graphics3D.uploads++;} }''',
 "javax/microedition/m3g/Texture2D.java": '''package javax.microedition.m3g;
-public class Texture2D {public static final int FILTER_BASE_LEVEL=208,FILTER_NEAREST=210,FILTER_LINEAR=209,WRAP_REPEAT=241,FUNC_MODULATE=227,FUNC_ADD=224;
- public Image2D image;public int function,filter;public Texture2D(Image2D i){image=i;}
- public void setFiltering(int a,int b){filter=b;} public void setWrapping(int a,int b){} public void setBlending(int n){function=n;} }''',
+public class Texture2D {public static final int FILTER_BASE_LEVEL=208,FILTER_NEAREST=210,FILTER_LINEAR=209,WRAP_CLAMP=240,WRAP_REPEAT=241,FUNC_MODULATE=227,FUNC_ADD=224;
+ public Image2D image;public int function,filter,wrapS,wrapT;public Texture2D(Image2D i){image=i;}
+ public void setFiltering(int a,int b){filter=b;} public void setWrapping(int a,int b){wrapS=a;wrapT=b;} public void setBlending(int n){function=n;} }''',
 "javax/microedition/m3g/Graphics3D.java": '''package javax.microedition.m3g;
 import java.util.Hashtable;
 import javax.microedition.lcdui.Graphics;
@@ -205,7 +205,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     sources += sorted(TEST.glob("*.java"))
     # Compile the current adapter against the doubles, not copies of its logic.
     sources += [ROOT / "src/code/Rendering" / name for name in
-                ("M3GSceneRenderer.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "M3GScreenLines.java", "ScreenLineGeometry.java")]
+                ("M3GSceneRenderer.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java")]
     if os.environ.get("ECJ_JAR"):
         compiler = [JAVA, "-jar", os.environ["ECJ_JAR"], "-8", "-proc:none", "-nowarn"]
     else:
@@ -214,6 +214,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                               "-d", str(classes)] + list(map(str, sources)), check=True)
     classpath = os.pathsep.join(map(str, (classes, APP, API)))
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GlassTest"], check=True)

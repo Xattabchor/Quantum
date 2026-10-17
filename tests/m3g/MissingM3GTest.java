@@ -66,6 +66,18 @@ public final class MissingM3GTest {
         javax.microedition.lcdui.Graphics rainLCD=javax.microedition.lcdui.Image.createImage(32,64).getGraphics();
         rainOnly.paintAfterScene(rainLCD,13,g.getRenderer(),false);
         M3GTest.check(rainLCD.lineCalls==1 && g.getRendererError()!=null,"missing API lost cheap LCDUI rain");g.destroy();
-        System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay");
+        for(int mode:new int[]{0,1,3}) {
+            g=M3GTest.renderer();DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
+            int[] pixels=new int[15];java.util.Arrays.fill(pixels,0x80d08040);
+            Texture tex=new Texture(new RawImage(pixels,3,5),false,null);
+            code.Rendering.Meshes.Sprite sprite=new code.Rendering.Meshes.Sprite(tex,5);
+            sprite.mode=(byte)mode;sprite.fog=true;sprite.mirX=true;
+            sprite.pos.sx=0;sprite.pos.sy=0;sprite.pos.rz=-400;sprite.size.sx=32;sprite.size.sy=32;
+            M3GTest.submit(cpu,sprite,null,0);cpu.render();M3GTest.submit(g,sprite,null,0);g.render();
+            M3GTest.check(!g.isM3GActive() && g.getRendererError()!=null && java.util.Arrays.equals(cpu.display,g.display),
+                    "missing API failed to replay sprite mode "+mode);
+            cpu.destroy();g.destroy();
+        }
+        System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay / animated sprite class safety+replay");
     }
 }

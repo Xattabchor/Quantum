@@ -30,10 +30,13 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final TriangleStripArray[] alternateQuadTriangles = new TriangleStripArray[2];
     private final TriangleStripArray baseQuad, alternateQuad;
     static final int OPAQUE_TEXTURE = 0, ALPHA_TEXTURE = 1, FOG_MASK = 2, ADD_TEXTURE = 3;
+    static final int SPRITE_CUTOUT=4, SPRITE_ALPHA=5, SPRITE_ADD=6,
+            SPRITE_MASK=7, SPRITE_ALPHA_MASK=8;
     private final Vector textures = new Vector();
     private Image surface;
     private M3GSkyRenderer skyRenderer;
     private M3GScreenLines screenLines;
+    private M3GSpriteRenderer spriteRenderer;
     private Background flashBackground;
     private boolean bound;
     private int cachedPixels;
@@ -44,7 +47,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         RawImage image;
         int[] pixels;
         int width, height;
-        int kind;
+        int kind, cost;
         Texture2D texture;
     }
 
@@ -116,6 +119,18 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 && (long)raw.w * raw.h <= CACHE_PIXELS;
     }
 
+    static int spriteDimension(int n) {
+        if(n<=0 || n>16384) return 0;
+        int result=1;while(result<n) result*=2;return result;
+    }
+
+    boolean supportsSpriteTexture(RawImage raw) {
+        if(raw==null || raw.img==null) return false;
+        int w=spriteDimension(raw.w),h=spriteDimension(raw.h);
+        return w>0 && h>0 && w<=maxTexture && h<=maxTexture
+                && (long)w*h<=CACHE_PIXELS && (long)raw.w*raw.h<=raw.img.length;
+    }
+
     public void finish(DirectX7 g) {
         if(!bound) return;
         try { graphics.releaseTarget(); }
@@ -131,6 +146,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             surface = null;
             skyRenderer = null;
             screenLines = null;
+            spriteRenderer = null;
             flashBackground = null;
             textures.removeAllElements();
             cachedPixels = 0;
@@ -174,6 +190,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(object instanceof SkyMesh) {
             if(skyRenderer == null) skyRenderer = new M3GSkyRenderer(this, graphics);
             return skyRenderer.draw(g, (SkyMesh)object);
+        }
+        if(object instanceof Sprite) {
+            if(spriteRenderer==null) spriteRenderer=new M3GSpriteRenderer(this,graphics);
+            return spriteRenderer.draw(g,(Sprite)object);
         }
         MuzzleGlow glow = object instanceof MuzzleGlow ? (MuzzleGlow)object : null;
         if(glow != null) {
@@ -553,29 +573,38 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     private Texture2D createTexture(RawImage image, int kind) {
-        int size = image.w * image.h;
+        boolean sprite=kind>=SPRITE_CUTOUT;
+        int width=sprite?spriteDimension(image.w):image.w;
+        int height=sprite?spriteDimension(image.h):image.h;
+        int size = width * height;
         while(textures.size() > 0 && (textures.size() >= CACHE_ENTRIES || cachedPixels + size > CACHE_PIXELS)) {
             CachedTexture oldest = (CachedTexture)textures.elementAt(0);
-            cachedPixels -= oldest.width * oldest.height;
+            cachedPixels -= oldest.cost;
             textures.removeElementAt(0);
         }
         byte[] rgba = new byte[size * 4];
         for(int i = 0; i < size; i++) {
-            int pixel = image.img[i];
+            // Sprite-only padding permits original non-power-of-two assets.
+            // Extend edge texels; UVs still cover only the original image.
+            int pixel = image.img[sprite?Math.min(i/width,image.h-1)*image.w
+                    +Math.min(i%width,image.w-1):i];
             // Legacy additive source discards channel low bits. Hardware cannot
             // mask destination low bits; native ADD may differ by one per channel.
-            int rgb = kind == ADD_TEXTURE ? pixel & 0xfefefe : pixel;
-            rgba[i * 4] = kind == FOG_MASK ? (byte)255 : (byte)(rgb >> 16);
-            rgba[i * 4 + 1] = kind == FOG_MASK ? (byte)255 : (byte)(rgb >> 8);
-            rgba[i * 4 + 2] = kind == FOG_MASK ? (byte)255 : (byte)rgb;
-            rgba[i * 4 + 3] = kind == ALPHA_TEXTURE ? (byte)(pixel >>> 24) : (byte)(pixel == 0 ? 0 : 255);
+            int rgb = kind == ADD_TEXTURE || kind == SPRITE_ADD ? pixel & 0xfefefe : pixel;
+            boolean mask=kind==FOG_MASK || kind==SPRITE_MASK || kind==SPRITE_ALPHA_MASK;
+            rgba[i * 4] = mask ? (byte)255 : (byte)(rgb >> 16);
+            rgba[i * 4 + 1] = mask ? (byte)255 : (byte)(rgb >> 8);
+            rgba[i * 4 + 2] = mask ? (byte)255 : (byte)rgb;
+            rgba[i * 4 + 3] = kind==ALPHA_TEXTURE || kind==SPRITE_ALPHA || kind==SPRITE_ALPHA_MASK
+                    ? (byte)(pixel >>> 24) : (byte)(kind==SPRITE_ADD || pixel!=0 ? 255 : 0);
         }
         CachedTexture cached = new CachedTexture();
         cached.image = image; cached.pixels = image.img; cached.width = image.w; cached.height = image.h;
-        cached.kind = kind;
-        cached.texture = new Texture2D(new Image2D(Image2D.RGBA, image.w, image.h, rgba));
+        cached.kind = kind;cached.cost=size;
+        cached.texture = new Texture2D(new Image2D(Image2D.RGBA, width, height, rgba));
         cached.texture.setFiltering(Texture2D.FILTER_BASE_LEVEL, Texture2D.FILTER_NEAREST);
-        cached.texture.setWrapping(Texture2D.WRAP_REPEAT, Texture2D.WRAP_REPEAT);
+        cached.texture.setWrapping(sprite?Texture2D.WRAP_CLAMP:Texture2D.WRAP_REPEAT,
+                sprite?Texture2D.WRAP_CLAMP:Texture2D.WRAP_REPEAT);
         cached.texture.setBlending(Texture2D.FUNC_MODULATE);
         textures.addElement(cached);
         cachedPixels += size;

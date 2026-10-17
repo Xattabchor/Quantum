@@ -188,7 +188,7 @@ this.buffer.resetTex();
    public void drawRenderObject(RenderObject object, Texture texture, boolean fast) {
        if(nativePass) {
            if(sceneRenderer.draw(this, object, texture, fast)) return;
-           // CPU materials/sprites must see all previously rendered M3G pixels.
+           // CPU materials/unsupported sprites must see all prior M3G pixels.
            sceneRenderer.finish(this);
        }
        byte originalMode = texture == null ? 0 : texture.drawmode;

@@ -5,4 +5,4 @@ MIDlet-1: Quantum,,code.utils.Main
 MicroEdition-Configuration: CLDC-1.1
 MicroEdition-Profile: MIDP-2.0
 MIDlet-Jar-URL: Quantum.jar
-MIDlet-Jar-Size: 436567
+MIDlet-Jar-Size: 440236
