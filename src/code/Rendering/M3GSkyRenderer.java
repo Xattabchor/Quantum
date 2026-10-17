@@ -50,7 +50,7 @@ final class M3GSkyRenderer {
             int material = p instanceof Polygon3V ? ((Polygon3V)p).tex : ((Polygon4V)p).tex;
             if(materials == null || materials.textures == null || material < 0 || material >= materials.textures.length) return false;
             Texture t = materials.textures[material];
-            if(t == null || (t.drawmode != 0 && t.drawmode != 4) || !owner.supportsTexture(t.rImg)) return false;
+            if(t == null || (DirectX7.m3gDrawMode(t.drawmode) != 0 && t.drawmode != 4) || !owner.supportsTexture(t.rImg)) return false;
         }
         float far = g.distY;
         Vertex[] vertices = sky.mesh.getVertices();

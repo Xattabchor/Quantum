@@ -179,6 +179,11 @@ this.buffer.resetTex();
        System.out.println("M3G disabled: " + message);
    }
 
+   /** M3G deliberately disables legacy dithering materials, treating them as 0. */
+   public static byte m3gDrawMode(byte mode) {
+       return mode >= 10 && mode <= 12 ? (byte)0 : mode;
+   }
+
    /** Shared dispatch, including the polygons of animated MeshImage objects. */
    public void drawRenderObject(RenderObject object, Texture texture, boolean fast) {
        if(nativePass) {
@@ -186,13 +191,19 @@ this.buffer.resetTex();
            // CPU materials/sprites must see all previously rendered M3G pixels.
            sceneRenderer.finish(this);
        }
+       byte originalMode = texture == null ? 0 : texture.drawmode;
+       boolean alias = rendererMode == M3G && texture != null && originalMode >= 10 && originalMode <= 12;
+       if(alias) texture.drawmode = 0;
        boolean previous = staticLightmapPass;
        staticLightmapPass = rendererMode == M3G && texture != null
                && (texture.drawmode == 9 || texture.drawmode == 13);
        try {
            if(fast) object.renderFast(this, texture);
            else object.render(this, texture);
-       } finally { staticLightmapPass = previous; }
+       } finally {
+           staticLightmapPass = previous;
+           if(alias) texture.drawmode = originalMode;
+       }
    }
 
    public boolean isStaticLightmapPass() { return staticLightmapPass; }

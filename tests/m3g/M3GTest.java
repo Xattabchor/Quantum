@@ -143,8 +143,8 @@ public final class M3GTest {
         System.out.println("PASS alpha / quad diagonal / static baked light");
 
         g=renderer();calls=Graphics3D.calls;
-        t=texture(0xff888888);t.drawmode=10;submit(g,triangle(),t,0);g.render();
-        check(Graphics3D.calls==calls,"unsupported dithering material did not fall back");
+        t=texture(0xff888888);t.drawmode=14;submit(g,triangle(),t,0);g.render();
+        check(Graphics3D.calls==calls,"unsupported material did not fall back");
         t=texture(0xff999999);g.flushAlpha=true;submit(g,triangle(),t,0);g.render();
         check(Graphics3D.calls==calls,"flushAlpha must remain software");
         g.flushAlpha=false;DeveloperMenu.renderPolygonsOverwrite=true;

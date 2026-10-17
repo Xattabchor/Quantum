@@ -148,8 +148,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
             object=glow.quad;texture=glow.texture;fast=true;
         }
         if(texture == null) return false;
-        int mode = texture.drawmode;
-        // Mode 7 is an untextured translucent tint; dithering stays CPU.
+        int mode = DirectX7.m3gDrawMode(texture.drawmode);
+        // Mode 7 is an untextured tint; modes 10/11/12 are aliases of 0.
         if(mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4
                 && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 13) return false;
         // The original paths disagree on these degenerate distance values.

@@ -38,6 +38,15 @@ public final class MissingM3GTest {
             M3GTest.check(!g.isM3GActive() && java.util.Arrays.equals(cpu.display,g.display),"missing API mode "+mode);
             g.destroy();cpu.destroy();
         }
+        for(int mode:new int[]{10,11,12}) {
+            g=M3GTest.renderer();DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
+            Texture t=M3GTest.texture(0xffa1b2c3);t.drawmode=(byte)mode;
+            M3GTest.submit(cpu,M3GTest.triangle(),M3GTest.texture(0xffa1b2c3),0);cpu.render();
+            M3GTest.submit(g,M3GTest.triangle(),t,0);g.render();
+            M3GTest.check(!g.isM3GActive() && java.util.Arrays.equals(cpu.display,g.display) && t.drawmode==mode,
+                    "missing API revived dithering or changed material "+mode);
+            g.destroy();cpu.destroy();
+        }
         System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay");
     }
 }
