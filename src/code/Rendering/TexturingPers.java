@@ -89,6 +89,7 @@ x1++;
         }
         // Selected M3G mode 1 is ALPHA, also during CPU recovery.
         if(dmode == 1 && g3d.getRenderer() == DirectX7.M3G) dmode = 4;
+        if(dmode == 10 && g3d.getRenderer() == DirectX7.M3G) dmode = 7;
         if (texture.rImg.alphaMixing == false && texture.drawmode == 4) {
             dmode = 0;
         }
@@ -2109,6 +2110,7 @@ static final void paintPers_glass(final DirectX7 g3d, final Texture texture, int
 
 
         final boolean modulate = g3d.getRenderer() == DirectX7.M3G;
+        final boolean doubleModulate = texture.drawmode == 10;
         final int[] tex = texture.rImg.img;
         final int lengthBIT = tex.length-1;
         final int widthBIT = texture.rImg.widthBIT;
@@ -2202,7 +2204,8 @@ for(;length>=sz2; length-=sz2) {
 
 col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
             if(modulate) {
-                if(col != 0) rgb[x1] = DirectX7.modulateColor(col,rgb[x1]);
+                if(col != 0) rgb[x1] = doubleModulate
+                        ? DirectX7.modulateColorX2(col,rgb[x1]) : DirectX7.modulateColor(col,rgb[x1]);
             } else {
             coord = ((((col & 0xff0000) - 0x800000) * scale) >> 24) + ((((col & 0xff00) - 0x8000) * scale) >> 16) * w + x1;
             if(coord < 0) rgb[x1] = rgb[0];
@@ -2220,7 +2223,8 @@ col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
                 for(; x1<x2;) {
 col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
             if(modulate) {
-                if(col != 0) rgb[x1] = DirectX7.modulateColor(col,rgb[x1]);
+                if(col != 0) rgb[x1] = doubleModulate
+                        ? DirectX7.modulateColorX2(col,rgb[x1]) : DirectX7.modulateColor(col,rgb[x1]);
             } else {
             coord = ((((col & 0xff0000) - 0x800000) * scale) >> 24) + ((((col & 0xff00) - 0x8000) * scale) >> 16) * w + x1;
             if(coord < 0) rgb[x1] = rgb[0];

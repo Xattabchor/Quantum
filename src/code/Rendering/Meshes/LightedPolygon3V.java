@@ -63,7 +63,8 @@ q=(ny>4000 || ny<-4000) ? 9999999 : Main.q;
 
 if(Main.mipMapping==true && texture.mip!=null) {
 texture.rImg=texture.mip[0];
-if(texture.drawmode<10 || texture.drawmode>12) {
+if(texture.drawmode < 10 || texture.drawmode > 12
+                || (texture.drawmode == 10 && g3d.getRenderer() == DirectX7.M3G)) {
 addmip=( q>999 ? 2 : 3);
 sizeu=(size(au, bu, cu)*texture.rImg.w>>8);
 sizev=(size(av, bv, cv)*texture.rImg.h>>8);

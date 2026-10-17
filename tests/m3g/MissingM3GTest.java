@@ -31,11 +31,12 @@ public final class MissingM3GTest {
         glow.texture=M3GTest.texture(0x80ffffff);int background=g.display[0];
         M3GTest.check(!g.renderOverlay(glow) && g.display[0]==background && g.getRendererError()!=null,
                 "missing API flash must skip without damaging the frame");g.destroy();
-        for(int mode:new int[]{1,2,5,7,8}) {
+        for(int mode:new int[]{1,2,5,7,8,10}) {
             g=M3GTest.renderer();DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
             Texture t=M3GTest.texture(0xffd08040);t.drawmode=(byte)mode;
             Texture referenceTexture=M3GTest.texture(0xffd08040);referenceTexture.drawmode=(byte)mode;
             if(mode==1) AlphaModeTest.reference(cpu,M3GTest.triangle(),referenceTexture);
+            else if(mode==10) ModulateX2Test.reference(cpu,M3GTest.triangle(),referenceTexture);
             else if(mode==7) GlassTest.reference(cpu,M3GTest.triangle(),referenceTexture);
             else {M3GTest.submit(cpu,M3GTest.triangle(),referenceTexture,0);cpu.render();}
             M3GTest.submit(g,M3GTest.triangle(),t,0);g.render();
@@ -43,7 +44,7 @@ public final class MissingM3GTest {
             M3GTest.check(!g.isM3GActive() && java.util.Arrays.equals(cpu.display,g.display),"missing API mode "+mode);
             g.destroy();cpu.destroy();
         }
-        for(int mode:new int[]{10,11,12}) {
+        for(int mode:new int[]{11,12}) {
             g=M3GTest.renderer();DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
             Texture t=M3GTest.texture(0xffa1b2c3);t.drawmode=(byte)mode;
             M3GTest.submit(cpu,M3GTest.triangle(),M3GTest.texture(0xffa1b2c3),0);cpu.render();

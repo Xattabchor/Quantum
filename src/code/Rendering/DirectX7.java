@@ -212,7 +212,7 @@ this.buffer.resetTex();
 
    /** M3G deliberately disables legacy dithering materials, treating them as 0. */
    public static byte m3gDrawMode(byte mode) {
-       return mode >= 10 && mode <= 12 ? (byte)0 : mode;
+       return mode >= 11 && mode <= 12 ? (byte)0 : mode;
    }
 
    /** CPU equivalent of native MODULATE; source alpha is handled as cutout. */
@@ -221,6 +221,14 @@ this.buffer.resetTex();
                | ((((source >>> 16) & 255) * ((background >>> 16) & 255) / 255) << 16)
                | ((((source >>> 8) & 255) * ((background >>> 8) & 255) / 255) << 8)
                | ((source & 255) * (background & 255) / 255);
+   }
+
+   /** CPU equivalent of MODULATE_X2, including saturation of bright channels. */
+   static int modulateColorX2(int source, int background) {
+       return (background & 0xff000000)
+               | (Math.min(255, ((source >>> 16) & 255) * ((background >>> 16) & 255) * 2 / 255) << 16)
+               | (Math.min(255, ((source >>> 8) & 255) * ((background >>> 8) & 255) * 2 / 255) << 8)
+               | Math.min(255, (source & 255) * (background & 255) * 2 / 255);
    }
 
    /** Shared dispatch, including the polygons of animated MeshImage objects. */

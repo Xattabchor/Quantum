@@ -117,7 +117,7 @@ public class Camera {public Transform projection;public void setGeneric(Transfor
 }}''',
 "javax/microedition/m3g/CompositingMode.java": '''package javax.microedition.m3g;
 public class CompositingMode {
- public static final int ALPHA=64,ALPHA_ADD=65,MODULATE=66,REPLACE=68;
+ public static final int ALPHA=64,ALPHA_ADD=65,MODULATE=66,MODULATE_X2=67,REPLACE=68;
  public boolean depth; public int blend; public float threshold;
  public void setDepthTestEnable(boolean b){depth=b;} public void setDepthWriteEnable(boolean b){}
  public void setBlending(int b){blend=b;} public void setAlphaThreshold(float f){threshold=f;}
@@ -227,7 +227,8 @@ public class Graphics3D {
      src=Math.round(src*(1-f)+((draw.fogColor>>(16-k*8))&255)*f);
     }
     int dst=(before>>(16-k*8))&255;
-    int value=a.comp.blend==CompositingMode.MODULATE?src*dst/255
+    int value=a.comp.blend==CompositingMode.MODULATE_X2?Math.min(255,2*src*dst/255)
+      :a.comp.blend==CompositingMode.MODULATE?src*dst/255
       :a.comp.blend==CompositingMode.ALPHA_ADD?Math.min(255,dst+src*alpha/255)
       :a.comp.blend==CompositingMode.ALPHA?(src*alpha+dst*(255-alpha))/255:src;
     out|=value<<(16-k*8);
@@ -272,6 +273,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameTransactionTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GlassTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModulateX2Test"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.AlphaModeTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyFlashTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SolidSkyTest"], check=True)

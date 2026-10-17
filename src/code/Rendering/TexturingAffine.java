@@ -27,6 +27,7 @@ public class TexturingAffine {
         }
         // Selected M3G mode 1 is ALPHA, also during CPU recovery.
         if(fog == 1 && g3d.getRenderer() == DirectX7.M3G) fog = 4;
+        if(fog == 10 && g3d.getRenderer() == DirectX7.M3G) fog = 7;
         if(texture.rImg.alphaMixing == false && texture.drawmode == 4) {
             fog = 0;
         }
@@ -2464,6 +2465,7 @@ static final void paint_glass(DirectX7 g3d, Texture texture,
 
 
         final boolean modulate = g3d.getRenderer() == DirectX7.M3G;
+        final boolean doubleModulate = texture.drawmode == 10;
         final int[] tex = texture.rImg.img;
         final int lengthBIT = tex.length-1;
         final int widthBIT = texture.rImg.widthBIT;
@@ -2572,7 +2574,8 @@ static final void paint_glass(DirectX7 g3d, Texture texture,
         for(; x1 < x2; x1++) {
             col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
             if(modulate) {
-                if(col != 0) rgb[x1] = DirectX7.modulateColor(col,rgb[x1]);
+                if(col != 0) rgb[x1] = doubleModulate
+                        ? DirectX7.modulateColorX2(col,rgb[x1]) : DirectX7.modulateColor(col,rgb[x1]);
             } else {
             coord = ((((col & 0xff0000) - 0x800000) * scale) >> 24) + ((((col & 0xff00) - 0x8000) * scale) >> 16) * w + x1;
             if(coord < 0) rgb[x1] = rgb[0];
