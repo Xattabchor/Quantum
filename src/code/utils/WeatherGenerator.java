@@ -361,12 +361,20 @@ float yy=y*1.3f*3*frameTime/80/50;
       if(lightingTwice) nextLighting = lastLighting + 200+r.nextInt(175)-(oldLightingTwice?75:0);
   }
   
-  /** Rain and snow share one native RGB overlay. Rain simulation stays bounded. */
+  /** Compatibility wrapper for standalone callers. GameScreen uses prepareM3G
+   * and submits weather inside the world's final transaction. */
   public boolean paintM3G(DirectX7 g) {
+      ScreenLines particles=prepareM3G(g);
+      return particles!=null && g.renderScreenLines(particles);
+  }
+
+  /** Snapshot geometry only: no bind, readback, drawing or simulation update. */
+  public ScreenLines prepareM3G(DirectX7 g) {
       setRenderer(g.getRenderer());
-      if(!g.canRenderM3G() || code.HUD.DeveloperMenu.drawPortals) return false;
+      if(!g.canRenderM3G() || code.HUD.DeveloperMenu.drawPortals) return null;
       try {
-          if(nativeParticles != null) nativeParticles.clear();
+          if(nativeParticles==null) nativeParticles=new ScreenLines();
+          nativeParticles.clear();
           boolean light = lighting && System.currentTimeMillis()-lastLighting<135;
           int rain=0;
           for(int slot=0,count=particleCount();slot<count;slot++) {
@@ -379,14 +387,12 @@ float yy=y*1.3f*3*frameTime/80/50;
                   if(depth<0) size=rainSize*(100-depth)/100;
                   depth=Math.max(0,Math.min(100,depth));
                   int color=light?0xffffff:mixColor(rainColorNear,rainColorFar,depth);
-                  if(nativeParticles==null) nativeParticles=new ScreenLines();
                   int x=(int)coords[i*2],y=(int)coords[i*2+1];
                   nativeParticles.line(x,y,x-size/4,y+size,1,color,false);
                   continue;
               }
               if(type != 2) continue;
               int depth=info[i*2+1];
-              if(nativeParticles == null) nativeParticles = new ScreenLines();
               int base=snowSize;
               int size=(base*(100-depth)+depth)/100;
               if(depth<0) size=base*(100-depth)/100;
@@ -396,9 +402,9 @@ float yy=y*1.3f*3*frameTime/80/50;
               if(size>1) nativeParticles.rect(x-size/2,y-size/2,size-1,size-1,color);
               else nativeParticles.rect(x,y,1,1,color);
           }
-          return nativeParticles == null || g.renderScreenLines(nativeParticles);
+          return nativeParticles;
       } catch(OutOfMemoryError ex) {
-          return false; // Allocation before native submission: original LCDUI fallback.
+          return null; // Allocation before native submission: original LCDUI fallback.
       }
   }
 

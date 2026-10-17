@@ -33,13 +33,14 @@ assert game.count("fastbloomScr(g3d);")==1
 loader = (ROOT / "src/code/Gameplay/LevelLoader.java").read_text()
 assert 'GameScreen.bloom = getBoolean("BLOOM", lvl, setting, false);' in loader
 
-assert game.index("wg.paintM3G(g3d)") > game.index("if(doubleBright &&")
-assert game.index("wg.paintM3G(g3d)") < game.index("scene.flush(g, 0, screenY)")
+assert "wg.paintM3G(g3d)" not in game and "g3d.renderMuzzleGlow(" not in game
+assert game.index("wg.prepareM3G(g3d)") < game.index("scene.flush(g, 0, screenY)")
+assert "nativeWeather=g3d.renderGameFrame(vignette,playerDied,player.isDamaged()," in game
 assert "wg.paintAfterScene(g, screenY, g3d.getRenderer(), nativeWeather);" in game
 assert game.index("scene.flush(g, 0, screenY)") < game.index("wg.paintAfterScene(") < game.index("player.arsenal.drawWeapon(")
-assert game.index("if(doubleBright &&") < game.index("g3d.renderMuzzleGlow(") < game.index("wg.paintM3G(g3d)")
-assert game.index("g3d.renderMuzzleGlow(") < game.index("player.arsenal.drawWeapon(")
-assert "if(!playerDied) g3d.renderMuzzleGlow" in game
+assert game.index("g3d.renderGameFrame(") < game.index("player.arsenal.drawWeapon(")
+frame_source=(ROOT / "src/code/Rendering/DirectX7.java").read_text()
+assert "MuzzleGlow glow=dead?null:prepareMuzzleGlow(house,part);" in frame_source
 assert game.index("g3d.render();") < game.index("wg.lightingEffect(") < game.index("if(vignette != null &&")
 assert "if(lighting && !player.character.underRoof && wg != null && g3d.getRenderer() != DirectX7.M3G)" in game
 assert "System.currentTimeMillis() - wg.lastLighting) < 135" in game
@@ -55,7 +56,7 @@ for forbidden in ("legacyFog(", "additiveFog(", "lightmapColor(", "FOG_MASK", "S
     assert forbidden not in scene_source+sprite_source
 
 # Selected-M3G effects replace CPU postprocess even after native failure.
-assert "g3d.renderWithEffects(vignette,playerDied,player.isDamaged());" in game
+assert "g3d.renderGameFrame(vignette,playerDied,player.isDamaged()," in game
 assert "if(vignette != null && g3d.getRenderer()==DirectX7.SOFTWARE)" in game
 assert "if(doubleBright && g3d.getRenderer()==DirectX7.SOFTWARE)" in game
 assert "if(g3d.getRenderer()==DirectX7.SOFTWARE) {\n                if(playerDied) deathScr" in game
@@ -257,6 +258,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialPrepTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameEffectsTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameTransactionTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GlassTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyFlashTest"], check=True)

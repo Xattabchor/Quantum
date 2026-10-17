@@ -337,6 +337,7 @@ public final class GameScreen extends MyCanvas {
         g.translate(0, 0);
         
         boolean playerDied = player.isDead();
+        boolean nativeWeather = false;
         int playerHeight = player.getEyesHeight();
 
         g3d.setRenderer(Main.renderer);
@@ -430,7 +431,8 @@ public final class GameScreen extends MyCanvas {
             } else scene.render(g, renderFrom, player);
 
             if(g3d.getRenderer()==DirectX7.M3G)
-                g3d.renderWithEffects(vignette,playerDied,player.isDamaged());
+                nativeWeather=g3d.renderGameFrame(vignette,playerDied,player.isDamaged(),
+                        scene.getHouse(),renderFrom,wg==null?null:wg.prepareM3G(g3d));
             else g3d.render();
             g3d.shootIntensity -= QFPS.frameTime;
             if(g3d.shootIntensity < 0) g3d.shootIntensity = 0;
@@ -457,8 +459,6 @@ public final class GameScreen extends MyCanvas {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
         }
         
-        if(!playerDied) g3d.renderMuzzleGlow(scene.getHouse(),renderFrom);
-        boolean nativeWeather = wg != null && wg.paintM3G(g3d);
         try {
             scene.flush(g, 0, screenY);
         } catch (Exception ext) {

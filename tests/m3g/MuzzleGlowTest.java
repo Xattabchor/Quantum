@@ -13,7 +13,7 @@ import javax.microedition.m3g.Texture2D;
 /** Ray/pulse/overlay contracts; no GPU rasterization or real-game asset test. */
 public final class MuzzleGlowTest {
     private static void check(boolean ok,String message) { M3GTest.check(ok,message); }
-    private static House wall(int distance) {
+    static House wall(int distance) {
         Vertex a=new Vertex(-3000,3000,-distance),b=new Vertex(3000,3000,-distance),
                 c=new Vertex(3000,-3000,-distance),d=new Vertex(-3000,-3000,-distance);
         Polygon4V p=new Polygon4V(a,b,c,d,(byte)0,(byte)0,(byte)255,(byte)0,(byte)255,(byte)255,(byte)0,(byte)255);

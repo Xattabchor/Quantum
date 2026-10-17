@@ -376,8 +376,9 @@ CPU; визуальная проверка на телефоне и замер F
 ### Дождь и снег: M3G RGB-полосы
 
 При выбранном M3G дождь снова рисуется **нативными полосами**, а не LCDUI.
-`paintM3G` собирает дождь и снег в один ScreenLines batch до flush сцены,
-после постобработки. `paintAfterScene` при успешном native-проходе больше
+`prepareM3G` собирает дождь и снег в переиспользуемый ScreenLines без рисования,
+а `renderGameFrame` отправляет его после post-effect/flash перед финальным readback.
+`paintM3G` сохранён как standalone-обёртка для старых внешних вызовов. `paintAfterScene` при успешном native-проходе больше
 не рисует частицы повторно. Координаты framebuffer-local; screenY учитывается
 только при flush или LCDUI fallback, а не в native-вершинах.
 
@@ -395,9 +396,10 @@ CPU; визуальная проверка на телефоне и замер F
   используется LCDUI fallback: исходный снег и до 16 дешёвых вертикальных
   дождевых линий. Успешный native-проход никогда не дублируется через LCDUI.
 
-В отличие от предыдущего LCDUI-дождя native-путь снова требует транзакцию
-backup/upload/readback кадра. Дождь и снег используют общую транзакцию,
-но восстановление M3G **не означает гарантированного ускорения** на устройстве.
+В GameScreen дождь/снег входят в транзакцию мира: отдельного weather backup,
+upload/readback больше нет. Standalone paintM3G/renderScreenLines по-прежнему
+создают самостоятельный overlay для совместимости. Это **не гарантирует FPS**
+на устройстве; исходный LCDUI fallback остаётся.
 
 Лимит теперь действует **и на симуляцию**: создание частиц, update, все шесть
 движений камеры, snow-поиск и painter работают по активному списку. При чистом
@@ -636,8 +638,10 @@ FPS/внешний вид на телефоне не проверены; бол�
   CPU-перерисовке он также не добавляется. Аддитивное состояние не переносится
   на следующие обычные материалы.
 
-Один quad не означает бесплатный эффект: погодный и flash overlay-проходы
-сейчас отдельные, с копированием/резервированием и readback кадра. FPS на 220 МГц
+В GameScreen flash теперь входит в общий native-проход после post-effect,
+до погоды. Его 32×32 RGBA upload подготавливается до первого scene draw и имеет
+отдельную единственную cache entry, не вытесняющую мировой FIFO. Standalone
+renderMuzzleGlow/renderOverlay остаются для совместимости. FPS на 220 МГц
 и качество картинки без проверки на телефоне не гарантируются.
 
 ## Туман в M3G
@@ -765,19 +769,20 @@ JSR-184, native-ошибке или другом CPU fallback. Проверяе�
 Сам флаг `GameScreen.bloom` не сбрасывается: после переключения на Software
 снова действует исходное значение уровня без его перезагрузки. Формат и название
 ключа не изменены, нового пункта меню нет. Постэффекты M3G отдельно заменены
-быстрым combined overlay (ниже); погода и отдельное muzzle glow сохраняются. Source-guards
+быстрым combined overlay (ниже); погода и muzzle glow сохраняются в общем проходе. Source-guards
 проверяют Software-only условие, единственное место вызова и прежний loader ключа.
 FPS/визуальная проверка на телефоне не проводились.
 
 ### Виньетка, урон и смерть: один дешёвый native post-effect
 
-Для **выбранного M3G** `GameScreen` передаёт маску/флаги в `DirectX7.renderWithEffects`.
+Для **выбранного M3G** `GameScreen` передаёт маску/флаги в `DirectX7.renderGameFrame`.
+Прежний renderWithEffects сохранён для callers без погоды/flash.
 Эффект не сортируется с миром: после sky/world/nested queues, до единственного
 финального `SceneRenderer.finish/getRGB` вызывается `FrameEffects`. Подготовка
 его кэша выполняется **до любого native scene draw**, поэтому даже холодный upload
 маски сам по себе не добавляет bind/readback. CPU-материалы/холодные мировые текстуры
-по-прежнему могут создавать свои прежние барьеры. После post-effect идут отдельные
-muzzle/weather passes, затем LCDUI оружие/HUD; их транзакции здесь не переделаны.
+по-прежнему могут создавать свои прежние барьеры. После post-effect идут flash и
+weather draws в том же target, затем единственный finish и LCDUI оружие/HUD.
 
 `M3GFrameEffects` рисует **один quad / один draw для всех трёх эффектов вместе**:
 
@@ -814,6 +819,49 @@ Software оставлен исходным: applyVignette, grayscale deathScr, d
 Новая маска имеет отдельный ограниченный кэш, не вытесняет 16 мировых текстур.
 Dispose/resize/смена backend освобождают native mask/буферы. FPS/визуальная проверка
 на телефоне не выполнены: один дополнительный fullscreen fill всё равно стоит GPU.
+
+### Единая игровая транзакция, включая flash и погоду
+
+`DirectX7.renderGameFrame(vignette,dead,damaged,house,part,weather)` обрабатывает:
+
+1. Подготовку кэшированной маски, ray/геометрии flash и его native текстуры,
+   weather helper buffers **до первого native bind**.
+2. Sky prefix, отсортированный мир и вложенные MeshImage в исходном порядке.
+3. Совмещённый MODULATE post-effect, затем additive flash (кроме смерти игрока).
+4. Пакеты RGB погоды (по 32 частицы), затем финальный finish/getRGB.
+
+На прогретом кэше полностью native-сцены — **один backup, один bind/release и
+один readback**, а не отдельные транзакции post/flash/weather. Непрозрачное полное
+небо по-прежнему не загружает старый CPU framebuffer в target; без такого неба
+остаётся одна необходимая загрузка фона. Количество GPU draw не сводится к одному:
+batching/слои/погодные packets остаются отдельными вызовами.
+
+Один cache slot flash отделён от 16-элементного world FIFO. В штатном MuzzleGlow
+он содержит 32×32 RGBA (4096 байт входного изображения, внутренний расход зависит
+от драйвера). Иначе 16 прогретых world-текстур могли бы вытеснить preloaded flash,
+запустить каскад eviction и снова потребовать readback/upload после мира.
+Замена image/pixels/размера/вида flash обновляет единственную запись; dispose/resize
+освобождают её. World texture limits/метаданные cutout/alpha не менялись.
+
+`WeatherGenerator.prepareM3G` делает только snapshot полос из текущей симуляции.
+Тот же ScreenLines и массивы переиспользуются, старый count очищается. Нет второго
+update/random/camera move. Сохранены 16 rain slots, полный snow pool, RGB/depth/
+thunder, screenY только в flush/LCDUI fallback. drawPortals/flushAlpha/debug или
+неактивный backend сохраняют прежний fallback/порядок.
+
+Результат renderGameFrame означает, можно ли пропустить LCDUI weather. Флаг true
+возвращается после успешного **финального readback**, не после первой погодной
+порции; пустой кадр без частиц не требует submission. Unsupported weather возвращает
+false без отключения успешно нарисованного мира. При exception/OOM/readback failure
+в любом этапе освобождается target, восстанавливается pre-frame backup и один раз
+повторяются sky/world/post на CPU. Косметический flash пропускается, ScreenLines
+погоды не отправляется в CPU replay: после flush рисует исходный LCDUI snow и
+ограниченный rain. Нет дублирования частично успешных native particles.
+
+Standalone renderOverlay/renderScreenLines/paintM3G/renderMuzzleGlow сохранены,
+но GameScreen больше их не вызывает. Они по-прежнему отдельные транзакции для
+внешних callers. Software GameScreen остаётся исходным. Не устраняются необходимые
+CPU-барьеры/загрузки холодных мировых текстур. Скорость на устройстве не измерена.
 
 ## Ограничения и производительность
 
@@ -882,6 +930,15 @@ resize/центр/release, no-op skip, state isolation, fallback при сбое
 readback, native OOM и mask upload OOM, flushAlpha/debug, отсутствие изменений
 Software. Missing-API suite проверяет CPU replay с новыми эффектами без optional API.
 Это contract/equation tests, не GPU-снимки и не измерение FPS.
+`FrameTransactionTest` проверяет действительный порядок sky/world/post/flash/weather,
+единственный bind/readback с холодной маской/flash и прогретым миром, отсутствие
+лишней CPU background upload, HW ON/OFF, пропуск flash при смерти, native weather
+without sky и необходимые CPU barriers. Регрессия 16 заполненных world cache slots
+проверяет отсутствие eviction cascade из-за flash. Инъекции failure в sky/world/
+post/flash/каждый из трёх weather packets/readback/OOM проверяют атомарный CPU replay,
+очистку target и отсутствие stale weather success. Реальный prepareM3G не рисует,
+переиспользует snapshot и сохраняет LCDUI fallback/portal/ARGB/Software. Missing-API
+suite проверяет combined game frame без optional API. Это не GPU/FPS benchmark.
 `StaticLightTest` проверяет статические режимы 9/13 для triangle/quad,
 серый/RGB lightmap, fogQ/fast/mip, отсутствие реакции на выстрел/фонарь/камеру,
 дистанционное затухание, маски прозрачности, сброс цветов, CPU fallback,

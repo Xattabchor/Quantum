@@ -2,7 +2,8 @@ package code.Rendering;
 
 /** Reusable screen-space effect batch, without optional API dependencies.
  * Queue only LEGACY_LINE batches (lightning). Rain/snow must be submitted with
- * DirectX7.renderScreenLines, with WeatherGenerator.paint as LCDUI fallback.
+ * DirectX7.renderGameFrame (or standalone renderScreenLines), with
+ * WeatherGenerator.paintAfterScene as LCDUI fallback.
  */
 public final class ScreenLines extends RenderObject {
     public static final int LINE = 0, LEGACY_LINE = 1, RECT = 2;

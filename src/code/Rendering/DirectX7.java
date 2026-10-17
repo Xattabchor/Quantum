@@ -279,14 +279,27 @@ this.buffer.resetTex();
     * Software callers retain their original GameScreen postprocessing. */
    public void renderWithEffects(byte[] vignette, boolean dead, boolean damaged) {
        if(rendererMode!=M3G) {render();return;}
-       if(frameEffects==null) frameEffects=new FrameEffects();
-       frameEffects.set(vignette,dead,damaged);
-       render(true,frameEffects.active()?frameEffects:null);
+       render(true,prepareFrameEffects(vignette,dead,damaged),null,null);
    }
 
-   private void render(boolean allowM3G) {render(allowM3G,null);}
+   /** Ordered game transaction: sky/world -> effects -> flash -> weather.
+    * True suppresses LCDUI weather ONLY after the final readback succeeds. */
+   public boolean renderGameFrame(byte[] vignette,boolean dead,boolean damaged,
+           code.Gameplay.Map.House house,int part,ScreenLines weather) {
+       if(rendererMode!=M3G) {render();return false;}
+       MuzzleGlow glow=dead?null:prepareMuzzleGlow(house,part);
+       return render(true,prepareFrameEffects(vignette,dead,damaged),glow,weather);
+   }
 
-   private void render(boolean allowM3G,FrameEffects effects) {
+   private FrameEffects prepareFrameEffects(byte[] vignette,boolean dead,boolean damaged) {
+       if(frameEffects==null) frameEffects=new FrameEffects();
+       frameEffects.set(vignette,dead,damaged);
+       return frameEffects.active()?frameEffects:null;
+   }
+
+   private void render(boolean allowM3G) {render(allowM3G,null,null,null);}
+
+   private boolean render(boolean allowM3G,FrameEffects effects,MuzzleGlow glow,ScreenLines weather) {
        lx = camera.m03;
        ly = camera.m13;
        lz = camera.m23;
@@ -296,7 +309,8 @@ this.buffer.resetTex();
        // Mutable LCDUI Images do not preserve framebuffer alpha. Keep these
        // paths entirely on the original rasterizer rather than change semantics.
        boolean useM3G = allowM3G && rendererMode == M3G && !rendererFailed && !flushAlpha
-               && !DeveloperMenu.renderPolygonsOverwrite && (buffer.getSize()>0 || backgroundPending || effects!=null);
+               && !DeveloperMenu.renderPolygonsOverwrite && (buffer.getSize()>0 || backgroundPending || effects!=null
+                       || glow!=null || (weather!=null && weather.count>0));
        try {
            if(useM3G) {
                boolean saved = false;
@@ -308,11 +322,17 @@ this.buffer.resetTex();
                    System.arraycopy(display, 0, frameBackup, 0, display.length);
                    saved = true;
                    if(effects!=null) sceneRenderer.prepareEffects(this,effects);
+                   if(glow!=null || weather!=null) sceneRenderer.prepareOverlays(this,glow,weather);
                    nativePass = true;
                    drawBuffer();
                    if(effects!=null) drawRenderObject(effects,null,false);
+                   // Do not put cosmetic overlays in the replay queue. Weather
+                   // has an explicit LCDUI fallback; flash is best-effort only.
+                   if(glow!=null) sceneRenderer.draw(this,glow,null,false);
+                   boolean nativeWeather=weather!=null && (weather.count==0
+                           || sceneRenderer.draw(this,weather,null,false));
                    sceneRenderer.finish(this);
-                   return;
+                   return nativeWeather;
                } catch(Exception ex) {
                    // Includes missing optional class and unsupported native targets.
                    rendererError = ex.toString();
@@ -330,6 +350,9 @@ this.buffer.resetTex();
            }
            drawBuffer();
            if(effects!=null) effects.render(this,null);
+           // Empty weather needs no native submission, but a failed native
+           // frame must return false so no stale success suppresses fallback.
+           return weather!=null && weather.count==0 && canRenderM3G();
        } finally {
            nativePass = false;
            resetQueues();
@@ -384,14 +407,19 @@ this.buffer.resetTex();
        } catch(OutOfMemoryError ex) { muzzleGlow = null; }
    }
 
-   public boolean renderMuzzleGlow(code.Gameplay.Map.House house,int part) {
-       if(!canRenderM3G() || muzzleGlow == null) return false;
+   private MuzzleGlow prepareMuzzleGlow(code.Gameplay.Map.House house,int part) {
+       if(!canRenderM3G() || muzzleGlow == null) return null;
        try {
-           return muzzleGlow.prepare(this,house,part,System.currentTimeMillis()) && renderOverlay(muzzleGlow);
+           return muzzleGlow.prepare(this,house,part,System.currentTimeMillis())?muzzleGlow:null;
        } catch(Exception ex) {
            // A cosmetic ray/texture failure must not change combat or the frame.
-           return false;
-       } catch(OutOfMemoryError ex) { return false; }
+           return null;
+       } catch(OutOfMemoryError ex) { return null; }
+   }
+
+   public boolean renderMuzzleGlow(code.Gameplay.Map.House house,int part) {
+       MuzzleGlow glow=prepareMuzzleGlow(house,part);
+       return glow!=null && renderOverlay(glow);
    }
 
    public final void drawLine(int x1, int y1, int x2, int y2, int fat, int col) {

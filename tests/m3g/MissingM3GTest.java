@@ -112,6 +112,13 @@ public final class MissingM3GTest {
         M3GTest.submit(g,M3GTest.triangle(),worldTexture,0);g.renderWithEffects(vignette,true,true);
         M3GTest.check(!g.isM3GActive() && java.util.Arrays.equals(effectsCPU.display,g.display),"missing API lost combined frame effects or ran them twice");
         g.destroy();effectsCPU.destroy();
+        g=M3GTest.renderer();effectsCPU=new DirectX7(32,32);effectsCPU.clearDisplay(0x123456);
+        M3GTest.submit(effectsCPU,M3GTest.triangle(),worldTexture,0);effectsCPU.render();effects.render(effectsCPU,null);
+        ScreenLines tail=new ScreenLines();tail.rect(2,3,1,1,0xffffff);
+        g.startMuzzleGlow();M3GTest.submit(g,M3GTest.triangle(),worldTexture,0);
+        M3GTest.check(!g.renderGameFrame(vignette,true,true,null,0,tail),"missing API reported native weather success");
+        M3GTest.check(!g.isM3GActive() && java.util.Arrays.equals(effectsCPU.display,g.display),"missing API combined tail corrupted scene replay");
+        g.destroy();effectsCPU.destroy();
         System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay / sprite+panorama class safety / combined queue replay / HW perspective="+code.utils.Main.m3gPerspective);
     }
 }
