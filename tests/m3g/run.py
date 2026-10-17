@@ -30,6 +30,8 @@ assert "if(!nativeWeather) wg.paint(g, screenY);" in game
 assert game.index("if(doubleBright)") < game.index("g3d.renderMuzzleGlow(") < game.index("wg.paintM3G(g3d)")
 assert game.index("g3d.renderMuzzleGlow(") < game.index("player.arsenal.drawWeapon(")
 assert "if(!playerDied) g3d.renderMuzzleGlow" in game
+assert game.index("g3d.render();") < game.index("wg.lightingEffect(") < game.index("if(vignette != null)")
+assert "if(lighting && !player.character.underRoof && wg != null)" in game
 weapon = (ROOT / "src/code/Gameplay/Weapon.java").read_text()
 assert "if(shootLight) {" in weapon and "g3d.startMuzzleGlow();" in weapon
 assert weapon.index("g3d.startMuzzleGlow();") > weapon.index("if (magazine.rounds > 0)")
@@ -144,7 +146,7 @@ public class Graphics3D {
   }
   Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex==null?Texture2D.FUNC_MODULATE:a.tex.function;draw.filter=a.tex==null?0:a.tex.filter;
   draw.colors=c.clone();draw.indices=i.indices.clone();draw.lengths=i.lengths;draw.textureAlpha=p[3]&255;
-  draw.positions=v.positions.shorts.clone();draw.coords=v.coords.shorts==null?null:v.coords.shorts.clone();draw.scale=v.scale;draw.uvScale=v.uvScale;
+  draw.positions=v.positions.shorts.clone();draw.coords=v.coords==null || v.coords.shorts==null?null:v.coords.shorts.clone();draw.scale=v.scale;draw.uvScale=v.uvScale;
   draw.projection=camera.projection.matrix.clone();
   draw.fog=a.fog!=null;
   if(draw.fog){draw.fogColor=a.fog.color;draw.near=a.fog.near;draw.far=a.fog.far;}
@@ -185,7 +187,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     sources += sorted(TEST.glob("*.java"))
     # Compile the current adapter against the doubles, not copies of its logic.
     sources += [ROOT / "src/code/Rendering" / name for name in
-                ("M3GSceneRenderer.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "M3GScreenLines.java", "ScreenLineGeometry.java")]
+                ("M3GSceneRenderer.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GStormFlash.java")]
     if os.environ.get("ECJ_JAR"):
         compiler = [JAVA, "-jar", os.environ["ECJ_JAR"], "-8", "-proc:none", "-nowarn"]
     else:
@@ -197,6 +199,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GlassTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.StormFlashTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.DitherDisabledTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GeometryTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyTest"], check=True)

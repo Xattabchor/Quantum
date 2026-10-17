@@ -47,6 +47,11 @@ public final class MissingM3GTest {
                     "missing API revived dithering or changed material "+mode);
             g.destroy();cpu.destroy();
         }
+        g=M3GTest.renderer();DirectX7 flashCPU=new DirectX7(32,32);flashCPU.clearDisplay(0x123456);
+        code.utils.WeatherGenerator flashWeather=new code.utils.WeatherGenerator(32,32,0,0,0,0,0,true,null,1,1,16,16,1,1);
+        flashWeather.lightingEffect(flashCPU,-10);flashWeather.lightingEffect(g,-10);
+        M3GTest.check(!g.isM3GActive() && java.util.Arrays.equals(g.display,flashCPU.display),"missing API lost storm flash fallback");
+        g.destroy();flashCPU.destroy();
         System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay");
     }
 }

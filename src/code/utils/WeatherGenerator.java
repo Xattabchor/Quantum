@@ -7,12 +7,14 @@ package code.utils;
 import code.AI.Player;
 import code.Rendering.DirectX7;
 import code.Rendering.ScreenLines;
+import code.Rendering.StormFlash;
 import java.util.Random;
 import javax.microedition.lcdui.Graphics;
 
 public class WeatherGenerator {
     
   private ScreenLines nativeParticles;
+  private StormFlash nativeFlash;
   public byte generate; 
 /*
  * 0 - Nothing 
@@ -424,6 +426,17 @@ float yy=y*1.3f*3*frameTime/80/50;
         int ySize = horizonSize*g3d.height/g3d.fovY;
         
         if(horizonY>=screenHeight) return;
+
+        // No new per-pixel work on the native path. Keep the original loop below
+        // as an exact Software/failure fallback after renderOverlay restores it.
+        if(g3d.canRenderM3G() && screenWidth==g3d.width && screenHeight==g3d.height && ySize>0) {
+            try {
+                if(nativeFlash==null) nativeFlash=new StormFlash();
+                nativeFlash.set(horizonY,ySize);
+                if(g3d.renderOverlay(nativeFlash)) return;
+            } catch(OutOfMemoryError ex) { nativeFlash=null; }
+        }
+
         
         int y = horizonY;
         if(y<0) y = 0;

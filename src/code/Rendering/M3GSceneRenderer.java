@@ -34,6 +34,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private Image surface;
     private M3GSkyRenderer skyRenderer;
     private M3GScreenLines screenLines;
+    private M3GStormFlash stormFlash;
     private boolean bound;
     private int cachedPixels;
     private final int maxTexture;
@@ -128,12 +129,17 @@ public final class M3GSceneRenderer implements SceneRenderer {
             surface = null;
             skyRenderer = null;
             screenLines = null;
+            stormFlash = null;
             textures.removeAllElements();
             cachedPixels = 0;
         }
     }
 
     public boolean draw(DirectX7 g, RenderObject object, Texture texture, boolean fast) {
+        if(object instanceof StormFlash) {
+            if(stormFlash == null) stormFlash = new M3GStormFlash(this,graphics);
+            return stormFlash.draw(g,(StormFlash)object);
+        }
         if(object instanceof ScreenLines) {
             if(screenLines == null) screenLines = new M3GScreenLines(this,graphics);
             return screenLines.draw(g,(ScreenLines)object);
