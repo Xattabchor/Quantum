@@ -48,7 +48,7 @@ final class M3GFrameEffects {
                 // Map original d/256 to the nearest native byte/255.
                 luminance[y*w+x]=(byte)((value*255+128)>>8);
             }
-            next=new Texture2D(new Image2D(Image2D.LUMINANCE,w,h,luminance));
+            next=new Texture2D(owner.uploadImage(g,Image2D.LUMINANCE,w,h,luminance));
             next.setFiltering(Texture2D.FILTER_BASE_LEVEL,Texture2D.FILTER_LINEAR);
             next.setWrapping(Texture2D.WRAP_CLAMP,Texture2D.WRAP_CLAMP);
             next.setBlending(Texture2D.FUNC_MODULATE);
@@ -73,7 +73,7 @@ final class M3GFrameEffects {
         Texture2D desired=effects.vignette==null?null:mask;
         if(activeTexture!=desired) {appearance.setTexture(0,desired);activeTexture=desired;}
         owner.bind(g);owner.restoreCamera(g);
-        graphics.render(buffer,indices,appearance,null);
+        owner.renderNative(g,buffer,indices,appearance);
         return true;
     }
     private void vertex(int i,int x,int y) {

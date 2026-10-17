@@ -90,10 +90,10 @@ public final class BatchTest {
             Main.m3gPerspective=flag;
             geometry(64,false,0,false,1);geometry(128,false,0,false,2);
             geometry(100,false,0,false,2);geometry(100,true,0,false,4);
-            geometry(65,false,13,true,2);geometry(65,false,13,false,-1);geometry(65,true,7,false,3);
+            geometry(65,false,13,true,2);geometry(65,false,13,false,2);geometry(65,true,7,false,3);
             geometry(65,false,3,true,2);geometry(65,false,6,true,2);
-            geometry(65,false,3,false,-1); // Different physical scales: don't distort native Fog.
-            for(int mode:new int[]{1,9,13}) {geometry(17,false,mode,true,1);geometry(17,false,mode,false,-1);}
+            geometry(65,false,3,false,2); // Different legacy scales now share an exact common lattice.
+            for(int mode:new int[]{1,9,13}) {geometry(17,false,mode,true,1);geometry(17,false,mode,false,1);}
             for(int mode:new int[]{2,4,5,8,10,11,12}) geometry(17,false,mode,false,1);
         }
         System.out.println("PASS 100 triangles -> 2 draws / 100 quads -> 4 draws / ordered geometry+relative W+UV+colors+materials / exact native Fog scales / PC ON+OFF");

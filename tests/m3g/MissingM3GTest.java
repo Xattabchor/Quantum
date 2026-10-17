@@ -118,6 +118,8 @@ public final class MissingM3GTest {
         g.startMuzzleGlow();M3GTest.submit(g,M3GTest.triangle(),worldTexture,0);
         M3GTest.check(!g.renderGameFrame(vignette,true,true,null,0,tail),"missing API reported native weather success");
         M3GTest.check(!g.isM3GActive() && java.util.Arrays.equals(effectsCPU.display,g.display),"missing API combined tail corrupted scene replay");
+        M3GTest.check(g.getM3GDrawCalls()==0 && g.getM3GTextureUploads()==0
+                && g.getM3GStatsText(1000).startsWith("CPU "),"stats/HUD requires missing optional API");
         g.destroy();effectsCPU.destroy();
         System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay / sprite+panorama class safety / combined queue replay / HW perspective="+code.utils.Main.m3gPerspective);
     }

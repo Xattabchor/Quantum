@@ -150,7 +150,7 @@ final class M3GSkyRenderer {
             buffer.setTexCoords(0,uv,uvScale/256,null);
             owner.bind(g);
             graphics.setCamera(camera,null);
-            graphics.render(buffer,indices,appearance,null);
+            owner.renderNative(g,buffer,indices,appearance);
         }
     }
 

@@ -61,6 +61,17 @@ assert "if(vignette != null && g3d.getRenderer()==DirectX7.SOFTWARE)" in game
 assert "if(doubleBright && g3d.getRenderer()==DirectX7.SOFTWARE)" in game
 assert "if(g3d.getRenderer()==DirectX7.SOFTWARE) {\n                if(playerDied) deathScr" in game
 
+# All native render/image creation sites route through one counted API boundary.
+rendering=ROOT / "src/code/Rendering"
+for adapter in rendering.glob("M3G*.java"):
+    text=adapter.read_text()
+    if adapter.name!="M3GSceneRenderer.java":
+        assert "graphics.render(" not in text and "new Image2D(" not in text, adapter
+assert scene_source.count("graphics.render(")==1 and scene_source.count("new Image2D(")==1
+assert game.index("g3d.beginFrameStats();") < game.index("scene.render(g,")
+assert "g3d.getRenderer()==DirectX7.M3G && DeveloperMenu.showFps" in game
+assert "g3d.getM3GStatsText(System.currentTimeMillis())" in game
+
 # Only the API subset under test. These sources never enter the MIDlet.
 STUBS = {
 "javax/microedition/media/Manager.java": """package javax.microedition.media;
@@ -268,6 +279,8 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.CombinedPassTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.DitherDisabledTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GeometryTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogPackingTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.RenderStatsTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.LinesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.CheapRainTest"], check=True)

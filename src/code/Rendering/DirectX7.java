@@ -16,6 +16,30 @@ public final class DirectX7 {
    private String rendererError;
    private MuzzleGlow muzzleGlow;
    private FrameEffects frameEffects;
+   int frameDrawCalls,frameCpuBarriers,frameTextureUploads;
+   private int peakDraws,peakBarriers,peakUploads;
+   private long statsNext;
+   private String statsText;
+   private boolean statsNative;
+
+   /** Call once before sky/world preparation, NOT once per native segment. */
+   public void beginFrameStats() {frameDrawCalls=frameCpuBarriers=frameTextureUploads=0;}
+   public int getM3GDrawCalls() {return frameDrawCalls;}
+   public int getM3GCpuBarriers() {return frameCpuBarriers;}
+   public int getM3GTextureUploads() {return frameTextureUploads;}
+
+   /** Cached HUD, per-frame peaks over a 250ms display window. No string per draw. */
+   public String getM3GStatsText(long now) {
+       peakDraws=Math.max(peakDraws,frameDrawCalls);
+       peakBarriers=Math.max(peakBarriers,frameCpuBarriers);
+       peakUploads=Math.max(peakUploads,frameTextureUploads);
+       boolean active=isM3GActive();
+       if(statsText==null || now>=statsNext || now<statsNext-250 || active!=statsNative) {
+           statsText=(active?"M3G ":"CPU ")+"D:"+peakDraws+" B:"+peakBarriers+" T:"+peakUploads;
+           peakDraws=peakBarriers=peakUploads=0;statsNext=now+250;statsNative=active;
+       }
+       return statsText;
+   }
 
    public int width, height;
    public int[] display;
@@ -196,7 +220,7 @@ this.buffer.resetTex();
        if(nativePass) {
            if(sceneRenderer.draw(this, object, texture, fast)) return;
            // CPU materials/unsupported sprites must see all prior M3G pixels.
-           sceneRenderer.finish(this);
+           sceneRenderer.barrier(this);
        }
        byte originalMode = texture == null ? 0 : texture.drawmode;
        boolean alias = rendererMode == M3G && texture != null && originalMode >= 10 && originalMode <= 12;

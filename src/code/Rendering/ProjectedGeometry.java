@@ -8,6 +8,41 @@ package code.Rendering;
 public final class ProjectedGeometry {
     private ProjectedGeometry() { }
 
+    /** Fog-only shared binary depth lattice. Scale = 2^shift / move, rather
+     * than a unique float for each polygon's screen bounds. Exact screen
+     * endpoints and the original <=1/128 eye-weight error bound are retained.
+     * If the common lattice is unsuitable, use the original per-polygon pack. */
+    public static float packFog(Vertex[] vertices,int count,int cx,int cy,
+            int distance,short[] positions,float[] work) {
+        if(distance<=0) return 0;
+        long max=1;
+        for(int i=0;i<count;i++) {
+            Vertex v=vertices[i];
+            if(v.rz>0) return 0;
+            long x=Math.abs((long)v.sx-cx),y=Math.abs((long)v.sy-cy);
+            if(x>32767 || y>32767) return 0; // q>=1 cannot fit even the old pack.
+            long depth=(long)distance-v.rz;
+            max=Math.max(max,Math.max(1L,Math.max(x,y))*depth);
+        }
+        long limit=30000;int shift=0;
+        while(max>limit) {limit<<=1;shift++;}
+        long step=1L<<shift;
+        float scale=(float)step/distance;
+        boolean valid=true;
+        for(int i=0;i<count;i++) {
+            Vertex v=vertices[i];
+            long depth=(long)distance-v.rz;
+            long q=(depth+(step>>>1))>>>shift;
+            float weight=1.0f-(float)v.rz/distance;
+            long x=((long)v.sx-cx)*q,y=((long)cy-v.sy)*q;
+            if(q<=0 || q>32767 || x < -32767 || x>32767 || y < -32767 || y>32767
+                    || Math.abs(q*scale-weight)>weight/128.0f) {valid=false;break;}
+            positions[i*3]=(short)x;positions[i*3+1]=(short)y;positions[i*3+2]=(short)-q;
+        }
+        if(valid) return scale;
+        return pack(vertices,count,cx,cy,distance,true,positions,work);
+    }
+
     public static float pack(Vertex[] vertices, int count, int cx, int cy,
             int distance, boolean perspective, short[] positions, float[] work) {
         if(distance <= 0) return 0;

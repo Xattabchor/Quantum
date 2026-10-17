@@ -102,7 +102,8 @@ final class M3GPolygonBatch {
             // With no eye-space Fog, a common positive factor per polygon cancels
             // in projection and perspective interpolation. Keep each original
             // integer homogeneous weight: no re-quantization or shared-edge drift.
-            // Native Fog requires the EXACT original common eye-space scale.
+            // Native Fog still requires an EXACT common eye-space scale. Fog
+            // packing now shares a binary depth lattice when representable.
             buffer.setPositions(positions,fogged?scale:1.0f,null);
             int triangles=vertices/3;
             if(indexCache[triangles-1]==null) {
@@ -110,7 +111,7 @@ final class M3GPolygonBatch {
                 indexCache[triangles-1]=new TriangleStripArray(0,lengths);
             }
             owner.bind(g);owner.restoreCamera(g);
-            graphics.render(buffer,indexCache[triangles-1],appearance,null);
+            owner.renderNative(g,buffer,indexCache[triangles-1],appearance);
         }
         texture=null;polygon=null;firstOrder=null;firstIndices=null;
     }

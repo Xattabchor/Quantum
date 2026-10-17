@@ -214,6 +214,24 @@ public final class M3GSceneRenderer implements SceneRenderer {
             screenLines=new M3GScreenLines(this,graphics);
     }
 
+    /** Intermediate native -> CPU/resource transition, not the final readback. */
+    public void barrier(DirectX7 g) {
+        flushBatch(g);
+        if(bound) g.frameCpuBarriers++;
+        finish(g);
+    }
+
+    void renderNative(DirectX7 g,VertexBuffer vertices,TriangleStripArray indices,Appearance material) {
+        g.frameDrawCalls++; // API attempts, including a call that throws.
+        graphics.render(vertices,indices,material,null);
+    }
+
+    Image2D uploadImage(DirectX7 g,int format,int width,int height,byte[] pixels) {
+        Image2D image=new Image2D(format,width,height,pixels);
+        g.frameTextureUploads++; // Successful Image2D creation, not cache hits.
+        return image;
+    }
+
     public void finish(DirectX7 g) {
         flushBatch(g);
         if(!bound) return;
@@ -270,7 +288,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             setBlend(CompositingMode.REPLACE);setThreshold(0);
             // Full-frame opaque background; old pixels cannot contribute.
             bind(g,false);restoreCamera(g);
-            graphics.render(buffers[1],baseQuad,appearance,null);
+            renderNative(g,buffers[1],baseQuad,appearance);
             return true;
         }
         if(object instanceof SkyFlash) {
@@ -349,8 +367,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
         float fogFar=nativeFog?materialMath.fogFar(distance):0;
         if(nativeFog && !(fogFar>1.0f)) return false;
         if(nativeFog && !perspective) selectPolygonMode(affineFogPolygon);
-        float scale = ProjectedGeometry.pack(vertices, count, g.centreX, g.centreY,
-                distance, nativeFog || (mode != 8 && perspective), positions, work);
+        float scale = nativeFog
+                ? ProjectedGeometry.packFog(vertices,count,g.centreX,g.centreY,distance,positions,work)
+                : ProjectedGeometry.pack(vertices,count,g.centreX,g.centreY,
+                        distance,mode!=8 && perspective,positions,work);
         if(scale == 0) return false;
         buffersScale=scale;
         if(mode == 7) {
@@ -481,7 +501,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             batch.add(g,slot+3,buffersScale,positions,coords,colors,order,triangles,batchState);
         } else {
             flushBatch(g);bind(g);restoreCamera(g);
-            graphics.render(buffers[slot], triangles, appearance, null);
+            renderNative(g,buffers[slot],triangles,appearance);
         }
     }
 
@@ -490,14 +510,14 @@ public final class M3GSceneRenderer implements SceneRenderer {
         int slot=count-3;
         posArrays[slot].set(0,count,xyz);uvArrays[slot].set(0,count,uv);colorArrays[slot].set(0,count,rgba);
         buffers[slot].setPositions(posArrays[slot],scale,null);
-        bind(g);restoreCamera(g);graphics.render(buffers[slot],triangles,state,null);
+        bind(g);restoreCamera(g);renderNative(g,buffers[slot],triangles,state);
     }
 
     Texture2D texture(DirectX7 g, RawImage raw, int kind) {
         Texture2D result = findTexture(raw, kind);
         if(result == null) {
-            finish(g);
-            result = createTexture(raw, kind);
+            barrier(g);
+            result = createTexture(g,raw,kind);
         }
         return result;
     }
@@ -609,14 +629,14 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 && cached.width==image.w && cached.height==image.h && cached.kind==kind) {
             lastTexture=cached;return cached.texture;
         }
-        finish(g);
-        Texture2D texture=createTexture(image,kind,false);
+        barrier(g);
+        Texture2D texture=createTexture(g,image,kind,false);
         muzzleTexture=lastTexture;return texture;
     }
 
-    private Texture2D createTexture(RawImage image,int kind) {return createTexture(image,kind,true);}
+    private Texture2D createTexture(DirectX7 g,RawImage image,int kind) {return createTexture(g,image,kind,true);}
 
-    private Texture2D createTexture(RawImage image, int kind,boolean pooled) {
+    private Texture2D createTexture(DirectX7 g,RawImage image, int kind,boolean pooled) {
         boolean sprite=kind>=SPRITE_CUTOUT && kind<=SPRITE_ADD;
         int width=sprite?spriteDimension(image.w):image.w;
         int height=sprite?spriteDimension(image.h):image.h;
@@ -650,7 +670,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         cached.image = image; cached.pixels = image.img; cached.width = image.w; cached.height = image.h;
         cached.kind = kind;cached.cost=size;
         cached.cutoutThreshold=opaque?0:0.5f;
-        cached.texture = new Texture2D(new Image2D(Image2D.RGBA, width, height, rgba));
+        cached.texture = new Texture2D(uploadImage(g,Image2D.RGBA,width,height,rgba));
         cached.texture.setFiltering(Texture2D.FILTER_BASE_LEVEL, Texture2D.FILTER_NEAREST);
         cached.texture.setWrapping(sprite?Texture2D.WRAP_CLAMP:Texture2D.WRAP_REPEAT,
                 sprite?Texture2D.WRAP_CLAMP:Texture2D.WRAP_REPEAT);

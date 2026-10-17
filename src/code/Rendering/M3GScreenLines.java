@@ -67,7 +67,7 @@ final class M3GScreenLines {
         positions.set(0,VERTICES,packed);colors.set(0,VERTICES,rgb);
         buffer.setPositions(positions,1.0f/precision,null);
         owner.bind(g);owner.restoreCamera(g);
-        graphics.render(buffer,indices,appearance,null);
+        owner.renderNative(g,buffer,indices,appearance);
     }
     private static short round(float value) {
         int v=(int)(value+(value<0?-0.5f:0.5f));

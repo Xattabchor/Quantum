@@ -88,7 +88,7 @@ final class M3GPanoramaRenderer {
         }
         positions.set(0,4,xyz);coords.set(0,4,uv);colors.set(0,4,rgba);
         buffer.setPositions(positions,1.0f/precision,null);appearance.setTexture(0,image);
-        graphics.render(buffer,indices,appearance,null);
+        owner.renderNative(g,buffer,indices,appearance);
     }
     private static short pack(float value,int units) {
         float v=value*units;return (short)(v<0?v-0.5f:v+0.5f);

@@ -341,6 +341,7 @@ public final class GameScreen extends MyCanvas {
         int playerHeight = player.getEyesHeight();
 
         g3d.setRenderer(Main.renderer);
+        g3d.beginFrameStats();
         Matrix playerMat = player.getCharacter().getTransform();
         int renderFrom;
         player.setCamera(g3d);
@@ -664,6 +665,10 @@ public final class GameScreen extends MyCanvas {
             if(DeveloperMenu.drawLevelPoints && DeveloperMenu.debugMode) scene.drawPoints(g, screenY, player);
         }
         
+        if(g3d.getRenderer()==DirectX7.M3G && DeveloperMenu.showFps) {
+            g.setClip(0,screenY,g3d.getWidth(),g3d.getHeight());
+            font.drawString(g,g3d.getM3GStatsText(System.currentTimeMillis()),2,screenY+2,20);
+        }
         run(begintime);
         finishDraw = true;
         QFPS.frame();

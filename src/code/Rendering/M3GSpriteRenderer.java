@@ -102,6 +102,6 @@ final class M3GSpriteRenderer {
         colors.set(0,4,rgba);
     }
     private void render(DirectX7 g) {
-        owner.bind(g);owner.restoreCamera(g);graphics.render(buffer,indices,appearance,null);
+        owner.bind(g);owner.restoreCamera(g);owner.renderNative(g,buffer,indices,appearance);
     }
 }
