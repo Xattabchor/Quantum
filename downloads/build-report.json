@@ -8,7 +8,7 @@
       0
     ]
   ],
-  "jar_sha256": "070d8faccd5b2071860b402b4859e89b71cd8a423176942bc82779163b3a29c7",
+  "jar_sha256": "8fb1d0c139e1271799539be2c04a3817a196c19a1fdd35791cf80e02f37f872f",
   "resource_files": 0,
   "source_files": 127,
   "preverifier": "ProGuard -microedition (CLDC StackMap)",
