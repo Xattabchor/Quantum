@@ -29,7 +29,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final TriangleStripArray[] baseQuadTriangles = new TriangleStripArray[2];
     private final TriangleStripArray[] alternateQuadTriangles = new TriangleStripArray[2];
     private final TriangleStripArray baseQuad, alternateQuad;
-    static final int OPAQUE_TEXTURE = 0, ALPHA_TEXTURE = 1, FOG_MASK = 2, ADD_TEXTURE = 3, GLASS_TEXTURE = 4;
+    static final int OPAQUE_TEXTURE = 0, ALPHA_TEXTURE = 1, FOG_MASK = 2, ADD_TEXTURE = 3;
     private final Vector textures = new Vector();
     private Image surface;
     private M3GSkyRenderer skyRenderer;
@@ -149,7 +149,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
         if(texture == null) return false;
         int mode = texture.drawmode;
-        // Mode 7 is a cached translucent imitation; dithering stays CPU.
+        // Mode 7 is an untextured translucent tint; dithering stays CPU.
         if(mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4
                 && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 13) return false;
         // The original paths disagree on these degenerate distance values.
@@ -179,13 +179,28 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 && (mode == 3 || mode == 6) && Main.fogQ > 0 && alternateDiagonal();
         indices[1] = alternate ? alternateQuad : baseQuad;
         TriangleStripArray[] quadTriangles = alternate ? alternateQuadTriangles : baseQuadTriangles;
-        boolean perspective = usePerspective(texture, count, fastPath);
+        boolean perspective = mode != 7 && usePerspective(texture, count, fastPath);
         // TexturingPers interpolates 1 / (move - rz), not 1 / (distY - rz).
         // distY only controls screen projection and changes with the FOV.
         int distance = TexturingPers.move;
         float scale = ProjectedGeometry.pack(vertices, count, g.centreX, g.centreY,
                 distance, mode != 8 && perspective, positions, work);
         if(scale == 0) return false;
+        if(mode == 7) {
+            // Cheapest glass approximation: no source pixels, UV, mip or upload.
+            // Uniform cool tint, alpha 32/255. Original Software refraction stays.
+            int slot = count - 3;
+            posArrays[slot].set(0, count, positions);
+            buffers[slot].setPositions(posArrays[slot], scale, null);
+            appearance.setFog(null);
+            appearance.setTexture(0, null);
+            composite.setBlending(CompositingMode.ALPHA);
+            composite.setAlphaThreshold(0);
+            uniformColors(count, 0xb0beca, 32);
+            colorArrays[slot].set(0, count, colors);
+            render(g, slot, indices[slot]);
+            return true;
+        }
         RawImage raw = selectImage(texture, object, count, fastPath);
         if(mode == 8) {
             // CPU paintFill samples the first UV of EACH triangle, even if its
@@ -231,7 +246,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         boolean nativeFog = (mode == 3 || mode == 6) && Main.fogQ > 0 && highQuality
                 && perspective && fogFar > 1.0f
                 && (mode != 6 || !LightMapper.cameraVectorLight);
-        int kind = mode == 7 ? GLASS_TEXTURE : mode == 2 ? ADD_TEXTURE : mode == 4 && raw.alphaMixing ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
+        int kind = mode == 2 ? ADD_TEXTURE : mode == 4 && raw.alphaMixing ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
         // Cache eviction/uploads are done outside a bound target. A white alpha
         // mask is needed only for the colored fog's legacy two-pass variant.
         Texture2D nativeTexture = texture(g, raw, kind);
@@ -244,8 +259,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
         appearance.setTexture(0, nativeTexture);
         nativeTexture.setBlending(Texture2D.FUNC_MODULATE);
         composite.setBlending((glow != null || mode == 2) ? CompositingMode.ALPHA_ADD
-                : (kind == ALPHA_TEXTURE || kind == GLASS_TEXTURE) ? CompositingMode.ALPHA : CompositingMode.REPLACE);
-        composite.setAlphaThreshold(kind == ALPHA_TEXTURE || kind == GLASS_TEXTURE ? 0 : 0.5f);
+                : kind == ALPHA_TEXTURE ? CompositingMode.ALPHA : CompositingMode.REPLACE);
+        composite.setAlphaThreshold(kind == ALPHA_TEXTURE ? 0 : 0.5f);
 
         if(glow != null) {
             // Warm radial RGBA texture * fading vertex alpha, additively blended.
@@ -521,18 +536,6 @@ public final class M3GSceneRenderer implements SceneRenderer {
             rgba[i * 4 + 1] = kind == FOG_MASK ? (byte)255 : (byte)(rgb >> 8);
             rgba[i * 4 + 2] = kind == FOG_MASK ? (byte)255 : (byte)rgb;
             rgba[i * 4 + 3] = kind == ALPHA_TEXTURE ? (byte)(pixel >>> 24) : (byte)(pixel == 0 ? 0 : 255);
-            if(kind == GLASS_TEXTURE) {
-                // Original R/G encode displacement, NOT glass color/opacity.
-                // Bake a cool neutral ripple once at upload, never sample the
-                // framebuffer. A zero source pixel is not a cutout in mode 7.
-                int dx = ((pixel >> 16) & 255) - 128;
-                int dy = ((pixel >> 8) & 255) - 128;
-                int ripple = (dx + dy) / 8;
-                rgba[i * 4] = (byte)(176 + ripple);
-                rgba[i * 4 + 1] = (byte)(190 + ripple);
-                rgba[i * 4 + 2] = (byte)(202 + ripple);
-                rgba[i * 4 + 3] = (byte)(8 + (Math.abs(dx) + Math.abs(dy)) * 40 / 256);
-            }
         }
         CachedTexture cached = new CachedTexture();
         cached.image = image; cached.pixels = image.img; cached.width = image.w; cached.height = image.h;
