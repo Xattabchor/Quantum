@@ -989,6 +989,19 @@ Software оставлен исходным: applyVignette, grayscale deathScr, d
 Dispose/resize/смена backend освобождают native mask/буферы. FPS/визуальная проверка
 на телефоне не выполнены: один дополнительный fullscreen fill всё равно стоит GPU.
 
+### CPU-подготовка OMNI и recovery: оптимизации без изменения формул
+
+Метрическая упаковка OMNI реконструирует depth один раз на вершину и сохраняет
+исходные short-границы/округление. CPU-свет режима 5 кэширует длину lightdir,
+последнюю нормаль/результат; OMNI учитывает все 9 компонентов вращения камеры.
+CPU FrameEffects использует ленивую таблицу tint на 2 KiB данных и парное чтение
+маски. При OOM остаётся прежняя арифметика. В штатном native post-effect таблица
+не создаётся, новых draw/upload/readback нет. Software не изменён.
+
+Точное сравнение формул проверяет `CpuOptimizationTest`. Парные микрозамеры
+на реальном KVM и их ограничения: [отчёт](cpu-optimizations.md).
+Это не измерение M3G FPS на телефоне.
+
 ### Единая игровая транзакция с погодой
 
 `DirectX7.renderGameFrame(vignette,dead,damaged,house,part,weather)` обрабатывает:

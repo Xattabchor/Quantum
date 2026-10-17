@@ -256,13 +256,24 @@ this.buffer.resetTex();
 
    /** API-free recovery of mode 5 ambient 25% + directional 75%.
     * The CPU samplers use /256; return 64..256 so full diffuse remains full RGB. */
+   private static boolean shadeLightReady,shadeNormalReady;
+   private static int shadeLX,shadeLY,shadeLZ,shadeNX,shadeNY,shadeNZ,shadeValue;
+   private static double shadeLightLength;
+
    public static int mode5Shade(int nx,int ny,int nz) {
+       int lx=lightdirx,ly=lightdiry,lz=lightdirz;
+       if(!shadeLightReady || shadeLX!=lx || shadeLY!=ly || shadeLZ!=lz) {
+           shadeLightReady=true;shadeNormalReady=false;
+           shadeLX=lx;shadeLY=ly;shadeLZ=lz;
+           shadeLightLength=Math.sqrt((double)lx*lx+(double)ly*ly+(double)lz*lz);
+       }
+       if(shadeNormalReady && shadeNX==nx && shadeNY==ny && shadeNZ==nz) return shadeValue;
        double normal=Math.sqrt((double)nx*nx+(double)ny*ny+(double)nz*nz);
-       double light=Math.sqrt((double)lightdirx*lightdirx+(double)lightdiry*lightdiry+(double)lightdirz*lightdirz);
-       double dot=0;
-       if(normal>0 && light>0) dot=((double)nx*lightdirx+(double)ny*lightdiry+(double)nz*lightdirz)/(normal*light);
+       double light=shadeLightLength,dot=0;
+       if(normal>0 && light>0) dot=((double)nx*lx+(double)ny*ly+(double)nz*lz)/(normal*light);
        dot=Math.max(0,Math.min(1,dot));
-       return 64+(int)(192*dot+0.5);
+       shadeNX=nx;shadeNY=ny;shadeNZ=nz;shadeNormalReady=true;
+       shadeValue=64+(int)(192*dot+0.5);return shadeValue;
    }
 
    /** Shared dispatch, including the polygons of animated MeshImage objects. */

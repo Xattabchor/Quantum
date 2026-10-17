@@ -2,6 +2,9 @@
 
 Дата: **17 октября 2026**.
 
+> Это исходный замер до CPU-оптимизаций. Актуальное парное сравнение —
+> [до/после оптимизаций](cpu-optimizations.md).
+
 ## Итог
 
 **KVM из указанного репозитория действительно запущен.** Выполнены CPU-микробенчмарки
@@ -87,6 +90,11 @@ CPU recovery, **не native MODULATE**. Framebuffer переиспользует
 native draw/upload/readback, LCDUI presentation и реальный FPS.
 
 ## Воспроизведение
+
+Для исходной версии нужен JAR из commit `c981fce` с SHA-256 выше, переданный
+через `--app-jar /path/to/baseline/Quantum.jar`. Текущий `downloads/Quantum.jar`
+уже может содержать последующие оптимизации.
+
 
 Сначала выполнить обычную SDK-сборку `scripts/build_cldc.py`, чтобы получить
 `build/cldc/api.jar`. Нужны Java и ECJ с поддержкой Java 1.3, как для основной

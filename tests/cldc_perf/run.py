@@ -18,7 +18,8 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 TASKS = (
     "transform_project_1000", "matrix_mul_1000", "pack_triangles_1000",
-    "base_shade_1000", "omni_shade_1000", "post_240x320", "post_176x220",
+    "base_shade_1000", "omni_shade_1000", "base_shade_varying_1000",
+    "omni_shade_varying_1000", "post_240x320", "post_176x220",
 )
 
 
@@ -104,6 +105,7 @@ def main():
         result = {
             "kind": "CPU microbenchmark; NOT game FPS or M3G/GPU timing",
             "quantum_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+            "checkout_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip()),
             "app_jar_sha256": digest(app), "app_jar_bytes": app.stat().st_size,
             "game_resource_files": resource_files, "kvm_sha256": digest(kvm),
             "preverify_sha256": digest(preverify),
