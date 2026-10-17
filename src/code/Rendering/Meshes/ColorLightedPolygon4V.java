@@ -55,7 +55,7 @@ if(fog==5) {
 sz2=0xff-(int)MathUtils.calcLight(nx, ny, nz,(int)DirectX7.lightdirx,(int)DirectX7.lightdiry,(int)DirectX7.lightdirz);
 }
 
-if(fog==1) szCalcfogAdd();
+if(fog==1 && g3d.getRenderer()!=DirectX7.M3G) szCalcfogAdd();
 
 
 q=(ny>4000 || ny<-4000) ? 9999999 : Main.q;
@@ -128,7 +128,7 @@ if(sz2<0) sz2=0;
 }
 
 
-if(texture.drawmode==1) szCalcfogAdd();
+if(texture.drawmode==1 && g3d.getRenderer()!=DirectX7.M3G) szCalcfogAdd();
 
         TexturingAffine.paint(g3d, texture,
                 a, (au), (av),

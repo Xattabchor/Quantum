@@ -50,7 +50,9 @@ final class M3GSkyRenderer {
             int material = p instanceof Polygon3V ? ((Polygon3V)p).tex : ((Polygon4V)p).tex;
             if(materials == null || materials.textures == null || material < 0 || material >= materials.textures.length) return false;
             Texture t = materials.textures[material];
-            if(t == null || (DirectX7.m3gDrawMode(t.drawmode) != 0 && t.drawmode != 4) || !owner.supportsTexture(t.rImg)) return false;
+            if(t == null || !owner.supportsTexture(t.rImg)) return false;
+            int mode=DirectX7.m3gDrawMode(t.drawmode);
+            if(mode!=0 && mode!=1 && mode!=2 && mode!=4 && mode!=7 && mode!=10) return false;
         }
         float far = g.distY;
         Vertex[] vertices = sky.mesh.getVertices();
@@ -90,13 +92,17 @@ final class M3GSkyRenderer {
             for(int i = ordered.getSize()-1; i >= 0; i--) {
                 RenderObject p = items[i].obj; Texture t = items[i].tex;
                 RawImage raw = t.rImg;
-                boolean alpha = t.drawmode == 4 && raw.alphaMixing;
+                int mode=DirectX7.m3gDrawMode(t.drawmode);
+                boolean alpha = mode == 1 || (mode == 4 && raw.alphaMixing);
                 // Shared bounded texture cache; animation and array replacement
                 // have the same invalidation semantics as level materials.
-                Texture2D texture = owner.texture(g,raw,alpha ? M3GSceneRenderer.ALPHA_TEXTURE : M3GSceneRenderer.OPAQUE_TEXTURE);
+                Texture2D texture = owner.texture(g,raw,mode==2?M3GSceneRenderer.ADD_TEXTURE
+                        :alpha ? M3GSceneRenderer.ALPHA_TEXTURE : M3GSceneRenderer.OPAQUE_TEXTURE);
                 texture.setBlending(Texture2D.FUNC_MODULATE);
                 appearance.setTexture(0,texture); appearance.setFog(null);
-                composite.setBlending(alpha ? CompositingMode.ALPHA : CompositingMode.REPLACE);
+                composite.setBlending(mode==2?CompositingMode.ALPHA_ADD
+                        :mode==7?CompositingMode.MODULATE:mode==10?CompositingMode.MODULATE_X2
+                        :alpha ? CompositingMode.ALPHA : CompositingMode.REPLACE);
                 composite.setAlphaThreshold(alpha ? 0 : owner.textureCutoutThreshold());
                 if(p instanceof Polygon3V) {
                     Polygon3V a = (Polygon3V)p;

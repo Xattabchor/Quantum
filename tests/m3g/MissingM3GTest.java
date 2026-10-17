@@ -9,6 +9,7 @@ public final class MissingM3GTest {
         M3GTest.check(!g.isM3GActive(), "Missing JSR-184 did not fall back");
         M3GTest.check(g.getRendererError() != null, "Missing JSR-184 not diagnosed");
         g.destroy();
+        ModeOptimizationAuditTest.cpuSkyAliases();
         // SkyMesh must also remain loadable and replayable without any JSR-184.
         g=M3GTest.renderer();
         code.Rendering.Meshes.Polygon3V p=M3GTest.triangle();

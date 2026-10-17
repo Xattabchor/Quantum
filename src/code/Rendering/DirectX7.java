@@ -259,6 +259,12 @@ this.buffer.resetTex();
            // CPU materials/unsupported sprites must see all prior M3G pixels.
            sceneRenderer.barrier(this);
        }
+       drawSoftwareObject(object,texture,fast);
+   }
+
+   /** CPU-only dispatch for a whole-mesh fallback; never re-enter native sky
+    * rendering after its atomic material/geometry validation has rejected it. */
+   public void drawSoftwareObject(RenderObject object,Texture texture,boolean fast) {
        byte originalMode = texture == null ? 0 : texture.drawmode;
        boolean alias = rendererMode == M3G && texture != null && m3gDrawMode(originalMode) != originalMode;
        if(alias) texture.drawmode = m3gDrawMode(originalMode);

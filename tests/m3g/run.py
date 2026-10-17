@@ -261,6 +261,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run(compiler + ["-classpath", os.pathsep.join(map(str, (APP, API))),
                               "-d", str(classes)] + list(map(str, sources)), check=True)
     classpath = os.pathsep.join(map(str, (classes, APP, API)))
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModeOptimizationAuditTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MulSpriteTest"], check=True)

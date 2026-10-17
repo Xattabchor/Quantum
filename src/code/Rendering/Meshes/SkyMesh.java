@@ -29,7 +29,7 @@ public final class SkyMesh extends RenderObject {
             fallback.sort(0, fallback.getSize() - 1);
             TMPElement[] items = fallback.getBuffer();
             for(int i = fallback.getSize() - 1; i >= 0; i--)
-                items[i].obj.render(g, items[i].tex);
+                g.drawSoftwareObject(items[i].obj,items[i].tex,false);
         } finally {
             fallback.resetTex();
             fallback.reset();

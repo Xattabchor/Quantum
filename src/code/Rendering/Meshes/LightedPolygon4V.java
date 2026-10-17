@@ -62,7 +62,7 @@ public class LightedPolygon4V extends Polygon4V {
 
         if(fog == 5) {
             sz2 = 0xff - MathUtils.calcLight(nx, ny, nz, DirectX7.lightdirx, DirectX7.lightdiry, DirectX7.lightdirz);
-        } else if(fog == 1) {
+        } else if(fog==1 && g3d.getRenderer()!=DirectX7.M3G) {
             szCalcfogAdd();
         }
 
@@ -138,7 +138,7 @@ public class LightedPolygon4V extends Polygon4V {
         }
 
 
-        if(texture.drawmode == 1) {
+        if(texture.drawmode==1 && g3d.getRenderer()!=DirectX7.M3G) {
             szCalcfogAdd();
         }
 
