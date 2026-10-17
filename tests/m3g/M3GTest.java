@@ -138,7 +138,7 @@ public final class M3GTest {
         LightedPolygon3V lit=new LightedPolygon3V(base.a,base.b,base.c,(byte)0,(byte)0,(byte)255,(byte)0,(byte)0,(byte)255);lit.la=20;lit.lb=100;lit.lc=200;
         DirectX7.fDist=1000;t=texture(0xffffffff);t.drawmode=9;
         submit(g,lit,t,0);g.render();
-        check((Graphics3D.lastVertices.colors.bytes[0]&255)==20 && Graphics3D.lastAppearance.fog!=null,"static baked light + native Fog");
+        check((Graphics3D.lastVertices.colors.bytes[0]&255)==20 && Graphics3D.lastAppearance.fog==null,"static baked light without Fog");
         g.destroy();
         System.out.println("PASS alpha / quad diagonal / static baked light");
 

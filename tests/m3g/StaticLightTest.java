@@ -31,9 +31,7 @@ public final class StaticLightTest {
     }
     private static void submit(DirectX7 g,RenderObject p,Texture t) { M3GTest.submit(g,p,t,0);g.render(); }
     private static int expected(int value,int depth,int distance) {
-        value=Math.max(0,Math.min(255,value));
-        int fog=distance<=1?0:Math.min(255,Math.max(0,depth*255/distance));
-        return value*(255-fog)/255;
+        return Math.max(0,Math.min(255,value));
     }
     private static void colors(byte[] colors,boolean rgb,int count,int quality,int distance) {
         int[][] values={{20,100,200},{80,160,240},{255,64,0},{50,60,70}};
@@ -71,15 +69,13 @@ public final class StaticLightTest {
             Main.fogQ=2;Main.persQ=4;Main.mipMapping=false;
             for(int distance:new int[]{-1,0,1,200,2000}) {
                 DirectX7.fDist=distance;int calls=Graphics3D.calls;submit(g,p,t);
-                if(distance<=1) check(Graphics3D.calls==calls,"invalid native range must use CPU fallback");
-                else {
-                    check(Graphics3D.history.lastElement().fog,"lightmap distance fade must use native Fog");
-                    colors(Graphics3D.history.lastElement().colors,rgb,quad?4:3,2,distance);
-                }
+                check(Graphics3D.calls==calls+1,"baked colors depend on a Fog range");
+                check(!Graphics3D.history.lastElement().fog,"black Fog remains on baked colors");
+                colors(Graphics3D.history.lastElement().colors,rgb,quad?4:3,2,distance);
             }
             g.destroy();
         }
-        System.out.println("PASS static grayscale9 / RGB13 / triangle+quad / quality+fast / no muzzle+torch+camera / raw baked RGB + native distance Fog");
+        System.out.println("PASS static grayscale9 / RGB13 / triangle+quad / quality+fast / no muzzle+torch+camera / raw baked RGB without distance Fog");
 
         DirectX7 cutout=M3GTest.renderer();Main.fogQ=2;Main.persQ=4;Main.mipMapping=false;
         Texture hole=M3GTest.texture(0);hole.drawmode=13;cutout.clearDisplay(0xff123456);

@@ -107,6 +107,15 @@ public final class BatchTest {
         queue(mixedRenderer,mixed,new Texture[]{mixedTex});check(Graphics3D.history.size()==mixedStart+1
                 && mixedReference.equals(triangles(mixedStart)),"mixed tri/quad/static RGB stream changed");mixedRenderer.destroy();
 
+        // Removing 9/13 Fog also allows adjacent plain/gray/RGB polygons sharing
+        // a texture to stay in one run; varying baked colors must survive.
+        Texture shared=M3GTest.texture(0xff7090b0),gray=new Texture(shared.rImg,true,null),rgb=new Texture(shared.rImg,true,null);
+        gray.drawmode=9;rgb.drawmode=13;Texture[] fogFree={shared,gray,rgb};RenderObject[] stream=faces(100,false,false);
+        List<String> streamReference=reference(stream,fogFree);DirectX7 mixedModes=renderer();
+        int streamStart=Graphics3D.history.size(),packets=Graphics3D.calls;queue(mixedModes,stream,fogFree);
+        check(Graphics3D.calls==packets+2 && streamReference.equals(triangles(streamStart)),"fog-free 0/9/13 run split or lost baked colors");
+        mixedModes.destroy();
+
         // Same RawImage/Texture2D with native Fog vs no Fog: capture state before flush.
         Texture add=M3GTest.texture(0xff405060),normal=new Texture(add.rImg,true,null);add.drawmode=3;
         RenderObject[] objects=faces(9,false,false);Texture[] materials={add,add,normal,normal,add,normal};

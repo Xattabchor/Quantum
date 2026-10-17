@@ -297,12 +297,10 @@ this.buffer.resetTex();
 
    public boolean isStaticLightmapPass() { return staticLightmapPass; }
 
-   /** Static baked brightness plus distance fade; no camera or weapon inputs. */
+   /** Selected-M3G baked brightness only: no fog, distance or dynamic light.
+    * Keep rz in the signature for compatibility with existing CPU callers. */
    public int lightmapColor(int value, int rz) {
-       value = Math.max(0,Math.min(255,value));
-       if(fDist <= 1) return value;
-       int fade = (int)Math.max(0L,Math.min(255L,-(long)rz*255/fDist));
-       return value*(255-fade)/255;
+       return Math.max(0,Math.min(255,value));
    }
 
    /** Keep sky as an ordered prefix, never mixed into world depth sorting.

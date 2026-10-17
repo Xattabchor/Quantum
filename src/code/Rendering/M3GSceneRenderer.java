@@ -355,7 +355,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4
                 && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 10 && mode != 13) return false;
         boolean nativeFog=glow==null && Main.fogQ>0
-                && (mode==3 || mode==6 || mode==9 || mode==13);
+                && (mode==3 || mode==6);
         // Invalid native ranges retain the original CPU material fallback.
         if(nativeFog && DirectX7.fDist<=1) return false;
         Class type = object.getClass();
@@ -484,8 +484,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
             uniformColors(count,0xffffff,255);
             render(g,slot,indices[slot]);
         } else {
-            // Only baked RGB is prepared on the CPU. Distance attenuation is
-            // applied once by Fog, after texture/lightmap modulation in M3G.
+            // Modes 9/13 keep only baked vertex colors, with no distance Fog.
+            // Native Fog remains a separate stage for modes 3/6 only.
             setColors(g, object, count, mode);
             if(!batchable) colorArrays[slot].set(0, count, colors);
             if(nativeFog) {

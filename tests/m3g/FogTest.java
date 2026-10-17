@@ -37,7 +37,7 @@ public final class FogTest {
         for(int shift=0;shift<=16;shift+=8) check(Math.abs(((actual>>shift)&255)-((expected>>shift)&255))<=2,"Fog equation mismatch");
     }
     public static void main(String[] args) {
-        int[] modes={3,6,9,13};
+        int[] modes={3,6};
         for(int mode:modes) for(int perspective:new int[]{0,4}) for(int quality:new int[]{1,2}) {
             DirectX7 g=start();Main.persQ=perspective;Main.fogQ=quality;
             Texture t=texture(mode,0xffd06020);
@@ -63,7 +63,7 @@ public final class FogTest {
             Main.fogQ=0;submit(g,flat(100),t);check(!last().fog,"fogQ=0 must disable native Fog");
             nearColor(g.display[0],0xd06020);g.destroy();
         }
-        System.out.println("PASS single-pass native Fog 3/6/9/13 / HQ+LQ+forceLQ / affine+perspective / HW ON+OFF / distance+color+zoom / OFF / no CPU RGB fading");
+        System.out.println("PASS single-pass native Fog 3/6 / HQ+LQ+forceLQ / affine+perspective / HW ON+OFF / distance+color+zoom / OFF / no CPU RGB fading");
 
         for(int mode:modes) {
             DirectX7 g=start();Main.persQ=0;
@@ -94,7 +94,7 @@ public final class FogTest {
             submit(g,flat(500),texture(mode,0x80d06020));
             check(last().textureAlpha==255,"native Fog changed nonzero/opaque semantics");
             nearColor(g.display[0],mix(0xd06020,(mode==3)?DirectX7.fogc:0,127));
-            for(int plain:new int[]{0,1,2,4,5,7,8,10,11,12}) {
+            for(int plain:new int[]{0,1,2,4,5,7,8,9,10,11,12,13}) {
                 submit(g,M3GTest.triangle(),texture(plain,0x80abcdef));check(!last().fog,"Fog leaked into material "+plain);
             }
             Main.fogQ=1;Main.forceLQFog=true;

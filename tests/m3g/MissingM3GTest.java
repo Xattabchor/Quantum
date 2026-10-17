@@ -27,6 +27,7 @@ public final class MissingM3GTest {
                 p.a,p.b,p.c,(byte)0,(byte)0,(byte)255,(byte)0,(byte)0,(byte)255);
         Texture bakedTexture=M3GTest.texture(0xffffffff);bakedTexture.drawmode=13;
         g.shootIntensity=100;g.shootLength=0;M3GTest.submit(g,baked,bakedTexture,0);g.render();
+        M3GTest.check(g.lightmapColor(128,-10000)==128,"missing API restored baked distance fade");
         M3GTest.check(!g.isM3GActive() && !g.isStaticLightmapPass(),"missing API lost static fallback/scope");g.destroy();
         g=M3GTest.renderer();MuzzleGlow glow=new MuzzleGlow();glow.alpha=100;
         glow.texture=M3GTest.texture(0x80ffffff);int background=g.display[0];

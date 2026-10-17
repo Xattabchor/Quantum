@@ -74,6 +74,6 @@ public final class FogPackingTest {
             g.destroy();
         }
         Main.m3gPerspective=true;
-        System.out.println("PASS 100 varying-depth/screen-bound Fog triangles -> 2 draws for 3/6/9/13 / HW ON+OFF (not FPS)");
+        System.out.println("PASS 100 varying-depth/screen-bound triangles -> 2 draws for Fog 3/6 and fog-free 9/13 / HW ON+OFF (not FPS)");
     }
 }
