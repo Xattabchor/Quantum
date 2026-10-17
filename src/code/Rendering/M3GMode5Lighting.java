@@ -1,7 +1,6 @@
 package code.Rendering;
 
 import javax.microedition.m3g.*;
-import code.Math.Matrix;
 
 /** Mode 5 only: white ambient 25% + directional 75%, plus a short weapon OMNI.
  * Base packets use the engine normal frame; pulse packets use metric eye-space
@@ -71,49 +70,23 @@ final class M3GMode5Lighting {
 
     }
 
-    // One bounded value-keyed entry, shared with the singleton native pipeline.
-    // No Material/Light construction is needed by this CPU-only packing method.
-    private static boolean packedReady,packedEye,packedFallback;
-    private static int normalX,normalY,normalZ,fallbackX,fallbackY,fallbackZ;
-    private static int c00,c01,c02,c10,c11,c12,c20,c21,c22;
-    private static short packedX,packedY,packedZ;
-
     static void packNormals(RenderObject object,int count,short[] out,int lx,int ly,int lz,DirectX7 eye) {
-        if(eye==null) {
-            if(packedEye) {packedEye=false;packedReady=false;}
-        } else {
-            Matrix c=eye.camera;
-            if(!packedEye || c00!=c.m00 || c01!=c.m01 || c02!=c.m02
-                    || c10!=c.m10 || c11!=c.m11 || c12!=c.m12
-                    || c20!=c.m20 || c21!=c.m21 || c22!=c.m22) {
-                packedEye=true;packedReady=false;
-                c00=c.m00;c01=c.m01;c02=c.m02;c10=c.m10;c11=c.m11;c12=c.m12;
-                c20=c.m20;c21=c.m21;c22=c.m22;
-            }
+        double x=object.nx,y=object.ny,z=object.nz;
+        if(eye!=null) {
+            x=Mode5WeaponLight.eyeX(eye,object.nx,object.ny,object.nz);
+            y=Mode5WeaponLight.eyeY(eye,object.nx,object.ny,object.nz);
+            z=Mode5WeaponLight.eyeZ(eye,object.nx,object.ny,object.nz);
         }
-        if(!packedReady || normalX!=object.nx || normalY!=object.ny || normalZ!=object.nz
-                || (packedFallback && (fallbackX!=lx || fallbackY!=ly || fallbackZ!=lz))) {
-            normalX=object.nx;normalY=object.ny;normalZ=object.nz;
-            double x=object.nx,y=object.ny,z=object.nz;
-            if(eye!=null) {
-                x=Mode5WeaponLight.eyeX(eye,object.nx,object.ny,object.nz);
-                y=Mode5WeaponLight.eyeY(eye,object.nx,object.ny,object.nz);
-                z=Mode5WeaponLight.eyeZ(eye,object.nx,object.ny,object.nz);
-            }
-            double length=Math.sqrt(x*x+y*y+z*z);
-            packedFallback=length==0;
-            if(packedFallback) {
-                fallbackX=lx;fallbackY=ly;fallbackZ=lz;
-                // Never submit a zero vector for driver-side normalization. A normal
-                // facing away from the source has exactly the ambient-only result.
-                x=-(double)lx;y=-(double)ly;z=-(double)lz;
-                length=Math.sqrt(x*x+y*y+z*z);
-                if(length==0) {z=1;length=1;}
-            }
-            packedX=component(x*32767/length);packedY=component(y*32767/length);packedZ=component(z*32767/length);
-            packedReady=true;
+        double length=Math.sqrt(x*x+y*y+z*z);
+        if(length==0) {
+            // Never submit a zero vector for driver-side normalization. A normal
+            // facing away from the source has exactly the ambient-only result.
+            x=-(double)lx;y=-(double)ly;z=-(double)lz;
+            length=Math.sqrt(x*x+y*y+z*z);
+            if(length==0) {z=1;length=1;}
         }
-        for(int i=0,j=0;i<count;i++,j+=3) {out[j]=packedX;out[j+1]=packedY;out[j+2]=packedZ;}
+        short nx=component(x*32767/length),ny=component(y*32767/length),nz=component(z*32767/length);
+        for(int i=0;i<count;i++) {out[i*3]=nx;out[i*3+1]=ny;out[i*3+2]=nz;}
     }
 
     private static short component(double v) {return (short)(int)(v+(v<0?-0.5:0.5));}

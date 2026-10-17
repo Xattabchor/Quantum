@@ -38,8 +38,8 @@ public final class NativePrepTest {
                 Arrays.fill(actual,(short)123);Arrays.fill(expected,(short)123);
                 normal(p,count,expected,lx,ly,lz,eye);
                 M3GMode5Lighting.packNormals(p,count,actual,lx,ly,lz,eye);
-                check(Arrays.equals(actual,expected),"native normal cache/reference");
-                // A second call is a cache hit, but count may differ.
+                check(Arrays.equals(actual,expected),"native normal/reference");
+                // Repeat with a different count; the original loop must still match.
                 normal(p,4,expected,lx,ly,lz,eye);
                 M3GMode5Lighting.packNormals(p,4,actual,lx,ly,lz,eye);
                 check(Arrays.equals(actual,expected),"native normal cache count/duplicate");
@@ -73,10 +73,29 @@ public final class NativePrepTest {
         }
         return offset;
     }
-    private static void vertices() {
+    private static java.lang.reflect.Field field(String name) throws Exception {
+        java.lang.reflect.Field f=M3GPolygonBatch.class.getDeclaredField(name);
+        f.setAccessible(true);return f;
+    }
+    private static final class BatchProbe {
+        final M3GPolygonBatch batch=new M3GPolygonBatch(null,null);
+        final java.lang.reflect.Field size=field("size"),material=field("material");
+        final javax.microedition.m3g.Material lit=new javax.microedition.m3g.Material();
+        final java.lang.reflect.Method method=M3GPolygonBatch.class.getDeclaredMethod("append",
+                short[].class,short[].class,byte[].class,short[].class,int[].class);
+        BatchProbe() throws Exception {method.setAccessible(true);}
+        int append(short[] p,short[] uv,byte[] c,short[] n,int[] order,int offset,boolean lighting) throws Exception {
+            size.setInt(batch,offset);material.set(batch,lighting?lit:null);
+            method.invoke(batch,p,uv,c,n,order);return size.getInt(batch);
+        }
+    }
+    private static void vertices() throws Exception {
         Random r=new Random(192);
         short[] p=new short[12],uv=new short[8],n=new short[12];byte[] c=new byte[16];
-        short[] actualP=new short[576],actualUV=new short[384],actualN=new short[576];byte[] actualC=new byte[768];
+        BatchProbe probe=new BatchProbe();
+        short[] actualP=(short[])field("xyz").get(probe.batch),actualUV=(short[])field("uv").get(probe.batch),
+                actualN=(short[])field("packedNormals").get(probe.batch);
+        byte[] actualC=(byte[])field("rgba").get(probe.batch);
         short[] expectedP=new short[576],expectedUV=new short[384],expectedN=new short[576];byte[] expectedC=new byte[768];
         int[][] orders={{0,1,2},{0,1,3,1,2,3},{0,1,2,0,2,3},{2,0,1},{3},{},{3,3,0,1,2,0,3}};
         for(int trial=0;trial<12000;trial++) {
@@ -91,7 +110,7 @@ public final class NativePrepTest {
             Arrays.fill(actualC,(byte)99);Arrays.fill(expectedC,(byte)99);
             short[] savedP=p.clone(),savedUV=uv.clone(),savedN=n.clone();byte[] savedC=c.clone();
             int count=reference(p,uv,c,n,order,expectedP,expectedUV,expectedC,expectedN,offset,lit);
-            int actual=M3GPolygonBatch.appendVertices(p,uv,c,lit?n:null,order,actualP,actualUV,actualC,actualN,offset,lit);
+            int actual=probe.append(p,uv,c,lit?n:null,order,offset,lit);
             check(count==actual && Arrays.equals(actualP,expectedP) && Arrays.equals(actualUV,expectedUV)
                     && Arrays.equals(actualC,expectedC) && Arrays.equals(actualN,expectedN),"exact ordered batch / both diagonals / prefix+suffix / lit+unlit");
             check(Arrays.equals(p,savedP) && Arrays.equals(uv,savedUV) && Arrays.equals(n,savedN) && Arrays.equals(c,savedC),"batch changed input arrays");
@@ -99,14 +118,14 @@ public final class NativePrepTest {
             if(order.length>0) {
                 order[0]=(order[0]+1)%4;
                 reference(p,uv,c,n,order,expectedP,expectedUV,expectedC,expectedN,offset,lit);
-                M3GPolygonBatch.appendVertices(p,uv,c,lit?n:null,order,actualP,actualUV,actualC,actualN,offset,lit);
+                probe.append(p,uv,c,lit?n:null,order,offset,lit);
                 check(Arrays.equals(actualP,expectedP) && Arrays.equals(actualUV,expectedUV)
                         && Arrays.equals(actualC,expectedC) && Arrays.equals(actualN,expectedN),"in-place order mutation");
             }
         }
     }
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         normals();vertices();
-        System.out.println("PASS native prep: exact normal quantization/cache / all 9 mutable camera entries / light+normal+eye invalidation / degenerate fallback / 12000 ordered batch streams / both diagonals / alpha+UV / unlit normals untouched");
+        System.out.println("PASS restored pre-KVM native prep: exact restored normal quantization / all 9 mutable camera entries / light+normal+eye invalidation / degenerate fallback / 12000 ordered batch streams / both diagonals / alpha+UV / unlit normals untouched");
     }
 }

@@ -1,11 +1,10 @@
 package code.Rendering;
 
 import code.Math.Matrix;
-import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Random;
 
-/** Exact comparisons with the pre-optimization CPU equations. */
+/** Regression comparisons with the restored pre-KVM CPU equations. */
 public final class CpuOptimizationTest {
     private static void check(boolean ok,String why) {M3GTest.check(ok,why);}
     private static int base(int nx,int ny,int nz) {
@@ -82,17 +81,14 @@ public final class CpuOptimizationTest {
                 f.render(g,null);check(Arrays.equals(expected,g.display),"short/odd/oversized mask or display / tint invalidation");
             }
         }
-        // No mask, nonstandard channel tint, and the allocation-failure fallback.
-        Field failed=FrameEffects.class.getDeclaredField("cpuTintUnavailable");failed.setAccessible(true);
-        for(boolean unavailable:new boolean[]{false,true}) {
-            f=new FrameEffects();failed.setBoolean(f,unavailable);
-            for(int tint:new int[]{0xffffffff,0xff4040,0x802020,0x808080,0xffffff,0x123456,0x80123456}) {
-                f.set(null,false,true);f.tint=tint;
-                g.display=new int[]{0x12345678,0xffabcdef,0,0xffffffff};
-                int[] expected=g.display.clone();
-                for(int i=0;i<expected.length;i++) expected[i]=effect(expected[i],256,tint);
-                f.render(g,null);check(Arrays.equals(expected,g.display),"no mask/custom tint/OOM arithmetic recovery");
-            }
+        // The restored implementation is arithmetic-only, without a CPU LUT.
+        f=new FrameEffects();
+        for(int tint:new int[]{0xffffffff,0xff4040,0x802020,0x808080,0xffffff,0x123456,0x80123456}) {
+            f.set(null,false,true);f.tint=tint;
+            g.display=new int[]{0x12345678,0xffabcdef,0,0xffffffff};
+            int[] expected=g.display.clone();
+            for(int i=0;i<expected.length;i++) expected[i]=effect(expected[i],256,tint);
+            f.render(g,null);check(Arrays.equals(expected,g.display),"no mask/custom tint arithmetic");
         }
         g.destroy();
     }
@@ -118,7 +114,7 @@ public final class CpuOptimizationTest {
             int count=trial%2+3;
             check(pack(g,vertices,count,expected)==Mode5WeaponLight.pack(g,vertices,count,actual)
                     && Arrays.equals(expected,actual),"exact metric pack/range/partial output");
-            // Exercise cache hits, changing normal, changing light, mutable camera,
+            // Exercise repeated calls, changing normal, changing light, mutable camera,
             // FOV/position/pulse, extreme integer inputs and zero vectors.
             DirectX7.lightdirx=(short)random.nextInt();DirectX7.lightdiry=(short)random.nextInt();DirectX7.lightdirz=(short)random.nextInt();
             if(trial%5==0) DirectX7.lightdirx=DirectX7.lightdiry=DirectX7.lightdirz=0;
@@ -127,8 +123,8 @@ public final class CpuOptimizationTest {
             light.start(0);light.prepare(trial%125);
             for(int changed=0;changed<16;changed++) {
                 int b=base(nx,ny,nz);
-                check(DirectX7.mode5Shade(nx,ny,nz)==b && DirectX7.mode5Shade(nx,ny,nz)==b,"base shade/cache");
-                check(light.shade(g,vertices[0],nx,ny,nz)==shade(light,g,vertices[0],nx,ny,nz),"exact OMNI/cache invalidation");
+                check(DirectX7.mode5Shade(nx,ny,nz)==b && DirectX7.mode5Shade(nx,ny,nz)==b,"base shade/reference");
+                check(light.shade(g,vertices[0],nx,ny,nz)==shade(light,g,vertices[0],nx,ny,nz),"exact restored OMNI");
                 int value=random.nextInt();
                 switch(changed) {
                     case 0:g.camera.m00=value;break;case 1:g.camera.m01=value;break;case 2:g.camera.m02=value;break;
@@ -142,6 +138,6 @@ public final class CpuOptimizationTest {
             }
         }
         g.destroy();
-        System.out.println("PASS exact CPU optimization reference: exhaustive effect bytes / short+odd masks / alpha+tint / OOM recovery / 12000 metric packs / changing normal+all 9 camera entries+light / extreme inputs");
+        System.out.println("PASS exact restored pre-KVM CPU reference: exhaustive effect bytes / short+odd masks / alpha+tint / restored arithmetic / 12000 metric packs / changing normal+all 9 camera entries+light / extreme inputs");
     }
 }

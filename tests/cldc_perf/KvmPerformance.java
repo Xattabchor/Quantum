@@ -68,14 +68,6 @@ public final class KvmPerformance {
             for(int n=0;n<repeats;n++) {
                 for(int i=0;i<1000;i++) checksum+=DirectX7.mode5Shade(0,0,4096);
             }
-        } else if(task.equals("base_shade_varying_1000")) {
-            for(int n=0;n<repeats;n++) {
-                for(int i=0;i<1000;i++) checksum+=DirectX7.mode5Shade(i%101-50,i%73-36,4096);
-            }
-        } else if(task.equals("omni_shade_varying_1000")) {
-            for(int n=0;n<repeats;n++) {
-                for(int i=0;i<1000;i++) checksum+=light.shade(renderer,vertices[i],i%101-50,i%73-36,4096);
-            }
         } else if(task.equals("omni_shade_1000")) {
             for(int n=0;n<repeats;n++) {
                 for(int i=0;i<1000;i++) checksum+=light.shade(renderer,vertices[i],0,0,4096);

@@ -79,48 +79,13 @@ final class M3GPolygonBatch {
     }
 
     private void append(short[] positions,short[] coords,byte[] colors,short[] normals,int[] order) {
-        size=appendVertices(positions,coords,colors,normals,order,xyz,uv,rgba,packedNormals,size,material!=null);
-    }
-
-    /** API-free packing kernel; preserves painter order and batch boundaries. */
-    static int appendVertices(short[] positions,short[] coords,byte[] colors,short[] normals,int[] order,
-            short[] xyz,short[] uv,byte[] rgba,short[] packedNormals,int size,boolean lit) {
-        int d3=size*3,d2=size*2,d4=size*4;
-        if(order.length==3 && order[0]==0 && order[1]==1 && order[2]==2) {
-            System.arraycopy(positions,0,xyz,d3,9);System.arraycopy(coords,0,uv,d2,6);
-            System.arraycopy(colors,0,rgba,d4,12);
-            if(lit) System.arraycopy(normals,0,packedNormals,d3,9);
-            return size+3;
-        }
-        if(order.length==6 && order[0]==0 && order[1]==1 && order[5]==3
-                && ((order[2]==3 && order[3]==1 && order[4]==2)
-                    || (order[2]==2 && order[3]==0 && order[4]==2))) {
-            // The two existing quad diagonals: three ordered contiguous runs.
-            int first=order[2]==3?2:3,second=order[first],third=order[first+1],last=5-first;
-            System.arraycopy(positions,0,xyz,d3,first*3);
-            System.arraycopy(positions,second*3,xyz,d3+first*3,3);
-            System.arraycopy(positions,third*3,xyz,d3+(first+1)*3,last*3);
-            System.arraycopy(coords,0,uv,d2,first*2);
-            System.arraycopy(coords,second*2,uv,d2+first*2,2);
-            System.arraycopy(coords,third*2,uv,d2+(first+1)*2,last*2);
-            System.arraycopy(colors,0,rgba,d4,first*4);
-            System.arraycopy(colors,second*4,rgba,d4+first*4,4);
-            System.arraycopy(colors,third*4,rgba,d4+(first+1)*4,last*4);
-            if(lit) {
-                System.arraycopy(normals,0,packedNormals,d3,first*3);
-                System.arraycopy(normals,second*3,packedNormals,d3+first*3,3);
-                System.arraycopy(normals,third*3,packedNormals,d3+(first+1)*3,last*3);
-            }
-            return size+6;
-        }
-        for(int i=0;i<order.length;i++,size++) {
+        for(int i=0;i<order.length;i++) {
             int vertex=order[i];
             System.arraycopy(positions,vertex*3,xyz,size*3,3);
             System.arraycopy(coords,vertex*2,uv,size*2,2);
             System.arraycopy(colors,vertex*4,rgba,size*4,4);
-            if(lit) System.arraycopy(normals,vertex*3,packedNormals,size*3,3);
+            if(material!=null) System.arraycopy(normals,vertex*3,packedNormals,size*3,3);size++;
         }
-        return size;
     }
 
     void discard() {firstCount=0;size=0;texture=null;polygon=null;firstOrder=null;firstIndices=null;}
