@@ -39,7 +39,10 @@ public final class MissingM3GTest {
             if(mode==1) AlphaModeTest.reference(cpu,M3GTest.triangle(),referenceTexture);
             else if(mode==10) ModulateX2Test.reference(cpu,M3GTest.triangle(),referenceTexture);
             else if(mode==7) GlassTest.reference(cpu,M3GTest.triangle(),referenceTexture);
-            else {M3GTest.submit(cpu,M3GTest.triangle(),referenceTexture,0);cpu.render();}
+            else {
+                if(mode==5) cpu.setRenderer(DirectX7.M3G);
+                M3GTest.submit(cpu,M3GTest.triangle(),referenceTexture,0);cpu.renderSoftware();
+            }
             M3GTest.submit(g,M3GTest.triangle(),t,0);g.render();
             M3GTest.check(t.drawmode==mode,"missing API leaked material alias");
             M3GTest.check(!g.isM3GActive() && java.util.Arrays.equals(cpu.display,g.display),"missing API mode "+mode);

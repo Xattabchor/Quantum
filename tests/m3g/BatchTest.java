@@ -39,13 +39,14 @@ public final class BatchTest {
                     int[] indices={d.indices[offset+i-2],d.indices[offset+i-1],d.indices[offset+i]};
                     if((i&1)!=0) {int t=indices[0];indices[0]=indices[1];indices[1]=t;}
                     String row=d.blend+":"+d.function+":"+d.filter+":"+d.sample+":"+d.threshold+":"+d.textured
-                            +":"+d.cull+":"+d.winding+":"+d.perspective+":"+d.fog+":"+d.fogColor+":"+d.near+":"+d.far;
+                            +":"+d.lit+":"+d.lights+":"+d.cull+":"+d.winding+":"+d.perspective+":"+d.fog+":"+d.fogColor+":"+d.near+":"+d.far;
                     for(int vertex:indices) {
                         int p=vertex*3;double w=-(double)d.positions[p+2];
                         row+="/"+d.positions[p]/w+","+d.positions[p+1]/w+","+(w/-d.positions[indices[0]*3+2]);
                         if(d.fog) row+=","+Float.floatToIntBits(-d.positions[p+2]*d.scale);
                         if(d.textured) row+=","+d.coords[vertex*2]*d.uvScale+","+d.coords[vertex*2+1]*d.uvScale;
                         for(int channel=0;channel<4;channel++) row+=","+(d.colors[vertex*4+channel]&255);
+                        if(d.lit) for(int channel=0;channel<3;channel++) row+=","+d.normals[vertex*3+channel];
                     }
                     result.add(row);
                 }
@@ -68,7 +69,7 @@ public final class BatchTest {
         DirectX7 g=renderer();int start=Graphics3D.history.size(),calls=Graphics3D.calls,sets=VertexArray.sets;
         queue(g,objects,textures);
         check(expected.equals(triangles(start)),"ordered projected geometry/relative W/UV/light/material changed in mode "+mode+" quad="+quad);
-        check(VertexArray.sets==sets+3*(Graphics3D.calls-calls),"per-polygon native vertex uploads survived batching");
+        check(VertexArray.sets==sets+(mode==5?4:3)*(Graphics3D.calls-calls),"per-polygon native vertex uploads survived batching");
         if(expectedCalls>=0) check(Graphics3D.calls==calls+expectedCalls,"wrong draw reduction "+(Graphics3D.calls-calls)+" mode "+mode);
         int arrays=VertexArray.created,indices=TriangleStripArray.created,uploads=Graphics3D.uploads;
         int binds=Graphics3D.binds,releases=Graphics3D.releases,reads=Image.getRGBCalls;
@@ -90,6 +91,7 @@ public final class BatchTest {
             Main.m3gPerspective=flag;
             geometry(64,false,0,false,1);geometry(128,false,0,false,2);
             geometry(100,false,0,false,2);geometry(100,true,0,false,4);
+            geometry(100,false,5,false,2);geometry(65,true,5,false,3);
             geometry(65,false,13,true,2);geometry(65,false,13,false,2);geometry(65,true,7,false,3);
             geometry(65,false,3,true,2);geometry(65,false,6,true,2);
             geometry(65,false,3,false,2); // Different legacy scales now share an exact common lattice.

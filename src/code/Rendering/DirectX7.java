@@ -252,6 +252,17 @@ this.buffer.resetTex();
        return modulateColor(spriteModulateSource(pixel,color),background);
    }
 
+   /** API-free recovery of mode 5 ambient 25% + directional 75%.
+    * The CPU samplers use /256; return 64..256 so full diffuse remains full RGB. */
+   public static int mode5Shade(int nx,int ny,int nz) {
+       double normal=Math.sqrt((double)nx*nx+(double)ny*ny+(double)nz*nz);
+       double light=Math.sqrt((double)lightdirx*lightdirx+(double)lightdiry*lightdiry+(double)lightdirz*lightdirz);
+       double dot=0;
+       if(normal>0 && light>0) dot=((double)nx*lightdirx+(double)ny*lightdiry+(double)nz*lightdirz)/(normal*light);
+       dot=Math.max(0,Math.min(1,dot));
+       return 64+(int)(192*dot+0.5);
+   }
+
    /** Shared dispatch, including the polygons of animated MeshImage objects. */
    public void drawRenderObject(RenderObject object, Texture texture, boolean fast) {
        if(nativePass) {

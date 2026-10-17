@@ -1,7 +1,6 @@
 package code.Rendering;
 
 import code.Gameplay.Map.LightMapper;
-import code.Math.MathUtils;
 import code.Rendering.Meshes.*;
 import code.utils.Main;
 import java.util.Arrays;
@@ -45,6 +44,7 @@ public final class MaterialModesTest {
         t.drawmode=0;submit(g,p,t);
         check(last().blend==CompositingMode.REPLACE && last().function==Texture2D.FUNC_MODULATE && !last().fog,
                 "special material blend/function/fog leaked");
+        check(!last().lit && last().lights==0,"native mode 5 light/material leaked");
         for(byte c:last().colors) check((c&255)==255,"special material vertex color leaked");
     }
     public static void main(String[] args) {
@@ -68,26 +68,7 @@ public final class MaterialModesTest {
         }
         System.out.println("PASS mode2 native additive / saturation / cutout / fractional-alpha ignored / cache / six polygon types");
 
-        for(int kind=0;kind<6;kind++) {
-            DirectX7 g=M3GTest.renderer();RenderObject p=polygon(kind);Texture t=texture(5,0xffdf9153);
-            for(int pers:new int[]{0,4}) for(int quality:new int[]{0,1,2}) for(int[] direction:new int[][]{
-                    {0,0,4096},{0,0,-4096},{4096,0,0},{4096,0,2048},{0,0,0}}) {
-                Main.persQ=pers;Main.fogQ=quality;
-                DirectX7.lightdirx=(short)direction[0];DirectX7.lightdiry=(short)direction[1];DirectX7.lightdirz=(short)direction[2];
-                int calls=Graphics3D.calls;submit(g,p,t);
-                int light=MathUtils.calcLight(p.nx,p.ny,p.nz,direction[0],direction[1],direction[2]);
-                int shade=pers==4 && quality==0?255:(light*255+128)>>8;
-                check(Graphics3D.calls==calls+1 && !last().fog && last().blend==CompositingMode.REPLACE,"mode5 not flat native draw");
-                for(int i=0;i<last().colors.length;i++) check((last().colors[i]&255)==(i%4==3?255:shade),"mode5 coefficient");
-                int cpu=pers==4 && quality==0?0xdf9153:(((0xdf*light)>>8)<<16)|(((0x91*light)>>8)<<8)|((0x53*light)>>8);
-                near(g.display[0],cpu,1,"mode5 /256 rounding tolerance");
-                byte[] baseline=last().colors.clone();g.shootIntensity=999;g.flashlightEnabled=true;
-                LightMapper.cameraVectorLight=true;g.camera.m03=500;submit(g,p,t);
-                check(Arrays.equals(baseline,last().colors),"mode5 reacted to shot/torch/camera");
-            }
-            ordinary(g,p,t);g.destroy();
-        }
-        System.out.println("PASS mode5 flat normal/lightdir / zero+opposed+oblique / fogQ0 affine-perspective / no dynamic light");
+        NativeLightingTest.contracts();
 
         Main.persQ=4;Main.fogQ=2;Main.mipMapping=false;
         for(int kind=0;kind<6;kind++) {
@@ -128,7 +109,8 @@ public final class MaterialModesTest {
             DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
             DirectX7 nativeG=M3GTest.renderer();RenderObject cpuP=polygon(1),nativeP=polygon(1);
             Texture cpuT=texture(mode,0xffd08153),nativeT=texture(mode,0xffd08153);
-            M3GTest.submit(cpu,cpuP,cpuT,0);cpu.render();
+            if(mode==5) cpu.setRenderer(DirectX7.M3G);
+            M3GTest.submit(cpu,cpuP,cpuT,0);cpu.renderSoftware();
             M3GTest.submit(nativeG,nativeP,nativeT,0);
             if(readback) System.setProperty("readback.fail","true");else Graphics3D.failAt=Graphics3D.calls+1;
             nativeG.render();Graphics3D.failAt=0;System.clearProperty("readback.fail");
@@ -160,6 +142,6 @@ public final class MaterialModesTest {
         M3GTest.submit(cpu,polygon(1),a,0);cpu.render();M3GTest.submit(g,polygon(1),a,0);
         Graphics3D.failAt=Graphics3D.calls+2;g.render();Graphics3D.failAt=0;
         check(!g.isM3GActive() && Arrays.equals(cpu.display,g.display),"mode8 second triangle rollback");g.destroy();cpu.destroy();
-        System.out.println("PASS mode2/5/8 native-error / readback / second-fill rollback to original Software");
+        System.out.println("PASS mode2/5/8 native-error / readback / second-fill rollback with selected-backend material semantics");
     }
 }

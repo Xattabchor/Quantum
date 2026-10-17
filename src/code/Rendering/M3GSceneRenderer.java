@@ -1,7 +1,6 @@
 package code.Rendering;
 
 import code.Rendering.Meshes.*;
-import code.Math.MathUtils;
 import code.utils.Main;
 import java.util.Hashtable;
 import java.util.Vector;
@@ -20,6 +19,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final PolygonMode affineFogPolygon = new PolygonMode();
     private PolygonMode activePolygon;
     private M3GPolygonBatch batch;
+    private M3GMode5Lighting mode5Lighting;
     private final M3GMaterialMath materialMath=new M3GMaterialMath();
     private final M3GPolygonBatch.State batchState=new M3GPolygonBatch.State();
     private CachedTexture lastTexture,muzzleTexture;
@@ -33,13 +33,13 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final Fog fog = new Fog();
     private final Vertex[] vertices = new Vertex[4];
     private final int[] uv = new int[8];
-    private final short[] positions = new short[12], coords = new short[8];
+    private final short[] positions = new short[12], coords = new short[8], normals=new short[12];
     private final byte[] colors = new byte[16];
     private final float[] work = new float[12];
     private final VertexBuffer[] buffers = new VertexBuffer[2];
     private final VertexArray[] posArrays = new VertexArray[2];
     private final VertexArray[] uvArrays = new VertexArray[2];
-    private final VertexArray[] colorArrays = new VertexArray[2];
+    private final VertexArray[] colorArrays = new VertexArray[2], normalArrays=new VertexArray[2];
     private final TriangleStripArray[] indices = new TriangleStripArray[2];
     private final TriangleStripArray[] baseQuadTriangles = new TriangleStripArray[2];
     private final TriangleStripArray[] alternateQuadTriangles = new TriangleStripArray[2];
@@ -169,6 +169,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         graphics.setViewport(0, 0, g.width, g.height);
         graphics.setCamera(camera, null);
         graphics.resetLights();
+        if(mode5Lighting!=null) mode5Lighting.resetBinding();
     }
 
     void restoreCamera(DirectX7 g) {
@@ -222,6 +223,13 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     void renderNative(DirectX7 g,VertexBuffer vertices,TriangleStripArray indices,Appearance material) {
+        renderNative(g,vertices,indices,material,false,0,0,0);
+    }
+
+    void renderNative(DirectX7 g,VertexBuffer vertices,TriangleStripArray indices,Appearance material,
+            boolean lit,int lx,int ly,int lz) {
+        if(lit) mode5Lighting.apply(graphics,lx,ly,lz);
+        else if(mode5Lighting!=null) mode5Lighting.disable(graphics);
         g.frameDrawCalls++; // API attempts, including a call that throws.
         graphics.render(vertices,indices,material,null);
     }
@@ -253,6 +261,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
             spriteRenderer = null;
             panoramaRenderer = null;
             frameEffects = null;
+            if(mode5Lighting!=null) mode5Lighting.disable(graphics);
+            mode5Lighting=null;
             flashBackground = null;
             polygonModes.removeAllElements();polygonModes.addElement(polygon);polygonModes.addElement(screenPolygon);
             textures.removeAllElements();lastTexture=null;muzzleTexture=null;
@@ -354,6 +364,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             uv[4] = p.cu; uv[5] = p.cv; uv[6] = p.du; uv[7] = p.dv;
             count = 4;
         }
+        batchState.material=null;batchState.lightX=batchState.lightY=batchState.lightZ=0;
         materialMath.resetBounds();
         boolean fastPath = fast || (Main.persQ == 0 && !Main.mipMapping);
         boolean alternate = count == 4 && type == Polygon4V.class && !fastPath
@@ -442,15 +453,12 @@ public final class M3GSceneRenderer implements SceneRenderer {
             if(!batchable) colorArrays[slot].set(0,count,colors);
             render(g,slot,indices[slot]);
         } else if(mode == 5) {
-            // Original mode 5: one normal/lightdir coefficient, not a native
-            // Light or baked lightmap. Perspective fogQ=0 bypasses shading;
-            // affine historically shades even with fogQ=0.
-            int light = MathUtils.calcLight(object.nx, object.ny, object.nz,
-                    DirectX7.lightdirx, DirectX7.lightdiry, DirectX7.lightdirz);
-            int shade = perspective && Main.fogQ == 0 ? 255 : (light * 255 + 128) >> 8;
-            uniformColors(count, (shade << 16) | (shade << 8) | shade, 255);
-            if(!batchable) colorArrays[slot].set(0, count, colors);
-            render(g, slot, indices[slot]);
+            if(mode5Lighting==null) mode5Lighting=new M3GMode5Lighting();
+            batchState.material=mode5Lighting.material;
+            batchState.lightX=DirectX7.lightdirx;batchState.lightY=DirectX7.lightdiry;batchState.lightZ=DirectX7.lightdirz;
+            M3GMode5Lighting.packNormals(object,count,normals,batchState.lightX,batchState.lightY,batchState.lightZ);
+            uniformColors(count,0xffffff,255);
+            render(g,slot,indices[slot]);
         } else {
             // Only baked RGB is prepared on the CPU. Distance attenuation is
             // applied once by Fog, after texture/lightmap modulation in M3G.
@@ -487,19 +495,23 @@ public final class M3GSceneRenderer implements SceneRenderer {
             int[] order=triangles==baseQuad?QUAD:triangles==alternateQuad?ALT_QUAD
                     :triangles==baseQuadTriangles[0]?ABD:triangles==baseQuadTriangles[1]?BCD
                     :triangles==alternateQuadTriangles[1]?ACD:TRI;
-            batch.add(g,slot+3,buffersScale,positions,coords,colors,order,triangles,batchState);
+            batch.add(g,slot+3,buffersScale,positions,coords,colors,normals,order,triangles,batchState);
         } else {
             flushBatch(g);bind(g);restoreCamera(g);
             renderNative(g,buffers[slot],triangles,appearance);
         }
     }
 
-    void renderSingle(DirectX7 g,int count,float scale,short[] xyz,short[] uv,byte[] rgba,
-            TriangleStripArray triangles,Appearance state) {
+    void renderSingle(DirectX7 g,int count,float scale,short[] xyz,short[] uv,byte[] rgba,short[] normals,
+            TriangleStripArray triangles,Appearance state,boolean lit,int lx,int ly,int lz) {
         int slot=count-3;
         posArrays[slot].set(0,count,xyz);uvArrays[slot].set(0,count,uv);colorArrays[slot].set(0,count,rgba);
         buffers[slot].setPositions(posArrays[slot],scale,null);
-        bind(g);restoreCamera(g);renderNative(g,buffers[slot],triangles,state);
+        if(lit) {
+            if(normalArrays[slot]==null) normalArrays[slot]=new VertexArray(count,3,2);
+            normalArrays[slot].set(0,count,normals);buffers[slot].setNormals(normalArrays[slot]);
+        } else buffers[slot].setNormals(null);
+        bind(g);restoreCamera(g);renderNative(g,buffers[slot],triangles,state,lit,lx,ly,lz);
     }
 
     Texture2D texture(DirectX7 g, RawImage raw, int kind) {

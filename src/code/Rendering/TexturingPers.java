@@ -90,6 +90,7 @@ x1++;
         // Selected M3G mode 1 is ALPHA, also during CPU recovery.
         if(dmode == 1 && g3d.getRenderer() == DirectX7.M3G) dmode = 4;
         if(dmode == 10 && g3d.getRenderer() == DirectX7.M3G) dmode = 7;
+        if(dmode == 5 && g3d.getRenderer() == DirectX7.M3G) qz = 255-DirectX7.mode5Shade(nx,ny,nz);
         if (texture.rImg.alphaMixing == false && texture.drawmode == 4) {
             dmode = 0;
         }
@@ -215,7 +216,7 @@ x1++;
             bf = bf * MathUtils.calcLight(nx, ny, nz, b.x - g3d.getCamera().m03, b.y - g3d.getCamera().m13, b.z - g3d.getCamera().m23) / 255;
             cf = cf * MathUtils.calcLight(nx, ny, nz, c.x - g3d.getCamera().m03, c.y - g3d.getCamera().m13, c.z - g3d.getCamera().m23) / 255;
         }
-        if ((dmode == 5 || dmode == 6 || dmode == 9) && af < 1 && bf < 1 && cf < 1) {
+        if (((dmode == 5 && g3d.getRenderer()!=DirectX7.M3G) || dmode == 6 || dmode == 9) && af < 1 && bf < 1 && cf < 1) {
             TexturingAffine.paintFill(g3d, a, b, c, 0);
             return;
         }
@@ -1593,7 +1594,7 @@ final int df) {
                     dwz, duz, dvz,fogc, sz2, q,a,b,c,f_start,f_end,df_start,df_end,df); return; 
         
     }
-    if(Main.fogQ==0) {
+    if(Main.fogQ==0 && !(texture.drawmode==5 && g3d.getRenderer()==DirectX7.M3G)) {
     paintMiniTrianglePers_0(g3d, texture, y_start, y_end,
                     x_start, wz_start, uz_start, vz_start,
                     x_end, wz_end, uz_end, vz_end,

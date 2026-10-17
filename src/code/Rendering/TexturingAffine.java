@@ -28,6 +28,7 @@ public class TexturingAffine {
         // Selected M3G mode 1 is ALPHA, also during CPU recovery.
         if(fog == 1 && g3d.getRenderer() == DirectX7.M3G) fog = 4;
         if(fog == 10 && g3d.getRenderer() == DirectX7.M3G) fog = 7;
+        if(fog == 5 && g3d.getRenderer() == DirectX7.M3G) sz2 = 255-DirectX7.mode5Shade(nx,ny,nz);
         if(texture.rImg.alphaMixing == false && texture.drawmode == 4) {
             fog = 0;
         }

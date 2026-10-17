@@ -127,10 +127,25 @@ public class PolygonMode {public static final int CULL_BACK=160,CULL_FRONT=161,C
  public boolean perspective=true;public int cull=CULL_BACK,winding=WINDING_CCW;public static int perspectiveCalls;
  public void setCulling(int n){cull=n;} public void setWinding(int n){winding=n;} public void setPerspectiveCorrectionEnable(boolean b){perspective=b;perspectiveCalls++;} public void setShading(int n){} }''',
 "javax/microedition/m3g/Appearance.java": '''package javax.microedition.m3g;
-public class Appearance {public Texture2D tex;public CompositingMode comp;public Fog fog;public PolygonMode polygon;
+public class Appearance {public Texture2D tex;public CompositingMode comp;public Fog fog;public PolygonMode polygon;public Material material;
+ public void setMaterial(Material m){material=m;}
  public void setFog(Fog f){fog=f;}
  public void setPolygonMode(PolygonMode p){polygon=p;} public void setCompositingMode(CompositingMode c){comp=c;}
  public void setTexture(int n,Texture2D t){tex=t;} }''',
+"javax/microedition/m3g/Light.java": '''package javax.microedition.m3g;
+public class Light {
+ public static final int AMBIENT=128,DIRECTIONAL=129;public int mode,color;public float intensity=1;
+ public void setMode(int m){mode=m;}public void setColor(int c){color=c;}public void setIntensity(float i){intensity=i;}
+}''',
+"javax/microedition/m3g/Material.java": '''package javax.microedition.m3g;
+public class Material {
+ public static final int AMBIENT=1024,DIFFUSE=2048,EMISSIVE=4096,SPECULAR=8192;
+ public int ambient=0xff333333,diffuse=0xffcccccc,emissive,specular;public boolean tracking;
+ public Material(){if(Boolean.getBoolean("material.fail"))throw new IllegalStateException("material");}
+ public void setColor(int target,int rgb){if((target&AMBIENT)!=0)ambient=rgb;if((target&DIFFUSE)!=0)diffuse=rgb;
+  if((target&EMISSIVE)!=0)emissive=rgb;if((target&SPECULAR)!=0)specular=rgb;}
+ public void setShininess(float s){}public void setVertexColorTrackingEnable(boolean b){tracking=b;}
+}''',
 "javax/microedition/m3g/Fog.java": '''package javax.microedition.m3g;
 public class Fog {public static final int LINEAR=81;public int color;public float near,far;
  public void setMode(int m){if(m!=LINEAR)throw new AssertionError("fog mode");}
@@ -144,8 +159,9 @@ public class VertexArray {public static int created,sets;public short[] shorts;p
  public void set(int start,int count,byte[] p){sets++;bytes=new byte[count*components];System.arraycopy(p,0,bytes,0,bytes.length);}
 }''',
 "javax/microedition/m3g/VertexBuffer.java": '''package javax.microedition.m3g;
-public class VertexBuffer {public VertexArray colors,coords,positions;public float scale,uvScale;
+public class VertexBuffer {public VertexArray colors,coords,positions,normals;public float scale,uvScale;
  public void setColors(VertexArray a){colors=a;}
+ public void setNormals(VertexArray a){if(a!=null && Boolean.getBoolean("normals.fail"))throw new IllegalStateException("normals");normals=a;}
  public static int defaultColorCalls;
  public void setDefaultColor(int c){defaultColorCalls++;colors=new VertexArray(4,4,1);colors.bytes=new byte[16];
   for(int i=0;i<4;i++) {colors.bytes[i*4]=(byte)(c>>16);colors.bytes[i*4+1]=(byte)(c>>8);colors.bytes[i*4+2]=(byte)c;colors.bytes[i*4+3]=(byte)(c>>>24);}}
@@ -180,7 +196,7 @@ public class Graphics3D {
  public static Graphics target; public static Camera camera;
  public static class Draw {
   public int blend,function,fogColor,textureAlpha,filter,colorComponents,cull,winding,sample;public boolean textured,perspective;public float near,far,threshold;public boolean fog;
-  public byte[] colors;public int[] indices,lengths; public short[] positions,coords;public float scale,uvScale;public float[] projection;
+  public byte[] colors;public int[] indices,lengths; public short[] positions,coords,normals;public boolean lit,tracking;public int lights,diffuse,ambient,emissive,specular;public float ambientIntensity,directionalIntensity;public float[] lightMatrix;public float scale,uvScale;public float[] projection;
  }
  public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
  public static Graphics3D getInstance(){return INSTANCE;}
@@ -189,7 +205,12 @@ public class Graphics3D {
   if(target!=null)throw new AssertionError("target leak");target=(Graphics)g;binds++;
  }
  public void releaseTarget(){if(target==null)throw new AssertionError("double release");target=null;releases++;}
- public void setViewport(int x,int y,int w,int h){} public void setCamera(Camera c,Transform t){camera=c;} public void resetLights(){}
+ public void setViewport(int x,int y,int w,int h){} public void setCamera(Camera c,Transform t){camera=c;} public void resetLights(){lights.removeAllElements();lightTransforms.removeAllElements();}
+ public static java.util.Vector<Light> lights=new java.util.Vector<Light>();
+ public static java.util.Vector<float[]> lightTransforms=new java.util.Vector<float[]>();
+ public int addLight(Light l,Transform t){if(Boolean.getBoolean("lights.fail") || (lights.size()==1 && Boolean.getBoolean("lights.second.fail")))throw new IllegalStateException("light");
+  lights.add(l);lightTransforms.add(t==null?null:t.matrix.clone());return lights.size()-1;}
+ public void setLight(int n,Light l,Transform t){lights.set(n,l);lightTransforms.set(n,t==null?null:t.matrix.clone());}
  public void clear(Background b){
   if(target==null || !b.colorClear || b.depthClear)throw new AssertionError("sky clear state");
   if(Boolean.getBoolean("m3g.oom"))throw new OutOfMemoryError("native clear memory");
@@ -211,6 +232,24 @@ public class Graphics3D {
   draw.cull=a.polygon==null?PolygonMode.CULL_BACK:a.polygon.cull;draw.winding=a.polygon==null?PolygonMode.WINDING_CCW:a.polygon.winding;
   draw.colors=c.clone();draw.indices=i.indices.clone();draw.lengths=i.lengths;draw.textureAlpha=p[3]&255;
   draw.positions=v.positions.shorts.clone();draw.coords=v.coords==null || v.coords.shorts==null?null:v.coords.shorts.clone();draw.scale=v.scale;draw.uvScale=v.uvScale;
+  draw.lights=lights.size();draw.lit=a.material!=null;
+  draw.normals=v.normals==null?null:v.normals.shorts.clone();
+  double lightingScale=1;
+  if(draw.lit){
+   if(v.normals==null)throw new AssertionError("lit draw without normals");
+   draw.tracking=a.material.tracking;draw.diffuse=a.material.diffuse;draw.ambient=a.material.ambient;
+   draw.emissive=a.material.emissive;draw.specular=a.material.specular;
+   lightingScale=0;
+   for(int n=0;n<lights.size();n++){
+    Light l=lights.get(n);
+    if(l.mode==Light.AMBIENT){draw.ambientIntensity+=l.intensity;lightingScale+=l.intensity;}
+    else if(l.mode==Light.DIRECTIONAL){
+     draw.directionalIntensity+=l.intensity;draw.lightMatrix=lightTransforms.get(n).clone();
+     double dot=(draw.normals[0]*draw.lightMatrix[2]+draw.normals[1]*draw.lightMatrix[6]+draw.normals[2]*draw.lightMatrix[10])/32767.0;
+     lightingScale+=l.intensity*Math.max(0,Math.min(1,dot));
+    } else throw new AssertionError("unexpected positional light");
+   }
+  }
   draw.projection=camera.projection.matrix.clone();
   draw.fog=a.fog!=null;
   if(draw.fog){draw.fogColor=a.fog.color;draw.near=a.fog.near;draw.far=a.fog.far;}
@@ -222,6 +261,7 @@ public class Graphics3D {
    int out=0xff000000;
    for(int k=0;k<3;k++){
     int src=draw.function==Texture2D.FUNC_ADD?Math.min(255,(p[k]&255)+(c[k]&255)):(p[k]&255)*(c[k]&255)/255;
+    if(draw.lit) src=(int)((p[k]&255)*lightingScale+0.5);
     if(draw.fog){float z=-v.positions.shorts[2]*v.scale;
      float f=Math.max(0,Math.min(1,(z-draw.near)/(draw.far-draw.near)));
      src=Math.round(src*(1-f)+((draw.fogColor>>(16-k*8))&255)*f);
@@ -274,6 +314,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameEffectsTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameTransactionTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativeLightingTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GlassTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModulateX2Test"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.AlphaModeTest"], check=True)
