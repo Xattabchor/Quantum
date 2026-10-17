@@ -25,6 +25,8 @@ public class TexturingAffine {
             TexturingAffine.paintOverwrite(g3d, a, b, c);
             return;
         }
+        // Selected M3G mode 1 is ALPHA, also during CPU recovery.
+        if(fog == 1 && g3d.getRenderer() == DirectX7.M3G) fog = 4;
         if(texture.rImg.alphaMixing == false && texture.drawmode == 4) {
             fog = 0;
         }

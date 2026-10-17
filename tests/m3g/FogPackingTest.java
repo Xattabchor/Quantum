@@ -57,7 +57,7 @@ public final class FogPackingTest {
         System.out.println("PASS 50000 Fog packing cases / no new legacy CPU fallbacks / exact endpoints + shared edges / <=1/128 original depth error / common lattice + exact legacy fallback / extreme inputs");
 
         Main.persQ=4;Main.fogQ=2;Main.mipMapping=false;
-        for(boolean hardware:new boolean[]{false,true}) for(int mode:new int[]{1,3,6,9,13}) {
+        for(boolean hardware:new boolean[]{false,true}) for(int mode:new int[]{3,6,9,13}) {
             Main.m3gPerspective=hardware;DirectX7 g=M3GTest.renderer();DirectX7.fDist=1000;
             Texture t=M3GTest.texture(0xff8090a0);t.drawmode=(byte)mode;
             int start=Graphics3D.calls,oldRuns=0;float lastOld=0;
@@ -74,6 +74,6 @@ public final class FogPackingTest {
             g.destroy();
         }
         Main.m3gPerspective=true;
-        System.out.println("PASS 100 varying-depth/screen-bound Fog triangles -> 2 draws for 1/3/6/9/13 / HW ON+OFF (not FPS)");
+        System.out.println("PASS 100 varying-depth/screen-bound Fog triangles -> 2 draws for 3/6/9/13 / HW ON+OFF (not FPS)");
     }
 }

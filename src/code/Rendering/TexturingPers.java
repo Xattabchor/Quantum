@@ -87,6 +87,8 @@ x1++;
             TexturingAffine.paintOverwrite(g3d, a, b, c);
             return;
         }
+        // Selected M3G mode 1 is ALPHA, also during CPU recovery.
+        if(dmode == 1 && g3d.getRenderer() == DirectX7.M3G) dmode = 4;
         if (texture.rImg.alphaMixing == false && texture.drawmode == 4) {
             dmode = 0;
         }

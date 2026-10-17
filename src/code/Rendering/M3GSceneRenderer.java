@@ -330,7 +330,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4
                 && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 13) return false;
         boolean nativeFog=glow==null && Main.fogQ>0
-                && (mode==1 || mode==3 || mode==6 || mode==9 || mode==13);
+                && (mode==3 || mode==6 || mode==9 || mode==13);
         // Invalid native ranges retain the original CPU material fallback.
         if(nativeFog && DirectX7.fDist<=1) return false;
         Class type = object.getClass();
@@ -416,7 +416,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         // Standard native fog is a single pass for HQ/LQ and affine UVs alike.
         batchable=glow==null;
         if(!batchable) flushBatch(g);
-        int kind = mode == 2 ? ADD_TEXTURE : mode == 4 && raw.alphaMixing ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
+        int kind = mode == 2 ? ADD_TEXTURE : mode == 1 || (mode == 4 && raw.alphaMixing) ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
         // Cache eviction/uploads are done outside a bound target.
         Texture2D nativeTexture = glow!=null?muzzleTexture(g,raw,kind):texture(g, raw, kind);
         CachedTexture nativeEntry=lastTexture;
@@ -458,7 +458,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             if(nativeFog) {
                 // Packed eye distance = 1 - rz/move, not raw engine depth.
                 batchState.near=1.0f;batchState.far=fogFar;
-                batchState.fogColor=(mode==1 || mode==3)?DirectX7.fogc&0xffffff:0;
+                batchState.fogColor=mode==3?DirectX7.fogc&0xffffff:0;
                 setFog(fog);
             }
             render(g, slot, indices[slot]);
