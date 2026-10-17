@@ -60,6 +60,12 @@ public final class MissingM3GTest {
         solidSky.render(null,g);g.render();
         for(int pixel:g.display) M3GTest.check(pixel==0x345678,"missing API lost solid mode1 sky");
         M3GTest.check(!g.isM3GActive(),"solid sky requires optional API to fall back");g.destroy();
+        g=M3GTest.renderer();code.utils.WeatherGenerator rainOnly=new code.utils.WeatherGenerator(32,32,0,0,0,0,0,false,null,1,1,16,16,1,1);
+        rainOnly.coords=new float[]{10,5};rainOnly.info=new int[]{1,0};
+        M3GTest.check(rainOnly.paintM3G(g) && g.getRendererError()==null,"rain-only needs optional M3G API");
+        javax.microedition.lcdui.Graphics rainLCD=javax.microedition.lcdui.Image.createImage(32,64).getGraphics();
+        rainOnly.paintAfterScene(rainLCD,13,g.getRenderer(),true);
+        M3GTest.check(rainLCD.lineCalls==1 && g.getRendererError()==null,"missing API lost cheap LCDUI rain");g.destroy();
         System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay");
     }
 }

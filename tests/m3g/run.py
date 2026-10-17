@@ -26,7 +26,8 @@ assert "g3d.addRenderObjectDT(nativeMesh, null);" in skybox
 game = (ROOT / "src/code/Gameplay/GameScreen.java").read_text()
 assert game.index("wg.paintM3G(g3d)") > game.index("if(doubleBright)")
 assert game.index("wg.paintM3G(g3d)") < game.index("scene.flush(g, 0, screenY)")
-assert "if(!nativeWeather) wg.paint(g, screenY);" in game
+assert "wg.paintAfterScene(g, screenY, g3d.getRenderer(), nativeWeather);" in game
+assert game.index("scene.flush(g, 0, screenY)") < game.index("wg.paintAfterScene(") < game.index("player.arsenal.drawWeapon(")
 assert game.index("if(doubleBright)") < game.index("g3d.renderMuzzleGlow(") < game.index("wg.paintM3G(g3d)")
 assert game.index("g3d.renderMuzzleGlow(") < game.index("player.arsenal.drawWeapon(")
 assert "if(!playerDied) g3d.renderMuzzleGlow" in game
@@ -56,9 +57,10 @@ public class Image {
 "javax/microedition/lcdui/Graphics.java": '''package javax.microedition.lcdui;
 public class Graphics {
  public Image image; public static int drawRGBCalls; Graphics(Image i){image=i;}
- public int color,lineCalls,rectCalls,lastX,lastY,lastX2,lastY2;
- public void setColor(int c){color=c;}
- public void drawLine(int x,int y,int x2,int y2){lineCalls++;lastX=x;lastY=y;lastX2=x2;lastY2=y2;}
+ public int color,lineCalls,rectCalls,lastX,lastY,lastX2,lastY2,colorCalls;
+ public java.util.Vector<int[]> lineHistory=new java.util.Vector<int[]>();
+ public void setColor(int c){color=c;colorCalls++;}
+ public void drawLine(int x,int y,int x2,int y2){lineCalls++;lastX=x;lastY=y;lastX2=x2;lastY2=y2;lineHistory.add(new int[]{x,y,x2,y2,color});}
  public void fillRect(int x,int y,int w,int h){rectCalls++;lastX=x;lastY=y;lastX2=x+w;lastY2=y+h;}
  public void drawRGB(int[] p,int o,int s,int x,int y,int w,int h,boolean a){
   drawRGBCalls++;
@@ -220,6 +222,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GeometryTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.LinesTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.CheapRainTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.StaticLightTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MuzzleGlowTest"], check=True)
     # Remove the optional API for a real class-loading fallback test.

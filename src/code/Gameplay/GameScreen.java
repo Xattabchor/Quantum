@@ -464,8 +464,7 @@ public final class GameScreen extends MyCanvas {
 
         if(wg != null) {
             g.clipRect(0, screenY, g3d.getWidth(), g3d.getHeight());
-            if(!nativeWeather) wg.paint(g, screenY);
-            else g.setColor(0xffffff);
+            wg.paintAfterScene(g, screenY, g3d.getRenderer(), nativeWeather);
             g.clipRect(0, 0, width, height);
             if(!redrawInfo) g.setClip(0, screenY, width, g3d.getHeight());
         }

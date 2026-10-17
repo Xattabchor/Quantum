@@ -296,34 +296,63 @@ float yy=y*1.3f*3*frameTime/80/50;
       if(lightingTwice) nextLighting = lastLighting + 200+r.nextInt(175)-(oldLightingTwice?75:0);
   }
   
-  /** Weather remains after postprocessing, before LCDUI flush/HUD. Coordinates
-   * are framebuffer-local: the letterbox screenY offset is applied only by flush. */
+  /** Only snow uses the native overlay. Cheap rain is drawn with LCDUI after
+   * flush, avoiding another full-frame upload/backup/readback for rain. */
   public boolean paintM3G(DirectX7 g) {
       if(!g.canRenderM3G() || code.HUD.DeveloperMenu.drawPortals) return false;
       try {
-          if(nativeParticles == null) nativeParticles = new ScreenLines();
-          nativeParticles.clear();
+          if(nativeParticles != null) nativeParticles.clear();
           boolean light = lighting && System.currentTimeMillis()-lastLighting<135;
           for(int i=0;i<coords.length/2;i++) {
-              int type=info[i*2],depth=info[i*2+1];
-              if(type != 1 && type != 2) continue;
-              int base=type==1?rainSize:snowSize;
+              int type=info[i*2];
+              if(type != 2) continue;
+              int depth=info[i*2+1];
+              if(nativeParticles == null) nativeParticles = new ScreenLines();
+              int base=snowSize;
               int size=(base*(100-depth)+depth)/100;
               if(depth<0) size=base*(100-depth)/100;
               depth=Math.max(0,Math.min(100,depth));
-              int color=light?0xffffff:mixColor(type==1?rainColorNear:snowColorNear,type==1?rainColorFar:snowColorFar,depth);
+              int color=light?0xffffff:mixColor(snowColorNear,snowColorFar,depth);
               int x=(int)coords[i*2],y=(int)coords[i*2+1];
-              if(type==1) nativeParticles.line(x,y,x-size/4,y+size,1,color,false);
-              else if(size>1) nativeParticles.rect(x-size/2,y-size/2,size-1,size-1,color);
+              if(size>1) nativeParticles.rect(x-size/2,y-size/2,size-1,size-1,color);
               else nativeParticles.rect(x,y,1,1,color);
           }
-          return g.renderScreenLines(nativeParticles);
+          return nativeParticles == null || g.renderScreenLines(nativeParticles);
       } catch(OutOfMemoryError ex) {
           return false; // Allocation before native submission: original LCDUI fallback.
       }
   }
 
-  public void paint(Graphics g,int xx) {
+  /** M3G keeps only a bounded, texture-free LCDUI rain overlay. Software is original. */
+  public void paintAfterScene(Graphics g,int xx,int renderer,boolean nativeSnow) {
+      if(renderer != DirectX7.M3G) {
+          if(!nativeSnow) paint(g,xx);
+          else g.setColor(0xffffff);
+          return;
+      }
+      if(!nativeSnow) paint(g,xx,false); // Original snow only, not full-cost rain.
+      paintCheapRain(g,xx);
+  }
+
+  private void paintCheapRain(Graphics g,int xx) {
+      final int limit=32;
+      int count=coords.length/2;
+      int step=Math.max(1,(count+limit-1)/limit);
+      boolean light=lighting && System.currentTimeMillis()-lastLighting<135;
+      g.setColor(light?0xffffff:mixColor(rainColorNear,rainColorFar,50));
+      for(int i=0;i<count;i+=step) {
+          if(info[i*2]!=1) continue;
+          int x=(int)coords[i*2],y=(int)coords[i*2+1];
+          if(x<0 || x>=screenWidth || y>=screenHeight || y+3<0) continue;
+          // Fixed one-pixel-wide vertical stroke: no size/depth math or geometry.
+          g.drawLine(x,y+xx,x,y+xx+3);
+      }
+      g.setColor(0xffffff);
+  }
+
+  public void paint(Graphics g,int xx) { paint(g,xx,true); }
+
+  private void paint(Graphics g,int xx,boolean includeRain) {
       
       /*int light = 0;
       final int litTim = 1000;
@@ -351,7 +380,7 @@ float yy=y*1.3f*3*frameTime/80/50;
               if(size>1)g.fillRect(x-size/2, y-size/2+xx, size-1, size-1);
               if(size<=1 )g.drawLine(x, y+xx, x,y+xx);
               
-          } else if(info[i*2]==1) {
+          } else if(includeRain && info[i*2]==1) {
               
               int depth=info[i*2+1];
               
