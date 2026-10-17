@@ -225,6 +225,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.PerspectiveToggleTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BackfaceTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BatchTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.OpaqueTextureTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GlassTest"], check=True)

@@ -97,7 +97,7 @@ final class M3GSkyRenderer {
                 texture.setBlending(Texture2D.FUNC_MODULATE);
                 appearance.setTexture(0,texture); appearance.setFog(null);
                 composite.setBlending(alpha ? CompositingMode.ALPHA : CompositingMode.REPLACE);
-                composite.setAlphaThreshold(alpha ? 0 : 0.5f);
+                composite.setAlphaThreshold(alpha ? 0 : owner.textureCutoutThreshold());
                 if(p instanceof Polygon3V) {
                     Polygon3V a = (Polygon3V)p;
                     triangle(g,raw,a.a,a.au,a.av,a.b,a.bu,a.bv,a.c,a.cu,a.cv);

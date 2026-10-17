@@ -64,6 +64,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         int kind, cost;
         Texture2D texture;
         int filter=Texture2D.FILTER_NEAREST;
+        float cutoutThreshold;
     }
 
     public M3GSceneRenderer() {
@@ -396,7 +397,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         setFunction(nativeTexture,Texture2D.FUNC_MODULATE);
         setBlend((glow != null || mode == 2) ? CompositingMode.ALPHA_ADD
                 : kind == ALPHA_TEXTURE ? CompositingMode.ALPHA : CompositingMode.REPLACE);
-        setThreshold(kind == ALPHA_TEXTURE ? 0 : 0.5f);
+        setThreshold(kind==ALPHA_TEXTURE?0:glow!=null?0.5f:nativeEntry.cutoutThreshold);
 
         if(glow != null) {
             // Warm radial RGBA texture * fading vertex alpha, additively blended.
@@ -436,14 +437,14 @@ public final class M3GSceneRenderer implements SceneRenderer {
             } else if(!highQuality && count == 4) {
                 // Flat LQ fog follows the same chosen diagonal as the CPU path.
                 legacyFog(g, object, slot, count, quadTriangles[0], mode, perspective,
-                        false, Math.min(vertices[0].rz, Math.min(vertices[1].rz, vertices[alternate ? 2 : 3].rz)), nativeTexture, mask);
+                        false, Math.min(vertices[0].rz, Math.min(vertices[1].rz, vertices[alternate ? 2 : 3].rz)), nativeTexture, mask, nativeEntry.cutoutThreshold);
                 legacyFog(g, object, slot, count, quadTriangles[1], mode, perspective,
-                        false, Math.min(vertices[alternate ? 0 : 1].rz, Math.min(vertices[2].rz, vertices[3].rz)), nativeTexture, mask);
+                        false, Math.min(vertices[alternate ? 0 : 1].rz, Math.min(vertices[2].rz, vertices[3].rz)), nativeTexture, mask, nativeEntry.cutoutThreshold);
             } else {
                 int farthest = vertices[0].rz;
                 for(int i = 1; i < count; i++) farthest = Math.min(farthest, vertices[i].rz);
                 legacyFog(g, object, slot, count, indices[slot], mode, perspective,
-                        highQuality, farthest, nativeTexture, mask);
+                        highQuality, farthest, nativeTexture, mask, nativeEntry.cutoutThreshold);
             }
         } else {
             setColors(g, object, count, mode);
@@ -537,12 +538,12 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     private void legacyFog(DirectX7 g, RenderObject object, int slot, int count,
             TriangleStripArray triangles, int mode, boolean perspective, boolean highQuality,
-            int farthest, Texture2D nativeTexture, Texture2D mask) {
+            int farthest, Texture2D nativeTexture, Texture2D mask, float cutoutThreshold) {
         // First pass: texture * visibility. M3G interpolates and modulates; no
         // texture pixels are recolored on the CPU, including in the affine path.
         appearance.setTexture(0, nativeTexture);
         composite.setBlending(CompositingMode.REPLACE);
-        composite.setAlphaThreshold(0.5f);
+        composite.setAlphaThreshold(cutoutThreshold);
         for(int i = 0; i < count; i++) {
             int visible = visibility(g, object, vertices[i], mode, perspective, highQuality, farthest);
             colors[i * 4] = colors[i * 4 + 1] = colors[i * 4 + 2] = (byte)visible;
@@ -567,7 +568,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             render(g, slot, triangles);
             appearance.setTexture(0, nativeTexture);
             composite.setBlending(CompositingMode.REPLACE);
-            composite.setAlphaThreshold(0.5f);
+            composite.setAlphaThreshold(cutoutThreshold);
         }
     }
 
@@ -672,6 +673,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
         return null;
     }
 
+    // Capture immediately after texture(): a later mask lookup changes lastTexture.
+    float textureCutoutThreshold() {return lastTexture.cutoutThreshold;}
+
     private Texture2D createTexture(RawImage image, int kind) {
         boolean sprite=kind>=SPRITE_CUTOUT && kind<=SPRITE_ALPHA_MASK;
         int width=sprite?spriteDimension(image.w):image.w;
@@ -683,6 +687,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             textures.removeElementAt(0);
         }
         byte[] rgba = new byte[size * 4];
+        boolean opaque=true;
         for(int i = 0; i < size; i++) {
             // Sprite-only nearest-neighbor reduction, done once per cache miss.
             // Sample texel centers; color and fog masks use the identical source.
@@ -698,10 +703,14 @@ public final class M3GSceneRenderer implements SceneRenderer {
             rgba[i * 4 + 2] = mask ? (byte)255 : (byte)rgb;
             rgba[i * 4 + 3] = kind==ALPHA_TEXTURE || kind==SPRITE_ALPHA || kind==SPRITE_ALPHA_MASK
                     ? (byte)(pixel >>> 24) : (byte)(kind==SPRITE_ADD || kind==PANORAMA_TEXTURE || pixel!=0 ? 255 : 0);
+            // Inspect the actual uploaded alpha, including reduced sprite copies,
+            // in this existing conversion loop. No extra scan on cache hits.
+            if((rgba[i*4+3]&255)!=255) opaque=false;
         }
         CachedTexture cached = new CachedTexture();
         cached.image = image; cached.pixels = image.img; cached.width = image.w; cached.height = image.h;
         cached.kind = kind;cached.cost=size;
+        cached.cutoutThreshold=opaque?0:0.5f;
         cached.texture = new Texture2D(new Image2D(Image2D.RGBA, width, height, rgba));
         cached.texture.setFiltering(Texture2D.FILTER_BASE_LEVEL, Texture2D.FILTER_NEAREST);
         cached.texture.setWrapping(sprite?Texture2D.WRAP_CLAMP:Texture2D.WRAP_REPEAT,

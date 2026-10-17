@@ -63,6 +63,7 @@ final class M3GSpriteRenderer {
         // Acquire both cached textures before submitting either pass. Uploads
         // are never performed with a bound native target.
         Texture2D image=owner.texture(g,raw,kind);
+        float cutoutThreshold=owner.textureCutoutThreshold();
         Texture2D mask=power>0 && fogColor!=0?owner.texture(g,raw,
                 alpha?M3GSceneRenderer.SPRITE_ALPHA_MASK:M3GSceneRenderer.SPRITE_MASK):null;
         positions.set(0,4,xyz);coords.set(0,4,uv);
@@ -71,7 +72,7 @@ final class M3GSpriteRenderer {
         image.setBlending(Texture2D.FUNC_MODULATE);
         composite.setBlending(sprite.mode==1?CompositingMode.ALPHA_ADD:
                 alpha?CompositingMode.ALPHA:CompositingMode.REPLACE);
-        composite.setAlphaThreshold(alpha || sprite.mode==1?0:0.5f);
+        composite.setAlphaThreshold(alpha || sprite.mode==1?0:cutoutThreshold);
         int visible=255-power;
         color((visible<<16)|(visible<<8)|visible,255);
         render(g);
