@@ -4,7 +4,7 @@ package code.Rendering;
 public interface SceneRenderer {
     boolean draw(DirectX7 g3d, RenderObject object, Texture texture, boolean fast);
     void prepareEffects(DirectX7 g3d, FrameEffects effects);
-    void prepareOverlays(DirectX7 g3d, MuzzleGlow glow, ScreenLines weather);
+    void prepareWeather(DirectX7 g3d, ScreenLines weather);
     void barrier(DirectX7 g3d);
     void finish(DirectX7 g3d);
     void dispose();

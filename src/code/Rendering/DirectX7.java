@@ -14,7 +14,6 @@ public final class DirectX7 {
    private boolean staticLightmapPass;
    private int[] frameBackup;
    private String rendererError;
-   private MuzzleGlow muzzleGlow;
    private Mode5WeaponLight mode5WeaponLight;
    private FrameEffects frameEffects;
    int frameDrawCalls,frameCpuBarriers,frameTextureUploads;
@@ -200,7 +199,6 @@ this.buffer.resetTex();
        }
        sceneRenderer = null;
        frameBackup = null;
-       muzzleGlow = null;
        mode5WeaponLight = null;
        frameEffects = null;
    }
@@ -360,17 +358,16 @@ this.buffer.resetTex();
    public void renderWithEffects(byte[] vignette, boolean dead, boolean damaged) {
        if(rendererMode!=M3G) {render();return;}
        if(dead && mode5WeaponLight!=null) mode5WeaponLight.stop();
-       render(true,prepareFrameEffects(vignette,dead,damaged),null,null);
+       render(true,prepareFrameEffects(vignette,dead,damaged),null);
    }
 
-   /** Ordered game transaction: sky/world -> effects -> flash -> weather.
+   /** Ordered game transaction: sky/world -> effects -> weather.
     * True suppresses LCDUI weather ONLY after the final readback succeeds. */
    public boolean renderGameFrame(byte[] vignette,boolean dead,boolean damaged,
            code.Gameplay.Map.House house,int part,ScreenLines weather) {
        if(rendererMode!=M3G) {render();return false;}
        if(dead && mode5WeaponLight!=null) mode5WeaponLight.stop();
-       MuzzleGlow glow=dead?null:prepareMuzzleGlow(house,part);
-       return render(true,prepareFrameEffects(vignette,dead,damaged),glow,weather);
+       return render(true,prepareFrameEffects(vignette,dead,damaged),weather);
    }
 
    private FrameEffects prepareFrameEffects(byte[] vignette,boolean dead,boolean damaged) {
@@ -379,9 +376,9 @@ this.buffer.resetTex();
        return frameEffects.active()?frameEffects:null;
    }
 
-   private void render(boolean allowM3G) {render(allowM3G,null,null,null);}
+   private void render(boolean allowM3G) {render(allowM3G,null,null);}
 
-   private boolean render(boolean allowM3G,FrameEffects effects,MuzzleGlow glow,ScreenLines weather) {
+   private boolean render(boolean allowM3G,FrameEffects effects,ScreenLines weather) {
        if(mode5WeaponLight!=null) mode5WeaponLight.prepare(System.currentTimeMillis());
        lx = camera.m03;
        ly = camera.m13;
@@ -393,7 +390,7 @@ this.buffer.resetTex();
        // paths entirely on the original rasterizer rather than change semantics.
        boolean useM3G = allowM3G && rendererMode == M3G && !rendererFailed && !flushAlpha
                && !DeveloperMenu.renderPolygonsOverwrite && (buffer.getSize()>0 || backgroundPending || effects!=null
-                       || glow!=null || (weather!=null && weather.count>0));
+                       || (weather!=null && weather.count>0));
        try {
            if(useM3G) {
                boolean saved = false;
@@ -405,13 +402,11 @@ this.buffer.resetTex();
                    System.arraycopy(display, 0, frameBackup, 0, display.length);
                    saved = true;
                    if(effects!=null) sceneRenderer.prepareEffects(this,effects);
-                   if(glow!=null || weather!=null) sceneRenderer.prepareOverlays(this,glow,weather);
+                   if(weather!=null) sceneRenderer.prepareWeather(this,weather);
                    nativePass = true;
                    drawBuffer();
                    if(effects!=null) drawRenderObject(effects,null,false);
-                   // Do not put cosmetic overlays in the replay queue. Weather
-                   // has an explicit LCDUI fallback; flash is best-effort only.
-                   if(glow!=null) sceneRenderer.draw(this,glow,null,false);
+                   // Weather has an explicit LCDUI fallback after native failure.
                    boolean nativeWeather=weather!=null && (weather.count==0
                            || sceneRenderer.draw(this,weather,null,false));
                    sceneRenderer.finish(this);
@@ -486,34 +481,20 @@ this.buffer.resetTex();
        return rendererMode==M3G && mode5WeaponLight!=null && mode5WeaponLight.level>0?mode5WeaponLight:null;
    }
 
-   public void startMuzzleGlow() {
+   public void startWeaponLight() {
        if(rendererMode!=M3G) return;
        long now=System.currentTimeMillis();
        try {
            if(mode5WeaponLight==null) mode5WeaponLight=new Mode5WeaponLight();
            mode5WeaponLight.start(now);
        } catch(OutOfMemoryError ex) {mode5WeaponLight=null;}
-       if(!canRenderM3G()) return;
-       try {
-           if(muzzleGlow == null) muzzleGlow = new MuzzleGlow();
-           muzzleGlow.start(now);
-       } catch(OutOfMemoryError ex) { muzzleGlow = null; }
    }
 
-   private MuzzleGlow prepareMuzzleGlow(code.Gameplay.Map.House house,int part) {
-       if(!canRenderM3G() || muzzleGlow == null) return null;
-       try {
-           return muzzleGlow.prepare(this,house,part,System.currentTimeMillis())?muzzleGlow:null;
-       } catch(Exception ex) {
-           // A cosmetic ray/texture failure must not change combat or the frame.
-           return null;
-       } catch(OutOfMemoryError ex) { return null; }
-   }
+   /** Compatibility hook: starts only the real mode-5 OMNI, never a sprite. */
+   public void startMuzzleGlow() {startWeaponLight();}
 
-   public boolean renderMuzzleGlow(code.Gameplay.Map.House house,int part) {
-       MuzzleGlow glow=prepareMuzzleGlow(house,part);
-       return glow!=null && renderOverlay(glow);
-   }
+   /** Retained for callers of the removed fake screen-space illumination. */
+   public boolean renderMuzzleGlow(code.Gameplay.Map.House house,int part) {return false;}
 
    public final void drawLine(int x1, int y1, int x2, int y2, int fat, int col) {
        int tmp;

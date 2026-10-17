@@ -421,7 +421,7 @@ public final class Weapon {
                 frame = 0;
                 if(shootLight) {
                     g3d.shootIntensity=g3d.shootLength=shotTime*90;
-                    g3d.startMuzzleGlow();
+                    g3d.startWeaponLight();
                 }
                 
                 if (shoot != null && Main.isSounds && Main.sounds != 0) {

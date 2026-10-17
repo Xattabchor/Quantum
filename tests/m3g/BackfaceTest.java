@@ -114,11 +114,9 @@ public final class BackfaceTest {
         M3GTest.submit(g,sprite,null,0);g.render();check(last().cull==PolygonMode.CULL_NONE,"sprite inherited mesh culling");
         code.Gameplay.Map.Skybox pano=new code.Gameplay.Map.Skybox(tex,2,1,-91,0.2f,0,0,0);pano.skyboxAlways=true;pano.render(null,g);g.render();check(last().cull==PolygonMode.CULL_NONE,"panorama inherited mesh culling");
         ScreenLines lines=new ScreenLines();lines.line(2,2,4,10,1,0xffffff,false);check(g.renderScreenLines(lines),"weather failed");check(last().cull==PolygonMode.CULL_NONE,"weather inherited mesh culling");
-        MuzzleGlow glow=new MuzzleGlow();glow.alpha=100;glow.texture=tex;glow.quad.a=a;glow.quad.b=b;glow.quad.c=c;glow.quad.d=d;
-        check(g.renderOverlay(glow),"muzzle glow failed");check(last().cull==PolygonMode.CULL_NONE,"glow inherited mesh culling");
         M3GTest.submit(g,M3GTest.triangle(),tex,0);g.render();meshState(last());
         g.resize(40,24);M3GTest.submit(g,M3GTest.triangle(),tex,0);g.render();meshState(last());g.destroy();
-        System.out.println("PASS sky+solid+sprite+panorama+weather+muzzle stay unculled / world state restored / resize");
+        System.out.println("PASS sky+solid+sprite+panorama+weather stay unculled / world state restored / resize");
 
         // GPU rejection leaves the original software mesh behavior and rollback.
         mesh=twoSidedMesh();image=new MeshImage(mesh);matrix=new Matrix();matrix.setPosition(0,0,-300);image.setMatrix(matrix);

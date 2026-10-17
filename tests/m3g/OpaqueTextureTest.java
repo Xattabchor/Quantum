@@ -71,11 +71,8 @@ public final class OpaqueTextureTest {
             int start=Graphics3D.history.size();M3GTest.submit(g,sky(t),null,0);g.render();
             check(Graphics3D.history.elementAt(start).threshold==(t==cutout?0.5f:0),"model sky alpha-test state");
         }
-        // Vertex alpha matters too: do not relax the old threshold of a custom
-        // non-alpha muzzle texture merely because its texels are all opaque.
-        MuzzleGlow glow=new MuzzleGlow();glow.texture=opaque;glow.alpha=100;
-        check(g.renderOverlay(glow) && last().threshold==0.5f,"opaque texture with fading vertex alpha lost threshold");g.destroy();
-        System.out.println("PASS sprites+fog+model sky / ALPHA and ADD unchanged / fading vertex-alpha effect retains original behavior");
+        g.destroy();
+        System.out.println("PASS sprites+fog+model sky / ALPHA and ordinary ADD unchanged");
 
         g=renderer();int[] pixels=new int[15];Arrays.fill(pixels,0xff123456);pixels[7]=0;
         RawImage raw=new RawImage(pixels,3,5);raw.alphaMixing=false;Texture npot=new Texture(raw,true,null);

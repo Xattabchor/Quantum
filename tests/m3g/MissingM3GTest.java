@@ -29,10 +29,9 @@ public final class MissingM3GTest {
         g.shootIntensity=100;g.shootLength=0;M3GTest.submit(g,baked,bakedTexture,0);g.render();
         M3GTest.check(g.lightmapColor(128,-10000)==128,"missing API restored baked distance fade");
         M3GTest.check(!g.isM3GActive() && !g.isStaticLightmapPass(),"missing API lost static fallback/scope");g.destroy();
-        g=M3GTest.renderer();MuzzleGlow glow=new MuzzleGlow();glow.alpha=100;
-        glow.texture=M3GTest.texture(0x80ffffff);int background=g.display[0];
-        M3GTest.check(!g.renderOverlay(glow) && g.display[0]==background && g.getRendererError()!=null,
-                "missing API flash must skip without damaging the frame");g.destroy();
+        g=M3GTest.renderer();int background=g.display[0];
+        M3GTest.check(!g.renderMuzzleGlow(null,0) && g.display[0]==background && g.getRendererError()==null,
+                "removed flash callback must not draw or load optional API");g.destroy();
         for(int mode:new int[]{1,2,5,7,8,10}) {
             g=M3GTest.renderer();DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
             Texture t=M3GTest.texture(0xffd08040);t.drawmode=(byte)mode;

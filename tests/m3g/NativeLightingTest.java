@@ -93,8 +93,8 @@ public final class NativeLightingTest {
         ScreenLines weather=new ScreenLines();weather.rect(2,2,1,1,0x80a0c0);
         M3GTest.submit(g,polygon(0),t,0);
         check(g.renderGameFrame(new byte[32*32],false,true,MuzzleGlowTest.wall(1000),0,weather),"lit combined frame failed");
-        check(Graphics3D.history.get(start).lit && Graphics3D.history.size()>=start+4,"lit/post/flash/weather packets missing");
-        for(int i=start+1;i<Graphics3D.history.size();i++) check(!Graphics3D.history.get(i).lit && Graphics3D.history.get(i).lights==0,"light leaked to post/flash/weather");
+        check(Graphics3D.history.get(start).lit && Graphics3D.history.size()==start+3,"lit/post/weather packets missing or fake flash remains");
+        for(int i=start+1;i<Graphics3D.history.size();i++) check(!Graphics3D.history.get(i).lit && Graphics3D.history.get(i).lights==0,"light leaked to post/weather");
         g.destroy();
         // No Fog/distance-blackout, including the API-free perspective fallback.
         for(int pers:new int[]{0,4}) for(int[] dir:new int[][]{{0,0,4096},{0,0,-4096},{2048,0,4096},{0,0,0}}) {

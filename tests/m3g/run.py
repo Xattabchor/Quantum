@@ -40,18 +40,21 @@ assert "wg.paintAfterScene(g, screenY, g3d.getRenderer(), nativeWeather);" in ga
 assert game.index("scene.flush(g, 0, screenY)") < game.index("wg.paintAfterScene(") < game.index("player.arsenal.drawWeapon(")
 assert game.index("g3d.renderGameFrame(") < game.index("player.arsenal.drawWeapon(")
 frame_source=(ROOT / "src/code/Rendering/DirectX7.java").read_text()
-assert "MuzzleGlow glow=dead?null:prepareMuzzleGlow(house,part);" in frame_source
+assert not (ROOT / "src/code/Rendering/MuzzleGlow.java").exists()
+assert "prepareMuzzleGlow" not in frame_source and "new MuzzleGlow" not in frame_source
 assert game.index("g3d.render();") < game.index("wg.lightingEffect(") < game.index("if(vignette != null &&")
 assert "if(lighting && !player.character.underRoof && wg != null && g3d.getRenderer() != DirectX7.M3G)" in game
 assert "System.currentTimeMillis() - wg.lastLighting) < 135" in game
 assert game.index("wg.setRenderer(Main.renderer)") < game.index("wg.moveY((int) -yRot")
 weapon = (ROOT / "src/code/Gameplay/Weapon.java").read_text()
-assert "if(shootLight) {" in weapon and "g3d.startMuzzleGlow();" in weapon
-assert weapon.index("g3d.startMuzzleGlow();") > weapon.index("if (magazine.rounds > 0)")
+assert "if(shootLight) {" in weapon and "g3d.startWeaponLight();" in weapon
+assert weapon.index("g3d.startWeaponLight();") > weapon.index("if (magazine.rounds > 0)")
 
 # Successful native material/sprite fog must not reintroduce CPU fading/masks.
 scene_source=(ROOT / "src/code/Rendering/M3GSceneRenderer.java").read_text()
 sprite_source=(ROOT / "src/code/Rendering/M3GSpriteRenderer.java").read_text()
+assert "MuzzleGlow" not in scene_source and "muzzleTexture" not in scene_source
+assert "rayCastScreenEffect(" not in frame_source+scene_source
 for forbidden in ("legacyFog(", "additiveFog(", "lightmapColor(", "FOG_MASK", "SPRITE_MASK", "SPRITE_ALPHA_MASK"):
     assert forbidden not in scene_source+sprite_source
 

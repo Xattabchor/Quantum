@@ -24,7 +24,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private int metricWidth,metricHeight,metricX,metricY;
     private final M3GMaterialMath materialMath=new M3GMaterialMath();
     private final M3GPolygonBatch.State batchState=new M3GPolygonBatch.State();
-    private CachedTexture lastTexture,muzzleTexture;
+    private CachedTexture lastTexture;
     private boolean batchable;
     private float buffersScale;
     private static final int[] TRI={0,1,2}, QUAD={0,1,3,1,2,3}, ALT_QUAD={0,1,2,0,2,3},
@@ -206,13 +206,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
         frameEffects.prepare(g,effects);
     }
 
-    /** Pre-upload the optional flash before any sky/world target is bound.
-     * Unsupported cosmetics are skipped by draw(), never CPU-rasterized. */
-    public void prepareOverlays(DirectX7 g,MuzzleGlow glow,ScreenLines weather) {
-        if(glow!=null && glow.texture!=null) {
-            RawImage raw=glow.texture.rImg;
-            if(supportsTexture(raw)) muzzleTexture(g,raw,raw.alphaMixing?ALPHA_TEXTURE:OPAQUE_TEXTURE);
-        }
+    /** Prepare native weather before binding the shared scene target. */
+    public void prepareWeather(DirectX7 g,ScreenLines weather) {
         if(weather!=null && weather.count>0 && screenLines==null)
             screenLines=new M3GScreenLines(this,graphics);
     }
@@ -280,7 +275,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             mode5Lighting=null;
             flashBackground = null;
             polygonModes.removeAllElements();polygonModes.addElement(polygon);polygonModes.addElement(screenPolygon);
-            textures.removeAllElements();lastTexture=null;muzzleTexture=null;
+            textures.removeAllElements();lastTexture=null;
             cachedPixels = 0;
         }
     }
@@ -344,17 +339,12 @@ public final class M3GSceneRenderer implements SceneRenderer {
             if(spriteRenderer==null) spriteRenderer=new M3GSpriteRenderer(this,graphics);
             return spriteRenderer.draw(g,(Sprite)object);
         }
-        MuzzleGlow glow = object instanceof MuzzleGlow ? (MuzzleGlow)object : null;
-        if(glow != null) {
-            if(glow.alpha <= 0) return true;
-            object=glow.quad;texture=glow.texture;fast=true;
-        }
         if(texture == null) return false;
         int mode = DirectX7.m3gDrawMode(texture.drawmode);
         // Modes 7/10 use MODULATE/MODULATE_X2; modes 11/12 alias 0.
         if(mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4
                 && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 10 && mode != 13) return false;
-        boolean nativeFog=glow==null && Main.fogQ>0
+        boolean nativeFog=Main.fogQ>0
                 && (mode==3 || mode==6);
         // Invalid native ranges retain the original CPU material fallback.
         if(nativeFog && DirectX7.fDist<=1) return false;
@@ -363,8 +353,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 && type != LightedPolygon3V.class && type != LightedPolygon4V.class
                 && type != ColorLightedPolygon3V.class && type != ColorLightedPolygon4V.class)
             return false;
-        // Screen-space muzzle glow shares buffers/material state, not mesh culling.
-        setScreenMode(glow!=null);
+        // World geometry retains backface culling.
+        setScreenMode(false);
         int count;
         if(object instanceof Polygon3V) {
             Polygon3V p = (Polygon3V)object;
@@ -441,11 +431,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
             coords[i * 2 + 1] = (short)v;
         }
         // Standard native fog is a single pass for HQ/LQ and affine UVs alike.
-        batchable=glow==null;
-        if(!batchable) flushBatch(g);
+        batchable=true;
         int kind = mode == 2 ? ADD_TEXTURE : mode == 1 || (mode == 4 && raw.alphaMixing) ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
         // Cache eviction/uploads are done outside a bound target.
-        Texture2D nativeTexture = glow!=null?muzzleTexture(g,raw,kind):texture(g, raw, kind);
+        Texture2D nativeTexture = texture(g, raw, kind);
         CachedTexture nativeEntry=lastTexture;
         batchState.imageFilter=nativeEntry.filter;
         int slot = count - 3;
@@ -455,20 +444,13 @@ public final class M3GSceneRenderer implements SceneRenderer {
         setFog(null);
         setTexture(nativeTexture);
         setFunction(nativeTexture,Texture2D.FUNC_MODULATE);
-        setBlend((glow != null || mode == 2) ? CompositingMode.ALPHA_ADD
+        setBlend(mode == 2 ? CompositingMode.ALPHA_ADD
                 : mode == 10 ? CompositingMode.MODULATE_X2
                 : mode == 7 ? CompositingMode.MODULATE
                 : kind == ALPHA_TEXTURE ? CompositingMode.ALPHA : CompositingMode.REPLACE);
-        setThreshold(kind==ALPHA_TEXTURE?0:glow!=null?0.5f:nativeEntry.cutoutThreshold);
+        setThreshold(kind==ALPHA_TEXTURE?0:nativeEntry.cutoutThreshold);
 
-        if(glow != null) {
-            // Warm radial RGBA texture * fading vertex alpha, additively blended.
-            nativeTexture.setFiltering(Texture2D.FILTER_BASE_LEVEL,Texture2D.FILTER_LINEAR);
-            nativeEntry.filter=Texture2D.FILTER_LINEAR;
-            uniformColors(count,0xffffff,glow.alpha);
-            if(!batchable) colorArrays[slot].set(0,count,colors);
-            render(g,slot,indices[slot]);
-        } else if(mode == 5) {
+        if(mode == 5) {
             if(mode5Lighting==null) mode5Lighting=new M3GMode5Lighting();
             batchState.material=mode5Lighting.material;
             batchState.lightX=DirectX7.lightdirx;batchState.lightY=DirectX7.lightdiry;batchState.lightZ=DirectX7.lightdirz;
@@ -646,28 +628,13 @@ public final class M3GSceneRenderer implements SceneRenderer {
     // Capture immediately after texture(): a later lookup changes lastTexture.
     float textureCutoutThreshold() {return lastTexture.cutoutThreshold;}
 
-    // One bounded production 32x32 flash entry, outside the world FIFO. A full
-    // 16-texture world must not evict the preloaded flash and force a tail readback.
-    private Texture2D muzzleTexture(DirectX7 g,RawImage image,int kind) {
-        CachedTexture cached=muzzleTexture;
-        if(cached!=null && cached.image==image && cached.pixels==image.img
-                && cached.width==image.w && cached.height==image.h && cached.kind==kind) {
-            lastTexture=cached;return cached.texture;
-        }
-        barrier(g);
-        Texture2D texture=createTexture(g,image,kind,false);
-        muzzleTexture=lastTexture;return texture;
-    }
-
-    private Texture2D createTexture(DirectX7 g,RawImage image,int kind) {return createTexture(g,image,kind,true);}
-
-    private Texture2D createTexture(DirectX7 g,RawImage image, int kind,boolean pooled) {
+    private Texture2D createTexture(DirectX7 g,RawImage image,int kind) {
         boolean mul=kind>=SPRITE_MUL && kind<=SPRITE_MUL+6;
         boolean sprite=(kind>=SPRITE_CUTOUT && kind<=SPRITE_ADD) || mul;
         int width=sprite?spriteDimension(image.w):image.w;
         int height=sprite?spriteDimension(image.h):image.h;
         int size = width * height;
-        while(pooled && textures.size() > 0 && (textures.size() >= CACHE_ENTRIES || cachedPixels + size > CACHE_PIXELS)) {
+        while(textures.size() > 0 && (textures.size() >= CACHE_ENTRIES || cachedPixels + size > CACHE_PIXELS)) {
             CachedTexture oldest = (CachedTexture)textures.elementAt(0);
             cachedPixels -= oldest.cost;
             textures.removeElementAt(0);
@@ -703,7 +670,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 sprite?Texture2D.WRAP_CLAMP:Texture2D.WRAP_REPEAT);
         cached.texture.setBlending(Texture2D.FUNC_MODULATE);
         lastTexture=cached;
-        if(pooled) {textures.addElement(cached);cachedPixels += size;}
+        textures.addElement(cached);cachedPixels += size;
         return cached.texture;
     }
 }
