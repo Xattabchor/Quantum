@@ -25,6 +25,7 @@ public class Skybox {
     private ScreenLines lightningLines;
     private SkyFlash skyFlash;
     private SolidSky nativeSolidSky;
+    private int nativeSolidColor;
     private PanoramaSky nativePanorama;
     public MultyTexture texture;
 	
@@ -176,18 +177,28 @@ public class Skybox {
             }
 			
 		} else if(mode == 1) {
-            if(g3d.getRenderer() == DirectX7.M3G) {
-                if(nativeSolidSky == null) nativeSolidSky = new SolidSky(color);
-                g3d.addRenderObjectDT(nativeSolidSky,null);
-            } else g3d.clearDisplay(color);
+            if(g3d.getRenderer() == DirectX7.M3G) renderSolid(g3d,color);
+            else g3d.clearDisplay(color);
 			
 		} else if(mode == 2) {
 			render2DSkybox(g3d);
 
 		} else if(mode == 3) {
-			renderGradient(g3d, tex, lowestDegree, horizonScale, horizonOffset);
-			
+            if(g3d.getRenderer() == DirectX7.M3G) {
+                if(x2<=x1 || y2<=y1) return;
+                // Replace gradient sampling with the existing full-frame solid
+                // background. Read one source color, never upload its texture.
+                renderSolid(g3d,tex.rImg.img[0]&0xffffff);
+            } else renderGradient(g3d, tex, lowestDegree, horizonScale, horizonOffset);
 		}
+    }
+
+    private void renderSolid(DirectX7 g3d,int rgb) {
+        if(nativeSolidSky==null || nativeSolidColor!=rgb) {
+            nativeSolidSky=new SolidSky(rgb);
+            nativeSolidColor=rgb;
+        }
+        g3d.addRenderObjectDT(nativeSolidSky,null);
     }
     
     void renderGradient(DirectX7 g3d, Texture texs, 

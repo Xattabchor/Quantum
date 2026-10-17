@@ -58,12 +58,12 @@ public final class SolidSkyTest {
         DirectX7 cpu=new DirectX7(32,32);int calls=Graphics3D.calls;submit(new Skybox(0xabcdef),cpu);
         for(int pixel:cpu.display) check(pixel==0xabcdef,"Software solid sky changed");
         check(Graphics3D.calls==calls,"Software solid sky entered M3G");cpu.destroy();
-        // Gradient stays CPU; panorama now has its own native path.
+        // M3G gradient is replaced by solid; panorama retains its native texture path.
         DirectX7 g=M3GTest.renderer();Texture image=M3GTest.texture(0xff123456);
         Skybox gradient=new Skybox(image,-91,1,0);gradient.skyboxAlways=true;calls=Graphics3D.calls;
-        submit(gradient,g);check(Graphics3D.calls==calls && !g.isM3GActive(),"gradient sky changed");
+        submit(gradient,g);check(Graphics3D.calls==calls+1 && g.isM3GActive() && !Graphics3D.history.lastElement().textured,"gradient sky not replaced by solid");
         Skybox panorama=new Skybox(image,1,1,-91,1,0,0,0);panorama.skyboxAlways=true;
-        submit(panorama,g);check(Graphics3D.calls==calls+1 && g.isM3GActive(),"panorama sky did not enter M3G");g.destroy();
-        System.out.println("PASS solid sky draw/readback/OOM/alpha/debug fallback / unchanged Software+gradient / native panorama");
+        submit(panorama,g);check(Graphics3D.calls==calls+2 && g.isM3GActive(),"panorama sky did not enter M3G");g.destroy();
+        System.out.println("PASS solid sky draw/readback/OOM/alpha/debug fallback / unchanged Software / M3G gradient-to-solid / native panorama");
     }
 }

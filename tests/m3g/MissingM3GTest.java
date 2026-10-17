@@ -98,6 +98,12 @@ public final class MissingM3GTest {
             int[] once=g.display.clone();g.render();M3GTest.check(java.util.Arrays.equals(once,g.display),"missing API retained stale sky prefix");
             combinedCPU.destroy();g.destroy();
         }
+        g=M3GTest.renderer();
+        Texture gradientTexture=new Texture(new RawImage(new int[]{0xff123456,0xff90b0d0},1,2),true,null);
+        code.Gameplay.Map.Skybox gradient=new code.Gameplay.Map.Skybox(gradientTexture,-91,1,0);gradient.skyboxAlways=true;
+        gradient.render(null,g);g.render();
+        for(int pixel:g.display) M3GTest.check(pixel==0x123456,"missing API revived gradient instead of flat replacement");
+        M3GTest.check(!g.isM3GActive() && g.getRendererError()!=null,"gradient replacement requires optional API to fall back");g.destroy();
         System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay / sprite+panorama class safety / combined queue replay / HW perspective="+code.utils.Main.m3gPerspective);
     }
 }
