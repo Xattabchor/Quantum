@@ -78,6 +78,14 @@ public final class MissingM3GTest {
                     "missing API failed to replay sprite mode "+mode);
             cpu.destroy();g.destroy();
         }
-        System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay / animated sprite class safety+replay");
+        g=M3GTest.renderer();DirectX7 panoCPU=new DirectX7(32,32);panoCPU.clearDisplay(0x123456);
+        Texture panoTexture=M3GTest.texture(0x80123456);
+        code.Gameplay.Map.Skybox panorama=new code.Gameplay.Map.Skybox(panoTexture,2,1,-91,0.2f,0,0x334455,0x667788);
+        code.Gameplay.Map.Skybox reference=new code.Gameplay.Map.Skybox(panoTexture,2,1,-91,0.2f,0,0x334455,0x667788);
+        panorama.skyboxAlways=reference.skyboxAlways=true;panorama.rotateY=reference.rotateY=-540;
+        reference.render(null,panoCPU);panorama.render(null,g);g.render();
+        M3GTest.check(!g.isM3GActive() && g.getRendererError()!=null && java.util.Arrays.equals(panoCPU.display,g.display),
+                "panorama wrapper requires optional API or replay changed sampling");panoCPU.destroy();g.destroy();
+        System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay / sprite+panorama class safety+replay");
     }
 }

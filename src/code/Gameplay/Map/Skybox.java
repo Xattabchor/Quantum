@@ -11,6 +11,7 @@ import code.Rendering.Texture;
 import code.Rendering.ScreenLines;
 import code.Rendering.SkyFlash;
 import code.Rendering.SolidSky;
+import code.Rendering.PanoramaSky;
 import code.utils.Asset;
 import javax.microedition.lcdui.Graphics;
 
@@ -24,6 +25,7 @@ public class Skybox {
     private ScreenLines lightningLines;
     private SkyFlash skyFlash;
     private SolidSky nativeSolidSky;
+    private PanoramaSky nativePanorama;
     public MultyTexture texture;
 	
     private int color, groundColor;
@@ -109,6 +111,7 @@ public class Skybox {
         lightningLines = null;
         skyFlash = null;
         nativeSolidSky = null;
+        nativePanorama = null;
 
         tex = null;
 
@@ -335,10 +338,14 @@ public class Skybox {
 
         final int xstep = ((endx << fp) - sx) / width;
         final int ystep = (int) ((tex.rImg.h << fp) * repeatY) / (endy - beginy);
-        render2D(g3d, sx, beginy, endy, xstep, ystep);
+        if(g3d.getRenderer()==DirectX7.M3G) {
+            if(nativePanorama==null) nativePanorama=new PanoramaSky(this,tex,color,groundColor);
+            nativePanorama.set(x1,y1,x2,y2,sx,beginy,endy,xstep,ystep);
+            g3d.addRenderObjectDT(nativePanorama,null);
+        } else render2D(g3d, sx, beginy, endy, xstep, ystep);
     }
 
-    void render2D(DirectX7 g3d, int uStart, int startY, int endY, int du, int dv) {
+    public void render2D(DirectX7 g3d, int uStart, int startY, int endY, int du, int dv) {
 
         final int rgb[] = g3d.display;
         final int width = g3d.width;

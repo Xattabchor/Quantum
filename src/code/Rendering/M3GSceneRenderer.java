@@ -32,11 +32,13 @@ public final class M3GSceneRenderer implements SceneRenderer {
     static final int OPAQUE_TEXTURE = 0, ALPHA_TEXTURE = 1, FOG_MASK = 2, ADD_TEXTURE = 3;
     static final int SPRITE_CUTOUT=4, SPRITE_ALPHA=5, SPRITE_ADD=6,
             SPRITE_MASK=7, SPRITE_ALPHA_MASK=8;
+    static final int PANORAMA_TEXTURE=9;
     private final Vector textures = new Vector();
     private Image surface;
     private M3GSkyRenderer skyRenderer;
     private M3GScreenLines screenLines;
     private M3GSpriteRenderer spriteRenderer;
+    private M3GPanoramaRenderer panoramaRenderer;
     private Background flashBackground;
     private boolean bound;
     private int cachedPixels;
@@ -86,7 +88,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     void bind(DirectX7 g) { bind(g,true); }
 
-    private void bind(DirectX7 g,boolean preserve) {
+    void bind(DirectX7 g,boolean preserve) {
         if(bound) return;
         if(surface == null || surface.getWidth() != g.width || surface.getHeight() != g.height)
             surface = Image.createImage(g.width, g.height);
@@ -148,6 +150,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             skyRenderer = null;
             screenLines = null;
             spriteRenderer = null;
+            panoramaRenderer = null;
             flashBackground = null;
             textures.removeAllElements();
             cachedPixels = 0;
@@ -191,6 +194,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(object instanceof SkyMesh) {
             if(skyRenderer == null) skyRenderer = new M3GSkyRenderer(this, graphics);
             return skyRenderer.draw(g, (SkyMesh)object);
+        }
+        if(object instanceof PanoramaSky) {
+            if(panoramaRenderer==null) panoramaRenderer=new M3GPanoramaRenderer(this,graphics);
+            return panoramaRenderer.draw(g,(PanoramaSky)object);
         }
         if(object instanceof Sprite) {
             if(spriteRenderer==null) spriteRenderer=new M3GSpriteRenderer(this,graphics);
@@ -574,7 +581,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     private Texture2D createTexture(RawImage image, int kind) {
-        boolean sprite=kind>=SPRITE_CUTOUT;
+        boolean sprite=kind>=SPRITE_CUTOUT && kind<=SPRITE_ALPHA_MASK;
         int width=sprite?spriteDimension(image.w):image.w;
         int height=sprite?spriteDimension(image.h):image.h;
         int size = width * height;
@@ -598,7 +605,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             rgba[i * 4 + 1] = mask ? (byte)255 : (byte)(rgb >> 8);
             rgba[i * 4 + 2] = mask ? (byte)255 : (byte)rgb;
             rgba[i * 4 + 3] = kind==ALPHA_TEXTURE || kind==SPRITE_ALPHA || kind==SPRITE_ALPHA_MASK
-                    ? (byte)(pixel >>> 24) : (byte)(kind==SPRITE_ADD || pixel!=0 ? 255 : 0);
+                    ? (byte)(pixel >>> 24) : (byte)(kind==SPRITE_ADD || kind==PANORAMA_TEXTURE || pixel!=0 ? 255 : 0);
         }
         CachedTexture cached = new CachedTexture();
         cached.image = image; cached.pixels = image.img; cached.width = image.w; cached.height = image.h;
