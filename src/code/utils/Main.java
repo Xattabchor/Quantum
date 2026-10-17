@@ -56,7 +56,7 @@ public final class Main extends MIDlet {
     public static int lang = -1;
     public static int q = 24;
     public static String life_icon, hand_icon, money_icon, patron_icon, sight_icon,
-            skull_icon, background_logo, background, shop_patron, shop_medkit, low_life_icon,
+            skull_icon, background_logo, background, title_image, shop_patron, shop_medkit, low_life_icon,
             low_patron_icon, patron_no_weapon_icon;
 
     public static String[] splash;
@@ -186,6 +186,7 @@ public final class Main extends MIDlet {
         hand_icon = settings.getNoLang("HAND_ICON", "/hand.png");
         background_logo = settings.getNoLang("BACKGROUND_LOGO", "/background.png");
         background = settings.getNoLang("BACKGROUND", "/background2.png");
+        title_image = settings.getNoLang("TITLE_IMAGE", "/title.png");
         shop_patron = settings.getNoLang("SHOP_PATRON_ICON", "/icon_patron.png");
         shop_medkit = settings.getNoLang("SHOP_MEDKIT_ICON", "/icon_medicine_chest.png");
         splash = GameIni.cutOnStrings(settings.getNoLang("SPLASH", "/splash.png"), ',', ';');
