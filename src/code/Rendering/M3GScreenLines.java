@@ -9,14 +9,12 @@ final class M3GScreenLines {
     private final Graphics3D graphics;
     private final VertexBuffer buffer=new VertexBuffer();
     private final VertexArray positions=new VertexArray(VERTICES,3,2);
-    private final VertexArray colors=new VertexArray(VERTICES,4,1);
-    private final VertexArray texcoords=new VertexArray(VERTICES,2,2);
+    private final VertexArray colors=new VertexArray(VERTICES,3,1);
     private final short[] packed=new short[VERTICES*3];
-    private final byte[] rgb=new byte[VERTICES*4];
+    private final byte[] rgb=new byte[VERTICES*3];
     private final TriangleStripArray indices;
     private final Appearance appearance=new Appearance();
     private final ScreenLineGeometry geometry=new ScreenLineGeometry();
-    private final RawImage white=new RawImage(new int[]{0xffffffff},1,1);
 
     M3GScreenLines(M3GSceneRenderer owner,Graphics3D graphics) {
         this.owner=owner;this.graphics=graphics;
@@ -30,8 +28,8 @@ final class M3GScreenLines {
         composite.setDepthTestEnable(false);composite.setDepthWriteEnable(false);
         composite.setBlending(CompositingMode.REPLACE);composite.setAlphaThreshold(0);
         appearance.setCompositingMode(composite);appearance.setFog(null);
-        texcoords.set(0,VERTICES,new short[VERTICES*2]);
-        buffer.setTexCoords(0,texcoords,1,null);buffer.setColors(colors);
+        // RGB implies alpha=1 in M3G. No texture, UV, sampling or alpha blending.
+        buffer.setColors(colors);
     }
 
     boolean draw(DirectX7 g,ScreenLines lines) {
@@ -41,18 +39,16 @@ final class M3GScreenLines {
         int bound=4*max+Math.max(Math.abs(g.centreX),Math.abs(g.centreY))+8;
         int precision=Math.min(16,30000/Math.max(1,bound));
         if(precision<1) return false;
-        Texture2D texture=owner.texture(g,white,M3GSceneRenderer.OPAQUE_TEXTURE);
-        texture.setBlending(Texture2D.FUNC_MODULATE);appearance.setTexture(0,texture);
         int size=0;
         for(int i=0;i<lines.count;i++) {
             if(!geometry.build(lines,i,g.width,g.height)) continue;
             int color=lines.get(i,5);
             for(int v=0;v<4;v++) {
-                int p=(size*4+v)*3,c=(size*4+v)*4;
+                int p=(size*4+v)*3,c=(size*4+v)*3;
                 packed[p]=round((geometry.xy[v*2]-g.centreX)*precision);
                 packed[p+1]=round((g.centreY-geometry.xy[v*2+1])*precision);
                 packed[p+2]=(short)-precision;
-                rgb[c]=(byte)(color>>16);rgb[c+1]=(byte)(color>>8);rgb[c+2]=(byte)color;rgb[c+3]=(byte)255;
+                rgb[c]=(byte)(color>>16);rgb[c+1]=(byte)(color>>8);rgb[c+2]=(byte)color;
             }
             if(++size==SEGMENTS) {render(g,precision);size=0;}
         }

@@ -132,7 +132,7 @@ public class Graphics3D {
  public static VertexBuffer lastVertices; public static TriangleStripArray lastIndices;public static Appearance lastAppearance;
  public static Graphics target; public static Camera camera;
  public static class Draw {
-  public int blend,function,fogColor,textureAlpha,filter;public float near,far;public boolean fog;
+  public int blend,function,fogColor,textureAlpha,filter,colorComponents;public boolean textured;public float near,far;public boolean fog;
   public byte[] colors;public int[] indices,lengths; public short[] positions,coords;public float scale,uvScale;public float[] projection;
  }
  public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
@@ -159,6 +159,7 @@ public class Graphics3D {
    p=new byte[]{p[offset],p[offset+1],p[offset+2],p[offset+3]};
   }
   Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex==null?Texture2D.FUNC_MODULATE:a.tex.function;draw.filter=a.tex==null?0:a.tex.filter;
+  draw.colorComponents=v.colors.components;draw.textured=a.tex!=null;
   draw.colors=c.clone();draw.indices=i.indices.clone();draw.lengths=i.lengths;draw.textureAlpha=p[3]&255;
   draw.positions=v.positions.shorts.clone();draw.coords=v.coords==null || v.coords.shorts==null?null:v.coords.shorts.clone();draw.scale=v.scale;draw.uvScale=v.uvScale;
   draw.projection=camera.projection.matrix.clone();
@@ -167,7 +168,7 @@ public class Graphics3D {
   history.add(draw);
   // Sample only the first vertex/texel to test blending equations. This is NOT
   // triangle rasterization or a visual substitute for a JSR-184 implementation.
-  int alpha=(p[3]&255)*(c[3]&255)/255;
+  int alpha=(p[3]&255)*(v.colors.components==3?255:c[3]&255)/255;
   if(alpha/255.0f>=a.comp.threshold){
    int out=0xff000000;
    for(int k=0;k<3;k++){

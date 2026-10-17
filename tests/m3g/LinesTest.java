@@ -7,6 +7,7 @@ import code.utils.WeatherGenerator;
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.m3g.Graphics3D;
+import javax.microedition.m3g.CompositingMode;
 
 /** Instrumented strip/ordering/rollback tests, NOT GPU-rendered screenshots. */
 public final class LinesTest {
@@ -41,13 +42,18 @@ public final class LinesTest {
         check(!geometry.build(b,0,32,32),"legacy horizontal behavior changed");
         System.out.println("PASS rain strips / degenerate point / offscreen clipping / lightning widths");
 
-        DirectX7 g=M3GTest.renderer();int calls=Graphics3D.calls;
+        DirectX7 g=M3GTest.renderer();int calls=Graphics3D.calls,uploads=Graphics3D.uploads;
         check(g.renderScreenLines(batch(65)),"native rain overlay unavailable");
         check(Graphics3D.calls==calls+3,"65 segments must use 3 calls, not 65");
         check(last().indices.length==128 && last().lengths.length==32,"independent strip indices");
         for(int i=0;i<32;i++) check(last().lengths[i]==4,"strip must contain four vertices");
         check(!last().fog && (last().colors[0]&255)==0xab && (last().colors[1]&255)==0xcd
-                && (last().colors[2]&255)==0xef && (last().colors[3]&255)==255,"opaque RGB / fog isolation");
+                && (last().colors[2]&255)==0xef,"opaque RGB / fog isolation");
+        check(last().colorComponents==3 && last().colors.length==128*3,"weather still sends alpha components");
+        check(!last().textured && last().coords==null && last().blend==CompositingMode.REPLACE,
+                "weather still uses texture/UV/alpha blending");
+        check(Graphics3D.uploads==uploads,"weather uploaded a bitmap");
+        check(g.display[0]==0xffabcdef,"RGB colors lost implicit opaque alpha");
         for(int i=4;i<128;i++) check(last().positions[i*3]==0 && last().positions[i*3+1]==0,"unused strips contain stale geometry");
         check(Graphics3D.target==null,"overlay target not released");
         M3GTest.Marker marker=new M3GTest.Marker(false);M3GTest.submit(g,marker,null,0);
@@ -57,6 +63,24 @@ public final class LinesTest {
         check(!g.renderScreenLines(b) && Graphics3D.calls==calls && g.getRendererError()==null,"partial unsupported batch");
         g.resize(240,320);check(g.renderScreenLines(batch(1)),"resize lost line renderer");g.destroy();
         System.out.println("PASS 32-strip batching / RGB / no bridges / degenerate tail / queue and resize");
+
+        // Alternating RGB, including black and ARGB input, stays opaque. State
+        // must remain independent of textured/transparent world materials.
+        g=M3GTest.renderer();b=new ScreenLines();
+        int[] palette={0x00112233,0x80445566,0xff000000,0xffaabbcc};
+        for(int color:palette) b.line(10,2,10,22,1,color,false);
+        uploads=Graphics3D.uploads;check(g.renderScreenLines(b),"mixed RGB particles unavailable");
+        for(int i=0;i<palette.length;i++) for(int v=0;v<4;v++) for(int channel=0;channel<3;channel++)
+            check((last().colors[(i*4+v)*3+channel]&255)==((palette[i]>>(16-channel*8))&255),"RGB particle color/stride changed");
+        check(Graphics3D.uploads==uploads && !last().textured,"RGB batch created texture");
+        Texture alpha=M3GTest.texture(0x80ffffff);alpha.drawmode=4;
+        M3GTest.submit(g,M3GTest.triangle(),alpha,0);g.render();
+        check(last().textured && last().blend==CompositingMode.ALPHA && last().colorComponents==4,"RGB batch contaminated world alpha");
+        uploads=Graphics3D.uploads;check(g.renderScreenLines(b),"RGB batch after textured alpha unavailable");
+        check(!last().textured && last().coords==null && last().colorComponents==3
+                && last().blend==CompositingMode.REPLACE && Graphics3D.uploads==uploads,"world texture/alpha contaminated weather");
+        g.destroy();
+        System.out.println("PASS texture-free RGB weather / ARGB ignored / black opaque / no uploads / alpha-state isolation");
 
         g=M3GTest.renderer();WeatherGenerator w=weather();calls=Graphics3D.calls;
         check(w.paintM3G(g) && Graphics3D.calls==calls+1,"weather did not use native strips");
