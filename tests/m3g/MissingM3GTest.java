@@ -26,6 +26,10 @@ public final class MissingM3GTest {
         Texture bakedTexture=M3GTest.texture(0xffffffff);bakedTexture.drawmode=13;
         g.shootIntensity=100;g.shootLength=0;M3GTest.submit(g,baked,bakedTexture,0);g.render();
         M3GTest.check(!g.isM3GActive() && !g.isStaticLightmapPass(),"missing API lost static fallback/scope");g.destroy();
+        g=M3GTest.renderer();MuzzleGlow glow=new MuzzleGlow();glow.alpha=100;
+        glow.texture=M3GTest.texture(0x80ffffff);int background=g.display[0];
+        M3GTest.check(!g.renderOverlay(glow) && g.display[0]==background && g.getRendererError()!=null,
+                "missing API flash must skip without damaging the frame");g.destroy();
         System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay");
     }
 }

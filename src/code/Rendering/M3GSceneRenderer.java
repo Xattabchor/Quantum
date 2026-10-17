@@ -142,6 +142,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
             if(skyRenderer == null) skyRenderer = new M3GSkyRenderer(this, graphics);
             return skyRenderer.draw(g, (SkyMesh)object);
         }
+        MuzzleGlow glow = object instanceof MuzzleGlow ? (MuzzleGlow)object : null;
+        if(glow != null) {
+            if(glow.alpha <= 0) return true;
+            object=glow.quad;texture=glow.texture;fast=true;
+        }
         if(texture == null) return false;
         int mode = texture.drawmode;
         // Legacy fog modes are handled below; glass, water and dithering stay CPU.
@@ -212,10 +217,17 @@ public final class M3GSceneRenderer implements SceneRenderer {
         appearance.setFog(null);
         appearance.setTexture(0, nativeTexture);
         nativeTexture.setBlending(Texture2D.FUNC_MODULATE);
-        composite.setBlending(kind == ALPHA_TEXTURE ? CompositingMode.ALPHA : CompositingMode.REPLACE);
+        composite.setBlending(glow != null ? CompositingMode.ALPHA_ADD
+                : kind == ALPHA_TEXTURE ? CompositingMode.ALPHA : CompositingMode.REPLACE);
         composite.setAlphaThreshold(kind == ALPHA_TEXTURE ? 0 : 0.5f);
 
-        if(mode == 1 && Main.fogQ > 0) {
+        if(glow != null) {
+            // Warm radial RGBA texture * fading vertex alpha, additively blended.
+            nativeTexture.setFiltering(Texture2D.FILTER_BASE_LEVEL,Texture2D.FILTER_LINEAR);
+            uniformColors(count,0xffffff,glow.alpha);
+            colorArrays[slot].set(0,count,colors);
+            render(g,slot,indices[slot]);
+        } else if(mode == 1 && Main.fogQ > 0) {
             // Legacy ADD fog is saturation of texture + constant fog RGB, not
             // conventional linear fog. Texture ADD performs that operation in M3G.
             uniformColors(count, additiveFog(count), 255);

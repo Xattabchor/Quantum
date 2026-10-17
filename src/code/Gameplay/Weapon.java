@@ -419,7 +419,10 @@ public final class Weapon {
         if (frame == -1) {
             if (magazine.rounds > 0) {
                 frame = 0;
-                if(shootLight) g3d.shootIntensity=g3d.shootLength=shotTime*90;
+                if(shootLight) {
+                    g3d.shootIntensity=g3d.shootLength=shotTime*90;
+                    g3d.startMuzzleGlow();
+                }
                 
                 if (shoot != null && Main.isSounds && Main.sounds != 0) {
                     Asset.getSound(reload).stop();

@@ -158,6 +158,26 @@ public final class House {
         return col;
     }
 
+    /** Cosmetic camera ray after scene rendering. Do not overwrite the visible
+     * room list used by portal debugging, or the gameplay query scratch vectors. */
+    public final void rayCastScreenEffect(int part, Ray ray) {
+        if(part < 0 || part >= rooms.length || rooms[part] == null) return;
+        rayCastEffectRoom(rooms[part],ray);
+        Room[] near = neighbours[part];
+        if(near != null) for(int i=0;i<near.length;i++)
+            if(near[i] != null) rayCastEffectRoom(near[i],ray);
+    }
+
+    private void rayCastEffectRoom(Room room, Ray ray) {
+        room.rayCast(ray);
+        Vector objects = room.getObjects();
+        for(int i=0;i<objects.size();i++) {
+            Object object = objects.elementAt(i);
+            if(object instanceof MeshObject && ((MeshObject)object).precCol)
+                ((MeshObject)object).rayCast(ray);
+        }
+    }
+
     public final void rayCast(int part, Ray ray, boolean rayIsFromWeapons) {
         if(part == -1) return;
 

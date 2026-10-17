@@ -14,6 +14,7 @@ public final class DirectX7 {
    private boolean staticLightmapPass;
    private int[] frameBackup;
    private String rendererError;
+   private MuzzleGlow muzzleGlow;
 
    public int width, height;
    public int[] display;
@@ -168,6 +169,7 @@ this.buffer.resetTex();
        }
        sceneRenderer = null;
        frameBackup = null;
+       muzzleGlow = null;
    }
 
    private void failRenderer(String message) {
@@ -275,6 +277,12 @@ this.buffer.resetTex();
    public boolean renderScreenLines(ScreenLines lines) {
        if(!canRenderM3G() || nativePass) return false;
        if(lines.count == 0) return true;
+       return renderOverlay(lines);
+   }
+
+   /** Best-effort native overlay; no CPU replay and no scene-queue consumption. */
+   public boolean renderOverlay(RenderObject effect) {
+       if(!canRenderM3G() || nativePass) return false;
        boolean saved = false;
        try {
            if(sceneRenderer == null) sceneRenderer = (SceneRenderer)
@@ -283,7 +291,7 @@ this.buffer.resetTex();
                frameBackup = new int[display.length];
            System.arraycopy(display,0,frameBackup,0,display.length);
            saved = true;
-           boolean drawn = sceneRenderer.draw(this,lines,null,false);
+           boolean drawn = sceneRenderer.draw(this,effect,null,false);
            sceneRenderer.finish(this);
            if(!drawn) System.arraycopy(frameBackup,0,display,0,display.length);
            return drawn;
@@ -297,6 +305,24 @@ this.buffer.resetTex();
        if(saved) System.arraycopy(frameBackup,0,display,0,display.length);
        failRenderer(rendererError);
        return false;
+   }
+
+   public void startMuzzleGlow() {
+       if(!canRenderM3G()) return;
+       try {
+           if(muzzleGlow == null) muzzleGlow = new MuzzleGlow();
+           muzzleGlow.start(System.currentTimeMillis());
+       } catch(OutOfMemoryError ex) { muzzleGlow = null; }
+   }
+
+   public boolean renderMuzzleGlow(code.Gameplay.Map.House house,int part) {
+       if(!canRenderM3G() || muzzleGlow == null) return false;
+       try {
+           return muzzleGlow.prepare(this,house,part,System.currentTimeMillis()) && renderOverlay(muzzleGlow);
+       } catch(Exception ex) {
+           // A cosmetic ray/texture failure must not change combat or the frame.
+           return false;
+       } catch(OutOfMemoryError ex) { return false; }
    }
 
    public final void drawLine(int x1, int y1, int x2, int y2, int fat, int col) {

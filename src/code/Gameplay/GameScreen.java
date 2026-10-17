@@ -452,6 +452,7 @@ public final class GameScreen extends MyCanvas {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
         }
         
+        if(!playerDied) g3d.renderMuzzleGlow(scene.getHouse(),renderFrom);
         boolean nativeWeather = wg != null && wg.paintM3G(g3d);
         try {
             scene.flush(g, 0, screenY);

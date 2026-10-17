@@ -1,16 +1,16 @@
 {
-  "classes": 133,
-  "code_methods": 1718,
-  "stackmap_attributes": 926,
+  "classes": 134,
+  "code_methods": 1731,
+  "stackmap_attributes": 934,
   "class_versions": [
     [
       47,
       0
     ]
   ],
-  "jar_sha256": "16e1790875681cdb722f4d4f9df0bdb7decc00a9661fe5badfce407dc1fe69f8",
+  "jar_sha256": "bf80ca3243f01c06b1143fabf0712f9e9947c3f611b44aea8b2fee0b539fec52",
   "resource_files": 0,
-  "source_files": 126,
+  "source_files": 127,
   "preverifier": "ProGuard -microedition (CLDC StackMap)",
   "tools_sha256": {
     "ecj-legacy.jar": "01971245e470f07cb9f9730325d9c57b58782f57c1df396d6ed74c5619a4db39",

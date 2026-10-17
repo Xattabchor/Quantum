@@ -27,6 +27,12 @@ game = (ROOT / "src/code/Gameplay/GameScreen.java").read_text()
 assert game.index("wg.paintM3G(g3d)") > game.index("if(doubleBright)")
 assert game.index("wg.paintM3G(g3d)") < game.index("scene.flush(g, 0, screenY)")
 assert "if(!nativeWeather) wg.paint(g, screenY);" in game
+assert game.index("if(doubleBright)") < game.index("g3d.renderMuzzleGlow(") < game.index("wg.paintM3G(g3d)")
+assert game.index("g3d.renderMuzzleGlow(") < game.index("player.arsenal.drawWeapon(")
+assert "if(!playerDied) g3d.renderMuzzleGlow" in game
+weapon = (ROOT / "src/code/Gameplay/Weapon.java").read_text()
+assert "if(shootLight) {" in weapon and "g3d.startMuzzleGlow();" in weapon
+assert weapon.index("g3d.startMuzzleGlow();") > weapon.index("if (magazine.rounds > 0)")
 
 # Only the API subset under test. These sources never enter the MIDlet.
 STUBS = {
@@ -101,12 +107,12 @@ public class TriangleStripArray {public int[] indices,lengths;
  public TriangleStripArray(int[] indices,int[] lengths){this.indices=indices;this.lengths=lengths;}
 }''',
 "javax/microedition/m3g/Image2D.java": '''package javax.microedition.m3g;
-public class Image2D {public static final int RGBA=100; public byte[] pixels;
- public Image2D(int f,int w,int h,byte[] p){pixels=p;Graphics3D.uploads++;} }''',
+public class Image2D {public static final int RGBA=100; public byte[] pixels;public int width,height;
+ public Image2D(int f,int w,int h,byte[] p){pixels=p;width=w;height=h;Graphics3D.uploads++;} }''',
 "javax/microedition/m3g/Texture2D.java": '''package javax.microedition.m3g;
-public class Texture2D {public static final int FILTER_BASE_LEVEL=208,FILTER_NEAREST=210,WRAP_REPEAT=241,FUNC_MODULATE=227,FUNC_ADD=224;
- public Image2D image;public int function;public Texture2D(Image2D i){image=i;}
- public void setFiltering(int a,int b){} public void setWrapping(int a,int b){} public void setBlending(int n){function=n;} }''',
+public class Texture2D {public static final int FILTER_BASE_LEVEL=208,FILTER_NEAREST=210,FILTER_LINEAR=209,WRAP_REPEAT=241,FUNC_MODULATE=227,FUNC_ADD=224;
+ public Image2D image;public int function,filter;public Texture2D(Image2D i){image=i;}
+ public void setFiltering(int a,int b){filter=b;} public void setWrapping(int a,int b){} public void setBlending(int n){function=n;} }''',
 "javax/microedition/m3g/Graphics3D.java": '''package javax.microedition.m3g;
 import java.util.Hashtable;
 import javax.microedition.lcdui.Graphics;
@@ -116,7 +122,7 @@ public class Graphics3D {
  public static VertexBuffer lastVertices; public static TriangleStripArray lastIndices;public static Appearance lastAppearance;
  public static Graphics target; public static Camera camera;
  public static class Draw {
-  public int blend,function,fogColor,textureAlpha;public float near,far;public boolean fog;
+  public int blend,function,fogColor,textureAlpha,filter;public float near,far;public boolean fog;
   public byte[] colors;public int[] indices,lengths; public short[] positions,coords;public float scale,uvScale;public float[] projection;
  }
  public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
@@ -132,7 +138,11 @@ public class Graphics3D {
   if(Boolean.getBoolean("m3g.oom"))throw new OutOfMemoryError("native memory");
   before=target.image.pixels[0];calls++;lastVertices=v;lastIndices=i;lastAppearance=a;
   byte[] p=a.tex.image.pixels;byte[] c=v.colors.bytes;
-  Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex.function;
+  if(Boolean.getBoolean("m3g.sampleCenter")) {
+   int offset=(a.tex.image.width/2+a.tex.image.height/2*a.tex.image.width)*4;
+   p=new byte[]{p[offset],p[offset+1],p[offset+2],p[offset+3]};
+  }
+  Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex.function;draw.filter=a.tex.filter;
   draw.colors=c.clone();draw.indices=i.indices.clone();draw.lengths=i.lengths;draw.textureAlpha=p[3]&255;
   draw.positions=v.positions.shorts.clone();draw.coords=v.coords.shorts.clone();draw.scale=v.scale;draw.uvScale=v.uvScale;
   draw.projection=camera.projection.matrix.clone();
@@ -189,6 +199,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.LinesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.StaticLightTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MuzzleGlowTest"], check=True)
     # Remove the optional API for a real class-loading fallback test.
     shutil.rmtree(classes / "javax/microedition/m3g")
     no_m3g_api = temp / "api-without-m3g.jar"
