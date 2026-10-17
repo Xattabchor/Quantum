@@ -326,9 +326,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
         if(texture == null) return false;
         int mode = DirectX7.m3gDrawMode(texture.drawmode);
-        // Mode 7 aliases ADD (2); modes 10/11/12 alias 0.
+        // Mode 7 is textured MODULATE; modes 10/11/12 alias 0.
         if(mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4
-                && mode != 5 && mode != 6 && mode != 8 && mode != 9 && mode != 13) return false;
+                && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 13) return false;
         boolean nativeFog=glow==null && Main.fogQ>0
                 && (mode==1 || mode==3 || mode==6 || mode==9 || mode==13);
         // Invalid native ranges retain the original CPU material fallback.
@@ -429,6 +429,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         setTexture(nativeTexture);
         setFunction(nativeTexture,Texture2D.FUNC_MODULATE);
         setBlend((glow != null || mode == 2) ? CompositingMode.ALPHA_ADD
+                : mode == 7 ? CompositingMode.MODULATE
                 : kind == ALPHA_TEXTURE ? CompositingMode.ALPHA : CompositingMode.REPLACE);
         setThreshold(kind==ALPHA_TEXTURE?0:glow!=null?0.5f:nativeEntry.cutoutThreshold);
 

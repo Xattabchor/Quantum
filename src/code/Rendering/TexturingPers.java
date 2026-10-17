@@ -2106,6 +2106,7 @@ static final void paintPers_glass(final DirectX7 g3d, final Texture texture, int
             final int dwz, final int duz, final int dvz,int fogc,int sz2) {
 
 
+        final boolean modulate = g3d.getRenderer() == DirectX7.M3G;
         final int[] tex = texture.rImg.img;
         final int lengthBIT = tex.length-1;
         final int widthBIT = texture.rImg.widthBIT;
@@ -2198,10 +2199,14 @@ for(;length>=sz2; length-=sz2) {
 {
 
 col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            if(modulate) {
+                if(col != 0) rgb[x1] = DirectX7.modulateColor(col,rgb[x1]);
+            } else {
             coord = ((((col & 0xff0000) - 0x800000) * scale) >> 24) + ((((col & 0xff00) - 0x8000) * scale) >> 16) * w + x1;
             if(coord < 0) rgb[x1] = rgb[0];
             else if(coord > g3dlen) rgb[x1] = rgb[g3dlen];
             else rgb[x1] = rgb[coord];
+            }
 }
                            }
             if(length > 0) { // ������������ ���������� �������
@@ -2212,10 +2217,14 @@ col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
                 dv = (v_2 - v) / length;
                 for(; x1<x2;) {
 col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            if(modulate) {
+                if(col != 0) rgb[x1] = DirectX7.modulateColor(col,rgb[x1]);
+            } else {
             coord = ((((col & 0xff0000) - 0x800000) * scale) >> 24) + ((((col & 0xff00) - 0x8000) * scale) >> 16) * w + x1;
             if(coord < 0) rgb[x1] = rgb[0];
             else if(coord > g3dlen) rgb[x1] = rgb[g3dlen];
             else rgb[x1] = rgb[coord];
+            }
 x1++;
                 }
 

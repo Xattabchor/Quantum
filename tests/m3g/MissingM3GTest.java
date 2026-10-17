@@ -34,8 +34,9 @@ public final class MissingM3GTest {
         for(int mode:new int[]{2,5,7,8}) {
             g=M3GTest.renderer();DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
             Texture t=M3GTest.texture(0xffd08040);t.drawmode=(byte)mode;
-            Texture referenceTexture=M3GTest.texture(0xffd08040);referenceTexture.drawmode=(byte)(mode==7?2:mode);
-            M3GTest.submit(cpu,M3GTest.triangle(),referenceTexture,0);cpu.render();
+            Texture referenceTexture=M3GTest.texture(0xffd08040);referenceTexture.drawmode=(byte)mode;
+            if(mode==7) GlassTest.reference(cpu,M3GTest.triangle(),referenceTexture);
+            else {M3GTest.submit(cpu,M3GTest.triangle(),referenceTexture,0);cpu.render();}
             M3GTest.submit(g,M3GTest.triangle(),t,0);g.render();
             M3GTest.check(t.drawmode==mode,"missing API leaked material alias");
             M3GTest.check(!g.isM3GActive() && java.util.Arrays.equals(cpu.display,g.display),"missing API mode "+mode);
