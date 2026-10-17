@@ -326,9 +326,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
         if(texture == null) return false;
         int mode = DirectX7.m3gDrawMode(texture.drawmode);
-        // Mode 7 is an untextured tint; modes 10/11/12 are aliases of 0.
+        // Mode 7 aliases ADD (2); modes 10/11/12 alias 0.
         if(mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4
-                && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 13) return false;
+                && mode != 5 && mode != 6 && mode != 8 && mode != 9 && mode != 13) return false;
         boolean nativeFog=glow==null && Main.fogQ>0
                 && (mode==1 || mode==3 || mode==6 || mode==9 || mode==13);
         // Invalid native ranges retain the original CPU material fallback.
@@ -360,7 +360,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 && (mode == 3 || mode == 6) && Main.fogQ > 0 && alternateDiagonal();
         indices[1] = alternate ? alternateQuad : baseQuad;
         TriangleStripArray[] quadTriangles = alternate ? alternateQuadTriangles : baseQuadTriangles;
-        boolean perspective = mode != 7 && usePerspective(texture, count, fastPath);
+        boolean perspective = usePerspective(texture, count, fastPath);
         // TexturingPers interpolates 1 / (move - rz), not 1 / (distY - rz).
         // distY only controls screen projection and changes with the FOV.
         int distance = TexturingPers.move;
@@ -373,19 +373,6 @@ public final class M3GSceneRenderer implements SceneRenderer {
                         distance,mode!=8 && perspective,positions,work);
         if(scale == 0) return false;
         buffersScale=scale;
-        if(mode == 7) {
-            batchable=true;
-            // Cheapest glass approximation: no source pixels, UV, mip or upload.
-            // Uniform cool tint, alpha 32/255. Original Software refraction stays.
-            int slot = count - 3;
-            setFog(null);
-            setTexture(null);
-            setBlend(CompositingMode.ALPHA);
-            setThreshold(0);
-            uniformColors(count, 0xb0beca, 32);
-            render(g, slot, indices[slot]);
-            return true;
-        }
         RawImage raw = selectImage(texture, object, count, fastPath);
         if(mode == 8) {
             // CPU paintFill samples the first UV of EACH triangle, even if its

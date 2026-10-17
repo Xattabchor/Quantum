@@ -210,9 +210,9 @@ this.buffer.resetTex();
        System.out.println("M3G disabled: " + message);
    }
 
-   /** M3G deliberately disables legacy dithering materials, treating them as 0. */
+   /** M3G material aliases: glass uses ADD; legacy dithering uses mode 0. */
    public static byte m3gDrawMode(byte mode) {
-       return mode >= 10 && mode <= 12 ? (byte)0 : mode;
+       return mode == 7 ? (byte)2 : mode >= 10 && mode <= 12 ? (byte)0 : mode;
    }
 
    /** Shared dispatch, including the polygons of animated MeshImage objects. */
@@ -223,8 +223,8 @@ this.buffer.resetTex();
            sceneRenderer.barrier(this);
        }
        byte originalMode = texture == null ? 0 : texture.drawmode;
-       boolean alias = rendererMode == M3G && texture != null && originalMode >= 10 && originalMode <= 12;
-       if(alias) texture.drawmode = 0;
+       boolean alias = rendererMode == M3G && texture != null && m3gDrawMode(originalMode) != originalMode;
+       if(alias) texture.drawmode = m3gDrawMode(originalMode);
        boolean previous = staticLightmapPass;
        staticLightmapPass = rendererMode == M3G && texture != null
                && (texture.drawmode == 9 || texture.drawmode == 13);
