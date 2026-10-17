@@ -52,7 +52,7 @@ final class M3GSkyRenderer {
             Texture t = materials.textures[material];
             if(t == null || !owner.supportsTexture(t.rImg)) return false;
             int mode=DirectX7.m3gDrawMode(t.drawmode);
-            if(mode!=0 && mode!=1 && mode!=2 && mode!=4 && mode!=7 && mode!=10) return false;
+            if(mode!=0 && mode!=1 && mode!=2 && mode!=4 && mode!=5 && mode!=7 && mode!=10) return false;
         }
         float far = g.distY;
         Vertex[] vertices = sky.mesh.getVertices();
@@ -98,7 +98,8 @@ final class M3GSkyRenderer {
                 // have the same invalidation semantics as level materials.
                 Texture2D texture = owner.texture(g,raw,mode==2?M3GSceneRenderer.ADD_TEXTURE
                         :alpha ? M3GSceneRenderer.ALPHA_TEXTURE : M3GSceneRenderer.OPAQUE_TEXTURE);
-                texture.setBlending(Texture2D.FUNC_MODULATE);
+                texture.setBlending(mode==5?Texture2D.FUNC_BLEND:Texture2D.FUNC_MODULATE);
+                if(mode==5) texture.setBlendColor(DirectX7.getM3GBlendColor());
                 appearance.setTexture(0,texture); appearance.setFog(null);
                 composite.setBlending(mode==2?CompositingMode.ALPHA_ADD
                         :mode==7?CompositingMode.MODULATE:mode==10?CompositingMode.MODULATE_X2

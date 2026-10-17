@@ -48,13 +48,16 @@ assert "if(lighting && !player.character.underRoof && wg != null && g3d.getRende
 assert "System.currentTimeMillis() - wg.lastLighting) < 135" in game
 assert game.index("wg.setRenderer(Main.renderer)") < game.index("wg.moveY((int) -yRot")
 weapon = (ROOT / "src/code/Gameplay/Weapon.java").read_text()
-assert "if(shootLight) {" in weapon and "g3d.startWeaponLight();" in weapon
-assert weapon.index("g3d.startWeaponLight();") > weapon.index("if (magazine.rounds > 0)")
+assert "if(shootLight) {" in weapon and "g3d.startWeaponLight();" not in weapon
+assert 'DirectX7.configureM3GBlend(lvl.get("M3G_BLEND_COLOR"));' in loader
 
 # Successful native material/sprite fog must not reintroduce CPU fading/masks.
 scene_source=(ROOT / "src/code/Rendering/M3GSceneRenderer.java").read_text()
 sprite_source=(ROOT / "src/code/Rendering/M3GSpriteRenderer.java").read_text()
 assert "MuzzleGlow" not in scene_source and "muzzleTexture" not in scene_source
+assert not (ROOT / "src/code/Rendering/M3GMode5Lighting.java").exists()
+assert "Mode5WeaponLight.pack(" not in scene_source and "mode5Lighting" not in scene_source
+assert "new Mode5WeaponLight" not in frame_source
 assert "rayCastScreenEffect(" not in frame_source+scene_source
 for forbidden in ("legacyFog(", "additiveFog(", "lightmapColor(", "FOG_MASK", "SPRITE_MASK", "SPRITE_ALPHA_MASK"):
     assert forbidden not in scene_source+sprite_source
@@ -210,9 +213,9 @@ public class Image2D {public static final int RGBA=100,LUMINANCE=97; public byte
   else pixels=p;
  } }''',
 "javax/microedition/m3g/Texture2D.java": '''package javax.microedition.m3g;
-public class Texture2D {public static final int FILTER_BASE_LEVEL=208,FILTER_NEAREST=210,FILTER_LINEAR=209,WRAP_CLAMP=240,WRAP_REPEAT=241,FUNC_MODULATE=227,FUNC_ADD=224;
- public Image2D image;public int function,filter,wrapS,wrapT;public Texture2D(Image2D i){image=i;}
- public void setFiltering(int a,int b){filter=b;} public void setWrapping(int a,int b){wrapS=a;wrapT=b;} public void setBlending(int n){function=n;} }''',
+public class Texture2D {public static final int FILTER_BASE_LEVEL=208,FILTER_NEAREST=210,FILTER_LINEAR=209,WRAP_CLAMP=240,WRAP_REPEAT=241,FUNC_MODULATE=227,FUNC_ADD=224,FUNC_BLEND=225;
+ public Image2D image;public int function,blendColor,filter,wrapS,wrapT;public Texture2D(Image2D i){image=i;}
+ public void setFiltering(int a,int b){filter=b;} public void setWrapping(int a,int b){wrapS=a;wrapT=b;} public void setBlending(int n){function=n;} public void setBlendColor(int rgb){blendColor=rgb&0xffffff;} }''',
 "javax/microedition/m3g/Graphics3D.java": '''package javax.microedition.m3g;
 import java.util.Hashtable;
 import javax.microedition.lcdui.Graphics;
@@ -222,7 +225,7 @@ public class Graphics3D {
  public static VertexBuffer lastVertices; public static TriangleStripArray lastIndices;public static Appearance lastAppearance;
  public static Graphics target; public static Camera camera;
  public static class Draw {
-  public int blend,function,fogColor,textureAlpha,filter,colorComponents,cull,winding,sample;public boolean textured,perspective;public float near,far,threshold;public boolean fog;
+  public int blend,function,blendColor,fogColor,textureAlpha,filter,colorComponents,cull,winding,sample;public boolean textured,perspective;public float near,far,threshold;public boolean fog;
   public byte[] colors;public int[] indices,lengths; public short[] positions,coords,normals;public boolean lit,tracking;public int lights,diffuse,ambient,emissive,specular;public float ambientIntensity,directionalIntensity,omniIntensity,omniQuadratic;public float[] omniPosition;public float[] lightMatrix;public float scale,uvScale;public float[] projection;
  }
  public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
@@ -254,6 +257,7 @@ public class Graphics3D {
    p=new byte[]{p[offset],p[offset+1],p[offset+2],p[offset+3]};
   }
   Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex==null?Texture2D.FUNC_MODULATE:a.tex.function;draw.filter=a.tex==null?0:a.tex.filter;
+  draw.blendColor=a.tex==null?0:a.tex.blendColor;
   draw.sample=((p[0]&255)<<24)|((p[1]&255)<<16)|((p[2]&255)<<8)|(p[3]&255);draw.threshold=a.comp.threshold;
   draw.colorComponents=v.colors.components;draw.textured=a.tex!=null;draw.perspective=a.polygon==null || a.polygon.perspective;
   draw.cull=a.polygon==null?PolygonMode.CULL_BACK:a.polygon.cull;draw.winding=a.polygon==null?PolygonMode.WINDING_CCW:a.polygon.winding;
@@ -295,6 +299,7 @@ public class Graphics3D {
    int out=0xff000000;
    for(int k=0;k<3;k++){
     int src=draw.function==Texture2D.FUNC_ADD?Math.min(255,(p[k]&255)+(c[k]&255)):(p[k]&255)*(c[k]&255)/255;
+    if(draw.function==Texture2D.FUNC_BLEND) src=((c[k]&255)*(255-(p[k]&255))+((draw.blendColor>>(16-k*8))&255)*(p[k]&255))/255;
     if(draw.lit) src=Math.min(255,(int)((p[k]&255)*lightingScale+0.5));
     if(draw.fog){float z=-v.positions.shorts[2]*v.scale;
      float f=Math.max(0,Math.min(1,(z-draw.near)/(draw.far-draw.near)));
@@ -352,6 +357,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativePrepTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativeLightingTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.Mode5BlendTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.WeaponOmniTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GlassTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModulateX2Test"], check=True)

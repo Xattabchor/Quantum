@@ -2,7 +2,8 @@ package code.Rendering;
 
 import code.Math.Matrix;
 
-/** API-free shot pulse and metric eye-space reconstruction for mode 5 only. */
+/** Legacy API-free arithmetic utility. The game no longer creates this light;
+ * mode 5 is now BLEND and its compatibility shot hooks are no-ops. */
 public final class Mode5WeaponLight {
     public static final int DURATION=120, HALF_DISTANCE=1000;
     public static final float X=40,Y=-40,Z=-120, POSITION_SCALE=0.25f;

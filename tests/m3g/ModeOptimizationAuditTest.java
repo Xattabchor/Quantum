@@ -72,7 +72,7 @@ public final class ModeOptimizationAuditTest {
                     && g.getM3GCpuBarriers()==0 && g.getM3GTextureUploads()==0,"warm changed sky/world split transaction "+mode);
             g.destroy();
         }
-        for(int mode:new int[]{1,7,10}) for(int failure=0;failure<4;failure++) {
+        for(int mode:new int[]{1,5,7,10}) for(int failure=0;failure<4;failure++) {
             DirectX7 g=M3GTest.renderer(),cpu=M3GTest.renderer();
             Texture world=M3GTest.texture(0x808090a0);world.drawmode=(byte)mode;
             M3GTest.submit(cpu,sky(mode),null,0);cpu.renderBackground();
@@ -98,7 +98,7 @@ public final class ModeOptimizationAuditTest {
             g.destroy();
         }
         Main.m3gPerspective=true;
-        for(int mode:new int[]{1,7,10}) {
+        for(int mode:new int[]{1,5,7,10}) {
             DirectX7 g=M3GTest.renderer();Texture world=M3GTest.texture(0x808090a0);world.drawmode=(byte)mode;
             Texture mul=M3GTest.texture(0xff808080);byte[] mask=new byte[32*32];
             ScreenLines weather=new ScreenLines();weather.rect(2,2,1,1,0x99aabb);

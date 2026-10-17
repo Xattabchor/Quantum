@@ -15,7 +15,6 @@ public final class DirectX7 {
    private boolean staticLightmapPass;
    private int[] frameBackup;
    private String rendererError;
-   private Mode5WeaponLight mode5WeaponLight;
    private FrameEffects frameEffects;
    private Image frameImage;
    private int[] frameImageBuffer;
@@ -221,14 +220,11 @@ this.buffer.resetTex();
        }
        sceneRenderer = null;
        frameBackup = null;
-       mode5WeaponLight = null;
        frameEffects = null;
    }
 
    private void failRenderer(String message) {
-       Mode5WeaponLight pulse=mode5WeaponLight;
        releaseRenderer();
-       mode5WeaponLight=pulse; // Frozen shot state must survive complete CPU replay.
        rendererFailed = true;
        rendererError = message;
        System.out.println("M3G disabled: " + message);
@@ -380,7 +376,6 @@ this.buffer.resetTex();
     * Software callers retain their original GameScreen postprocessing. */
    public void renderWithEffects(byte[] vignette, boolean dead, boolean damaged) {
        if(rendererMode!=M3G) {render();return;}
-       if(dead && mode5WeaponLight!=null) mode5WeaponLight.stop();
        render(true,prepareFrameEffects(vignette,dead,damaged),null);
    }
 
@@ -389,7 +384,6 @@ this.buffer.resetTex();
    public boolean renderGameFrame(byte[] vignette,boolean dead,boolean damaged,
            code.Gameplay.Map.House house,int part,ScreenLines weather) {
        if(rendererMode!=M3G) {render();return false;}
-       if(dead && mode5WeaponLight!=null) mode5WeaponLight.stop();
        return render(true,prepareFrameEffects(vignette,dead,damaged),weather);
    }
 
@@ -399,7 +393,6 @@ this.buffer.resetTex();
    public boolean renderGameFrameImage(byte[] vignette,boolean dead,boolean damaged,
            code.Gameplay.Map.House house,int part,ScreenLines weather) {
        if(rendererMode!=M3G) {render();return false;}
-       if(dead && mode5WeaponLight!=null) mode5WeaponLight.stop();
        return render(true,prepareFrameEffects(vignette,dead,damaged),weather,!imagePresentationFailed);
    }
 
@@ -429,7 +422,6 @@ this.buffer.resetTex();
    }
 
    private boolean render(boolean allowM3G,FrameEffects effects,ScreenLines weather,boolean imageOutput) {
-       if(mode5WeaponLight!=null) mode5WeaponLight.prepare(System.currentTimeMillis());
        lx = camera.m03;
        ly = camera.m13;
        lz = camera.m23;
@@ -536,21 +528,14 @@ this.buffer.resetTex();
        return false;
    }
 
-   public Mode5WeaponLight getMode5WeaponLight() {
-       return rendererMode==M3G && mode5WeaponLight!=null && mode5WeaponLight.level>0?mode5WeaponLight:null;
-   }
+   /** New level-local RGB is reset to black on missing/invalid input. */
+   public static void configureM3GBlend(String value) {Mode5Blend.configure(value);}
+   public static int getM3GBlendColor() {return Mode5Blend.color();}
 
-   public void startWeaponLight() {
-       if(rendererMode!=M3G) return;
-       long now=System.currentTimeMillis();
-       try {
-           if(mode5WeaponLight==null) mode5WeaponLight=new Mode5WeaponLight();
-           mode5WeaponLight.start(now);
-       } catch(OutOfMemoryError ex) {mode5WeaponLight=null;}
-   }
-
-   /** Compatibility hook: starts only the real mode-5 OMNI, never a sprite. */
-   public void startMuzzleGlow() {startWeaponLight();}
+   /** Compatibility hooks: mode 5 no longer has lights or a shot pulse. */
+   public Mode5WeaponLight getMode5WeaponLight() {return null;}
+   public void startWeaponLight() { }
+   public void startMuzzleGlow() { }
 
    /** Retained for callers of the removed fake screen-space illumination. */
    public boolean renderMuzzleGlow(code.Gameplay.Map.House house,int part) {return false;}

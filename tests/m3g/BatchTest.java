@@ -39,7 +39,7 @@ public final class BatchTest {
                     int[] indices={d.indices[offset+i-2],d.indices[offset+i-1],d.indices[offset+i]};
                     if((i&1)!=0) {int t=indices[0];indices[0]=indices[1];indices[1]=t;}
                     String row=d.blend+":"+d.function+":"+d.filter+":"+d.sample+":"+d.threshold+":"+d.textured
-                            +":"+d.lit+":"+d.lights+":"+d.cull+":"+d.winding+":"+d.perspective+":"+d.fog+":"+d.fogColor+":"+d.near+":"+d.far;
+                            +":"+d.blendColor+":"+d.lit+":"+d.lights+":"+d.cull+":"+d.winding+":"+d.perspective+":"+d.fog+":"+d.fogColor+":"+d.near+":"+d.far;
                     for(int vertex:indices) {
                         int p=vertex*3;double w=-(double)d.positions[p+2];
                         row+="/"+d.positions[p]/w+","+d.positions[p+1]/w+","+(w/-d.positions[indices[0]*3+2]);
@@ -69,7 +69,7 @@ public final class BatchTest {
         DirectX7 g=renderer();int start=Graphics3D.history.size(),calls=Graphics3D.calls,sets=VertexArray.sets;
         queue(g,objects,textures);
         check(expected.equals(triangles(start)),"ordered projected geometry/relative W/UV/light/material changed in mode "+mode+" quad="+quad);
-        check(VertexArray.sets==sets+(mode==5?4:3)*(Graphics3D.calls-calls),"per-polygon native vertex uploads survived batching");
+        check(VertexArray.sets==sets+3*(Graphics3D.calls-calls),"per-polygon native vertex uploads survived batching");
         if(expectedCalls>=0) check(Graphics3D.calls==calls+expectedCalls,"wrong draw reduction "+(Graphics3D.calls-calls)+" mode "+mode);
         int arrays=VertexArray.created,indices=TriangleStripArray.created,uploads=Graphics3D.uploads;
         int binds=Graphics3D.binds,releases=Graphics3D.releases,reads=Image.getRGBCalls;

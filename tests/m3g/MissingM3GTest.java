@@ -53,13 +53,10 @@ public final class MissingM3GTest {
         code.Rendering.Meshes.Polygon3V pulseFace=M3GTest.triangle();pulseFace.nx=pulseFace.ny=0;pulseFace.nz=4096;
         Texture pulseTexture=M3GTest.texture(0xff8090a0);pulseTexture.drawmode=5;
         M3GTest.submit(g,pulseFace,pulseTexture,0);g.render();
-        M3GTest.check(!g.isM3GActive() && g.getMode5WeaponLight()!=null,"missing API lost weapon pulse recovery");
+        M3GTest.check(!g.isM3GActive() && g.getMode5WeaponLight()==null,"missing API revived removed weapon pulse");
         DirectX7 pulseCPU=M3GTest.renderer();
-        try {
-            java.lang.reflect.Field f=DirectX7.class.getDeclaredField("mode5WeaponLight");f.setAccessible(true);f.set(pulseCPU,g.getMode5WeaponLight());
-        } catch(Exception ex) {throw new AssertionError(ex);}
         pulseCPU.drawSoftwareObject(pulseFace,pulseTexture,false);
-        M3GTest.check(java.util.Arrays.equals(g.display,pulseCPU.display),"missing API OMNI CPU equation/replay");
+        M3GTest.check(java.util.Arrays.equals(g.display,pulseCPU.display),"missing API BLEND CPU equation/replay");
         g.destroy();pulseCPU.destroy();
         for(int mode:new int[]{11,12}) {
             g=M3GTest.renderer();DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);

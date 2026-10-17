@@ -173,6 +173,7 @@ public class LevelLoader {
         if(Main.Blood != null) Asset.getTexture(Main.Blood);
 
         GameScreen.bloom = getBoolean("BLOOM", lvl, setting, false);
+        DirectX7.configureM3GBlend(lvl.get("M3G_BLEND_COLOR"));
         DirectX7.lightdiry = (short) getInt("LIGHT_Y", lvl, setting, 4096);
         DirectX7.lightdirx = (short) getInt("LIGHT_X", lvl, setting, -4096);
         DirectX7.lightdirz = (short) getInt("LIGHT_Z", lvl, setting, 4096);

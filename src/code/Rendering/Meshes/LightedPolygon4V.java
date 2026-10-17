@@ -130,7 +130,7 @@ public class LightedPolygon4V extends Polygon4V {
 
     public final void renderFast(DirectX7 g3d, Texture texture) {
 
-        if(texture.drawmode == 5) {
+        if(texture.drawmode == 5 && g3d.getRenderer()!=DirectX7.M3G) {
             sz2 = 0xff - MathUtils.calcLight(nx, ny, nz, DirectX7.lightdirx, DirectX7.lightdiry, DirectX7.lightdirz);
             if(sz2 < 0) {
                 sz2 = 0;

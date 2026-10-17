@@ -90,14 +90,6 @@ x1++;
         // Selected M3G mode 1 is ALPHA, also during CPU recovery.
         if(dmode == 1 && g3d.getRenderer() == DirectX7.M3G) dmode = 4;
         if(dmode == 10 && g3d.getRenderer() == DirectX7.M3G) dmode = 7;
-        if(dmode == 5 && g3d.getRenderer() == DirectX7.M3G) qz = 255-DirectX7.mode5Shade(nx,ny,nz);
-        boolean mode5Pulse=dmode==5 && g3d.getMode5WeaponLight()!=null;
-        if(mode5Pulse) {
-            Mode5WeaponLight pulse=g3d.getMode5WeaponLight();
-            al=ag=ab=pulse.shade(g3d,a,nx,ny,nz);
-            bl=bg=bb=pulse.shade(g3d,b,nx,ny,nz);
-            cl=cg=cb=pulse.shade(g3d,c,nx,ny,nz);
-        }
         if (texture.rImg.alphaMixing == false && texture.drawmode == 4) {
             dmode = 0;
         }
@@ -206,7 +198,7 @@ x1++;
             if (cf < 0) cf = 0;
         }
         
-        if (texture.drawmode == 9 || texture.drawmode == 13 || mode5Pulse) {
+        if (texture.drawmode == 9 || texture.drawmode == 13) {
             af = al;
             bf = bl;
             cf = cl;
@@ -231,8 +223,7 @@ x1++;
 
         final int W_UNIT = texture.rImg.W_UNIT;
 
-        // Active OMNI uses metric eye-space projection, including during replay.
-        int move=mode5Pulse && (nx!=0 || ny!=0 || nz!=0) && g3d.distX>0?g3d.distX:TexturingPers.move;
+        int move=TexturingPers.move;
         int tempI =(int)( (W_UNIT>>fp) + move);
         int awz, bwz, cwz;
         
@@ -1594,7 +1585,13 @@ static final void paintMiniTrianglePers_5(final DirectX7 g3d, final Texture text
             int f_start,int f_end,
 final int df_start,final int df_end,
 final int df) {
-    if( (texture.drawmode==5 && g3d.getMode5WeaponLight()!=null) || ((texture.drawmode==9 || texture.drawmode==13) && Main.fogQ>=1) || (Main.fogQ==2 && Main.forceLQFog==false && texture.drawmode==6)) {
+    if(texture.drawmode==5 && g3d.getRenderer()==DirectX7.M3G) {
+        paintMiniTrianglePersBlend5(g3d,texture,y_start,y_end,x_start,wz_start,uz_start,vz_start,
+                x_end,wz_end,uz_end,vz_end,dx_start,dwz_start,duz_start,dvz_start,
+                dx_end,dwz_end,duz_end,dvz_end,dwz,duz,dvz,fogc,sz2,q,a,b,c,f_start,f_end,df_start,df_end,df);
+        return;
+    }
+    if( ((texture.drawmode==9 || texture.drawmode==13) && Main.fogQ>=1) || (Main.fogQ==2 && Main.forceLQFog==false && texture.drawmode==6)) {
     paintMiniTrianglePers_6_HQ(g3d, texture, y_start, y_end,
                     x_start, wz_start, uz_start, vz_start,
                     x_end, wz_end, uz_end, vz_end,
@@ -1603,7 +1600,7 @@ final int df) {
                     dwz, duz, dvz,fogc, sz2, q,a,b,c,f_start,f_end,df_start,df_end,df); return; 
         
     }
-    if(Main.fogQ==0 && !(texture.drawmode==5 && g3d.getRenderer()==DirectX7.M3G)) {
+    if(Main.fogQ==0) {
     paintMiniTrianglePers_0(g3d, texture, y_start, y_end,
                     x_start, wz_start, uz_start, vz_start,
                     x_end, wz_end, uz_end, vz_end,
@@ -1735,6 +1732,134 @@ if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
         (  ( (col&0xFF00FF)*isz2)  &0xFF00FF00  )| 
         (  ( (col&0x00FF00)*isz2)  &0x00FF0000  )   
         ) >>>8;
+x1++;
+}
+
+
+
+            }
+
+
+
+
+
+
+ //Paste here
+        }
+    }
+
+static final void paintMiniTrianglePersBlend5(final DirectX7 g3d, final Texture texture, int y_start, final int y_end,
+            int x_start, int wz_start, int uz_start, int vz_start,
+            int x_end, int wz_end, int uz_end, int vz_end,
+            final int dx_start, final int dwz_start, final int duz_start, final int dvz_start,
+            final int dx_end, final int dwz_end, final int duz_end, final int dvz_end,
+            final int dwz, final int duz, final int dvz,int fogc,int sz2,int q,Vertex a,Vertex b,Vertex c,
+            int f_start,int f_end,
+final int df_start,final int df_end,
+final int df) {
+        final int blendColor=DirectX7.getM3GBlendColor();
+        final int[] tex = texture.rImg.img;
+        final int lengthBIT = tex.length-1;
+        final int widthBIT = texture.rImg.widthBIT;
+        final int[] rgb = g3d.display; //�������
+
+        int tempI;
+        long subtexel_a, subtexel_b;
+        int uz_a, uz_b, vz_a, vz_b, wz_a, wz_b; // ���� � ����� �������
+        int x1, x2, length;
+        int u, v, du, dv;
+        int uz_2, vz_2, wz_2, u_2, v_2; //����� �����
+        final int duz4=duz*q;
+        final int dvz4=dvz*q;
+        final int dwz4=dwz*q;
+int col,ca;
+        for (int y = y_start; y < y_end;x_start += dx_start,
+            wz_start += dwz_start,
+            uz_start += duz_start,
+            vz_start += dvz_start,
+
+            x_end += dx_end,
+            wz_end += dwz_end,
+            uz_end += duz_end,
+            vz_end += dvz_end,
+y++
+) {
+            x1 = x_start; x2 = x_end;
+            uz_a = uz_start; uz_b = uz_end;
+            vz_a = vz_start; vz_b = vz_end;
+            wz_a = wz_start; wz_b = wz_end;
+
+            subtexel_a = x1%FP;
+            subtexel_b = x2%FP;
+
+            uz_a -= (duz * subtexel_a) >> fp;//
+            vz_a -= (dvz * subtexel_a) >> fp;// ������������� ��������
+            wz_a -= (dwz * subtexel_a) >> fp;//
+
+            uz_b -= (duz * subtexel_b) >> fp;//
+            vz_b -= (dvz * subtexel_b) >> fp;// ������������� ��������
+            wz_b -= (dwz * subtexel_b) >> fp;//
+
+            x1 >>=fp;
+            x2 >>=fp;
+
+            if(x1<0) {
+                uz_a -= duz*x1;
+                vz_a -= dvz*x1;
+                wz_a -= dwz*x1;
+                x1 = 0;
+            }
+            if(x2>g3d.width) {
+                x2 -= g3d.width;
+                uz_b -= duz*x2;
+                vz_b -= dvz*x2;
+                wz_b -= dwz*x2;
+                x2 = g3d.width;
+            }
+
+            tempI = y*g3d.width;
+            x1 += tempI;
+            x2 += tempI;
+            length = x2 - x1;
+
+
+            if(wz_a == 0) return;
+            u = (int) (((long) uz_a << fp) / wz_a); //������� ���������� � ��������
+            v = (int) (((long) vz_a << fp) / wz_a); //
+
+
+
+//Paste SUb fog here
+for(;length>=q; length-=q) {
+
+                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)/q); //��������� du � dv �� ����
+                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)/q);
+
+
+                    for(int i=x1+q;x1<i;)
+{
+if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
+    rgb[x1]=Mode5Blend.pixel(col,blendColor);
+x1++;
+}
+                           }
+
+            if(length > 0) { // ������������ ���������� �������
+                du = ((int) (((long) uz_b << fp) / wz_b) - u) / length;
+                dv = ((int) (((long) vz_b << fp) / wz_b) - v) / length;
+if(Main.s60Optimization==1) {
+while(x2-x1>=2) {
+if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
+    rgb[x1]=Mode5Blend.pixel(col,blendColor);
+if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
+    rgb[x1+1]=Mode5Blend.pixel(col,blendColor);
+x1+=2;
+
+}
+}
+                while(x1<x2) {
+if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
+    rgb[x1]=Mode5Blend.pixel(col,blendColor);
 x1++;
 }
 

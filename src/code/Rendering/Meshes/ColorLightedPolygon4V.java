@@ -122,7 +122,7 @@ boolean pers=(( texture.perspectiveCorrection && (sizex>70-(Main.persQ<3?0:20) |
     
 public final void renderFast(DirectX7 g3d, Texture texture) {
 
-if(texture.drawmode==5) {
+if(texture.drawmode==5 && g3d.getRenderer()!=DirectX7.M3G) {
 sz2=0xff-(int)MathUtils.calcLight(nx, ny, nz,(int)DirectX7.lightdirx,(int)DirectX7.lightdiry,(int)DirectX7.lightdirz);
 if(sz2<0) sz2=0;
 }

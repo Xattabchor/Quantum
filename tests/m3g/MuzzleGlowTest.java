@@ -26,7 +26,7 @@ public final class MuzzleGlowTest {
         M3GTest.submit(g,M3GTest.triangle(),world,0);g.render();
         int uploads=Graphics3D.uploads,calls=Graphics3D.calls;
         House house=wall(1000);
-        g.startWeaponLight();check(g.getMode5WeaponLight()!=null,"real weapon OMNI removed with fake flash");
+        g.startWeaponLight();check(g.getMode5WeaponLight()==null,"removed weapon OMNI revived");
         check(!g.renderMuzzleGlow(house,0) && !g.renderMuzzleGlow(null,-1),"removed callback drew a sprite");
         check(Graphics3D.calls==calls && Graphics3D.uploads==uploads,"legacy callback touched GPU");
         M3GTest.submit(g,M3GTest.triangle(),world,0);
@@ -37,12 +37,12 @@ public final class MuzzleGlowTest {
         calls=Graphics3D.calls;int binds=Graphics3D.binds;g.startMuzzleGlow();
         g.renderGameFrame(null,false,false,house,0,null);
         check(Graphics3D.calls==calls && Graphics3D.binds==binds && Graphics3D.uploads==uploads,"empty shot frame drew fake illumination");
-        check(g.getMode5WeaponLight()!=null,"compatibility hook lost OMNI");
+        check(g.getMode5WeaponLight()==null,"compatibility hook revived OMNI");
         Texture lit=M3GTest.texture(0xff8090a0);lit.drawmode=5;
         RenderObject p=M3GTest.triangle();p.nx=p.ny=0;p.nz=4096;
         g.startWeaponLight();M3GTest.submit(g,p,lit,0);calls=Graphics3D.calls;g.renderGameFrame(null,false,false,house,0,null);
-        check(Graphics3D.calls==calls+1 && Graphics3D.history.lastElement().lights==3
-                && Graphics3D.history.lastElement().omniIntensity>0,"mode5 native OMNI not retained in single pass");
+        check(Graphics3D.calls==calls+1 && Graphics3D.history.lastElement().lights==0
+                && !Graphics3D.history.lastElement().lit,"mode5 BLEND revived native lighting");
         // Ordinary scene ADD sprites, unlike the fake illumination, still work.
         Texture add=M3GTest.texture(0xff203040);calls=Graphics3D.calls;
         M3GTest.submit(g,SpriteTest.sprite(add,1),null,0);g.render();
@@ -52,6 +52,6 @@ public final class MuzzleGlowTest {
         check(cpu.getMode5WeaponLight()==null && !cpu.renderMuzzleGlow(null,0),"Software gained native light/overlay");cpu.destroy();
         try {Class.forName("code.Rendering.MuzzleGlow");throw new AssertionError("fake illumination class still packaged");}
         catch(ClassNotFoundException expected) { }
-        System.out.println("PASS fake illumination class/ray/texture/cache/draw removed / legacy callbacks safe / empty+ordinary shot frames no extra upload/draw / native OMNI retained / ordinary ADD sprites+Software unchanged");
+        System.out.println("PASS fake illumination class/ray/texture/cache/draw removed / legacy callbacks safe / empty+ordinary shot frames no extra upload/draw / mode5 OMNI removed / ordinary ADD sprites+Software unchanged");
     }
 }

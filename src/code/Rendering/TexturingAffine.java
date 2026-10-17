@@ -28,7 +28,6 @@ public class TexturingAffine {
         // Selected M3G mode 1 is ALPHA, also during CPU recovery.
         if(fog == 1 && g3d.getRenderer() == DirectX7.M3G) fog = 4;
         if(fog == 10 && g3d.getRenderer() == DirectX7.M3G) fog = 7;
-        if(fog == 5 && g3d.getRenderer() == DirectX7.M3G) sz2 = 255-DirectX7.mode5Shade(nx,ny,nz);
         if(texture.rImg.alphaMixing == false && texture.drawmode == 4) {
             fog = 0;
         }
@@ -55,12 +54,6 @@ public class TexturingAffine {
             cv = cv * texture.rImg.h / 256;
         }
 
-        if(fog==5 && g3d.getMode5WeaponLight()!=null) {
-            Mode5WeaponLight pulse=g3d.getMode5WeaponLight();
-            paintAffine_9(g3d,texture,a,au,av,b,bu,bv,c,cu,cv,fogc,sz2,
-                    pulse.shade(g3d,a,nx,ny,nz),pulse.shade(g3d,b,nx,ny,nz),pulse.shade(g3d,c,nx,ny,nz),nx,ny,nz);
-            return;
-        }
 
 switch(fog)
 {
@@ -1562,6 +1555,12 @@ static final void paintAffine_5_draw(
 
 
 
+
+        if(texture.drawmode==5 && g3d.getRenderer()==DirectX7.M3G) {
+            paintAffineBlend5_draw(x_start,x_end,y_start,y_end,u_start,u_end,v_start,v_end,
+                    dx_start,dx_end,du_start,du_end,dv_start,dv_end,a,b,c,au,av,bu,bv,cu,cv,du,dv,g3d,texture,isz2);
+            return;
+        }
         final int[] tex = texture.rImg.img;
         final int lengthBIT = tex.length-1;
         final int widthBIT = texture.rImg.widthBIT;
@@ -1682,6 +1681,123 @@ if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
         (  ( (col&0xFF00FF)*isz2)  &0xFF00FF00  )| 
         (  ( (col&0x00FF00)*isz2)  &0x00FF0000  )   
         ) >>>8;
+x1++;
+}
+
+}
+}
+
+static final void paintAffineBlend5_draw(
+        int x_start,int x_end,
+        int y_start,int y_end,
+        int u_start,int u_end,
+        int v_start,int v_end,
+        int dx_start,int dx_end,
+        int du_start,int du_end,
+        int dv_start,int dv_end,
+        Vertex a, Vertex b, Vertex c,
+        int au,int av,
+        int bu,int bv,
+        int cu,int cv,
+        int du,int dv,
+        DirectX7 g3d, Texture texture,int isz2) {
+
+
+
+        final int blendColor=DirectX7.getM3GBlendColor();
+        final int[] tex = texture.rImg.img;
+        final int lengthBIT = tex.length-1;
+        final int widthBIT = texture.rImg.widthBIT;
+        final int[] rgb = g3d.display; //�������
+        int tempI,u,v,x1,x2,col;
+            for(;y_start<y_end; y_start++,
+                x_start += dx_start,
+                u_start += du_start,
+                v_start += dv_start,
+
+                x_end += dx_end,
+                u_end += du_end,
+                v_end += dv_end) { //рисуем все горизонтальные линии
+
+            if(y_start == b.sy) {
+                if(c.sy == b.sy) return;
+                tempI = b.sy - a.sy;
+                x_start = (a.sx<<fpPosition) + dx_start * tempI; //начало линии
+                u_start = (au<<fp) + du_start * tempI; //
+                v_start = (av<<fp) + dv_start * tempI;//
+                x_end = b.sx<<fpPosition; //
+                u_end = bu<<fp; //
+                v_end = bv<<fp;//конец линии
+                tempI = c.sy - b.sy;                  //
+                dx_end = ((c.sx - b.sx)<<fpPosition) / tempI;//
+                du_end = ((cu - bu)<<fp) / tempI;   //
+                dv_end = ((cv - bv)<<fp) / tempI;  //прищения для конца линии
+            }
+
+            if(y_start<0) continue;
+
+            if (x_start > x_end) {
+                x1 = x_end >> fpPosition;
+                u = u_end;
+                v = v_end;
+                x2 = x_start >> fpPosition;
+            } else {
+                x1 = x_start >> fpPosition;
+                u = u_start;
+                v = v_start;
+                x2 = x_end >> fpPosition;
+            }
+
+
+
+            if(x1 < 0) {
+                u -= du*x1;
+                v -= dv*x1;
+                x1 = 0;
+            }
+
+
+
+
+
+            if(x2 > g3d.width) x2 = g3d.width;
+
+            tempI = g3d.width * y_start;
+            x1 += tempI; //�� ���� �������� � �������
+            x2 += tempI; //�� ���� �������� � ������
+
+u -= du;
+v -= dv;
+if(Main.s60Optimization==1) {
+while(x2-x1>=6) {
+if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
+    rgb[x1]=Mode5Blend.pixel(col,blendColor);
+if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
+    rgb[x1+1]=Mode5Blend.pixel(col,blendColor);
+if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
+    rgb[x1+2]=Mode5Blend.pixel(col,blendColor);
+if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
+    rgb[x1+3]=Mode5Blend.pixel(col,blendColor);
+if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
+    rgb[x1+4]=Mode5Blend.pixel(col,blendColor);
+if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
+    rgb[x1+5]=Mode5Blend.pixel(col,blendColor);
+x1+=6;
+}
+}
+if(Main.s60Optimization == 0) {
+while(x2-x1>=2) {
+if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
+    rgb[x1]=Mode5Blend.pixel(col,blendColor);
+
+if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
+    rgb[x1+1]=Mode5Blend.pixel(col,blendColor);
+x1+=2;
+}
+}
+while(x1<x2) {
+if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0)
+    rgb[x1]=Mode5Blend.pixel(col,blendColor);
 x1++;
 }
 

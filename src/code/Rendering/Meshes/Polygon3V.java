@@ -180,7 +180,7 @@ if(pers) pers=((sizex>(Main.persQ<3?30:15) || sizey>(Main.persQ<3?30:15) )&& tex
     
 public void renderFast(DirectX7 g3d, Texture texture) {
 
-if(texture.drawmode==5) sz2=0xff-(int)MathUtils.calcLight(nx, ny, nz,(int)DirectX7.lightdirx,(int)DirectX7.lightdiry,(int)DirectX7.lightdirz);
+if(texture.drawmode==5 && g3d.getRenderer()!=DirectX7.M3G) sz2=0xff-(int)MathUtils.calcLight(nx, ny, nz,(int)DirectX7.lightdirx,(int)DirectX7.lightdiry,(int)DirectX7.lightdirz);
 else if(texture.drawmode==1 && g3d.getRenderer()!=DirectX7.M3G) szCalcfogAdd();
 
             TexturingAffine.paint(g3d,
