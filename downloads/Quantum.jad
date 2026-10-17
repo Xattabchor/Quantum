@@ -8,5 +8,5 @@ Nokia-UI-Enhancement: MusicKeysSupported
 Nokia-MIDlet-Category: Game
 MicroEdition-Configuration: CLDC-1.1
 MicroEdition-Profile: MIDP-2.0
-MIDlet-Jar-Size: 398691
+MIDlet-Jar-Size: 399085
 MIDlet-Jar-URL: Quantum.jar

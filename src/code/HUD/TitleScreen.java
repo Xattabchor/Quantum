@@ -13,9 +13,11 @@ public class TitleScreen extends GUIScreen {
     TextView text;
 
     private static final long TITLE_FADE_DURATION = 4000L;
+    private static final long TITLE_FADE_OUT_DURATION = 2500L;
 
     private Image title;
     private int[] titlePixels;
+    private boolean titleFadeFinished;
 
     int pixelsPerSec;
     int w, h;
@@ -54,23 +56,31 @@ public class TitleScreen extends GUIScreen {
     private void loadTitleImage() {
         title = null;
         titlePixels = null;
+        titleFadeFinished = false;
         if(Main.title_image != null) title = ImageResize.createImage(Main.title_image, w, h);
     }
 
-    private void drawTitle(Graphics g) {
+    private int getFadeAlpha(long elapsed, long duration) {
+        if(elapsed <= 0) return 0;
+        if(elapsed >= duration) return 255;
+
+        int progress = (int) (elapsed * 255L / duration);
+        return progress * progress * (765 - 2 * progress) / 65025;
+    }
+
+    private void drawTitle(Graphics g, long elapsed) {
         if(title == null) return;
 
-        long elapsed = System.currentTimeMillis() - start;
         if(elapsed >= TITLE_FADE_DURATION) {
-            titlePixels = null;
+            if(!titleFadeFinished) {
+                titlePixels = null;
+                titleFadeFinished = true;
+            }
             g.drawImage(title, 0, 0, 0);
             return;
         }
-        if(elapsed < 0) elapsed = 0;
 
-        // Smoothstep easing starts and finishes gently, like a cinematic fade.
-        int progress = (int) (elapsed * 255L / TITLE_FADE_DURATION);
-        int fade = progress * progress * (765 - 2 * progress) / 65025;
+        int fade = getFadeAlpha(elapsed, TITLE_FADE_DURATION);
         int pixelCount = w * h;
         if(titlePixels == null || titlePixels.length != pixelCount) {
             titlePixels = new int[pixelCount];
@@ -85,18 +95,47 @@ public class TitleScreen extends GUIScreen {
         g.drawRGB(titlePixels, 0, w, 0, 0, w, h, true);
     }
 
+    private void drawFadeOut(Graphics g, long elapsed, long scrollDuration) {
+        long fadeDuration = scrollDuration < TITLE_FADE_OUT_DURATION ?
+            scrollDuration : TITLE_FADE_OUT_DURATION;
+        if(fadeDuration <= 0) return;
+
+        long fadeStart = scrollDuration - fadeDuration;
+        if(elapsed <= fadeStart) return;
+
+        int alpha = getFadeAlpha(elapsed - fadeStart, fadeDuration);
+        if(alpha <= 0) return;
+
+        int pixelCount = w * h;
+        // Reuse the title buffer to keep the CLDC heap footprint low.
+        if(titlePixels == null || titlePixels.length != pixelCount) {
+            titlePixels = new int[pixelCount];
+        }
+
+        int black = alpha << 24;
+        for(int i = 0; i < pixelCount; i++) {
+            titlePixels[i] = black;
+        }
+        g.drawRGB(titlePixels, 0, w, 0, 0, w, h, true);
+    }
+
     protected final void paint(Graphics g) {
+        long elapsed = System.currentTimeMillis() - start;
         g.setColor(0);
         g.fillRect(0, 0, w, h);
         g.setColor(0xffffff);
 
-        drawTitle(g);
+        drawTitle(g, elapsed);
 
-        int y = h - (int) ((System.currentTimeMillis() - start) * pixelsPerSec / 1000);
+        int textHeight = text.getTextHeight();
+        int y = h - (int) (elapsed * pixelsPerSec / 1000L);
         text.setY(y);
         text.paint(g, 0, 0);
 
-        if(y <= -text.getTextHeight()) {
+        long scrollDuration = (((long) h + textHeight) * 1000L + pixelsPerSec - 1) / pixelsPerSec;
+        drawFadeOut(g, elapsed, scrollDuration);
+
+        if(y <= -textHeight) {
             onRightSoftKey();
             return;
         }
