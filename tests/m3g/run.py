@@ -107,10 +107,10 @@ public class Fog {public static final int LINEAR=81;public int color;public floa
  public void setLinear(float n,float f){if(f<=n)throw new IllegalArgumentException("fog range");near=n;far=f;}
 }''',
 "javax/microedition/m3g/VertexArray.java": '''package javax.microedition.m3g;
-public class VertexArray {public short[] shorts;public byte[] bytes;int components;
- public VertexArray(int count,int components,int size){this.components=components;}
- public void set(int start,int count,short[] p){shorts=new short[count*components];System.arraycopy(p,0,shorts,0,shorts.length);}
- public void set(int start,int count,byte[] p){bytes=new byte[count*components];System.arraycopy(p,0,bytes,0,bytes.length);}
+public class VertexArray {public static int created,sets;public short[] shorts;public byte[] bytes;int components;
+ public VertexArray(int count,int components,int size){this.components=components;created++;}
+ public void set(int start,int count,short[] p){sets++;shorts=new short[count*components];System.arraycopy(p,0,shorts,0,shorts.length);}
+ public void set(int start,int count,byte[] p){sets++;bytes=new byte[count*components];System.arraycopy(p,0,bytes,0,bytes.length);}
 }''',
 "javax/microedition/m3g/VertexBuffer.java": '''package javax.microedition.m3g;
 public class VertexBuffer {public VertexArray colors,coords,positions;public float scale,uvScale;
@@ -120,9 +120,9 @@ public class VertexBuffer {public VertexArray colors,coords,positions;public flo
  public void setPositions(VertexArray a,float s,float[] b){positions=a;scale=s;}
 }''',
 "javax/microedition/m3g/TriangleStripArray.java": '''package javax.microedition.m3g;
-public class TriangleStripArray {public int[] indices,lengths;
- public TriangleStripArray(int start,int[] lengths){indices=new int[]{0,1,2};}
- public TriangleStripArray(int[] indices,int[] lengths){this.indices=indices;this.lengths=lengths;}
+public class TriangleStripArray {public static int created;public int[] indices,lengths;
+ public TriangleStripArray(int start,int[] lengths){created++;this.lengths=lengths;int count=0;for(int n:lengths) count+=n;indices=new int[count];for(int n=0;n<count;n++) indices[n]=start+n;}
+ public TriangleStripArray(int[] indices,int[] lengths){created++;this.indices=indices;this.lengths=lengths;}
 }''',
 "javax/microedition/m3g/Image2D.java": '''package javax.microedition.m3g;
 public class Image2D {public static final int RGBA=100; public byte[] pixels;public int width,height;
@@ -140,7 +140,7 @@ public class Graphics3D {
  public static VertexBuffer lastVertices; public static TriangleStripArray lastIndices;public static Appearance lastAppearance;
  public static Graphics target; public static Camera camera;
  public static class Draw {
-  public int blend,function,fogColor,textureAlpha,filter,colorComponents,cull,winding;public boolean textured,perspective;public float near,far;public boolean fog;
+  public int blend,function,fogColor,textureAlpha,filter,colorComponents,cull,winding,sample;public boolean textured,perspective;public float near,far,threshold;public boolean fog;
   public byte[] colors;public int[] indices,lengths; public short[] positions,coords;public float scale,uvScale;public float[] projection;
  }
  public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
@@ -167,6 +167,7 @@ public class Graphics3D {
    p=new byte[]{p[offset],p[offset+1],p[offset+2],p[offset+3]};
   }
   Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex==null?Texture2D.FUNC_MODULATE:a.tex.function;draw.filter=a.tex==null?0:a.tex.filter;
+  draw.sample=((p[0]&255)<<24)|((p[1]&255)<<16)|((p[2]&255)<<8)|(p[3]&255);draw.threshold=a.comp.threshold;
   draw.colorComponents=v.colors.components;draw.textured=a.tex!=null;draw.perspective=a.polygon==null || a.polygon.perspective;
   draw.cull=a.polygon==null?PolygonMode.CULL_BACK:a.polygon.cull;draw.winding=a.polygon==null?PolygonMode.WINDING_CCW:a.polygon.winding;
   draw.colors=c.clone();draw.indices=i.indices.clone();draw.lengths=i.lengths;draw.textureAlpha=p[3]&255;
@@ -211,7 +212,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     sources += sorted(TEST.glob("*.java"))
     # Compile the current adapter against the doubles, not copies of its logic.
     sources += [ROOT / "src/code/Rendering" / name for name in
-                ("M3GSceneRenderer.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
+                ("M3GSceneRenderer.java", "M3GPolygonBatch.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
     if os.environ.get("ECJ_JAR"):
         compiler = [JAVA, "-jar", os.environ["ECJ_JAR"], "-8", "-proc:none", "-nowarn"]
     else:
@@ -223,6 +224,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.PerspectiveToggleTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BackfaceTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BatchTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GlassTest"], check=True)

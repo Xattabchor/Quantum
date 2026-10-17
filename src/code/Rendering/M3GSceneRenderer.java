@@ -9,7 +9,7 @@ import java.util.Vector;
 import javax.microedition.lcdui.Image;
 import javax.microedition.m3g.*;
 
-/** Immediate-mode M3G rasterizer, with CPU barriers for legacy materials. */
+/** Ordered M3G polygon packets, with CPU barriers for legacy materials. */
 public final class M3GSceneRenderer implements SceneRenderer {
     private final Graphics3D graphics;
     private final javax.microedition.m3g.Camera camera = new javax.microedition.m3g.Camera();
@@ -17,6 +17,13 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final PolygonMode polygon = new PolygonMode();
     private final PolygonMode screenPolygon = new PolygonMode();
     private boolean screenMode;
+    private M3GPolygonBatch batch;
+    private final M3GPolygonBatch.State batchState=new M3GPolygonBatch.State();
+    private CachedTexture lastTexture;
+    private boolean batchable;
+    private float buffersScale;
+    private static final int[] TRI={0,1,2}, QUAD={0,1,3,1,2,3}, ALT_QUAD={0,1,2,0,2,3},
+            ABD={0,1,3}, BCD={1,2,3}, ACD={0,2,3};
     private boolean hardwarePerspective = Main.m3gPerspective;
     private final Vector polygonModes = new Vector();
     private final CompositingMode composite = new CompositingMode();
@@ -56,6 +63,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         int width, height;
         int kind, cost;
         Texture2D texture;
+        int filter=Texture2D.FILTER_NEAREST;
     }
 
     public M3GSceneRenderer() {
@@ -73,6 +81,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         screenPolygon.setShading(PolygonMode.SHADE_SMOOTH);
         polygon.setShading(PolygonMode.SHADE_SMOOTH);
         appearance.setPolygonMode(polygon);
+        batchState.polygon=polygon;
         composite.setDepthTestEnable(false);
         composite.setDepthWriteEnable(false);
         appearance.setCompositingMode(composite);
@@ -105,10 +114,28 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     private void setScreenMode(boolean screen) {
+        batchState.polygon=screen?screenPolygon:polygon;
         if(screenMode!=screen) {
             appearance.setPolygonMode(screen?screenPolygon:polygon);
             screenMode=screen;
         }
+    }
+
+    // Plain Java state snapshots: no per-polygon native getters. Queued draws
+    // upload material/vertex state only when the ordered packet is submitted.
+    private void setTexture(Texture2D texture) {
+        batchState.texture=texture;
+        if(texture==null) {batchState.function=0;batchState.imageFilter=Texture2D.FILTER_NEAREST;}
+        if(!batchable) appearance.setTexture(0,texture);
+    }
+    private void setFog(Fog value) {
+        batchState.fogged=value!=null;
+        if(!batchable) appearance.setFog(value);
+    }
+    private void setBlend(int value) {batchState.blend=value;if(!batchable) composite.setBlending(value);}
+    private void setThreshold(float value) {batchState.threshold=value;if(!batchable) composite.setAlphaThreshold(value);}
+    private void setFunction(Texture2D texture,int value) {
+        batchState.function=value;if(!batchable) texture.setBlending(value);
     }
 
     void bind(DirectX7 g) { bind(g,true); }
@@ -159,7 +186,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 && (long)w*h<=CACHE_PIXELS && (long)raw.w*raw.h<=raw.img.length;
     }
 
+    private void flushBatch(DirectX7 g) {if(batch!=null) batch.flush(g);}
+
     public void finish(DirectX7 g) {
+        flushBatch(g);
         if(!bound) return;
         try { graphics.releaseTarget(); }
         finally { bound = false; }
@@ -167,6 +197,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     public void dispose() {
+        if(batch!=null) batch.discard();
+        batch=null;
         try {
             if(bound) graphics.releaseTarget();
         } finally {
@@ -178,13 +210,16 @@ public final class M3GSceneRenderer implements SceneRenderer {
             panoramaRenderer = null;
             flashBackground = null;
             polygonModes.removeAllElements();polygonModes.addElement(polygon);polygonModes.addElement(screenPolygon);
-            textures.removeAllElements();
+            textures.removeAllElements();lastTexture=null;
             cachedPixels = 0;
         }
     }
 
     public boolean draw(DirectX7 g, RenderObject object, Texture texture, boolean fast) {
+        batchable=false;
+        if(!(object instanceof Polygon3V) && !(object instanceof Polygon4V)) flushBatch(g);
         if(hardwarePerspective!=Main.m3gPerspective) {
+            flushBatch(g);
             hardwarePerspective=Main.m3gPerspective;
             for(int i=0;i<polygonModes.size();i++)
                 ((PolygonMode)polygonModes.elementAt(i)).setPerspectiveCorrectionEnable(hardwarePerspective);
@@ -200,8 +235,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
             buffers[1].setPositions(posArrays[1],scale,null);
             uniformColors(4,sky.color,255);
             colorArrays[1].set(0,4,colors);
-            appearance.setTexture(0,null);appearance.setFog(null);
-            composite.setBlending(CompositingMode.REPLACE);composite.setAlphaThreshold(0);
+            setTexture(null);setFog(null);
+            setBlend(CompositingMode.REPLACE);setThreshold(0);
             // Full-frame opaque background; old pixels cannot contribute.
             bind(g,false);restoreCamera(g);
             graphics.render(buffers[1],baseQuad,appearance,null);
@@ -281,18 +316,17 @@ public final class M3GSceneRenderer implements SceneRenderer {
         float scale = ProjectedGeometry.pack(vertices, count, g.centreX, g.centreY,
                 distance, mode != 8 && perspective, positions, work);
         if(scale == 0) return false;
+        buffersScale=scale;
         if(mode == 7) {
+            batchable=true;
             // Cheapest glass approximation: no source pixels, UV, mip or upload.
             // Uniform cool tint, alpha 32/255. Original Software refraction stays.
             int slot = count - 3;
-            posArrays[slot].set(0, count, positions);
-            buffers[slot].setPositions(posArrays[slot], scale, null);
-            appearance.setFog(null);
-            appearance.setTexture(0, null);
-            composite.setBlending(CompositingMode.ALPHA);
-            composite.setAlphaThreshold(0);
+            setFog(null);
+            setTexture(null);
+            setBlend(CompositingMode.ALPHA);
+            setThreshold(0);
             uniformColors(count, 0xb0beca, 32);
-            colorArrays[slot].set(0, count, colors);
             render(g, slot, indices[slot]);
             return true;
         }
@@ -305,19 +339,21 @@ public final class M3GSceneRenderer implements SceneRenderer {
             if(fillBase == null) return false;
             int first = fillColor(raw, fillBase, 0, perspective);
             int second = count == 4 ? fillColor(raw, fillBase, 1, perspective) : first;
+            batchable=first==second;
+            if(!batchable) flushBatch(g);
             int fillSlot = count - 3;
-            posArrays[fillSlot].set(0, count, positions);
-            buffers[fillSlot].setPositions(posArrays[fillSlot], scale, null);
-            appearance.setFog(null);
-            appearance.setTexture(0, null);
-            composite.setBlending(CompositingMode.REPLACE);
-            composite.setAlphaThreshold(0);
+            if(!batchable) posArrays[fillSlot].set(0, count, positions);
+            if(!batchable) buffers[fillSlot].setPositions(posArrays[fillSlot], scale, null);
+            setFog(null);
+            setTexture(null);
+            setBlend(CompositingMode.REPLACE);
+            setThreshold(0);
             uniformColors(count, first, 255);
-            colorArrays[fillSlot].set(0, count, colors);
+            if(!batchable) colorArrays[fillSlot].set(0, count, colors);
             render(g, fillSlot, first == second ? indices[fillSlot] : quadTriangles[0]);
             if(first != second) {
                 uniformColors(count, second, 255);
-                colorArrays[fillSlot].set(0, count, colors);
+                if(!batchable) colorArrays[fillSlot].set(0, count, colors);
                 render(g, fillSlot, quadTriangles[1]);
             }
             return true;
@@ -341,27 +377,33 @@ public final class M3GSceneRenderer implements SceneRenderer {
         boolean nativeFog = (mode == 3 || mode == 6) && Main.fogQ > 0 && highQuality
                 && perspective && fogFar > 1.0f
                 && (mode != 6 || !LightMapper.cameraVectorLight);
+        // Multi-pass/flat per-triangle legacy fog retains its immediate order.
+        batchable=glow==null && ((mode!=3 && mode!=6) || Main.fogQ==0 || nativeFog);
+        if(!batchable) flushBatch(g);
         int kind = mode == 2 ? ADD_TEXTURE : mode == 4 && raw.alphaMixing ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
         // Cache eviction/uploads are done outside a bound target. A white alpha
         // mask is needed only for the colored fog's legacy two-pass variant.
         Texture2D nativeTexture = texture(g, raw, kind);
+        CachedTexture nativeEntry=lastTexture;
+        batchState.imageFilter=nativeEntry.filter;
         Texture2D mask = mode == 3 && Main.fogQ > 0 && !nativeFog ? texture(g, raw, FOG_MASK) : null;
         int slot = count - 3;
-        posArrays[slot].set(0, count, positions);
-        uvArrays[slot].set(0, count, coords);
-        buffers[slot].setPositions(posArrays[slot], scale, null);
-        appearance.setFog(null);
-        appearance.setTexture(0, nativeTexture);
-        nativeTexture.setBlending(Texture2D.FUNC_MODULATE);
-        composite.setBlending((glow != null || mode == 2) ? CompositingMode.ALPHA_ADD
+        if(!batchable) posArrays[slot].set(0, count, positions);
+        if(!batchable) uvArrays[slot].set(0, count, coords);
+        if(!batchable) buffers[slot].setPositions(posArrays[slot], scale, null);
+        setFog(null);
+        setTexture(nativeTexture);
+        setFunction(nativeTexture,Texture2D.FUNC_MODULATE);
+        setBlend((glow != null || mode == 2) ? CompositingMode.ALPHA_ADD
                 : kind == ALPHA_TEXTURE ? CompositingMode.ALPHA : CompositingMode.REPLACE);
-        composite.setAlphaThreshold(kind == ALPHA_TEXTURE ? 0 : 0.5f);
+        setThreshold(kind == ALPHA_TEXTURE ? 0 : 0.5f);
 
         if(glow != null) {
             // Warm radial RGBA texture * fading vertex alpha, additively blended.
             nativeTexture.setFiltering(Texture2D.FILTER_BASE_LEVEL,Texture2D.FILTER_LINEAR);
+            nativeEntry.filter=Texture2D.FILTER_LINEAR;
             uniformColors(count,0xffffff,glow.alpha);
-            colorArrays[slot].set(0,count,colors);
+            if(!batchable) colorArrays[slot].set(0,count,colors);
             render(g,slot,indices[slot]);
         } else if(mode == 5) {
             // Original mode 5: one normal/lightdir coefficient, not a native
@@ -371,26 +413,26 @@ public final class M3GSceneRenderer implements SceneRenderer {
                     DirectX7.lightdirx, DirectX7.lightdiry, DirectX7.lightdirz);
             int shade = perspective && Main.fogQ == 0 ? 255 : (light * 255 + 128) >> 8;
             uniformColors(count, (shade << 16) | (shade << 8) | shade, 255);
-            colorArrays[slot].set(0, count, colors);
+            if(!batchable) colorArrays[slot].set(0, count, colors);
             render(g, slot, indices[slot]);
         } else if(mode == 1 && Main.fogQ > 0) {
             // Legacy ADD fog is saturation of texture + constant fog RGB, not
             // conventional linear fog. Texture ADD performs that operation in M3G.
             uniformColors(count, additiveFog(count), 255);
-            colorArrays[slot].set(0, count, colors);
-            nativeTexture.setBlending(Texture2D.FUNC_ADD);
+            if(!batchable) colorArrays[slot].set(0, count, colors);
+            setFunction(nativeTexture,Texture2D.FUNC_ADD);
             render(g, slot, indices[slot]);
         } else if((mode == 3 || mode == 6) && Main.fogQ > 0) {
             if(nativeFog) {
                 uniformColors(count, 0xffffff, 255);
-                colorArrays[slot].set(0, count, colors);
+                if(!batchable) colorArrays[slot].set(0, count, colors);
                 // Packed eye distance = 1 - rz/move, NOT the original -rz.
                 // Mapping both endpoints cancels the engine's projection offset.
-                fog.setLinear(1.0f, fogFar);
-                fog.setColor(mode == 3 ? DirectX7.fogc & 0xffffff : 0);
-                appearance.setFog(fog);
+                batchState.near=1.0f;batchState.far=fogFar;
+                batchState.fogColor=mode==3?DirectX7.fogc&0xffffff:0;
+                setFog(fog);
                 render(g, slot, indices[slot]);
-                appearance.setFog(null);
+                setFog(null);
             } else if(!highQuality && count == 4) {
                 // Flat LQ fog follows the same chosen diagonal as the CPU path.
                 legacyFog(g, object, slot, count, quadTriangles[0], mode, perspective,
@@ -405,7 +447,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             }
         } else {
             setColors(g, object, count, mode);
-            colorArrays[slot].set(0, count, colors);
+            if(!batchable) colorArrays[slot].set(0, count, colors);
             render(g, slot, indices[slot]);
         }
         return true;
@@ -425,8 +467,24 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     private void render(DirectX7 g, int slot, TriangleStripArray triangles) {
-        bind(g);
-        graphics.render(buffers[slot], triangles, appearance, null);
+        if(batchable) {
+            if(batch==null) batch=new M3GPolygonBatch(this,graphics);
+            int[] order=triangles==baseQuad?QUAD:triangles==alternateQuad?ALT_QUAD
+                    :triangles==baseQuadTriangles[0]?ABD:triangles==baseQuadTriangles[1]?BCD
+                    :triangles==alternateQuadTriangles[1]?ACD:TRI;
+            batch.add(g,slot+3,buffersScale,positions,coords,colors,order,triangles,batchState);
+        } else {
+            flushBatch(g);bind(g);restoreCamera(g);
+            graphics.render(buffers[slot], triangles, appearance, null);
+        }
+    }
+
+    void renderSingle(DirectX7 g,int count,float scale,short[] xyz,short[] uv,byte[] rgba,
+            TriangleStripArray triangles,Appearance state) {
+        int slot=count-3;
+        posArrays[slot].set(0,count,xyz);uvArrays[slot].set(0,count,uv);colorArrays[slot].set(0,count,rgba);
+        buffers[slot].setPositions(posArrays[slot],scale,null);
+        bind(g);restoreCamera(g);graphics.render(buffers[slot],triangles,state,null);
     }
 
     Texture2D texture(DirectX7 g, RawImage raw, int kind) {
@@ -609,7 +667,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         for(int i = 0; i < textures.size(); i++) {
             CachedTexture cached = (CachedTexture)textures.elementAt(i);
             if(cached.image == image && cached.pixels == image.img && cached.width == image.w
-                    && cached.height == image.h && cached.kind == kind) return cached.texture;
+                    && cached.height == image.h && cached.kind == kind) {lastTexture=cached;return cached.texture;}
         }
         return null;
     }
@@ -649,7 +707,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         cached.texture.setWrapping(sprite?Texture2D.WRAP_CLAMP:Texture2D.WRAP_REPEAT,
                 sprite?Texture2D.WRAP_CLAMP:Texture2D.WRAP_REPEAT);
         cached.texture.setBlending(Texture2D.FUNC_MODULATE);
-        textures.addElement(cached);
+        textures.addElement(cached);lastTexture=cached;
         cachedPixels += size;
         return cached.texture;
     }
