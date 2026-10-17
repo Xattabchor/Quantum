@@ -29,7 +29,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final TriangleStripArray[] baseQuadTriangles = new TriangleStripArray[2];
     private final TriangleStripArray[] alternateQuadTriangles = new TriangleStripArray[2];
     private final TriangleStripArray baseQuad, alternateQuad;
-    static final int OPAQUE_TEXTURE = 0, ALPHA_TEXTURE = 1, FOG_MASK = 2;
+    static final int OPAQUE_TEXTURE = 0, ALPHA_TEXTURE = 1, FOG_MASK = 2, ADD_TEXTURE = 3;
     private final Vector textures = new Vector();
     private Image surface;
     private M3GSkyRenderer skyRenderer;
@@ -150,7 +150,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(texture == null) return false;
         int mode = texture.drawmode;
         // Legacy fog modes are handled below; glass, water and dithering stay CPU.
-        if(mode != 0 && mode != 1 && mode != 3 && mode != 4 && mode != 6 && mode != 9 && mode != 13) return false;
+        if(mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4
+                && mode != 5 && mode != 6 && mode != 8 && mode != 9 && mode != 13) return false;
         // The original paths disagree on these degenerate distance values.
         // Preserve their behavior instead of passing invalid ranges to M3G Fog.
         if((mode == 3 || mode == 6) && Main.fogQ > 0 && DirectX7.fDist <= 1) return false;
@@ -183,9 +184,34 @@ public final class M3GSceneRenderer implements SceneRenderer {
         // distY only controls screen projection and changes with the FOV.
         int distance = TexturingPers.move;
         float scale = ProjectedGeometry.pack(vertices, count, g.centreX, g.centreY,
-                distance, perspective, positions, work);
+                distance, mode != 8 && perspective, positions, work);
         if(scale == 0) return false;
         RawImage raw = selectImage(texture, object, count, fastPath);
+        if(mode == 8) {
+            // CPU paintFill samples the first UV of EACH triangle, even if its
+            // pixel is zero. No texture upload, alpha test, or lightmap applies.
+            if(raw == null || raw.img == null || raw.img.length == 0) return false;
+            RawImage fillBase = texture.mip != null && texture.mip.length > 0 ? texture.mip[0] : raw;
+            if(fillBase == null) return false;
+            int first = fillColor(raw, fillBase, 0, perspective);
+            int second = count == 4 ? fillColor(raw, fillBase, 1, perspective) : first;
+            int fillSlot = count - 3;
+            posArrays[fillSlot].set(0, count, positions);
+            buffers[fillSlot].setPositions(posArrays[fillSlot], scale, null);
+            appearance.setFog(null);
+            appearance.setTexture(0, null);
+            composite.setBlending(CompositingMode.REPLACE);
+            composite.setAlphaThreshold(0);
+            uniformColors(count, first, 255);
+            colorArrays[fillSlot].set(0, count, colors);
+            render(g, fillSlot, first == second ? indices[fillSlot] : quadTriangles[0]);
+            if(first != second) {
+                uniformColors(count, second, 255);
+                colorArrays[fillSlot].set(0, count, colors);
+                render(g, fillSlot, quadTriangles[1]);
+            }
+            return true;
+        }
         if(!supportsTexture(raw)) return false;
         RawImage base = texture.mip != null && texture.mip.length > 0 ? texture.mip[0] : raw;
         if(base == null) return false;
@@ -205,7 +231,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         boolean nativeFog = (mode == 3 || mode == 6) && Main.fogQ > 0 && highQuality
                 && perspective && fogFar > 1.0f
                 && (mode != 6 || !LightMapper.cameraVectorLight);
-        int kind = mode == 4 && raw.alphaMixing ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
+        int kind = mode == 2 ? ADD_TEXTURE : mode == 4 && raw.alphaMixing ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
         // Cache eviction/uploads are done outside a bound target. A white alpha
         // mask is needed only for the colored fog's legacy two-pass variant.
         Texture2D nativeTexture = texture(g, raw, kind);
@@ -217,7 +243,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         appearance.setFog(null);
         appearance.setTexture(0, nativeTexture);
         nativeTexture.setBlending(Texture2D.FUNC_MODULATE);
-        composite.setBlending(glow != null ? CompositingMode.ALPHA_ADD
+        composite.setBlending((glow != null || mode == 2) ? CompositingMode.ALPHA_ADD
                 : kind == ALPHA_TEXTURE ? CompositingMode.ALPHA : CompositingMode.REPLACE);
         composite.setAlphaThreshold(kind == ALPHA_TEXTURE ? 0 : 0.5f);
 
@@ -227,6 +253,16 @@ public final class M3GSceneRenderer implements SceneRenderer {
             uniformColors(count,0xffffff,glow.alpha);
             colorArrays[slot].set(0,count,colors);
             render(g,slot,indices[slot]);
+        } else if(mode == 5) {
+            // Original mode 5: one normal/lightdir coefficient, not a native
+            // Light or baked lightmap. Perspective fogQ=0 bypasses shading;
+            // affine historically shades even with fogQ=0.
+            int light = MathUtils.calcLight(object.nx, object.ny, object.nz,
+                    DirectX7.lightdirx, DirectX7.lightdiry, DirectX7.lightdirz);
+            int shade = perspective && Main.fogQ == 0 ? 255 : (light * 255 + 128) >> 8;
+            uniformColors(count, (shade << 16) | (shade << 8) | shade, 255);
+            colorArrays[slot].set(0, count, colors);
+            render(g, slot, indices[slot]);
         } else if(mode == 1 && Main.fogQ > 0) {
             // Legacy ADD fog is saturation of texture + constant fog RGB, not
             // conventional linear fog. Texture ADD performs that operation in M3G.
@@ -263,6 +299,19 @@ public final class M3GSceneRenderer implements SceneRenderer {
             render(g, slot, indices[slot]);
         }
         return true;
+    }
+
+    private int fillColor(RawImage raw, RawImage base, int vertex, boolean perspective) {
+        int u = uv[vertex * 2], v = uv[vertex * 2 + 1];
+        if(raw.w != 256) {
+            if(u == 255 && base.w < 255) u = 256;
+            u = perspective ? (u * raw.w) >> 8 : u * raw.w / 256;
+        }
+        if(raw.h != 256) {
+            if(v == 255 && base.h < 256) v = 256;
+            v = perspective ? (v * raw.h) >> 8 : v * raw.h / 256;
+        }
+        return raw.img[((v << raw.widthBIT) + u) & (raw.img.length - 1)] & 0xffffff;
     }
 
     private void render(DirectX7 g, int slot, TriangleStripArray triangles) {
@@ -465,9 +514,12 @@ public final class M3GSceneRenderer implements SceneRenderer {
         byte[] rgba = new byte[size * 4];
         for(int i = 0; i < size; i++) {
             int pixel = image.img[i];
-            rgba[i * 4] = kind == FOG_MASK ? (byte)255 : (byte)(pixel >> 16);
-            rgba[i * 4 + 1] = kind == FOG_MASK ? (byte)255 : (byte)(pixel >> 8);
-            rgba[i * 4 + 2] = kind == FOG_MASK ? (byte)255 : (byte)pixel;
+            // Legacy additive source discards channel low bits. Hardware cannot
+            // mask destination low bits; native ADD may differ by one per channel.
+            int rgb = kind == ADD_TEXTURE ? pixel & 0xfefefe : pixel;
+            rgba[i * 4] = kind == FOG_MASK ? (byte)255 : (byte)(rgb >> 16);
+            rgba[i * 4 + 1] = kind == FOG_MASK ? (byte)255 : (byte)(rgb >> 8);
+            rgba[i * 4 + 2] = kind == FOG_MASK ? (byte)255 : (byte)rgb;
             rgba[i * 4 + 3] = kind == ALPHA_TEXTURE ? (byte)(pixel >>> 24) : (byte)(pixel == 0 ? 0 : 255);
         }
         CachedTexture cached = new CachedTexture();

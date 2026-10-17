@@ -137,14 +137,14 @@ public class Graphics3D {
   if(target==null || a.comp.depth)throw new AssertionError("target/depth");
   if(Boolean.getBoolean("m3g.oom"))throw new OutOfMemoryError("native memory");
   before=target.image.pixels[0];calls++;lastVertices=v;lastIndices=i;lastAppearance=a;
-  byte[] p=a.tex.image.pixels;byte[] c=v.colors.bytes;
-  if(Boolean.getBoolean("m3g.sampleCenter")) {
+  byte[] p=a.tex==null?new byte[]{-1,-1,-1,-1}:a.tex.image.pixels;byte[] c=v.colors.bytes;
+  if(a.tex!=null && Boolean.getBoolean("m3g.sampleCenter")) {
    int offset=(a.tex.image.width/2+a.tex.image.height/2*a.tex.image.width)*4;
    p=new byte[]{p[offset],p[offset+1],p[offset+2],p[offset+3]};
   }
-  Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex.function;draw.filter=a.tex.filter;
+  Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex==null?Texture2D.FUNC_MODULATE:a.tex.function;draw.filter=a.tex==null?0:a.tex.filter;
   draw.colors=c.clone();draw.indices=i.indices.clone();draw.lengths=i.lengths;draw.textureAlpha=p[3]&255;
-  draw.positions=v.positions.shorts.clone();draw.coords=v.coords.shorts.clone();draw.scale=v.scale;draw.uvScale=v.uvScale;
+  draw.positions=v.positions.shorts.clone();draw.coords=v.coords.shorts==null?null:v.coords.shorts.clone();draw.scale=v.scale;draw.uvScale=v.uvScale;
   draw.projection=camera.projection.matrix.clone();
   draw.fog=a.fog!=null;
   if(draw.fog){draw.fogColor=a.fog.color;draw.near=a.fog.near;draw.far=a.fog.far;}
@@ -155,7 +155,7 @@ public class Graphics3D {
   if(alpha/255.0f>=a.comp.threshold){
    int out=0xff000000;
    for(int k=0;k<3;k++){
-    int src=a.tex.function==Texture2D.FUNC_ADD?Math.min(255,(p[k]&255)+(c[k]&255)):(p[k]&255)*(c[k]&255)/255;
+    int src=draw.function==Texture2D.FUNC_ADD?Math.min(255,(p[k]&255)+(c[k]&255)):(p[k]&255)*(c[k]&255)/255;
     if(draw.fog){float z=-v.positions.shorts[2]*v.scale;
      float f=Math.max(0,Math.min(1,(z-draw.near)/(draw.far-draw.near)));
      src=Math.round(src*(1-f)+((draw.fogColor>>(16-k*8))&255)*f);
@@ -195,6 +195,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     classpath = os.pathsep.join(map(str, (classes, APP, API)))
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GeometryTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.LinesTest"], check=True)
