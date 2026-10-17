@@ -23,6 +23,7 @@ final class M3GScreenLines {
         for(int i=0;i<SEGMENTS;i++) lengths[i]=4;
         indices=new TriangleStripArray(verts,lengths);
         PolygonMode polygon=new PolygonMode();polygon.setCulling(PolygonMode.CULL_NONE);
+        owner.registerPolygonMode(polygon);
         appearance.setPolygonMode(polygon);
         CompositingMode composite=new CompositingMode();
         composite.setDepthTestEnable(false);composite.setDepthWriteEnable(false);

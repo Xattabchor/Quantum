@@ -19,6 +19,7 @@ final class M3GPanoramaRenderer {
     M3GPanoramaRenderer(M3GSceneRenderer owner,Graphics3D graphics) {
         this.owner=owner;this.graphics=graphics;
         PolygonMode polygon=new PolygonMode();polygon.setCulling(PolygonMode.CULL_NONE);
+        owner.registerPolygonMode(polygon);
         appearance.setPolygonMode(polygon);
         CompositingMode composite=new CompositingMode();
         composite.setDepthTestEnable(false);composite.setDepthWriteEnable(false);

@@ -2,6 +2,7 @@ package code.Rendering;
 
 public final class MissingM3GTest {
     public static void main(String[] args) {
+        code.utils.Main.m3gPerspective=args.length==0;
         DirectX7 g = M3GTest.renderer();
         M3GTest.submit(g, M3GTest.triangle(), M3GTest.texture(0xffffffff), 0);
         g.render();
@@ -97,6 +98,6 @@ public final class MissingM3GTest {
             int[] once=g.display.clone();g.render();M3GTest.check(java.util.Arrays.equals(once,g.display),"missing API retained stale sky prefix");
             combinedCPU.destroy();g.destroy();
         }
-        System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay / sprite+panorama class safety / combined queue replay");
+        System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay / sprite+panorama class safety / combined queue replay / HW perspective="+code.utils.Main.m3gPerspective);
     }
 }

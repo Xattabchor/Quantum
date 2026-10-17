@@ -93,11 +93,12 @@ public class CompositingMode {
 }''',
 "javax/microedition/m3g/PolygonMode.java": '''package javax.microedition.m3g;
 public class PolygonMode {public static final int CULL_NONE=162,SHADE_SMOOTH=165;
- public void setCulling(int n){} public void setPerspectiveCorrectionEnable(boolean b){} public void setShading(int n){} }''',
+ public boolean perspective=true;public static int perspectiveCalls;
+ public void setCulling(int n){} public void setPerspectiveCorrectionEnable(boolean b){perspective=b;perspectiveCalls++;} public void setShading(int n){} }''',
 "javax/microedition/m3g/Appearance.java": '''package javax.microedition.m3g;
-public class Appearance {public Texture2D tex;public CompositingMode comp;public Fog fog;
+public class Appearance {public Texture2D tex;public CompositingMode comp;public Fog fog;public PolygonMode polygon;
  public void setFog(Fog f){fog=f;}
- public void setPolygonMode(PolygonMode p){} public void setCompositingMode(CompositingMode c){comp=c;}
+ public void setPolygonMode(PolygonMode p){polygon=p;} public void setCompositingMode(CompositingMode c){comp=c;}
  public void setTexture(int n,Texture2D t){tex=t;} }''',
 "javax/microedition/m3g/Fog.java": '''package javax.microedition.m3g;
 public class Fog {public static final int LINEAR=81;public int color;public float near,far;
@@ -139,7 +140,7 @@ public class Graphics3D {
  public static VertexBuffer lastVertices; public static TriangleStripArray lastIndices;public static Appearance lastAppearance;
  public static Graphics target; public static Camera camera;
  public static class Draw {
-  public int blend,function,fogColor,textureAlpha,filter,colorComponents;public boolean textured;public float near,far;public boolean fog;
+  public int blend,function,fogColor,textureAlpha,filter,colorComponents;public boolean textured,perspective;public float near,far;public boolean fog;
   public byte[] colors;public int[] indices,lengths; public short[] positions,coords;public float scale,uvScale;public float[] projection;
  }
  public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
@@ -166,7 +167,7 @@ public class Graphics3D {
    p=new byte[]{p[offset],p[offset+1],p[offset+2],p[offset+3]};
   }
   Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex==null?Texture2D.FUNC_MODULATE:a.tex.function;draw.filter=a.tex==null?0:a.tex.filter;
-  draw.colorComponents=v.colors.components;draw.textured=a.tex!=null;
+  draw.colorComponents=v.colors.components;draw.textured=a.tex!=null;draw.perspective=a.polygon==null || a.polygon.perspective;
   draw.colors=c.clone();draw.indices=i.indices.clone();draw.lengths=i.lengths;draw.textureAlpha=p[3]&255;
   draw.positions=v.positions.shorts.clone();draw.coords=v.coords==null || v.coords.shorts==null?null:v.coords.shorts.clone();draw.scale=v.scale;draw.uvScale=v.uvScale;
   draw.projection=camera.projection.matrix.clone();
@@ -219,6 +220,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     classpath = os.pathsep.join(map(str, (classes, APP, API)))
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.PerspectiveToggleTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GlassTest"], check=True)
@@ -241,5 +243,6 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
         for name in src.namelist():
             if not name.startswith("javax/microedition/m3g/"):
                 dst.writestr(name, src.read(name))
-    subprocess.run([JAVA, "-cp", os.pathsep.join(map(str, (classes, APP, no_m3g_api))),
-                    "code.Rendering.MissingM3GTest"], check=True)
+    for options in ([], ["hardware-perspective-off"]):
+        subprocess.run([JAVA, "-cp", os.pathsep.join(map(str, (classes, APP, no_m3g_api))),
+                        "code.Rendering.MissingM3GTest"] + options, check=True)

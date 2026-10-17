@@ -83,6 +83,7 @@ public final class Main extends MIDlet {
     public static int fogQ = 2; //0-off 1 - lq 2 - hq
     public static int pixelsQ = 2; //0-4xmax 1 - 2xmax 2 - 1xmax
     public static int renderer = DirectX7.SOFTWARE;
+    public static boolean m3gPerspective = true;
     public static int persQ = 2;
     public static int availableLevel = 1; // номер доступного уровня
     public static boolean forceLQFog = false;
@@ -244,12 +245,7 @@ public final class Main extends MIDlet {
             defaultSettings();
         }
 
-        // Keep the original settings/save record layout byte-for-byte compatible.
-        renderer = "M3G".equals(settings.getNoLang("RENDERER")) ? DirectX7.M3G : DirectX7.SOFTWARE;
-        byte[] rendererSetting = RmsUtils.openStore("Quantum.Renderer");
-        if(rendererSetting != null && rendererSetting.length == 1
-                && (rendererSetting[0] == DirectX7.SOFTWARE || rendererSetting[0] == DirectX7.M3G))
-            renderer = rendererSetting[0];
+        loadRendererSettings();
 
         tmp = settings.getNoLang("OPEN_LEVELS");
         if(tmp != null) {
@@ -272,6 +268,20 @@ public final class Main extends MIDlet {
 
         mainCanvas = new MainCanvas(this);
         setCurrent(new SplashScreen(this));
+    }
+
+    private static void loadRendererSettings() {
+        // Independent stores preserve the original settings and Renderer records.
+        renderer = "M3G".equals(settings.getNoLang("RENDERER")) ? DirectX7.M3G : DirectX7.SOFTWARE;
+        byte[] rendererSetting = RmsUtils.openStore("Quantum.Renderer");
+        if(rendererSetting != null && rendererSetting.length == 1
+                && (rendererSetting[0] == DirectX7.SOFTWARE || rendererSetting[0] == DirectX7.M3G))
+            renderer = rendererSetting[0];
+        m3gPerspective = settings.getIntNoLang("M3G_PERSPECTIVE",1)!=0;
+        byte[] perspectiveSetting = RmsUtils.openStore("Quantum.M3GPerspective");
+        if(perspectiveSetting!=null && perspectiveSetting.length==1
+                && (perspectiveSetting[0]==0 || perspectiveSetting[0]==1))
+            m3gPerspective=perspectiveSetting[0]==1;
     }
 
     private static void defaultSettings() {
@@ -435,6 +445,8 @@ public final class Main extends MIDlet {
     public final void saveSettingToStore() {
         RmsUtils.removeStore("Quantum.Renderer");
         RmsUtils.saveStore("Quantum.Renderer", new byte[]{(byte)renderer});
+        RmsUtils.removeStore("Quantum.M3GPerspective");
+        RmsUtils.saveStore("Quantum.M3GPerspective",new byte[]{(byte)(m3gPerspective?1:0)});
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream dos = new DataOutputStream(baos);

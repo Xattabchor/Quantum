@@ -14,6 +14,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final Graphics3D graphics;
     private final javax.microedition.m3g.Camera camera = new javax.microedition.m3g.Camera();
     private final Appearance appearance = new Appearance();
+    private final PolygonMode polygon = new PolygonMode();
+    private boolean hardwarePerspective = Main.m3gPerspective;
+    private final Vector polygonModes = new Vector();
     private final CompositingMode composite = new CompositingMode();
     private final Fog fog = new Fog();
     private final Vertex[] vertices = new Vertex[4];
@@ -58,7 +61,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         Hashtable properties = Graphics3D.getProperties();
         Object limit = properties.get("maxTextureDimension");
         maxTexture = limit instanceof Integer ? ((Integer)limit).intValue() : 256;
-        PolygonMode polygon = new PolygonMode();
+        registerPolygonMode(polygon);
         polygon.setCulling(PolygonMode.CULL_NONE);
         polygon.setShading(PolygonMode.SHADE_SMOOTH);
         appearance.setPolygonMode(polygon);
@@ -84,6 +87,13 @@ public final class M3GSceneRenderer implements SceneRenderer {
         baseQuadTriangles[0] = new TriangleStripArray(new int[]{0, 1, 3}, new int[]{3});
         baseQuadTriangles[1] = new TriangleStripArray(new int[]{1, 2, 3}, new int[]{3});
         fog.setMode(Fog.LINEAR);
+    }
+
+    // Helpers register once, so a live preference change updates all cached
+    // appearances without rebuilding meshes/textures or setting native state per draw.
+    void registerPolygonMode(PolygonMode mode) {
+        mode.setPerspectiveCorrectionEnable(hardwarePerspective);
+        polygonModes.addElement(mode);
     }
 
     void bind(DirectX7 g) { bind(g,true); }
@@ -152,12 +162,18 @@ public final class M3GSceneRenderer implements SceneRenderer {
             spriteRenderer = null;
             panoramaRenderer = null;
             flashBackground = null;
+            polygonModes.removeAllElements();polygonModes.addElement(polygon);
             textures.removeAllElements();
             cachedPixels = 0;
         }
     }
 
     public boolean draw(DirectX7 g, RenderObject object, Texture texture, boolean fast) {
+        if(hardwarePerspective!=Main.m3gPerspective) {
+            hardwarePerspective=Main.m3gPerspective;
+            for(int i=0;i<polygonModes.size();i++)
+                ((PolygonMode)polygonModes.elementAt(i)).setPerspectiveCorrectionEnable(hardwarePerspective);
+        }
         if(object instanceof SolidSky) {
             SolidSky sky=(SolidSky)object;
             sky.prepare(g);

@@ -26,7 +26,7 @@ final class M3GSkyRenderer {
         this.owner = owner; this.graphics = graphics;
         PolygonMode polygon = new PolygonMode();
         polygon.setCulling(PolygonMode.CULL_NONE);
-        polygon.setPerspectiveCorrectionEnable(true);
+        owner.registerPolygonMode(polygon);
         appearance.setPolygonMode(polygon);
         composite.setDepthTestEnable(false); composite.setDepthWriteEnable(false);
         appearance.setCompositingMode(composite);

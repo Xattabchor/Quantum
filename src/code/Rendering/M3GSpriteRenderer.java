@@ -21,6 +21,7 @@ final class M3GSpriteRenderer {
     M3GSpriteRenderer(M3GSceneRenderer owner,Graphics3D graphics) {
         this.owner=owner;this.graphics=graphics;
         PolygonMode polygon=new PolygonMode();polygon.setCulling(PolygonMode.CULL_NONE);
+        owner.registerPolygonMode(polygon);
         appearance.setPolygonMode(polygon);appearance.setCompositingMode(composite);
         composite.setDepthTestEnable(false);composite.setDepthWriteEnable(false);
         buffer.setTexCoords(0,coords,1.0f/4096,null);buffer.setColors(colors);
