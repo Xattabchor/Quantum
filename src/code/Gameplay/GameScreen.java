@@ -308,6 +308,7 @@ public final class GameScreen extends MyCanvas {
         finishDraw = false;
         
         DirectX7 g3d = scene.getG3D();
+        if(wg != null) wg.setRenderer(Main.renderer);
         
         boolean redrawInfo = changed;
         if(!redrawInfo) g.setClip(0, height / 2 - g3d.getHeight() / 2, width, g3d.getHeight());
@@ -336,8 +337,11 @@ public final class GameScreen extends MyCanvas {
         g.translate(0, 0);
         
         boolean playerDied = player.isDead();
+        boolean nativeWeather = false;
         int playerHeight = player.getEyesHeight();
 
+        g3d.setRenderer(Main.renderer);
+        g3d.beginFrameStats();
         Matrix playerMat = player.getCharacter().getTransform();
         int renderFrom;
         player.setCamera(g3d);
@@ -427,26 +431,31 @@ public final class GameScreen extends MyCanvas {
                 scene.render(g, partsMass, player);
             } else scene.render(g, renderFrom, player);
 
-            g3d.render();
+            if(g3d.getRenderer()==DirectX7.M3G)
+                nativeWeather=g3d.renderGameFrameImage(vignette,playerDied,player.isDamaged(),
+                        scene.getHouse(),renderFrom,wg==null?null:wg.prepareM3G(g3d));
+            else g3d.render();
             g3d.shootIntensity -= QFPS.frameTime;
             if(g3d.shootIntensity < 0) g3d.shootIntensity = 0;
             
-            if(lighting && !player.character.underRoof && wg != null) {
+            if(lighting && !player.character.underRoof && wg != null && g3d.getRenderer() != DirectX7.M3G) {
 				Camera cam = player.getCamera();
 				wg.lightingEffect(g3d, cam != null ? cam.currentRotX : player.rotateX);
 			}
 
-            if(vignette != null) applyVignette(g3d.getDisplay()); //maybe i should remove all these vignette stuff?
+            if(vignette != null && g3d.getRenderer()==DirectX7.SOFTWARE) applyVignette(g3d.getDisplay());
         } catch (Exception ext) {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
         }
         
         int screenY = (height - g3d.getHeight()) / 2;
         try {
-            if(playerDied) deathScr(g3d.getDisplay());
-            if(player.isDamaged()) damageScr(g3d.getDisplay());
-            if(bloom) fastbloomScr(g3d);
-            if(doubleBright) applySub(scene.getG3D().display);
+            if(g3d.getRenderer()==DirectX7.SOFTWARE) {
+                if(playerDied) deathScr(g3d.getDisplay());
+                if(player.isDamaged()) damageScr(g3d.getDisplay());
+            }
+            if(bloom && g3d.getRenderer()==DirectX7.SOFTWARE) fastbloomScr(g3d);
+            if(doubleBright && g3d.getRenderer()==DirectX7.SOFTWARE) applySub(scene.getG3D().display);
         } catch (Exception ext) {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
         }
@@ -461,7 +470,7 @@ public final class GameScreen extends MyCanvas {
 
         if(wg != null) {
             g.clipRect(0, screenY, g3d.getWidth(), g3d.getHeight());
-            wg.paint(g, screenY);
+            wg.paintAfterScene(g, screenY, g3d.getRenderer(), nativeWeather);
             g.clipRect(0, 0, width, height);
             if(!redrawInfo) g.setClip(0, screenY, width, g3d.getHeight());
         }
@@ -656,6 +665,10 @@ public final class GameScreen extends MyCanvas {
             if(DeveloperMenu.drawLevelPoints && DeveloperMenu.debugMode) scene.drawPoints(g, screenY, player);
         }
         
+        if(g3d.getRenderer()==DirectX7.M3G && DeveloperMenu.showFps) {
+            g.setClip(0,screenY,g3d.getWidth(),g3d.getHeight());
+            font.drawString(g,g3d.getM3GStatsText(System.currentTimeMillis()),2,screenY+2,20);
+        }
         run(begintime);
         finishDraw = true;
         QFPS.frame();

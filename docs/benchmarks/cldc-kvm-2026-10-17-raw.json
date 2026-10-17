@@ -1,0 +1,82 @@
+[
+  {
+    "arguments": [
+      "health"
+    ],
+    "exit_code": 0,
+    "output": "PASS KVM floating point / sqrt / clock\n"
+  },
+  {
+    "arguments": [
+      "probe",
+      "javax.microedition.m3g.Graphics3D"
+    ],
+    "exit_code": 0,
+    "output": "UNAVAILABLE javax.microedition.m3g.Graphics3D: java.lang.ClassNotFoundException: javax/microedition/m3g/Graphics3D\n"
+  },
+  {
+    "arguments": [
+      "probe",
+      "javax.microedition.lcdui.Display"
+    ],
+    "exit_code": 0,
+    "output": "UNAVAILABLE javax.microedition.lcdui.Display: java.lang.NoClassDefFoundError: javax/microedition/lcdui/Display: Cannot create class in system package \n"
+  },
+  {
+    "arguments": [
+      "probe",
+      "code.utils.Main"
+    ],
+    "exit_code": 0,
+    "output": "UNAVAILABLE code.utils.Main: java.lang.NoClassDefFoundError: code/utils/Main: Cannot create class in system package \n"
+  },
+  {
+    "arguments": [
+      "transform_project_1000"
+    ],
+    "exit_code": 0,
+    "output": "TASK transform_project_1000 repeats=512 heap=4194304\nSAMPLE 415 512 27904\nSAMPLE 414 512 27904\nSAMPLE 417 512 27904\nSAMPLE 421 512 27904\nSAMPLE 424 512 27904\n"
+  },
+  {
+    "arguments": [
+      "matrix_mul_1000"
+    ],
+    "exit_code": 0,
+    "output": "TASK matrix_mul_1000 repeats=256 heap=4194304\nSAMPLE 440 256 32000\nSAMPLE 458 256 32000\nSAMPLE 438 256 32000\nSAMPLE 437 256 32000\nSAMPLE 436 256 32000\n"
+  },
+  {
+    "arguments": [
+      "pack_triangles_1000"
+    ],
+    "exit_code": 0,
+    "output": "TASK pack_triangles_1000 repeats=32 heap=4194304\nSAMPLE 272 32 32000\nSAMPLE 271 32 32000\nSAMPLE 269 32 32000\nSAMPLE 272 32 32000\nSAMPLE 272 32 32000\n"
+  },
+  {
+    "arguments": [
+      "base_shade_1000"
+    ],
+    "exit_code": 0,
+    "output": "TASK base_shade_1000 repeats=128 heap=4194304\nSAMPLE 391 128 29824000\nSAMPLE 391 128 29824000\nSAMPLE 390 128 29824000\nSAMPLE 391 128 29824000\nSAMPLE 389 128 29824000\n"
+  },
+  {
+    "arguments": [
+      "omni_shade_1000"
+    ],
+    "exit_code": 0,
+    "output": "TASK omni_shade_1000 repeats=32 heap=4194304\nSAMPLE 319 32 8192000\nSAMPLE 315 32 8192000\nSAMPLE 316 32 8192000\nSAMPLE 315 32 8192000\nSAMPLE 315 32 8192000\n"
+  },
+  {
+    "arguments": [
+      "post_240x320"
+    ],
+    "exit_code": 0,
+    "output": "TASK post_240x320 repeats=8 heap=4194304\nSAMPLE 409 8 -134217728\nSAMPLE 409 8 -134217728\nSAMPLE 407 8 -134217728\nSAMPLE 406 8 -134217728\nSAMPLE 404 8 -134217728\n"
+  },
+  {
+    "arguments": [
+      "post_176x220"
+    ],
+    "exit_code": 0,
+    "output": "TASK post_176x220 repeats=16 heap=4194304\nSAMPLE 415 16 -268435456\nSAMPLE 415 16 -268435456\nSAMPLE 415 16 -268435456\nSAMPLE 417 16 -268435456\nSAMPLE 416 16 -268435456\n"
+  }
+]

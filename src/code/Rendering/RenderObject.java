@@ -57,6 +57,7 @@ public abstract class RenderObject {
    public abstract boolean isVisible(int x1, int y1, int x2, int y2);
    
    public int getLight(Vertex a, int la, DirectX7 g3d) {
+       if(g3d.isStaticLightmapPass()) return g3d.lightmapColor(la,a.rz);
        int lightLen = g3d.flashlightEnabled?6500:5000;
        
        int lita= (-a.rz<DirectX7.fDist || DirectX7.fDist <= 1)?255:0;
@@ -87,6 +88,10 @@ public abstract class RenderObject {
    
    
    public int[] getLight(Vertex a, int la, int la2, int la3, DirectX7 g3d) {
+       if(g3d.isStaticLightmapPass()) {
+           return new int[]{Math.max(0,Math.min(255,la)),
+                   Math.max(0,Math.min(255,la2)),Math.max(0,Math.min(255,la3))};
+       }
        int lightLen = g3d.flashlightEnabled?6500:5000;
        int lita=(-a.rz<DirectX7.fDist || DirectX7.fDist <= 1)?255:0;
        int fa=0;

@@ -1,0 +1,89 @@
+[
+  {
+    "arguments": [
+      "health"
+    ],
+    "exit_code": 0,
+    "output": "PASS KVM floating point / sqrt / clock\n"
+  },
+  {
+    "arguments": [
+      "probe",
+      "javax.microedition.m3g.Graphics3D"
+    ],
+    "exit_code": 0,
+    "output": "UNAVAILABLE javax.microedition.m3g.Graphics3D: java.lang.ClassNotFoundException: javax/microedition/m3g/Graphics3D\n"
+  },
+  {
+    "arguments": [
+      "probe",
+      "javax.microedition.lcdui.Display"
+    ],
+    "exit_code": 0,
+    "output": "UNAVAILABLE javax.microedition.lcdui.Display: java.lang.NoClassDefFoundError: javax/microedition/lcdui/Display: Cannot create class in system package \n"
+  },
+  {
+    "arguments": [
+      "probe",
+      "code.utils.Main"
+    ],
+    "exit_code": 0,
+    "output": "UNAVAILABLE code.utils.Main: java.lang.NoClassDefFoundError: code/utils/Main: Cannot create class in system package \n"
+  },
+  {
+    "arguments": [
+      "normal_base_same_1000"
+    ],
+    "exit_code": 0,
+    "output": "TASK normal_base_same_1000 repeats=128 heap=4194304\nSAMPLE 301 128 4194176\nSAMPLE 300 128 4194176\nSAMPLE 296 128 4194176\nSAMPLE 290 128 4194176\nSAMPLE 295 128 4194176\n"
+  },
+  {
+    "arguments": [
+      "normal_eye_same_1000"
+    ],
+    "exit_code": 0,
+    "output": "TASK normal_eye_same_1000 repeats=64 heap=4194304\nSAMPLE 263 64 412672\nSAMPLE 260 64 412672\nSAMPLE 263 64 412672\nSAMPLE 260 64 412672\nSAMPLE 263 64 412672\n"
+  },
+  {
+    "arguments": [
+      "normal_base_vary_1000"
+    ],
+    "exit_code": 0,
+    "output": "TASK normal_base_vary_1000 repeats=128 heap=4194304\nSAMPLE 330 128 4249216\nSAMPLE 325 128 4249216\nSAMPLE 329 128 4249216\nSAMPLE 328 128 4249216\nSAMPLE 326 128 4249216\n"
+  },
+  {
+    "arguments": [
+      "normal_eye_vary_1000"
+    ],
+    "exit_code": 0,
+    "output": "TASK normal_eye_vary_1000 repeats=64 heap=4194304\nSAMPLE 278 64 448512\nSAMPLE 280 64 448512\nSAMPLE 278 64 448512\nSAMPLE 280 64 448512\nSAMPLE 279 64 448512\n"
+  },
+  {
+    "arguments": [
+      "batch_tri_unlit_1000"
+    ],
+    "exit_code": 0,
+    "output": "TASK batch_tri_unlit_1000 repeats=256 heap=4194304\nSAMPLE 257 256 59136\nSAMPLE 261 256 59136\nSAMPLE 257 256 59136\nSAMPLE 257 256 59136\nSAMPLE 258 256 59136\n"
+  },
+  {
+    "arguments": [
+      "batch_tri_lit_1000"
+    ],
+    "exit_code": 0,
+    "output": "TASK batch_tri_lit_1000 repeats=256 heap=4194304\nSAMPLE 293 256 59392\nSAMPLE 291 256 59392\nSAMPLE 296 256 59392\nSAMPLE 292 256 59392\nSAMPLE 298 256 59392\n"
+  },
+  {
+    "arguments": [
+      "batch_quad_unlit_1000"
+    ],
+    "exit_code": 0,
+    "output": "TASK batch_quad_unlit_1000 repeats=256 heap=4194304\nSAMPLE 482 256 40704\nSAMPLE 454 256 40704\nSAMPLE 450 256 40704\nSAMPLE 451 256 40704\nSAMPLE 450 256 40704\n"
+  },
+  {
+    "arguments": [
+      "batch_quad_lit_1000"
+    ],
+    "exit_code": 0,
+    "output": "TASK batch_quad_lit_1000 repeats=128 heap=4194304\nSAMPLE 258 128 20480\nSAMPLE 258 128 20480\nSAMPLE 259 128 20480\nSAMPLE 258 128 20480\nSAMPLE 259 128 20480\n"
+  }
+]

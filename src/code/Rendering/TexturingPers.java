@@ -87,6 +87,17 @@ x1++;
             TexturingAffine.paintOverwrite(g3d, a, b, c);
             return;
         }
+        // Selected M3G mode 1 is ALPHA, also during CPU recovery.
+        if(dmode == 1 && g3d.getRenderer() == DirectX7.M3G) dmode = 4;
+        if(dmode == 10 && g3d.getRenderer() == DirectX7.M3G) dmode = 7;
+        if(dmode == 5 && g3d.getRenderer() == DirectX7.M3G) qz = 255-DirectX7.mode5Shade(nx,ny,nz);
+        boolean mode5Pulse=dmode==5 && g3d.getMode5WeaponLight()!=null;
+        if(mode5Pulse) {
+            Mode5WeaponLight pulse=g3d.getMode5WeaponLight();
+            al=ag=ab=pulse.shade(g3d,a,nx,ny,nz);
+            bl=bg=bb=pulse.shade(g3d,b,nx,ny,nz);
+            cl=cg=cb=pulse.shade(g3d,c,nx,ny,nz);
+        }
         if (texture.rImg.alphaMixing == false && texture.drawmode == 4) {
             dmode = 0;
         }
@@ -195,7 +206,7 @@ x1++;
             if (cf < 0) cf = 0;
         }
         
-        if (texture.drawmode == 9 || texture.drawmode == 13) {
+        if (texture.drawmode == 9 || texture.drawmode == 13 || mode5Pulse) {
             af = al;
             bf = bl;
             cf = cl;
@@ -212,7 +223,7 @@ x1++;
             bf = bf * MathUtils.calcLight(nx, ny, nz, b.x - g3d.getCamera().m03, b.y - g3d.getCamera().m13, b.z - g3d.getCamera().m23) / 255;
             cf = cf * MathUtils.calcLight(nx, ny, nz, c.x - g3d.getCamera().m03, c.y - g3d.getCamera().m13, c.z - g3d.getCamera().m23) / 255;
         }
-        if ((dmode == 5 || dmode == 6 || dmode == 9) && af < 1 && bf < 1 && cf < 1) {
+        if (((dmode == 5 && g3d.getRenderer()!=DirectX7.M3G) || dmode == 6 || dmode == 9) && af < 1 && bf < 1 && cf < 1) {
             TexturingAffine.paintFill(g3d, a, b, c, 0);
             return;
         }
@@ -220,6 +231,8 @@ x1++;
 
         final int W_UNIT = texture.rImg.W_UNIT;
 
+        // Active OMNI uses metric eye-space projection, including during replay.
+        int move=mode5Pulse && (nx!=0 || ny!=0 || nz!=0) && g3d.distX>0?g3d.distX:TexturingPers.move;
         int tempI =(int)( (W_UNIT>>fp) + move);
         int awz, bwz, cwz;
         
@@ -1581,7 +1594,7 @@ static final void paintMiniTrianglePers_5(final DirectX7 g3d, final Texture text
             int f_start,int f_end,
 final int df_start,final int df_end,
 final int df) {
-    if( ((texture.drawmode==9 || texture.drawmode==13) && Main.fogQ>=1) || (Main.fogQ==2 && Main.forceLQFog==false && texture.drawmode==6)) {
+    if( (texture.drawmode==5 && g3d.getMode5WeaponLight()!=null) || ((texture.drawmode==9 || texture.drawmode==13) && Main.fogQ>=1) || (Main.fogQ==2 && Main.forceLQFog==false && texture.drawmode==6)) {
     paintMiniTrianglePers_6_HQ(g3d, texture, y_start, y_end,
                     x_start, wz_start, uz_start, vz_start,
                     x_end, wz_end, uz_end, vz_end,
@@ -1590,7 +1603,7 @@ final int df) {
                     dwz, duz, dvz,fogc, sz2, q,a,b,c,f_start,f_end,df_start,df_end,df); return; 
         
     }
-    if(Main.fogQ==0) {
+    if(Main.fogQ==0 && !(texture.drawmode==5 && g3d.getRenderer()==DirectX7.M3G)) {
     paintMiniTrianglePers_0(g3d, texture, y_start, y_end,
                     x_start, wz_start, uz_start, vz_start,
                     x_end, wz_end, uz_end, vz_end,
@@ -2106,6 +2119,8 @@ static final void paintPers_glass(final DirectX7 g3d, final Texture texture, int
             final int dwz, final int duz, final int dvz,int fogc,int sz2) {
 
 
+        final boolean modulate = g3d.getRenderer() == DirectX7.M3G;
+        final boolean doubleModulate = texture.drawmode == 10;
         final int[] tex = texture.rImg.img;
         final int lengthBIT = tex.length-1;
         final int widthBIT = texture.rImg.widthBIT;
@@ -2198,10 +2213,15 @@ for(;length>=sz2; length-=sz2) {
 {
 
 col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            if(modulate) {
+                if(col != 0) rgb[x1] = doubleModulate
+                        ? DirectX7.modulateColorX2(col,rgb[x1]) : DirectX7.modulateColor(col,rgb[x1]);
+            } else {
             coord = ((((col & 0xff0000) - 0x800000) * scale) >> 24) + ((((col & 0xff00) - 0x8000) * scale) >> 16) * w + x1;
             if(coord < 0) rgb[x1] = rgb[0];
             else if(coord > g3dlen) rgb[x1] = rgb[g3dlen];
             else rgb[x1] = rgb[coord];
+            }
 }
                            }
             if(length > 0) { // ������������ ���������� �������
@@ -2212,10 +2232,15 @@ col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
                 dv = (v_2 - v) / length;
                 for(; x1<x2;) {
 col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            if(modulate) {
+                if(col != 0) rgb[x1] = doubleModulate
+                        ? DirectX7.modulateColorX2(col,rgb[x1]) : DirectX7.modulateColor(col,rgb[x1]);
+            } else {
             coord = ((((col & 0xff0000) - 0x800000) * scale) >> 24) + ((((col & 0xff00) - 0x8000) * scale) >> 16) * w + x1;
             if(coord < 0) rgb[x1] = rgb[0];
             else if(coord > g3dlen) rgb[x1] = rgb[g3dlen];
             else rgb[x1] = rgb[coord];
+            }
 x1++;
                 }
 

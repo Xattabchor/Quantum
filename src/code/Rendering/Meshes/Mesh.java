@@ -216,16 +216,20 @@ public class Mesh {
     void render(DirectX7 g3d, int x1, int y1, int x2, int y2) {
         final RenderObject[] elements = this.polygons;
 
-        buffer.addRenderObjects(elements, texture, x1, y1, x2, y2);
-        buffer.sort(0, buffer.getSize() - 1);
-        TMPElement[] buffer2 = Mesh.buffer.getBuffer();
+        try {
+            buffer.addRenderObjects(elements, texture, x1, y1, x2, y2);
+            buffer.sort(0, buffer.getSize() - 1);
+            TMPElement[] buffer2 = Mesh.buffer.getBuffer();
 
-        int i = Mesh.buffer.getSize() - 1;
-        for(; i>=0; i--) {
-            TMPElement element = buffer2[i];
-            element.obj.renderFast(g3d, element.tex);
+            int i = Mesh.buffer.getSize() - 1;
+            for(; i>=0; i--) {
+                TMPElement element = buffer2[i];
+                g3d.drawRenderObject(element.obj, element.tex, true);
+            }
+        } finally {
+            // An M3G failure may replay this MeshImage on the CPU immediately.
+            buffer.reset();
         }
-        buffer.reset();
     }
     
     public static void resetBuffer() {

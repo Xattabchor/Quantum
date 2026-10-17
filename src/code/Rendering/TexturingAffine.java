@@ -25,6 +25,10 @@ public class TexturingAffine {
             TexturingAffine.paintOverwrite(g3d, a, b, c);
             return;
         }
+        // Selected M3G mode 1 is ALPHA, also during CPU recovery.
+        if(fog == 1 && g3d.getRenderer() == DirectX7.M3G) fog = 4;
+        if(fog == 10 && g3d.getRenderer() == DirectX7.M3G) fog = 7;
+        if(fog == 5 && g3d.getRenderer() == DirectX7.M3G) sz2 = 255-DirectX7.mode5Shade(nx,ny,nz);
         if(texture.rImg.alphaMixing == false && texture.drawmode == 4) {
             fog = 0;
         }
@@ -49,6 +53,13 @@ public class TexturingAffine {
             av = av * texture.rImg.h / 256;
             bv = bv * texture.rImg.h / 256;
             cv = cv * texture.rImg.h / 256;
+        }
+
+        if(fog==5 && g3d.getMode5WeaponLight()!=null) {
+            Mode5WeaponLight pulse=g3d.getMode5WeaponLight();
+            paintAffine_9(g3d,texture,a,au,av,b,bu,bv,c,cu,cv,fogc,sz2,
+                    pulse.shade(g3d,a,nx,ny,nz),pulse.shade(g3d,b,nx,ny,nz),pulse.shade(g3d,c,nx,ny,nz),nx,ny,nz);
+            return;
         }
 
 switch(fog)
@@ -2461,6 +2472,8 @@ static final void paint_glass(DirectX7 g3d, Texture texture,
         if(a.sy == c.sy) return;
 
 
+        final boolean modulate = g3d.getRenderer() == DirectX7.M3G;
+        final boolean doubleModulate = texture.drawmode == 10;
         final int[] tex = texture.rImg.img;
         final int lengthBIT = tex.length-1;
         final int widthBIT = texture.rImg.widthBIT;
@@ -2568,10 +2581,15 @@ static final void paint_glass(DirectX7 g3d, Texture texture,
 
         for(; x1 < x2; x1++) {
             col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
+            if(modulate) {
+                if(col != 0) rgb[x1] = doubleModulate
+                        ? DirectX7.modulateColorX2(col,rgb[x1]) : DirectX7.modulateColor(col,rgb[x1]);
+            } else {
             coord = ((((col & 0xff0000) - 0x800000) * scale) >> 24) + ((((col & 0xff00) - 0x8000) * scale) >> 16) * w + x1;
             if(coord < 0) rgb[x1] = rgb[0];
             else if(coord > g3dlen) rgb[x1] = rgb[g3dlen];
             else rgb[x1] = rgb[coord];
+            }
         }
 
     }

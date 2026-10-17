@@ -4,8 +4,46 @@ import code.HUD.DeveloperMenu;
 import code.Rendering.Meshes.Mesh;
 import code.Math.Matrix;
 import javax.microedition.lcdui.Graphics;
+import javax.microedition.lcdui.Image;
 
 public final class DirectX7 {
+
+   public static final int SOFTWARE = 0, M3G = 1;
+   private int rendererMode = SOFTWARE;
+   private SceneRenderer sceneRenderer;
+   private boolean rendererFailed, nativePass;
+   private boolean staticLightmapPass;
+   private int[] frameBackup;
+   private String rendererError;
+   private Mode5WeaponLight mode5WeaponLight;
+   private FrameEffects frameEffects;
+   private Image frameImage;
+   private int[] frameImageBuffer;
+   private boolean imagePresentationFailed;
+   int frameDrawCalls,frameCpuBarriers,frameTextureUploads;
+   private int peakDraws,peakBarriers,peakUploads;
+   private long statsNext;
+   private String statsText;
+   private boolean statsNative;
+
+   /** Call once before sky/world preparation, NOT once per native segment. */
+   public void beginFrameStats() {frameDrawCalls=frameCpuBarriers=frameTextureUploads=0;}
+   public int getM3GDrawCalls() {return frameDrawCalls;}
+   public int getM3GCpuBarriers() {return frameCpuBarriers;}
+   public int getM3GTextureUploads() {return frameTextureUploads;}
+
+   /** Cached HUD, per-frame peaks over a 250ms display window. No string per draw. */
+   public String getM3GStatsText(long now) {
+       peakDraws=Math.max(peakDraws,frameDrawCalls);
+       peakBarriers=Math.max(peakBarriers,frameCpuBarriers);
+       peakUploads=Math.max(peakUploads,frameTextureUploads);
+       boolean active=isM3GActive();
+       if(statsText==null || now>=statsNext || now<statsNext-250 || active!=statsNative) {
+           statsText=(active?"M3G ":"CPU ")+"D:"+peakDraws+" B:"+peakBarriers+" T:"+peakUploads;
+           peakDraws=peakBarriers=peakUploads=0;statsNext=now+250;statsNative=active;
+       }
+       return statsText;
+   }
 
    public int width, height;
    public int[] display;
@@ -25,6 +63,8 @@ public final class DirectX7 {
    public static short lightdirz = 0;
    
    private final RenderObjectBuffer buffer;
+   private RenderObjectBuffer backgroundBuffer;
+   private boolean backgroundPending;
    public int lx,ly,lz = 0;
    public int shootIntensity = 0;
    public int shootLength = 0;
@@ -45,6 +85,11 @@ lx=ly=lz=0;
 }
    
 public void resize(int width, int height) {
+resetQueues();
+discardFrameImage();
+releaseRenderer();
+rendererFailed = false;
+rendererError = null;
 this.width = width;
 this.height = height;
 
@@ -65,6 +110,10 @@ fovY=fov;
 fovX=fov*width/height;
 }
    public final void destroy() {
+resetQueues();
+discardFrameImage();
+releaseRenderer();
+backgroundBuffer = null;
 
 DirectX7.fDist = 1;
 DirectX7.drDist = 30000000;
@@ -83,8 +132,22 @@ this.buffer.resetTex();
       return this.height;
    }
 
+   /** Synchronize an image-only frame before exposing writable CPU pixels. */
    public final int[] getDisplay() {
+      syncFrameImage();
       return this.display;
+   }
+
+   private void discardFrameImage() {frameImage=null;frameImageBuffer=null;}
+
+   private void syncFrameImage() {
+       if(frameImage==null) return;
+       if(frameImageBuffer==display) {
+           // Leave the image pending if getRGB throws: never expose stale pixels.
+           frameCpuBarriers++;
+           frameImage.getRGB(display,0,width,0,0,width,height);
+       }
+       discardFrameImage();
    }
 
    public final void setCamera(Matrix matrix) {
@@ -132,38 +195,379 @@ this.buffer.resetTex();
     }
 
 
+   /** Changing the requested mode also permits a fresh attempt after a failure. */
+   public void setRenderer(int mode) {
+       if(mode != SOFTWARE && mode != M3G) throw new IllegalArgumentException("renderer");
+       if(mode == rendererMode) return;
+       releaseRenderer();
+       rendererMode = mode;
+       rendererFailed = false;
+       rendererError = null;
+   }
+
+   public int getRenderer() { return rendererMode; }
+   public String getRendererError() { return rendererError; }
+   public boolean isM3GActive() { return sceneRenderer != null && !rendererFailed; }
+
+   /** Also call after modifying a texture's public pixel array in place. */
+   public void releaseRenderer() {
+       syncFrameImage();
+       imagePresentationFailed=false;
+       nativePass = false;
+       if(sceneRenderer != null) {
+           try { sceneRenderer.dispose(); }
+           catch(RuntimeException ex) { }
+           catch(NoClassDefFoundError ex) { }
+       }
+       sceneRenderer = null;
+       frameBackup = null;
+       mode5WeaponLight = null;
+       frameEffects = null;
+   }
+
+   private void failRenderer(String message) {
+       Mode5WeaponLight pulse=mode5WeaponLight;
+       releaseRenderer();
+       mode5WeaponLight=pulse; // Frozen shot state must survive complete CPU replay.
+       rendererFailed = true;
+       rendererError = message;
+       System.out.println("M3G disabled: " + message);
+   }
+
+   /** M3G deliberately disables legacy dithering materials, treating them as 0. */
+   public static byte m3gDrawMode(byte mode) {
+       return mode >= 11 && mode <= 12 ? (byte)0 : mode;
+   }
+
+   /** CPU equivalent of native MODULATE; source alpha is handled as cutout. */
+   static int modulateColor(int source, int background) {
+       return (background & 0xff000000)
+               | ((((source >>> 16) & 255) * ((background >>> 16) & 255) / 255) << 16)
+               | ((((source >>> 8) & 255) * ((background >>> 8) & 255) / 255) << 8)
+               | ((source & 255) * (background & 255) / 255);
+   }
+
+   /** CPU equivalent of MODULATE_X2, including saturation of bright channels. */
+   static int modulateColorX2(int source, int background) {
+       return (background & 0xff000000)
+               | (Math.min(255, ((source >>> 16) & 255) * ((background >>> 16) & 255) * 2 / 255) << 16)
+               | (Math.min(255, ((source >>> 8) & 255) * ((background >>> 8) & 255) * 2 / 255) << 8)
+               | Math.min(255, (source & 255) * (background & 255) * 2 / 255);
+   }
+
+   /** MUL assets store brightness in blue; 69 is their legacy neutral key. */
+   static int spriteModulateSource(int pixel, int color) {
+       int value=pixel&255;
+       if(pixel==0 || value==69) return 0xffffff;
+       int mask=0xffffff;
+       switch(color) {
+           case 1: mask=0xff0000;break;
+           case 2: mask=0x00ff00;break;
+           case 3: mask=0x0000ff;break;
+           case 4: mask=0xff00ff;break;
+           case 5: mask=0xffff00;break;
+           case 6: mask=0x00ffff;break;
+       }
+       return ((value*0x010101)&mask) | (0xffffff^mask);
+   }
+
+   /** Selected-M3G sprite recovery, without reviving the legacy saturating MUL. */
+   public static int modulateSpritePixel(int pixel, int background, int color) {
+       return modulateColor(spriteModulateSource(pixel,color),background);
+   }
+
+   /** API-free recovery of mode 5 ambient 25% + directional 75%.
+    * The CPU samplers use /256; return 64..256 so full diffuse remains full RGB. */
+   private static boolean shadeLightReady,shadeNormalReady;
+   private static int shadeLX,shadeLY,shadeLZ,shadeNX,shadeNY,shadeNZ,shadeValue;
+   private static double shadeLightLength;
+
+   public static int mode5Shade(int nx,int ny,int nz) {
+       int lx=lightdirx,ly=lightdiry,lz=lightdirz;
+       if(!shadeLightReady || shadeLX!=lx || shadeLY!=ly || shadeLZ!=lz) {
+           shadeLightReady=true;shadeNormalReady=false;
+           shadeLX=lx;shadeLY=ly;shadeLZ=lz;
+           shadeLightLength=Math.sqrt((double)lx*lx+(double)ly*ly+(double)lz*lz);
+       }
+       if(shadeNormalReady && shadeNX==nx && shadeNY==ny && shadeNZ==nz) return shadeValue;
+       double normal=Math.sqrt((double)nx*nx+(double)ny*ny+(double)nz*nz);
+       double light=shadeLightLength,dot=0;
+       if(normal>0 && light>0) dot=((double)nx*lx+(double)ny*ly+(double)nz*lz)/(normal*light);
+       dot=Math.max(0,Math.min(1,dot));
+       shadeNX=nx;shadeNY=ny;shadeNZ=nz;shadeNormalReady=true;
+       shadeValue=64+(int)(192*dot+0.5);return shadeValue;
+   }
+
+   /** Shared dispatch, including the polygons of animated MeshImage objects. */
+   public void drawRenderObject(RenderObject object, Texture texture, boolean fast) {
+       if(nativePass) {
+           if(sceneRenderer.draw(this, object, texture, fast)) return;
+           // CPU materials/unsupported sprites must see all prior M3G pixels.
+           sceneRenderer.barrier(this);
+       }
+       drawSoftwareObject(object,texture,fast);
+   }
+
+   /** CPU-only dispatch for a whole-mesh fallback; never re-enter native sky
+    * rendering after its atomic material/geometry validation has rejected it. */
+   public void drawSoftwareObject(RenderObject object,Texture texture,boolean fast) {
+       if(frameImage!=null) syncFrameImage();
+       byte originalMode = texture == null ? 0 : texture.drawmode;
+       boolean alias = rendererMode == M3G && texture != null && m3gDrawMode(originalMode) != originalMode;
+       if(alias) texture.drawmode = m3gDrawMode(originalMode);
+       boolean previous = staticLightmapPass;
+       staticLightmapPass = rendererMode == M3G && texture != null
+               && (texture.drawmode == 9 || texture.drawmode == 13);
+       try {
+           if(fast) object.renderFast(this, texture);
+           else object.render(this, texture);
+       } finally {
+           staticLightmapPass = previous;
+           if(alias) texture.drawmode = originalMode;
+       }
+   }
+
+   public boolean isStaticLightmapPass() { return staticLightmapPass; }
+
+   /** Selected-M3G baked brightness only: no fog, distance or dynamic light.
+    * Keep rz in the signature for compatibility with existing CPU callers. */
+   public int lightmapColor(int value, int rz) {
+       return Math.max(0,Math.min(255,value));
+   }
+
+   /** Keep sky as an ordered prefix, never mixed into world depth sorting.
+    * Software/debug/alpha retain the original immediate sky pass. */
+   public void renderBackground() {
+       if(!canRenderM3G() || backgroundPending) {render();return;}
+       if(buffer.getSize()==0) return; // CPU gradient already painted its pixels.
+       TMPElement[] items=buffer.getBuffer();
+       int count=buffer.getSize();
+       try {
+           if(backgroundBuffer==null) backgroundBuffer=new RenderObjectBuffer();
+           for(int i=0;i<count;i++)
+               backgroundBuffer.addRenderObjectDT(items[i].obj,items[i].tex,0,0,width,height);
+       } catch(OutOfMemoryError ex) {
+           clearBackground();
+           render();return; // Original immediate pass if deferral cannot allocate.
+       }
+       // Do not retain a duplicate sky/texture in the now-empty world pool.
+       // Clear only after the entire copy succeeds, so OOM can render the original.
+       for(int i=0;i<count;i++) {items[i].obj=null;items[i].tex=null;}
+       buffer.reset();
+       backgroundPending=true;
+   }
+
+   private void clearBackground() {
+       backgroundPending=false;
+       if(backgroundBuffer==null) return;
+       TMPElement[] items=backgroundBuffer.getBuffer();
+       for(int i=0;i<backgroundBuffer.getSize();i++) {items[i].obj=null;items[i].tex=null;}
+       backgroundBuffer.reset();
+   }
+
+   private void resetQueues() {buffer.reset();clearBackground();}
+
+   private void drawQueue(RenderObjectBuffer queue) {
+       TMPElement[] elements = queue.getBuffer();
+       for(int i = queue.getSize() - 1; i >= 0; i--)
+           drawRenderObject(elements[i].obj, elements[i].tex, false);
+   }
+
+   private void drawBuffer() {
+       if(backgroundPending) drawQueue(backgroundBuffer);
+       drawQueue(buffer);
+   }
+
    public final void render() {
+       render(true);
+   }
+
+   /** Original rasterizer for a complete pass, without changing backend/cache. */
+   public final void renderSoftware() {
+       render(false);
+   }
+
+   /** Game frame effects run after world geometry but BEFORE its final readback.
+    * Software callers retain their original GameScreen postprocessing. */
+   public void renderWithEffects(byte[] vignette, boolean dead, boolean damaged) {
+       if(rendererMode!=M3G) {render();return;}
+       if(dead && mode5WeaponLight!=null) mode5WeaponLight.stop();
+       render(true,prepareFrameEffects(vignette,dead,damaged),null);
+   }
+
+   /** Ordered game transaction: sky/world -> effects -> weather.
+    * True suppresses LCDUI weather ONLY after the final readback succeeds. */
+   public boolean renderGameFrame(byte[] vignette,boolean dead,boolean damaged,
+           code.Gameplay.Map.House house,int part,ScreenLines weather) {
+       if(rendererMode!=M3G) {render();return false;}
+       if(dead && mode5WeaponLight!=null) mode5WeaponLight.stop();
+       return render(true,prepareFrameEffects(vignette,dead,damaged),weather);
+   }
+
+   /** GameScreen opt-in: CPU pixels are lazy until getDisplay()/a CPU transition.
+    * Legacy renderGameFrame/render/renderWithEffects retain eager pixel output.
+    * Direct writes to public display must first synchronize through getDisplay(). */
+   public boolean renderGameFrameImage(byte[] vignette,boolean dead,boolean damaged,
+           code.Gameplay.Map.House house,int part,ScreenLines weather) {
+       if(rendererMode!=M3G) {render();return false;}
+       if(dead && mode5WeaponLight!=null) mode5WeaponLight.stop();
+       return render(true,prepareFrameEffects(vignette,dead,damaged),weather,!imagePresentationFailed);
+   }
+
+   /** Only a known complete FIRST background makes previous pixels irrelevant.
+    * Do not assume that a sky mesh, a portal crop or world geometry covers all. */
+   private boolean opaqueFrameBackground() {
+       if(!backgroundPending || backgroundBuffer.getSize()==0) return false;
+       RenderObject object=backgroundBuffer.getBuffer()[backgroundBuffer.getSize()-1].obj;
+       if(object instanceof SolidSky || object instanceof SkyFlash) return true;
+       if(object instanceof PanoramaSky) {
+           PanoramaSky sky=(PanoramaSky)object;
+           return sky.x1==0 && sky.y1==0 && sky.x2==width && sky.y2==height && sky.startY<=sky.endY;
+       }
+       return false;
+   }
+
+   private FrameEffects prepareFrameEffects(byte[] vignette,boolean dead,boolean damaged) {
+       if(frameEffects==null) frameEffects=new FrameEffects();
+       frameEffects.set(vignette,dead,damaged);
+       return frameEffects.active()?frameEffects:null;
+   }
+
+   private void render(boolean allowM3G) {render(allowM3G,null,null);}
+
+   private boolean render(boolean allowM3G,FrameEffects effects,ScreenLines weather) {
+       return render(allowM3G,effects,weather,false);
+   }
+
+   private boolean render(boolean allowM3G,FrameEffects effects,ScreenLines weather,boolean imageOutput) {
+       if(mode5WeaponLight!=null) mode5WeaponLight.prepare(System.currentTimeMillis());
        lx = camera.m03;
        ly = camera.m13;
        lz = camera.m23;
-        buffer.sort(0,buffer.getSize()-1);
-        if(DeveloperMenu.renderPolygonsOverwrite) clearDisplay(0);
-        TMPElement[] buffer2 = buffer.getBuffer();
-
-        int i = buffer.getSize()-1;
-        
-        for(; i>=5; i-=5) {
-            TMPElement element = buffer2[i];
-            element.obj.render(this, element.tex);
-            element = buffer2[i-1];
-            element.obj.render(this, element.tex);
-            element = buffer2[i-2];
-            element.obj.render(this, element.tex);
-            element = buffer2[i-3];
-            element.obj.render(this, element.tex);
-            element = buffer2[i-4];
-            element.obj.render(this, element.tex);
-        }
-        
-        for(; i>=0; i--) {
-            TMPElement element = buffer2[i];
-            element.obj.render(this, element.tex);
-        }
-        
-        buffer.reset();
+       buffer.sort(0, buffer.getSize() - 1);
+       if(backgroundPending) backgroundBuffer.sort(0,backgroundBuffer.getSize()-1);
+       // Mutable LCDUI Images do not preserve framebuffer alpha. Keep these
+       // paths entirely on the original rasterizer rather than change semantics.
+       boolean useM3G = allowM3G && rendererMode == M3G && !rendererFailed && !flushAlpha
+               && !DeveloperMenu.renderPolygonsOverwrite && (buffer.getSize()>0 || backgroundPending || effects!=null
+                       || (weather!=null && weather.count>0));
+       // Reusing the single Image must not destroy the only valid pre-frame
+       // pixels. Complete sky frames can replay from any old CPU backup; partial
+       // and no-sky frames must materialize the previous image before reuse.
+       try {
+           if(DeveloperMenu.renderPolygonsOverwrite) {syncFrameImage();clearDisplay(0);}
+           else if(useM3G && imageOutput && opaqueFrameBackground()) discardFrameImage();
+           else syncFrameImage();
+           if(useM3G) {
+               boolean saved = false;
+               try {
+                   if(sceneRenderer == null) sceneRenderer = (SceneRenderer)
+                           Class.forName("code.Rendering.M3GSceneRenderer").newInstance();
+                   if(frameBackup == null || frameBackup.length != display.length)
+                       frameBackup = new int[display.length];
+                   System.arraycopy(display, 0, frameBackup, 0, display.length);
+                   saved = true;
+                   if(effects!=null) sceneRenderer.prepareEffects(this,effects);
+                   if(weather!=null) sceneRenderer.prepareWeather(this,weather);
+                   nativePass = true;
+                   drawBuffer();
+                   if(effects!=null) drawRenderObject(effects,null,false);
+                   // Weather has an explicit LCDUI fallback after native failure.
+                   boolean nativeWeather=weather!=null && (weather.count==0
+                           || sceneRenderer.draw(this,weather,null,false));
+                   if(imageOutput) {
+                       frameImage=sceneRenderer.finishImage(this);
+                       frameImageBuffer=frameImage==null?null:display;
+                   } else sceneRenderer.finish(this);
+                   return nativeWeather;
+               } catch(Exception ex) {
+                   // Includes missing optional class and unsupported native targets.
+                   rendererError = ex.toString();
+               } catch(NoClassDefFoundError ex) {
+                   rendererError = ex.toString();
+               } catch(OutOfMemoryError ex) {
+                   rendererError = "not enough memory for M3G";
+               } finally {
+                   nativePass = false;
+               }
+               // A failed batch can include both CPU and M3G objects. Restore
+               // the pre-pass pixels and replay the complete sorted queue once.
+               if(saved) System.arraycopy(frameBackup, 0, display, 0, display.length);
+               failRenderer(rendererError);
+           }
+           drawBuffer();
+           if(effects!=null) effects.render(this,null);
+           // Empty weather needs no native submission, but a failed native
+           // frame must return false so no stale success suppresses fallback.
+           return weather!=null && weather.count==0 && canRenderM3G();
+       } finally {
+           nativePass = false;
+           resetQueues();
+       }
    }
-   
+
+   public boolean canRenderM3G() {
+       return rendererMode == M3G && !rendererFailed && !flushAlpha
+               && !DeveloperMenu.renderPolygonsOverwrite;
+   }
+
+   /** Post-effect overlay before LCDUI flush. False means use original LCDUI
+    * weather; this method never consumes/replays the scene's object queue. */
+   public boolean renderScreenLines(ScreenLines lines) {
+       if(!canRenderM3G() || nativePass) return false;
+       if(lines.count == 0) return true;
+       return renderOverlay(lines);
+   }
+
+   /** Best-effort native overlay; no CPU replay and no scene-queue consumption. */
+   public boolean renderOverlay(RenderObject effect) {
+       if(!canRenderM3G() || nativePass) return false;
+       syncFrameImage();
+       boolean saved = false;
+       try {
+           if(sceneRenderer == null) sceneRenderer = (SceneRenderer)
+                   Class.forName("code.Rendering.M3GSceneRenderer").newInstance();
+           if(frameBackup == null || frameBackup.length != display.length)
+               frameBackup = new int[display.length];
+           System.arraycopy(display,0,frameBackup,0,display.length);
+           saved = true;
+           boolean drawn = sceneRenderer.draw(this,effect,null,false);
+           sceneRenderer.finish(this);
+           if(!drawn) System.arraycopy(frameBackup,0,display,0,display.length);
+           return drawn;
+       } catch(Exception ex) {
+           rendererError = ex.toString();
+       } catch(NoClassDefFoundError ex) {
+           rendererError = ex.toString();
+       } catch(OutOfMemoryError ex) {
+           rendererError = "not enough memory for M3G effects";
+       }
+       if(saved) System.arraycopy(frameBackup,0,display,0,display.length);
+       failRenderer(rendererError);
+       return false;
+   }
+
+   public Mode5WeaponLight getMode5WeaponLight() {
+       return rendererMode==M3G && mode5WeaponLight!=null && mode5WeaponLight.level>0?mode5WeaponLight:null;
+   }
+
+   public void startWeaponLight() {
+       if(rendererMode!=M3G) return;
+       long now=System.currentTimeMillis();
+       try {
+           if(mode5WeaponLight==null) mode5WeaponLight=new Mode5WeaponLight();
+           mode5WeaponLight.start(now);
+       } catch(OutOfMemoryError ex) {mode5WeaponLight=null;}
+   }
+
+   /** Compatibility hook: starts only the real mode-5 OMNI, never a sprite. */
+   public void startMuzzleGlow() {startWeaponLight();}
+
+   /** Retained for callers of the removed fake screen-space illumination. */
+   public boolean renderMuzzleGlow(code.Gameplay.Map.House house,int part) {return false;}
+
    public final void drawLine(int x1, int y1, int x2, int y2, int fat, int col) {
+       if(frameImage!=null) syncFrameImage();
        int tmp;
        if(y1>y2) {tmp=y1; y1=y2; y2=tmp;tmp=x1; x1=x2; x2=tmp;}
        
@@ -199,6 +603,15 @@ this.buffer.resetTex();
    }
 
    public final void flush(Graphics g, int x, int y) {
+       if(frameImage!=null && frameImageBuffer==display && rendererMode==M3G
+               && !imagePresentationFailed && !flushAlpha && !DeveloperMenu.renderPolygonsOverwrite) {
+           try {g.drawImage(frameImage,x,y,Graphics.TOP|Graphics.LEFT);return;}
+           catch(RuntimeException ex) {imagePresentationFailed=true;}
+           catch(OutOfMemoryError ex) {imagePresentationFailed=true;}
+           // Image blitting unsupported on this device: retain M3G rasterization
+           // but fall back to the original eager readback/drawRGB presentation.
+       }
+       syncFrameImage();
        if(DeveloperMenu.renderPolygonsOverwrite) for(int i=display.length-1;i>=0;i--) {
            int c=display[i];
            if(c==0) display[i]=0xffffff;
@@ -208,7 +621,7 @@ this.buffer.resetTex();
            else if(c==4) display[i]=0xff0000;
            else if(c==5) display[i]=0x880000;
        }
-g.drawRGB(display, 0, width, x, y, width, height,flushAlpha );
+g.drawRGB(display, 0, width, x, y, width, height, flushAlpha);
    }
 
 
@@ -548,6 +961,7 @@ drDist=d;
 
 
 public final void clearDisplay(int col) {
+   discardFrameImage(); // A complete CPU fill needs no previous pixels.
 
    int length = display.length;
    int i=0;

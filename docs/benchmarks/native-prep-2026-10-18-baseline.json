@@ -1,0 +1,187 @@
+{
+  "kind": "CPU microbenchmark; NOT game FPS or M3G/GPU timing",
+  "quantum_commit": "214a3fc5107a9fbcffdacb4646f42ae6d86036e9",
+  "checkout_dirty": true,
+  "app_jar_sha256": "21088a8a86cb85b364f178f3d29b7c0d3ea15ff02fc5cb524a0ec222eeef77a8",
+  "app_jar_bytes": 462899,
+  "game_resource_files": 0,
+  "kvm_sha256": "917b17f278023670b9a5472d7740d12a5c7b1c6e3718196f828d4bed5de82e66",
+  "preverify_sha256": "c6c77a7b6022f31194c47decf7393f6b904f642b872a5ac0fe88b24e0e90c538",
+  "benchmark_source_sha256": "8b2eac77bc0b15ff3dc2510ec2dfb01793db5d908719af5a532b366c1d71ea66",
+  "suite": "native-prep",
+  "ecj_sha256": "5d53b25fd09b8d83157634af682b4c64bce9def70f6533f81d9115526057ae69",
+  "api_jar_sha256": "3196b69bb3432c04ac1523e5672ac44a0deb717a1b7b85fdb1c163e825c99fb7",
+  "cpu": "Intel(R) Xeon(R) Processor @ 2.60GHz",
+  "host": "Linux-6.1.158+-x86_64-with-glibc2.36",
+  "heap_bytes": 4194304,
+  "samples": 5,
+  "calibration_min_ms": 250,
+  "probes": {
+    "javax.microedition.m3g.Graphics3D": "UNAVAILABLE javax.microedition.m3g.Graphics3D: java.lang.ClassNotFoundException: javax/microedition/m3g/Graphics3D",
+    "javax.microedition.lcdui.Display": "UNAVAILABLE javax.microedition.lcdui.Display: java.lang.NoClassDefFoundError: javax/microedition/lcdui/Display: Cannot create class in system package",
+    "code.utils.Main": "UNAVAILABLE code.utils.Main: java.lang.NoClassDefFoundError: code/utils/Main: Cannot create class in system package"
+  },
+  "tasks": {
+    "normal_base_same_1000": {
+      "median_ms_per_workload": 2.3125,
+      "min_ms_per_workload": 2.265625,
+      "max_ms_per_workload": 2.3515625,
+      "samples_ms_per_workload": [
+        2.3515625,
+        2.34375,
+        2.3125,
+        2.265625,
+        2.3046875
+      ],
+      "batch_repeats": 128,
+      "checksums": [
+        4194176,
+        4194176,
+        4194176,
+        4194176,
+        4194176
+      ]
+    },
+    "normal_eye_same_1000": {
+      "median_ms_per_workload": 4.109375,
+      "min_ms_per_workload": 4.0625,
+      "max_ms_per_workload": 4.109375,
+      "samples_ms_per_workload": [
+        4.109375,
+        4.0625,
+        4.109375,
+        4.0625,
+        4.109375
+      ],
+      "batch_repeats": 64,
+      "checksums": [
+        412672,
+        412672,
+        412672,
+        412672,
+        412672
+      ]
+    },
+    "normal_base_vary_1000": {
+      "median_ms_per_workload": 2.5625,
+      "min_ms_per_workload": 2.5390625,
+      "max_ms_per_workload": 2.578125,
+      "samples_ms_per_workload": [
+        2.578125,
+        2.5390625,
+        2.5703125,
+        2.5625,
+        2.546875
+      ],
+      "batch_repeats": 128,
+      "checksums": [
+        4249216,
+        4249216,
+        4249216,
+        4249216,
+        4249216
+      ]
+    },
+    "normal_eye_vary_1000": {
+      "median_ms_per_workload": 4.359375,
+      "min_ms_per_workload": 4.34375,
+      "max_ms_per_workload": 4.375,
+      "samples_ms_per_workload": [
+        4.34375,
+        4.375,
+        4.34375,
+        4.375,
+        4.359375
+      ],
+      "batch_repeats": 64,
+      "checksums": [
+        448512,
+        448512,
+        448512,
+        448512,
+        448512
+      ]
+    },
+    "batch_tri_unlit_1000": {
+      "median_ms_per_workload": 1.00390625,
+      "min_ms_per_workload": 1.00390625,
+      "max_ms_per_workload": 1.01953125,
+      "samples_ms_per_workload": [
+        1.00390625,
+        1.01953125,
+        1.00390625,
+        1.00390625,
+        1.0078125
+      ],
+      "batch_repeats": 256,
+      "checksums": [
+        59136,
+        59136,
+        59136,
+        59136,
+        59136
+      ]
+    },
+    "batch_tri_lit_1000": {
+      "median_ms_per_workload": 1.14453125,
+      "min_ms_per_workload": 1.13671875,
+      "max_ms_per_workload": 1.1640625,
+      "samples_ms_per_workload": [
+        1.14453125,
+        1.13671875,
+        1.15625,
+        1.140625,
+        1.1640625
+      ],
+      "batch_repeats": 256,
+      "checksums": [
+        59392,
+        59392,
+        59392,
+        59392,
+        59392
+      ]
+    },
+    "batch_quad_unlit_1000": {
+      "median_ms_per_workload": 1.76171875,
+      "min_ms_per_workload": 1.7578125,
+      "max_ms_per_workload": 1.8828125,
+      "samples_ms_per_workload": [
+        1.8828125,
+        1.7734375,
+        1.7578125,
+        1.76171875,
+        1.7578125
+      ],
+      "batch_repeats": 256,
+      "checksums": [
+        40704,
+        40704,
+        40704,
+        40704,
+        40704
+      ]
+    },
+    "batch_quad_lit_1000": {
+      "median_ms_per_workload": 2.015625,
+      "min_ms_per_workload": 2.015625,
+      "max_ms_per_workload": 2.0234375,
+      "samples_ms_per_workload": [
+        2.015625,
+        2.015625,
+        2.0234375,
+        2.015625,
+        2.0234375
+      ],
+      "batch_repeats": 128,
+      "checksums": [
+        20480,
+        20480,
+        20480,
+        20480,
+        20480
+      ]
+    }
+  },
+  "loader_sha256": "72d9894f74ecdad731508c2de4716a59b582e4a84b3eef3d15b8e53985e1b447"
+}

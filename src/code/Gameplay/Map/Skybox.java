@@ -5,9 +5,13 @@ import code.Math.MathUtils;
 import code.Math.Matrix;
 import code.Rendering.MultyTexture;
 import code.Rendering.DirectX7;
-import code.Rendering.Meshes.M3GParser;
+import code.Rendering.Meshes.SkyMesh;
 import code.Rendering.Meshes.Mesh;
 import code.Rendering.Texture;
+import code.Rendering.ScreenLines;
+import code.Rendering.SkyFlash;
+import code.Rendering.SolidSky;
+import code.Rendering.PanoramaSky;
 import code.utils.Asset;
 import javax.microedition.lcdui.Graphics;
 
@@ -17,6 +21,12 @@ public class Skybox {
 	
     private Matrix matrix;
     private Mesh mesh;
+    private SkyMesh nativeMesh;
+    private ScreenLines lightningLines;
+    private SkyFlash skyFlash;
+    private SolidSky nativeSolidSky;
+    private int nativeSolidColor;
+    private PanoramaSky nativePanorama;
     public MultyTexture texture;
 	
     private int color, groundColor;
@@ -98,6 +108,11 @@ public class Skybox {
         
         if (mesh != null) mesh.destroy();
         mesh = null;
+        nativeMesh = null;
+        lightningLines = null;
+        skyFlash = null;
+        nativeSolidSky = null;
+        nativePanorama = null;
 
         tex = null;
 
@@ -132,6 +147,13 @@ public class Skybox {
 		}
 
 		if(lighting) {
+            if(g3d.getRenderer() == DirectX7.M3G) {
+                // Cheapest storm: replace the sky only, no bolts or world glow.
+                if(skyFlash == null) skyFlash = new SkyFlash();
+                g3d.addRenderObjectDT(skyFlash,null);
+                lighting = false;
+                return;
+            }
 			if(skyLighting == null) g3d.clearDisplay(0xe5e5e5);
 			else if(mode == 3) renderGradient(g3d, skyLighting, lowestDegree, horizonScale, horizonOffset);
 			else renderGradient(g3d, skyLighting, -91, 1, 0);
@@ -144,20 +166,39 @@ public class Skybox {
 			matrix.setPosition(g3d.getCamera().m03, g3d.getCamera().m13, g3d.getCamera().m23);
 			Matrix fm = g3d.computeFinalMatrix(matrix);
 			
-			g3d.transformAndProjectVertices(mesh, fm);
 			mesh.getTexture().updateAnimation();
-			g3d.addMesh(mesh, x1, y1, x2, y2);
+            if(g3d.getRenderer() == DirectX7.M3G) {
+                if(nativeMesh == null) nativeMesh = new SkyMesh(mesh);
+                nativeMesh.set(fm, x1, y1, x2, y2);
+                g3d.addRenderObjectDT(nativeMesh, null);
+            } else {
+                g3d.transformAndProjectVertices(mesh, fm);
+                g3d.addMesh(mesh, x1, y1, x2, y2);
+            }
 			
 		} else if(mode == 1) {
-			g3d.clearDisplay(color);
+            if(g3d.getRenderer() == DirectX7.M3G) renderSolid(g3d,color);
+            else g3d.clearDisplay(color);
 			
 		} else if(mode == 2) {
 			render2DSkybox(g3d);
 
 		} else if(mode == 3) {
-			renderGradient(g3d, tex, lowestDegree, horizonScale, horizonOffset);
-			
+            if(g3d.getRenderer() == DirectX7.M3G) {
+                if(x2<=x1 || y2<=y1) return;
+                // Replace gradient sampling with the existing full-frame solid
+                // background. Read one source color, never upload its texture.
+                renderSolid(g3d,tex.rImg.img[0]&0xffffff);
+            } else renderGradient(g3d, tex, lowestDegree, horizonScale, horizonOffset);
 		}
+    }
+
+    private void renderSolid(DirectX7 g3d,int rgb) {
+        if(nativeSolidSky==null || nativeSolidColor!=rgb) {
+            nativeSolidSky=new SolidSky(rgb);
+            nativeSolidColor=rgb;
+        }
+        g3d.addRenderObjectDT(nativeSolidSky,null);
     }
     
     void renderGradient(DirectX7 g3d, Texture texs, 
@@ -308,10 +349,14 @@ public class Skybox {
 
         final int xstep = ((endx << fp) - sx) / width;
         final int ystep = (int) ((tex.rImg.h << fp) * repeatY) / (endy - beginy);
-        render2D(g3d, sx, beginy, endy, xstep, ystep);
+        if(g3d.getRenderer()==DirectX7.M3G) {
+            if(nativePanorama==null) nativePanorama=new PanoramaSky(this,tex,color,groundColor);
+            nativePanorama.set(x1,y1,x2,y2,sx,beginy,endy,xstep,ystep);
+            g3d.addRenderObjectDT(nativePanorama,null);
+        } else render2D(g3d, sx, beginy, endy, xstep, ystep);
     }
 
-    void render2D(DirectX7 g3d, int uStart, int startY, int endY, int du, int dv) {
+    public void render2D(DirectX7 g3d, int uStart, int startY, int endY, int du, int dv) {
 
         final int rgb[] = g3d.display;
         final int width = g3d.width;
@@ -393,10 +438,20 @@ public class Skybox {
     }
     
     public void drawLighting(DirectX7 g3d) {
+        if(g3d.getRenderer() == DirectX7.M3G) return;
+        try { drawLighting(g3d,g3d.canRenderM3G()); }
+        catch(OutOfMemoryError ex) { drawLighting(g3d,false); }
+    }
+
+    private void drawLighting(DirectX7 g3d,boolean nativeLines) {
         MathUtils.randomCall = 0;
         
         if(MathUtils.preudoRandom(lastLighting,8)==0) return;
         
+        if(nativeLines) {
+            if(lightningLines == null) lightningLines = new ScreenLines();
+            lightningLines.clear();
+        }
         int horizonY = (int) (g3d.height/2 + rotateX*g3d.height/g3d.fovY );
         horizonY = (horizonY-g3d.centreY) *g3d.distY/(11 + g3d.distY) + g3d.centreY;
             
@@ -411,10 +466,10 @@ public class Skybox {
         int mx = bx + (MathUtils.preudoRandom(lastLighting,100) - 50)*deg20/100;
         int my = horizonY - ySize/3 + MathUtils.preudoRandom(lastLighting,100)*g3d.height*10/g3d.fovY/100;
         
-        g3d.drawLine(bx, by, mx, my, fat, 0xffffff);
+        lightningLine(g3d, nativeLines, bx, by, mx, my, fat, 0xffffff);
         if(MathUtils.preudoRandom(lastLighting,4)==0) {
             int rnd = (MathUtils.preudoRandom(lastLighting,100) - 50)*deg20/25;
-            g3d.drawLine(mx/2+bx/2, my/2+by/2, mx+rnd, horizonY, fat, 0xffffff); //Additional spark idk
+            lightningLine(g3d, nativeLines, mx/2+bx/2, my/2+by/2, mx+rnd, horizonY, fat, 0xffffff); //Additional spark idk
         }
         
         int sparksCount = 2 + MathUtils.preudoRandom(lastLighting,3); //Lightings count
@@ -424,12 +479,17 @@ public class Skybox {
             int rnd = (MathUtils.preudoRandom(lastLighting,100) - 50)*deg20/50; //Lighting direction
             if(MathUtils.preudoRandom(lastLighting,4)==0) { //Subdiv lighting
                 int rnd2 = (MathUtils.preudoRandom(lastLighting,100) - 50)*deg20/150; //Small lightings direction
-                g3d.drawLine(mx,my,mx+rnd/2,horizonY/2+my/2,fat2,0xfdfdfd);
+                lightningLine(g3d, nativeLines, mx,my,mx+rnd/2,horizonY/2+my/2,fat2,0xfdfdfd);
                 
-                g3d.drawLine(mx+rnd/2,horizonY/2+my/2,mx+rnd/2+rnd2/2,horizonY,fat2,0xfdfdfd);
-                g3d.drawLine(mx+rnd/2,horizonY/2+my/2,mx+rnd/2-rnd2/2,horizonY,fat2,0xfdfdfd);
-            } else g3d.drawLine(mx,my,mx+rnd,horizonY,fat2,0xfdfdfd); //One lighting
+                lightningLine(g3d, nativeLines, mx+rnd/2,horizonY/2+my/2,mx+rnd/2+rnd2/2,horizonY,fat2,0xfdfdfd);
+                lightningLine(g3d, nativeLines, mx+rnd/2,horizonY/2+my/2,mx+rnd/2-rnd2/2,horizonY,fat2,0xfdfdfd);
+            } else lightningLine(g3d, nativeLines, mx,my,mx+rnd,horizonY,fat2,0xfdfdfd); //One lighting
         }
-        
+        if(nativeLines && lightningLines.count > 0) g3d.addRenderObjectDT(lightningLines,null);
+    }
+
+    private void lightningLine(DirectX7 g,boolean nativeLines,int x1,int y1,int x2,int y2,int fat,int color) {
+        if(nativeLines) lightningLines.line(x1,y1,x2,y2,fat,color,true);
+        else g.drawLine(x1,y1,x2,y2,fat,color);
     }
 }

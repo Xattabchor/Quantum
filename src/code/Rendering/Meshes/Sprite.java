@@ -241,6 +241,9 @@ if(this.anim_index>=this.textures.length) this.anim_index=this.textures.length-1
 
          if(x_end > rgbWidth) x_end = rgbWidth;
          
+if(this.mode==2 && this.color>=0 && this.color<=6 && g3d.getRenderer()==DirectX7.M3G) {
+    renderModulate(g3d,texture,x_start,y_start,x_end,y_end,u_start,v_start,du,dv); return;
+}
 if(this.mode==1) {renderAdd(g3d,texture,x_start,y_start,x_end,y_end,u_start,v_start,du,dv); return;}
 else if(this.mode==2 && color==0) {renderMul(g3d,texture,x_start,y_start,x_end,y_end,u_start,v_start,du,dv); return;}
 else if(this.mode==2 && color==1) {renderMulRed(g3d,texture,x_start,y_start,x_end,y_end,u_start,v_start,du,dv); return;}
@@ -417,6 +420,20 @@ if(Main.s60Optimization==1) {
 
       }
       
+      // Only selected-M3G CPU fallback/replay uses this replacement. Software
+      // retains the original saturating MUL operators below, including blue=69.
+      final void renderModulate(DirectX7 g3d, Texture texture,int x_start,int y_start,int x_end,int y_end,int u_start,int v_start,int du,int dv) {
+          int[] tex=texture.rImg.img, rgb=g3d.display;
+          int w=texture.rImg.w, length=tex.length;
+          while(y_start<y_end) {
+              int start=x_start+g3d.width*y_start,end=x_end+g3d.width*y_start;
+              int uv=(v_start&-4096)*w+u_start;
+              for(int x=start;x<end;x++,uv+=du)
+                  rgb[x]=DirectX7.modulateSpritePixel(tex[(uv>>12&Integer.MAX_VALUE)%length],rgb[x],color);
+              y_start++;v_start+=dv;
+          }
+      }
+
       final void renderMulRed(DirectX7 g3d, Texture texture,int x_start,int y_start,int x_end,int y_end,int u_start,int v_start,int du,int dv) {
       int[] tex = texture.rImg.img;
       int[] rgb = g3d.display;

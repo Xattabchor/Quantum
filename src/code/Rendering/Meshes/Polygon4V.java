@@ -157,7 +157,7 @@ public class Polygon4V extends RenderObject {
 
         if(fog == 5) {
             sz2 = 0xff - MathUtils.calcLight(nx, ny, nz, DirectX7.lightdirx, DirectX7.lightdiry, DirectX7.lightdirz);
-        } else if(fog == 1) {
+        } else if(fog==1 && g3d.getRenderer()!=DirectX7.M3G) {
             szCalcfogAdd();
         }
 
@@ -165,7 +165,8 @@ public class Polygon4V extends RenderObject {
 
         if(Main.mipMapping == true && texture.mip != null) {
             texture.rImg = texture.mip[0];
-            if(texture.drawmode < 10 || texture.drawmode > 12) {
+            if(texture.drawmode < 10 || texture.drawmode > 12
+                || (texture.drawmode == 10 && g3d.getRenderer() == DirectX7.M3G)) {
                 addmip = q > 999 ? 2 : 3;
                 sizeu = size(au, bu, cu, du) * texture.rImg.w >> 8;
                 sizev = size(av, bv, cv, dv) * texture.rImg.h >> 8;
@@ -259,7 +260,7 @@ public class Polygon4V extends RenderObject {
             sz2 = 0xff - MathUtils.calcLight(nx, ny, nz, DirectX7.lightdirx, DirectX7.lightdiry, DirectX7.lightdirz);
         }
 
-        if(texture.drawmode == 1) {
+        if(texture.drawmode==1 && g3d.getRenderer()!=DirectX7.M3G) {
             szCalcfogAdd();
         }
 

@@ -1,6 +1,7 @@
 package code.HUD;
 
 import code.HUD.Base.Selectable;
+import code.Rendering.DirectX7;
 import code.utils.IniFile;
 import code.utils.Main;
 import code.utils.canvas.MyCanvas;
@@ -24,7 +25,7 @@ public final class Setting extends Selectable {
 
         IniFile lang = Main.getGameText();
 		
-        String[] options = new String[20 + (hasLangSelect() ? 1 : 0)];
+        String[] options = new String[itemCount()];
         boolean[] center = new boolean[options.length];
         set(Main.getFont(), options, null, lang.get("BACK"), center);
         setItems();
@@ -48,8 +49,20 @@ public final class Setting extends Selectable {
 		setRightSoft(Main.getGameText().get("BACK"));
 	}
 
+    private int itemCount() {
+        return 21+(hasLangSelect()?1:0)+(Main.renderer==DirectX7.M3G?1:0);
+    }
+
     private void setItems() {
         IniFile lang = Main.getGameText();
+        if(getItems().length!=itemCount()) {
+            int index=itemIndex();
+            boolean left=list.left;
+            String[] items=new String[itemCount()];
+            set(Main.getFont(),items,null,lang.get("BACK"),new boolean[items.length]);
+            list.left=left;
+            setItemIndex(Math.min(index,items.length-1));
+        }
         String[] var2;
         int i = 0;
         var2 = this.getItems();
@@ -137,6 +150,17 @@ public final class Setting extends Selectable {
         var2[i] = lang.get("DEBUG") + ":" + (DeveloperMenu.debugMode ? lang.get("ON") : lang.get("OFF"));
         ms[i] = false;
         i++;
+        String rendererLabel = lang.get("RENDERER");
+        if(rendererLabel == null) rendererLabel = "Renderer";
+        var2[i] = rendererLabel + ": " + (Main.renderer == DirectX7.M3G ? "M3G (experimental)" : "Software");
+        ms[i] = false;
+        i++;
+        if(Main.renderer==DirectX7.M3G) {
+            String label=lang.get("M3G_PERSPECTIVE");
+            if(label==null) label="HW perspective";
+            var2[i]=label+": "+lang.get(Main.m3gPerspective?"ON":"OFF");
+            ms[i]=false;
+        }
     }
 
     protected final void paint(Graphics g) {
@@ -168,6 +192,10 @@ public final class Setting extends Selectable {
 
     protected final void onKey5() {
         int var1 = this.itemIndex();
+        if(Main.renderer==DirectX7.M3G && var1==getItems().length-1) {
+            Main.m3gPerspective=!Main.m3gPerspective;
+            setItems();repaint();return;
+        }
         int id = 0;
         id++;//Audio
         id++;
@@ -271,6 +299,9 @@ public final class Setting extends Selectable {
             if(menu instanceof PauseScreen) ((PauseScreen) menu).reloadText();
 		}
         id++;
+        if(var1 == id) Main.renderer = Main.renderer == DirectX7.M3G ? DirectX7.SOFTWARE : DirectX7.M3G;
+        id++;
+        if(Main.renderer==DirectX7.M3G && var1==id) Main.m3gPerspective=false;
         this.setItems();
         this.repaint();
     }
@@ -350,6 +381,9 @@ public final class Setting extends Selectable {
             if(menu instanceof PauseScreen) ((PauseScreen) menu).reloadText();
         }
         id++;
+        if(var1 == id) Main.renderer = Main.renderer == DirectX7.M3G ? DirectX7.SOFTWARE : DirectX7.M3G;
+        id++;
+        if(Main.renderer==DirectX7.M3G && var1==id) Main.m3gPerspective=true;
         this.setItems();
         this.repaint();
     }
