@@ -15,6 +15,7 @@ public final class DirectX7 {
    private int[] frameBackup;
    private String rendererError;
    private MuzzleGlow muzzleGlow;
+   private Mode5WeaponLight mode5WeaponLight;
    private FrameEffects frameEffects;
    int frameDrawCalls,frameCpuBarriers,frameTextureUploads;
    private int peakDraws,peakBarriers,peakUploads;
@@ -200,11 +201,14 @@ this.buffer.resetTex();
        sceneRenderer = null;
        frameBackup = null;
        muzzleGlow = null;
+       mode5WeaponLight = null;
        frameEffects = null;
    }
 
    private void failRenderer(String message) {
+       Mode5WeaponLight pulse=mode5WeaponLight;
        releaseRenderer();
+       mode5WeaponLight=pulse; // Frozen shot state must survive complete CPU replay.
        rendererFailed = true;
        rendererError = message;
        System.out.println("M3G disabled: " + message);
@@ -357,6 +361,7 @@ this.buffer.resetTex();
     * Software callers retain their original GameScreen postprocessing. */
    public void renderWithEffects(byte[] vignette, boolean dead, boolean damaged) {
        if(rendererMode!=M3G) {render();return;}
+       if(dead && mode5WeaponLight!=null) mode5WeaponLight.stop();
        render(true,prepareFrameEffects(vignette,dead,damaged),null,null);
    }
 
@@ -365,6 +370,7 @@ this.buffer.resetTex();
    public boolean renderGameFrame(byte[] vignette,boolean dead,boolean damaged,
            code.Gameplay.Map.House house,int part,ScreenLines weather) {
        if(rendererMode!=M3G) {render();return false;}
+       if(dead && mode5WeaponLight!=null) mode5WeaponLight.stop();
        MuzzleGlow glow=dead?null:prepareMuzzleGlow(house,part);
        return render(true,prepareFrameEffects(vignette,dead,damaged),glow,weather);
    }
@@ -378,6 +384,7 @@ this.buffer.resetTex();
    private void render(boolean allowM3G) {render(allowM3G,null,null,null);}
 
    private boolean render(boolean allowM3G,FrameEffects effects,MuzzleGlow glow,ScreenLines weather) {
+       if(mode5WeaponLight!=null) mode5WeaponLight.prepare(System.currentTimeMillis());
        lx = camera.m03;
        ly = camera.m13;
        lz = camera.m23;
@@ -477,11 +484,21 @@ this.buffer.resetTex();
        return false;
    }
 
+   public Mode5WeaponLight getMode5WeaponLight() {
+       return rendererMode==M3G && mode5WeaponLight!=null && mode5WeaponLight.level>0?mode5WeaponLight:null;
+   }
+
    public void startMuzzleGlow() {
+       if(rendererMode!=M3G) return;
+       long now=System.currentTimeMillis();
+       try {
+           if(mode5WeaponLight==null) mode5WeaponLight=new Mode5WeaponLight();
+           mode5WeaponLight.start(now);
+       } catch(OutOfMemoryError ex) {mode5WeaponLight=null;}
        if(!canRenderM3G()) return;
        try {
            if(muzzleGlow == null) muzzleGlow = new MuzzleGlow();
-           muzzleGlow.start(System.currentTimeMillis());
+           muzzleGlow.start(now);
        } catch(OutOfMemoryError ex) { muzzleGlow = null; }
    }
 

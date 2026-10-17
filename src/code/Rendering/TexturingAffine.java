@@ -55,6 +55,13 @@ public class TexturingAffine {
             cv = cv * texture.rImg.h / 256;
         }
 
+        if(fog==5 && g3d.getMode5WeaponLight()!=null) {
+            Mode5WeaponLight pulse=g3d.getMode5WeaponLight();
+            paintAffine_9(g3d,texture,a,au,av,b,bu,bv,c,cu,cv,fogc,sz2,
+                    pulse.shade(g3d,a,nx,ny,nz),pulse.shade(g3d,b,nx,ny,nz),pulse.shade(g3d,c,nx,ny,nz),nx,ny,nz);
+            return;
+        }
+
 switch(fog)
 {
 

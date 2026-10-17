@@ -2,14 +2,17 @@ package code.Rendering;
 
 import javax.microedition.m3g.*;
 
-/** Mode 5 only: white ambient 25% + directional 75%, no positional lights.
- * Normals and lightdir share the engine's normal frame. Projected positions
- * are deliberately not used to derive light vectors or camera-dependent light. */
+/** Mode 5 only: white ambient 25% + directional 75%, plus a short weapon OMNI.
+ * Base packets use the engine normal frame; pulse packets use metric eye-space
+ * positions and rotate both normals and lightdir into the same eye frame. */
 final class M3GMode5Lighting {
     final Material material=new Material();
     private final Light ambient=new Light(),directional=new Light();
     private final Transform transform=new Transform();
     private final float[] matrix=new float[16];
+    private Light omni;
+    private Transform omniTransform;
+    private int omniSlot=-1,omniLevel;
     private boolean installed,ready;
     private int x,y,z,directionalSlot;
 
@@ -22,13 +25,14 @@ final class M3GMode5Lighting {
         directional.setMode(Light.DIRECTIONAL);directional.setColor(0xffffff);
     }
 
-    void resetBinding() {installed=false;}
+    void resetBinding() {installed=false;omniSlot=-1;}
 
     void disable(Graphics3D graphics) {
-        if(installed) {graphics.resetLights();installed=false;}
+        if(installed) {graphics.resetLights();installed=false;omniSlot=-1;}
     }
 
-    void apply(Graphics3D graphics,int lx,int ly,int lz) {
+    void apply(Graphics3D graphics,int lx,int ly,int lz,int pulse) {
+        if(pulse==0 && omniSlot>=0) disable(graphics);
         boolean changed=!ready || x!=lx || y!=ly || z!=lz;
         if(changed) {
             ready=true;x=lx;y=ly;z=lz;
@@ -53,10 +57,26 @@ final class M3GMode5Lighting {
             graphics.addLight(ambient,null);
             directionalSlot=graphics.addLight(directional,transform);
         } else if(changed) graphics.setLight(directionalSlot,directional,transform);
+        if(pulse>0) {
+            if(omni==null) {
+                omni=new Light();omni.setMode(Light.OMNI);omni.setColor(0xffffff);
+                omni.setAttenuation(1,0,1.0f/(Mode5WeaponLight.HALF_DISTANCE*Mode5WeaponLight.HALF_DISTANCE));
+                omniTransform=new Transform();
+                omniTransform.set(new float[]{1,0,0,Mode5WeaponLight.X,0,1,0,Mode5WeaponLight.Y,0,0,1,Mode5WeaponLight.Z,0,0,0,1});
+            }
+            if(omniLevel!=pulse || omniSlot<0) {omni.setIntensity(pulse/256.0f);omniLevel=pulse;}
+            if(omniSlot<0) omniSlot=graphics.addLight(omni,omniTransform);
+        }
+
     }
 
-    static void packNormals(RenderObject object,int count,short[] out,int lx,int ly,int lz) {
+    static void packNormals(RenderObject object,int count,short[] out,int lx,int ly,int lz,DirectX7 eye) {
         double x=object.nx,y=object.ny,z=object.nz;
+        if(eye!=null) {
+            x=Mode5WeaponLight.eyeX(eye,object.nx,object.ny,object.nz);
+            y=Mode5WeaponLight.eyeY(eye,object.nx,object.ny,object.nz);
+            z=Mode5WeaponLight.eyeZ(eye,object.nx,object.ny,object.nz);
+        }
         double length=Math.sqrt(x*x+y*y+z*z);
         if(length==0) {
             // Never submit a zero vector for driver-side normalization. A normal

@@ -7,7 +7,7 @@ final class M3GPolygonBatch {
     static final class State {
         Texture2D texture;
         Material material;
-        int lightX,lightY,lightZ;
+        int lightX,lightY,lightZ,pulse;
         PolygonMode polygon;
         int blend,function,imageFilter=Texture2D.FILTER_NEAREST,fogColor;
         float threshold,near,far;
@@ -29,7 +29,7 @@ final class M3GPolygonBatch {
     private VertexBuffer buffer;
     private VertexArray positions,coords,colors,normals;
     private Material material;
-    private int lightX,lightY,lightZ;
+    private int lightX,lightY,lightZ,pulse;
     private Texture2D texture;
     private PolygonMode polygon;
     private int blend,function,levelFilter,imageFilter,fogColor;
@@ -56,14 +56,14 @@ final class M3GPolygonBatch {
         float near=fogged?source.near:0,far=fogged?source.far:0;
         // Capture desired state BEFORE flushing: a cached Texture2D may already
         // have been changed by preparation of the next material.
-        if(firstCount!=0 && (material!=source.material || lightX!=source.lightX || lightY!=source.lightY || lightZ!=source.lightZ
+        if(firstCount!=0 && (pulse!=source.pulse || material!=source.material || lightX!=source.lightX || lightY!=source.lightY || lightZ!=source.lightZ
                 || texture!=tex || polygon!=poly || this.blend!=blend
                 || this.function!=function || levelFilter!=level || imageFilter!=filter
                 || this.threshold!=threshold || this.fogged!=fogged || fogColor!=color
                 || this.near!=near || this.far!=far || (fogged && this.scale!=scale)
                 || (size==0?firstOrder.length:size)+order.length>MAX_VERTICES)) flush(g);
         if(firstCount==0) {
-            material=source.material;lightX=source.lightX;lightY=source.lightY;lightZ=source.lightZ;
+            pulse=source.pulse;material=source.material;lightX=source.lightX;lightY=source.lightY;lightZ=source.lightZ;
             texture=tex;polygon=poly;this.blend=blend;this.function=function;
             levelFilter=level;imageFilter=filter;this.threshold=threshold;
             this.fogged=fogged;fogColor=color;this.near=near;this.far=far;this.scale=scale;
@@ -100,7 +100,7 @@ final class M3GPolygonBatch {
         if(fogged) {fog.setColor(fogColor);fog.setLinear(near,far);appearance.setFog(fog);}
         else appearance.setFog(null);
         if(vertices==0) {
-            owner.renderSingle(g,count,scale,firstXYZ,firstUV,firstRGBA,firstNormals,indices,appearance,material!=null,lightX,lightY,lightZ);
+            owner.renderSingle(g,count,scale,firstXYZ,firstUV,firstRGBA,firstNormals,indices,appearance,material!=null,lightX,lightY,lightZ,pulse);
         } else {
             if(buffer==null) {
                 buffer=new VertexBuffer();positions=new VertexArray(MAX_VERTICES,3,2);
@@ -117,14 +117,14 @@ final class M3GPolygonBatch {
             // integer homogeneous weight: no re-quantization or shared-edge drift.
             // Native Fog still requires an EXACT common eye-space scale. Fog
             // packing now shares a binary depth lattice when representable.
-            buffer.setPositions(positions,fogged?scale:1.0f,null);
+            buffer.setPositions(positions,(fogged || pulse>0)?scale:1.0f,null);
             int triangles=vertices/3;
             if(indexCache[triangles-1]==null) {
                 int[] lengths=new int[triangles];for(int i=0;i<triangles;i++) lengths[i]=3;
                 indexCache[triangles-1]=new TriangleStripArray(0,lengths);
             }
             owner.bind(g);owner.restoreCamera(g);
-            owner.renderNative(g,buffer,indexCache[triangles-1],appearance,material!=null,lightX,lightY,lightZ);
+            owner.renderNative(g,buffer,indexCache[triangles-1],appearance,material!=null,lightX,lightY,lightZ,pulse);
         }
         texture=null;polygon=null;firstOrder=null;firstIndices=null;
     }

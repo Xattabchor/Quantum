@@ -20,6 +20,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private PolygonMode activePolygon;
     private M3GPolygonBatch batch;
     private M3GMode5Lighting mode5Lighting;
+    private javax.microedition.m3g.Camera metricCamera;
+    private int metricWidth,metricHeight,metricX,metricY;
     private final M3GMaterialMath materialMath=new M3GMaterialMath();
     private final M3GPolygonBatch.State batchState=new M3GPolygonBatch.State();
     private CachedTexture lastTexture,muzzleTexture;
@@ -223,12 +225,25 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     void renderNative(DirectX7 g,VertexBuffer vertices,TriangleStripArray indices,Appearance material) {
-        renderNative(g,vertices,indices,material,false,0,0,0);
+        renderNative(g,vertices,indices,material,false,0,0,0,0);
     }
 
     void renderNative(DirectX7 g,VertexBuffer vertices,TriangleStripArray indices,Appearance material,
-            boolean lit,int lx,int ly,int lz) {
-        if(lit) mode5Lighting.apply(graphics,lx,ly,lz);
+            boolean lit,int lx,int ly,int lz,int pulse) {
+        if(pulse>0) {
+            if(metricCamera==null || metricWidth!=g.width || metricHeight!=g.height || metricX!=g.distX || metricY!=g.distY) {
+                if(metricCamera==null) metricCamera=new javax.microedition.m3g.Camera();
+                metricWidth=g.width;metricHeight=g.height;metricX=g.distX;metricY=g.distY;
+                float ox=2.0f*g.centreX/g.width-1,oy=1-2.0f*g.centreY/g.height;
+                Transform projection=new Transform();
+                projection.set(new float[]{2.0f*g.distX/g.width,0,-ox,ox*g.distX,
+                        0,2.0f*g.distY/g.height,-oy,oy*g.distX,
+                        0,0,-1,g.distX-0.02f,0,0,-1,g.distX});
+                metricCamera.setGeneric(projection);
+            }
+            graphics.setCamera(metricCamera,null);
+        }
+        if(lit) mode5Lighting.apply(graphics,lx,ly,lz,pulse);
         else if(mode5Lighting!=null) mode5Lighting.disable(graphics);
         g.frameDrawCalls++; // API attempts, including a call that throws.
         graphics.render(vertices,indices,material,null);
@@ -364,7 +379,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             uv[4] = p.cu; uv[5] = p.cv; uv[6] = p.du; uv[7] = p.dv;
             count = 4;
         }
-        batchState.material=null;batchState.lightX=batchState.lightY=batchState.lightZ=0;
+        batchState.material=null;batchState.pulse=0;batchState.lightX=batchState.lightY=batchState.lightZ=0;
         materialMath.resetBounds();
         boolean fastPath = fast || (Main.persQ == 0 && !Main.mipMapping);
         boolean alternate = count == 4 && type == Polygon4V.class && !fastPath
@@ -377,8 +392,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
         int distance = TexturingPers.move;
         float fogFar=nativeFog?materialMath.fogFar(distance):0;
         if(nativeFog && !(fogFar>1.0f)) return false;
-        if(nativeFog && !perspective) selectPolygonMode(affineFogPolygon);
-        float scale = nativeFog
+        boolean metric=mode==5 && g.getMode5WeaponLight()!=null && (object.nx!=0 || object.ny!=0 || object.nz!=0);
+        if((nativeFog || metric) && !perspective) selectPolygonMode(affineFogPolygon);
+        float scale = metric?Mode5WeaponLight.pack(g,vertices,count,positions):nativeFog
                 ? ProjectedGeometry.packFog(vertices,count,g.centreX,g.centreY,distance,positions,work)
                 : ProjectedGeometry.pack(vertices,count,g.centreX,g.centreY,
                         distance,mode!=8 && perspective,positions,work);
@@ -456,7 +472,15 @@ public final class M3GSceneRenderer implements SceneRenderer {
             if(mode5Lighting==null) mode5Lighting=new M3GMode5Lighting();
             batchState.material=mode5Lighting.material;
             batchState.lightX=DirectX7.lightdirx;batchState.lightY=DirectX7.lightdiry;batchState.lightZ=DirectX7.lightdirz;
-            M3GMode5Lighting.packNormals(object,count,normals,batchState.lightX,batchState.lightY,batchState.lightZ);
+            if(metric) {
+                batchState.pulse=g.getMode5WeaponLight().level;
+                double length=Math.sqrt((double)DirectX7.lightdirx*DirectX7.lightdirx+(double)DirectX7.lightdiry*DirectX7.lightdiry+(double)DirectX7.lightdirz*DirectX7.lightdirz);
+                double unit=length>0?32767/length:0;
+                batchState.lightX=(int)(unit*Mode5WeaponLight.eyeX(g,DirectX7.lightdirx,DirectX7.lightdiry,DirectX7.lightdirz));
+                batchState.lightY=(int)(unit*Mode5WeaponLight.eyeY(g,DirectX7.lightdirx,DirectX7.lightdiry,DirectX7.lightdirz));
+                batchState.lightZ=(int)(unit*Mode5WeaponLight.eyeZ(g,DirectX7.lightdirx,DirectX7.lightdiry,DirectX7.lightdirz));
+            }
+            M3GMode5Lighting.packNormals(object,count,normals,batchState.lightX,batchState.lightY,batchState.lightZ,metric?g:null);
             uniformColors(count,0xffffff,255);
             render(g,slot,indices[slot]);
         } else {
@@ -503,7 +527,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     void renderSingle(DirectX7 g,int count,float scale,short[] xyz,short[] uv,byte[] rgba,short[] normals,
-            TriangleStripArray triangles,Appearance state,boolean lit,int lx,int ly,int lz) {
+            TriangleStripArray triangles,Appearance state,boolean lit,int lx,int ly,int lz,int pulse) {
         int slot=count-3;
         posArrays[slot].set(0,count,xyz);uvArrays[slot].set(0,count,uv);colorArrays[slot].set(0,count,rgba);
         buffers[slot].setPositions(posArrays[slot],scale,null);
@@ -511,7 +535,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             if(normalArrays[slot]==null) normalArrays[slot]=new VertexArray(count,3,2);
             normalArrays[slot].set(0,count,normals);buffers[slot].setNormals(normalArrays[slot]);
         } else buffers[slot].setNormals(null);
-        bind(g);restoreCamera(g);renderNative(g,buffers[slot],triangles,state,lit,lx,ly,lz);
+        bind(g);restoreCamera(g);renderNative(g,buffers[slot],triangles,state,lit,lx,ly,lz,pulse);
     }
 
     Texture2D texture(DirectX7 g, RawImage raw, int kind) {

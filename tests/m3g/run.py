@@ -134,7 +134,8 @@ public class Appearance {public Texture2D tex;public CompositingMode comp;public
  public void setTexture(int n,Texture2D t){tex=t;} }''',
 "javax/microedition/m3g/Light.java": '''package javax.microedition.m3g;
 public class Light {
- public static final int AMBIENT=128,DIRECTIONAL=129;public int mode,color;public float intensity=1;
+ public static final int AMBIENT=128,DIRECTIONAL=129,OMNI=130;public int mode,color;public float intensity=1,constant=1,linear,quadratic;
+ public void setAttenuation(float c,float l,float q){constant=c;linear=l;quadratic=q;}
  public void setMode(int m){mode=m;}public void setColor(int c){color=c;}public void setIntensity(float i){intensity=i;}
 }''',
 "javax/microedition/m3g/Material.java": '''package javax.microedition.m3g;
@@ -196,7 +197,7 @@ public class Graphics3D {
  public static Graphics target; public static Camera camera;
  public static class Draw {
   public int blend,function,fogColor,textureAlpha,filter,colorComponents,cull,winding,sample;public boolean textured,perspective;public float near,far,threshold;public boolean fog;
-  public byte[] colors;public int[] indices,lengths; public short[] positions,coords,normals;public boolean lit,tracking;public int lights,diffuse,ambient,emissive,specular;public float ambientIntensity,directionalIntensity;public float[] lightMatrix;public float scale,uvScale;public float[] projection;
+  public byte[] colors;public int[] indices,lengths; public short[] positions,coords,normals;public boolean lit,tracking;public int lights,diffuse,ambient,emissive,specular;public float ambientIntensity,directionalIntensity,omniIntensity,omniQuadratic;public float[] omniPosition;public float[] lightMatrix;public float scale,uvScale;public float[] projection;
  }
  public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
  public static Graphics3D getInstance(){return INSTANCE;}
@@ -208,7 +209,7 @@ public class Graphics3D {
  public void setViewport(int x,int y,int w,int h){} public void setCamera(Camera c,Transform t){camera=c;} public void resetLights(){lights.removeAllElements();lightTransforms.removeAllElements();}
  public static java.util.Vector<Light> lights=new java.util.Vector<Light>();
  public static java.util.Vector<float[]> lightTransforms=new java.util.Vector<float[]>();
- public int addLight(Light l,Transform t){if(Boolean.getBoolean("lights.fail") || (lights.size()==1 && Boolean.getBoolean("lights.second.fail")))throw new IllegalStateException("light");
+ public int addLight(Light l,Transform t){if(Boolean.getBoolean("lights.fail") || (lights.size()==1 && Boolean.getBoolean("lights.second.fail")) || (l.mode==Light.OMNI && Boolean.getBoolean("omni.fail")))throw new IllegalStateException("light");
   lights.add(l);lightTransforms.add(t==null?null:t.matrix.clone());return lights.size()-1;}
  public void setLight(int n,Light l,Transform t){lights.set(n,l);lightTransforms.set(n,t==null?null:t.matrix.clone());}
  public void clear(Background b){
@@ -247,6 +248,13 @@ public class Graphics3D {
      draw.directionalIntensity+=l.intensity;draw.lightMatrix=lightTransforms.get(n).clone();
      double dot=(draw.normals[0]*draw.lightMatrix[2]+draw.normals[1]*draw.lightMatrix[6]+draw.normals[2]*draw.lightMatrix[10])/32767.0;
      lightingScale+=l.intensity*Math.max(0,Math.min(1,dot));
+    } else if(l.mode==Light.OMNI) {
+     draw.omniIntensity=l.intensity;draw.omniQuadratic=l.quadratic;
+     float[] m=lightTransforms.get(n);draw.omniPosition=new float[]{m[3],m[7],m[11]};
+     double dx=m[3]-draw.positions[0]*draw.scale,dy=m[7]-draw.positions[1]*draw.scale,dz=m[11]-draw.positions[2]*draw.scale;
+     double d2=dx*dx+dy*dy+dz*dz,d=Math.sqrt(d2);
+     double dot=d==0?0:Math.max(0,(draw.normals[0]*dx+draw.normals[1]*dy+draw.normals[2]*dz)/(32767*d));
+     lightingScale+=l.intensity*dot/(l.constant+l.linear*d+l.quadratic*d2);
     } else throw new AssertionError("unexpected positional light");
    }
   }
@@ -261,7 +269,7 @@ public class Graphics3D {
    int out=0xff000000;
    for(int k=0;k<3;k++){
     int src=draw.function==Texture2D.FUNC_ADD?Math.min(255,(p[k]&255)+(c[k]&255)):(p[k]&255)*(c[k]&255)/255;
-    if(draw.lit) src=(int)((p[k]&255)*lightingScale+0.5);
+    if(draw.lit) src=Math.min(255,(int)((p[k]&255)*lightingScale+0.5));
     if(draw.fog){float z=-v.positions.shorts[2]*v.scale;
      float f=Math.max(0,Math.min(1,(z-draw.near)/(draw.far-draw.near)));
      src=Math.round(src*(1-f)+((draw.fogColor>>(16-k*8))&255)*f);
@@ -315,6 +323,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameTransactionTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativeLightingTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.WeaponOmniTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GlassTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModulateX2Test"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.AlphaModeTest"], check=True)

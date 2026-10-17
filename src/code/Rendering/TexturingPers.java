@@ -91,6 +91,13 @@ x1++;
         if(dmode == 1 && g3d.getRenderer() == DirectX7.M3G) dmode = 4;
         if(dmode == 10 && g3d.getRenderer() == DirectX7.M3G) dmode = 7;
         if(dmode == 5 && g3d.getRenderer() == DirectX7.M3G) qz = 255-DirectX7.mode5Shade(nx,ny,nz);
+        boolean mode5Pulse=dmode==5 && g3d.getMode5WeaponLight()!=null;
+        if(mode5Pulse) {
+            Mode5WeaponLight pulse=g3d.getMode5WeaponLight();
+            al=ag=ab=pulse.shade(g3d,a,nx,ny,nz);
+            bl=bg=bb=pulse.shade(g3d,b,nx,ny,nz);
+            cl=cg=cb=pulse.shade(g3d,c,nx,ny,nz);
+        }
         if (texture.rImg.alphaMixing == false && texture.drawmode == 4) {
             dmode = 0;
         }
@@ -199,7 +206,7 @@ x1++;
             if (cf < 0) cf = 0;
         }
         
-        if (texture.drawmode == 9 || texture.drawmode == 13) {
+        if (texture.drawmode == 9 || texture.drawmode == 13 || mode5Pulse) {
             af = al;
             bf = bl;
             cf = cl;
@@ -224,6 +231,8 @@ x1++;
 
         final int W_UNIT = texture.rImg.W_UNIT;
 
+        // Active OMNI uses metric eye-space projection, including during replay.
+        int move=mode5Pulse && (nx!=0 || ny!=0 || nz!=0) && g3d.distX>0?g3d.distX:TexturingPers.move;
         int tempI =(int)( (W_UNIT>>fp) + move);
         int awz, bwz, cwz;
         
@@ -1585,7 +1594,7 @@ static final void paintMiniTrianglePers_5(final DirectX7 g3d, final Texture text
             int f_start,int f_end,
 final int df_start,final int df_end,
 final int df) {
-    if( ((texture.drawmode==9 || texture.drawmode==13) && Main.fogQ>=1) || (Main.fogQ==2 && Main.forceLQFog==false && texture.drawmode==6)) {
+    if( (texture.drawmode==5 && g3d.getMode5WeaponLight()!=null) || ((texture.drawmode==9 || texture.drawmode==13) && Main.fogQ>=1) || (Main.fogQ==2 && Main.forceLQFog==false && texture.drawmode==6)) {
     paintMiniTrianglePers_6_HQ(g3d, texture, y_start, y_end,
                     x_start, wz_start, uz_start, vz_start,
                     x_end, wz_end, uz_end, vz_end,
