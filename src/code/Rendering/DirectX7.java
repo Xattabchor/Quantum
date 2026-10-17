@@ -15,6 +15,7 @@ public final class DirectX7 {
    private int[] frameBackup;
    private String rendererError;
    private MuzzleGlow muzzleGlow;
+   private FrameEffects frameEffects;
 
    public int width, height;
    public int[] display;
@@ -175,6 +176,7 @@ this.buffer.resetTex();
        sceneRenderer = null;
        frameBackup = null;
        muzzleGlow = null;
+       frameEffects = null;
    }
 
    private void failRenderer(String message) {
@@ -273,7 +275,18 @@ this.buffer.resetTex();
        render(false);
    }
 
-   private void render(boolean allowM3G) {
+   /** Game frame effects run after world geometry but BEFORE its final readback.
+    * Software callers retain their original GameScreen postprocessing. */
+   public void renderWithEffects(byte[] vignette, boolean dead, boolean damaged) {
+       if(rendererMode!=M3G) {render();return;}
+       if(frameEffects==null) frameEffects=new FrameEffects();
+       frameEffects.set(vignette,dead,damaged);
+       render(true,frameEffects.active()?frameEffects:null);
+   }
+
+   private void render(boolean allowM3G) {render(allowM3G,null);}
+
+   private void render(boolean allowM3G,FrameEffects effects) {
        lx = camera.m03;
        ly = camera.m13;
        lz = camera.m23;
@@ -283,7 +296,7 @@ this.buffer.resetTex();
        // Mutable LCDUI Images do not preserve framebuffer alpha. Keep these
        // paths entirely on the original rasterizer rather than change semantics.
        boolean useM3G = allowM3G && rendererMode == M3G && !rendererFailed && !flushAlpha
-               && !DeveloperMenu.renderPolygonsOverwrite && (buffer.getSize()>0 || backgroundPending);
+               && !DeveloperMenu.renderPolygonsOverwrite && (buffer.getSize()>0 || backgroundPending || effects!=null);
        try {
            if(useM3G) {
                boolean saved = false;
@@ -294,8 +307,10 @@ this.buffer.resetTex();
                        frameBackup = new int[display.length];
                    System.arraycopy(display, 0, frameBackup, 0, display.length);
                    saved = true;
+                   if(effects!=null) sceneRenderer.prepareEffects(this,effects);
                    nativePass = true;
                    drawBuffer();
+                   if(effects!=null) drawRenderObject(effects,null,false);
                    sceneRenderer.finish(this);
                    return;
                } catch(Exception ex) {
@@ -314,6 +329,7 @@ this.buffer.resetTex();
                failRenderer(rendererError);
            }
            drawBuffer();
+           if(effects!=null) effects.render(this,null);
        } finally {
            nativePass = false;
            resetQueues();

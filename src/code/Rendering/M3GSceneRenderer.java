@@ -53,6 +53,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private M3GScreenLines screenLines;
     private M3GSpriteRenderer spriteRenderer;
     private M3GPanoramaRenderer panoramaRenderer;
+    private M3GFrameEffects frameEffects;
     private Background flashBackground;
     private boolean bound;
     private int cachedPixels;
@@ -197,6 +198,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     private void flushBatch(DirectX7 g) {if(batch!=null) batch.flush(g);}
 
+    public void prepareEffects(DirectX7 g,FrameEffects effects) {
+        if(frameEffects==null) frameEffects=new M3GFrameEffects(this,graphics,maxTexture);
+        frameEffects.prepare(g,effects);
+    }
+
     public void finish(DirectX7 g) {
         flushBatch(g);
         if(!bound) return;
@@ -217,6 +223,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             screenLines = null;
             spriteRenderer = null;
             panoramaRenderer = null;
+            frameEffects = null;
             flashBackground = null;
             polygonModes.removeAllElements();polygonModes.addElement(polygon);polygonModes.addElement(screenPolygon);
             textures.removeAllElements();lastTexture=null;
@@ -232,6 +239,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
             hardwarePerspective=Main.m3gPerspective;
             for(int i=0;i<polygonModes.size();i++)
                 ((PolygonMode)polygonModes.elementAt(i)).setPerspectiveCorrectionEnable(hardwarePerspective);
+        }
+        if(object instanceof FrameEffects) {
+            if(frameEffects==null) return false;
+            return frameEffects.draw(g,(FrameEffects)object);
         }
         if(object instanceof SolidSky) {
             setScreenMode(true);

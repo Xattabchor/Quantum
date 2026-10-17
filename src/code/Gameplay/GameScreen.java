@@ -429,7 +429,9 @@ public final class GameScreen extends MyCanvas {
                 scene.render(g, partsMass, player);
             } else scene.render(g, renderFrom, player);
 
-            g3d.render();
+            if(g3d.getRenderer()==DirectX7.M3G)
+                g3d.renderWithEffects(vignette,playerDied,player.isDamaged());
+            else g3d.render();
             g3d.shootIntensity -= QFPS.frameTime;
             if(g3d.shootIntensity < 0) g3d.shootIntensity = 0;
             
@@ -438,17 +440,19 @@ public final class GameScreen extends MyCanvas {
 				wg.lightingEffect(g3d, cam != null ? cam.currentRotX : player.rotateX);
 			}
 
-            if(vignette != null) applyVignette(g3d.getDisplay()); //maybe i should remove all these vignette stuff?
+            if(vignette != null && g3d.getRenderer()==DirectX7.SOFTWARE) applyVignette(g3d.getDisplay());
         } catch (Exception ext) {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
         }
         
         int screenY = (height - g3d.getHeight()) / 2;
         try {
-            if(playerDied) deathScr(g3d.getDisplay());
-            if(player.isDamaged()) damageScr(g3d.getDisplay());
+            if(g3d.getRenderer()==DirectX7.SOFTWARE) {
+                if(playerDied) deathScr(g3d.getDisplay());
+                if(player.isDamaged()) damageScr(g3d.getDisplay());
+            }
             if(bloom && g3d.getRenderer()==DirectX7.SOFTWARE) fastbloomScr(g3d);
-            if(doubleBright) applySub(scene.getG3D().display);
+            if(doubleBright && g3d.getRenderer()==DirectX7.SOFTWARE) applySub(scene.getG3D().display);
         } catch (Exception ext) {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
         }

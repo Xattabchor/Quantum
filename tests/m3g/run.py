@@ -33,14 +33,14 @@ assert game.count("fastbloomScr(g3d);")==1
 loader = (ROOT / "src/code/Gameplay/LevelLoader.java").read_text()
 assert 'GameScreen.bloom = getBoolean("BLOOM", lvl, setting, false);' in loader
 
-assert game.index("wg.paintM3G(g3d)") > game.index("if(doubleBright)")
+assert game.index("wg.paintM3G(g3d)") > game.index("if(doubleBright &&")
 assert game.index("wg.paintM3G(g3d)") < game.index("scene.flush(g, 0, screenY)")
 assert "wg.paintAfterScene(g, screenY, g3d.getRenderer(), nativeWeather);" in game
 assert game.index("scene.flush(g, 0, screenY)") < game.index("wg.paintAfterScene(") < game.index("player.arsenal.drawWeapon(")
-assert game.index("if(doubleBright)") < game.index("g3d.renderMuzzleGlow(") < game.index("wg.paintM3G(g3d)")
+assert game.index("if(doubleBright &&") < game.index("g3d.renderMuzzleGlow(") < game.index("wg.paintM3G(g3d)")
 assert game.index("g3d.renderMuzzleGlow(") < game.index("player.arsenal.drawWeapon(")
 assert "if(!playerDied) g3d.renderMuzzleGlow" in game
-assert game.index("g3d.render();") < game.index("wg.lightingEffect(") < game.index("if(vignette != null)")
+assert game.index("g3d.render();") < game.index("wg.lightingEffect(") < game.index("if(vignette != null &&")
 assert "if(lighting && !player.character.underRoof && wg != null && g3d.getRenderer() != DirectX7.M3G)" in game
 assert "System.currentTimeMillis() - wg.lastLighting) < 135" in game
 assert game.index("wg.setRenderer(Main.renderer)") < game.index("wg.moveY((int) -yRot")
@@ -53,6 +53,12 @@ scene_source=(ROOT / "src/code/Rendering/M3GSceneRenderer.java").read_text()
 sprite_source=(ROOT / "src/code/Rendering/M3GSpriteRenderer.java").read_text()
 for forbidden in ("legacyFog(", "additiveFog(", "lightmapColor(", "FOG_MASK", "SPRITE_MASK", "SPRITE_ALPHA_MASK"):
     assert forbidden not in scene_source+sprite_source
+
+# Selected-M3G effects replace CPU postprocess even after native failure.
+assert "g3d.renderWithEffects(vignette,playerDied,player.isDamaged());" in game
+assert "if(vignette != null && g3d.getRenderer()==DirectX7.SOFTWARE)" in game
+assert "if(doubleBright && g3d.getRenderer()==DirectX7.SOFTWARE)" in game
+assert "if(g3d.getRenderer()==DirectX7.SOFTWARE) {\n                if(playerDied) deathScr" in game
 
 # Only the API subset under test. These sources never enter the MIDlet.
 STUBS = {
@@ -99,7 +105,7 @@ public class Camera {public Transform projection;public void setGeneric(Transfor
 }}''',
 "javax/microedition/m3g/CompositingMode.java": '''package javax.microedition.m3g;
 public class CompositingMode {
- public static final int ALPHA=64,ALPHA_ADD=65,REPLACE=68;
+ public static final int ALPHA=64,ALPHA_ADD=65,MODULATE=66,REPLACE=68;
  public boolean depth; public int blend; public float threshold;
  public void setDepthTestEnable(boolean b){depth=b;} public void setDepthWriteEnable(boolean b){}
  public void setBlending(int b){blend=b;} public void setAlphaThreshold(float f){threshold=f;}
@@ -128,7 +134,9 @@ public class VertexArray {public static int created,sets;public short[] shorts;p
 "javax/microedition/m3g/VertexBuffer.java": '''package javax.microedition.m3g;
 public class VertexBuffer {public VertexArray colors,coords,positions;public float scale,uvScale;
  public void setColors(VertexArray a){colors=a;}
- public void setDefaultColor(int c){colors=new VertexArray(3,4,1);colors.bytes=new byte[12];java.util.Arrays.fill(colors.bytes,(byte)255);}
+ public static int defaultColorCalls;
+ public void setDefaultColor(int c){defaultColorCalls++;colors=new VertexArray(4,4,1);colors.bytes=new byte[16];
+  for(int i=0;i<4;i++) {colors.bytes[i*4]=(byte)(c>>16);colors.bytes[i*4+1]=(byte)(c>>8);colors.bytes[i*4+2]=(byte)c;colors.bytes[i*4+3]=(byte)(c>>>24);}}
  public void setTexCoords(int n,VertexArray a,float s,float[] b){coords=a;uvScale=s;}
  public void setPositions(VertexArray a,float s,float[] b){positions=a;scale=s;}
 }''',
@@ -138,8 +146,14 @@ public class TriangleStripArray {public static int created;public int[] indices,
  public TriangleStripArray(int[] indices,int[] lengths){created++;this.indices=indices;this.lengths=lengths;}
 }''',
 "javax/microedition/m3g/Image2D.java": '''package javax.microedition.m3g;
-public class Image2D {public static final int RGBA=100; public byte[] pixels;public int width,height;
- public Image2D(int f,int w,int h,byte[] p){pixels=p;width=w;height=h;Graphics3D.uploads++;} }''',
+public class Image2D {public static final int RGBA=100,LUMINANCE=97; public byte[] pixels,encoded;public int width,height,format;
+ public Image2D(int f,int w,int h,byte[] p){
+  if(Graphics3D.target!=null)throw new AssertionError("texture upload with bound target");
+  if(f==LUMINANCE && Boolean.getBoolean("effects.upload.fail"))throw new OutOfMemoryError("effect mask memory");
+  encoded=p;format=f;width=w;height=h;Graphics3D.uploads++;
+  if(f==LUMINANCE){pixels=new byte[w*h*4];for(int i=0;i<w*h;i++){pixels[i*4]=pixels[i*4+1]=pixels[i*4+2]=p[i];pixels[i*4+3]=(byte)255;}}
+  else pixels=p;
+ } }''',
 "javax/microedition/m3g/Texture2D.java": '''package javax.microedition.m3g;
 public class Texture2D {public static final int FILTER_BASE_LEVEL=208,FILTER_NEAREST=210,FILTER_LINEAR=209,WRAP_CLAMP=240,WRAP_REPEAT=241,FUNC_MODULATE=227,FUNC_ADD=224;
  public Image2D image;public int function,filter,wrapS,wrapT;public Texture2D(Image2D i){image=i;}
@@ -201,7 +215,8 @@ public class Graphics3D {
      src=Math.round(src*(1-f)+((draw.fogColor>>(16-k*8))&255)*f);
     }
     int dst=(before>>(16-k*8))&255;
-    int value=a.comp.blend==CompositingMode.ALPHA_ADD?Math.min(255,dst+src*alpha/255)
+    int value=a.comp.blend==CompositingMode.MODULATE?src*dst/255
+      :a.comp.blend==CompositingMode.ALPHA_ADD?Math.min(255,dst+src*alpha/255)
       :a.comp.blend==CompositingMode.ALPHA?(src*alpha+dst*(255-alpha))/255:src;
     out|=value<<(16-k*8);
    }
@@ -225,7 +240,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     sources += sorted(TEST.glob("*.java"))
     # Compile the current adapter against the doubles, not copies of its logic.
     sources += [ROOT / "src/code/Rendering" / name for name in
-                ("M3GSceneRenderer.java", "M3GMaterialMath.java", "M3GPolygonBatch.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
+                ("M3GSceneRenderer.java", "M3GFrameEffects.java", "M3GMaterialMath.java", "M3GPolygonBatch.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
     if os.environ.get("ECJ_JAR"):
         compiler = [JAVA, "-jar", os.environ["ECJ_JAR"], "-8", "-proc:none", "-nowarn"]
     else:
@@ -241,6 +256,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.OpaqueTextureTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialPrepTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameEffectsTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GlassTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyFlashTest"], check=True)

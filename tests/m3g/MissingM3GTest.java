@@ -104,6 +104,14 @@ public final class MissingM3GTest {
         gradient.render(null,g);g.render();
         for(int pixel:g.display) M3GTest.check(pixel==0x123456,"missing API revived gradient instead of flat replacement");
         M3GTest.check(!g.isM3GActive() && g.getRendererError()!=null,"gradient replacement requires optional API to fall back");g.destroy();
+        g=M3GTest.renderer();DirectX7 effectsCPU=new DirectX7(32,32);effectsCPU.clearDisplay(0x123456);
+        byte[] vignette=new byte[32*32]; // Coefficient 128.
+        Texture worldTexture=M3GTest.texture(0xffa0c0e0);
+        M3GTest.submit(effectsCPU,M3GTest.triangle(),worldTexture,0);effectsCPU.render();
+        FrameEffects effects=new FrameEffects();effects.set(vignette,true,true);effects.render(effectsCPU,null);
+        M3GTest.submit(g,M3GTest.triangle(),worldTexture,0);g.renderWithEffects(vignette,true,true);
+        M3GTest.check(!g.isM3GActive() && java.util.Arrays.equals(effectsCPU.display,g.display),"missing API lost combined frame effects or ran them twice");
+        g.destroy();effectsCPU.destroy();
         System.out.println("PASS missing JSR-184 API at runtime / sky / weather overlay / sprite+panorama class safety / combined queue replay / HW perspective="+code.utils.Main.m3gPerspective);
     }
 }
