@@ -18,6 +18,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final PolygonMode screenPolygon = new PolygonMode();
     private boolean screenMode;
     private M3GPolygonBatch batch;
+    private final M3GMaterialMath materialMath=new M3GMaterialMath();
     private final M3GPolygonBatch.State batchState=new M3GPolygonBatch.State();
     private CachedTexture lastTexture;
     private boolean batchable;
@@ -305,6 +306,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             uv[4] = p.cu; uv[5] = p.cv; uv[6] = p.du; uv[7] = p.dv;
             count = 4;
         }
+        materialMath.resetBounds();
         boolean fastPath = fast || (Main.persQ == 0 && !Main.mipMapping);
         boolean alternate = count == 4 && type == Polygon4V.class && !fastPath
                 && (mode == 3 || mode == 6) && Main.fogQ > 0 && alternateDiagonal();
@@ -374,10 +376,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
         boolean highQuality = Main.fogQ == 2 && !Main.forceLQFog;
         // Affine mode 6 historically ignores forceLQFog, unlike its perspective path.
         if(mode == 6 && !perspective) highQuality = Main.fogQ == 2;
-        float fogFar = 1.0f + (float)DirectX7.fDist / distance;
         boolean nativeFog = (mode == 3 || mode == 6) && Main.fogQ > 0 && highQuality
-                && perspective && fogFar > 1.0f
-                && (mode != 6 || !LightMapper.cameraVectorLight);
+                && perspective && (mode != 6 || !LightMapper.cameraVectorLight);
+        float fogFar=nativeFog?materialMath.fogFar(distance):0;
+        nativeFog=nativeFog && fogFar>1.0f;
         // Multi-pass/flat per-triangle legacy fog retains its immediate order.
         batchable=glow==null && ((mode!=3 && mode!=6) || Main.fogQ==0 || nativeFog);
         if(!batchable) flushBatch(g);
@@ -511,8 +513,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private int additiveFog(int count) {
         int farthest = vertices[0].rz;
         for(int i = 1; i < count; i++) farthest = Math.min(farthest, vertices[i].rz);
-        int divisor = DirectX7.fDist / 255;
-        int amount = clamp(-(long)farthest / (divisor != 0 ? divisor : 255));
+        int amount = materialMath.additiveAmount(farthest);
         int shade = 255 - amount;
         int r = Math.max(0, ((DirectX7.fogc >> 16) & 255) - shade);
         int green = Math.max(0, ((DirectX7.fogc >> 8) & 255) - shade);
@@ -521,15 +522,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     private int visibility(DirectX7 g, RenderObject object, Vertex vertex,
-            int mode, boolean perspective, boolean highQuality, int farthest) {
-        int result;
-        if(highQuality) result = 255 - clamp(-(long)vertex.rz * 255 / DirectX7.fDist);
-        else {
-            int divisor = DirectX7.fDist / 255;
-            // When the legacy integer divisor vanishes its LQ fog amount stays 0.
-            result = 255 - (divisor == 0 ? 0 : clamp(-(long)farthest / divisor));
-        }
-        if(mode == 6 && highQuality && perspective && LightMapper.cameraVectorLight) {
+            int mode, boolean perspective) {
+        int result=materialMath.fogVisibility(vertex.rz);
+        if(mode == 6 && perspective && LightMapper.cameraVectorLight) {
             result = result * MathUtils.calcLight(object.nx, object.ny, object.nz,
                     vertex.x - g.camera.m03, vertex.y - g.camera.m13, vertex.z - g.camera.m23) / 255;
         }
@@ -544,8 +539,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
         appearance.setTexture(0, nativeTexture);
         composite.setBlending(CompositingMode.REPLACE);
         composite.setAlphaThreshold(cutoutThreshold);
+        int flatVisible=highQuality?0:materialMath.flatVisibility(farthest);
         for(int i = 0; i < count; i++) {
-            int visible = visibility(g, object, vertices[i], mode, perspective, highQuality, farthest);
+            int visible = highQuality?visibility(g, object, vertices[i], mode, perspective):flatVisible;
             colors[i * 4] = colors[i * 4 + 1] = colors[i * 4 + 2] = (byte)visible;
             colors[i * 4 + 3] = (byte)255;
         }
@@ -573,46 +569,35 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     private void setColors(DirectX7 g, RenderObject object, int count, int mode) {
-        boolean lit = (mode == 9 || mode == 13) && Main.fogQ > 0;
-        for(int i = 0; i < count; i++) {
-            int r = 255, green = 255, b = 255;
-            if(lit) {
-                if(object instanceof LightedPolygon3V) {
-                    LightedPolygon3V p = (LightedPolygon3V)object;
-                    r = i == 0 ? p.la : i == 1 ? p.lb : p.lc;
-                    green = b = r;
-                } else if(object instanceof LightedPolygon4V) {
-                    LightedPolygon4V p = (LightedPolygon4V)object;
-                    r = i == 0 ? p.la : i == 1 ? p.lb : i == 2 ? p.lc : p.ld;
-                    green = b = r;
-                } else if(object instanceof ColorLightedPolygon3V) {
-                    ColorLightedPolygon3V p = (ColorLightedPolygon3V)object;
-                    r = i == 0 ? p.ar : i == 1 ? p.br : p.cr;
-                    green = i == 0 ? p.ag : i == 1 ? p.bg : p.cg;
-                    b = i == 0 ? p.ab : i == 1 ? p.bb : p.cb;
-                } else if(object instanceof ColorLightedPolygon4V) {
-                    ColorLightedPolygon4V p = (ColorLightedPolygon4V)object;
-                    r = i == 0 ? p.ar : i == 1 ? p.br : i == 2 ? p.cr : p.dr;
-                    green = i == 0 ? p.ag : i == 1 ? p.bg : i == 2 ? p.cg : p.dg;
-                    b = i == 0 ? p.ab : i == 1 ? p.bb : i == 2 ? p.cb : p.db;
-                }
-                // Baked lightmap data only. No getLight(), camera-vector light,
-                // flashlight or muzzle flash is evaluated for native vertex RGB.
-                boolean baked = object instanceof LightedPolygon3V || object instanceof LightedPolygon4V
-                        || object instanceof ColorLightedPolygon3V || object instanceof ColorLightedPolygon4V;
-                if(baked) {
-                    int visible = g.lightmapColor(255, vertices[i].rz);
-                    r = clamp(r) * visible / 255;
-                    green = clamp(green) * visible / 255;
-                    b = clamp(b) * visible / 255;
-                }
-                if(mode == 9) green = b = r;
-                else if(Main.fogQ == 1) r = green = b = (r + green + b) / 3;
+        boolean lit=(mode==9 || mode==13) && Main.fogQ>0;
+        // Baked lightmap values only: no muzzle/torch/camera lighting here.
+        // Classify the polygon once, not once for every vertex/channel.
+        int type=!lit?0:object instanceof LightedPolygon3V?1:object instanceof LightedPolygon4V?2
+                :object instanceof ColorLightedPolygon3V?3:object instanceof ColorLightedPolygon4V?4:0;
+        if(type==0) {uniformColors(count,0xffffff,255);return;}
+        boolean gray=mode==9 || type<=2;
+        for(int i=0;i<count;i++) {
+            int r,green=0,b=0;
+            if(type==1) {
+                LightedPolygon3V p=(LightedPolygon3V)object;r=i==0?p.la:i==1?p.lb:p.lc;
+            } else if(type==2) {
+                LightedPolygon4V p=(LightedPolygon4V)object;r=i==0?p.la:i==1?p.lb:i==2?p.lc:p.ld;
+            } else if(type==3) {
+                ColorLightedPolygon3V p=(ColorLightedPolygon3V)object;r=i==0?p.ar:i==1?p.br:p.cr;
+                if(!gray) {green=i==0?p.ag:i==1?p.bg:p.cg;b=i==0?p.ab:i==1?p.bb:p.cb;}
+            } else {
+                ColorLightedPolygon4V p=(ColorLightedPolygon4V)object;r=i==0?p.ar:i==1?p.br:i==2?p.cr:p.dr;
+                if(!gray) {green=i==0?p.ag:i==1?p.bg:i==2?p.cg:p.dg;b=i==0?p.ab:i==1?p.bb:i==2?p.cb:p.db;}
             }
-            colors[i * 4] = (byte)Math.max(0, Math.min(255, r));
-            colors[i * 4 + 1] = (byte)Math.max(0, Math.min(255, green));
-            colors[i * 4 + 2] = (byte)Math.max(0, Math.min(255, b));
-            colors[i * 4 + 3] = (byte)255;
+            int visible=materialMath.visibility(vertices[i].rz);
+            r=M3GMaterialMath.shade(r,visible);
+            if(gray) green=b=r;
+            else {
+                green=M3GMaterialMath.shade(green,visible);b=M3GMaterialMath.shade(b,visible);
+                // Preserve separate channel rounding BEFORE the LQ average.
+                if(Main.fogQ==1) r=green=b=(r+green+b)/3;
+            }
+            colors[i*4]=(byte)r;colors[i*4+1]=(byte)green;colors[i*4+2]=(byte)b;colors[i*4+3]=(byte)255;
         }
     }
 
@@ -620,14 +605,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(fast || Main.persQ == 0) return false;
         if(Main.persQ == 4) return true;
         if(!texture.perspectiveCorrection) return false;
-        int minX = vertices[0].sx, maxX = minX, minY = vertices[0].sy, maxY = minY;
-        for(int i = 1; i < count; i++) {
-            minX = Math.min(minX, vertices[i].sx); maxX = Math.max(maxX, vertices[i].sx);
-            minY = Math.min(minY, vertices[i].sy); maxY = Math.max(maxY, vertices[i].sy);
-        }
+        materialMath.measure(vertices,count);
         int xLimit = count == 3 ? (Main.persQ < 3 ? 30 : 15) : (Main.persQ < 3 ? 70 : 50);
         int yLimit = count == 3 ? xLimit : (Main.persQ < 3 ? 100 : 70);
-        return (long)maxX - minX > xLimit || (long)maxY - minY > yLimit;
+        return materialMath.spanX>xLimit || materialMath.spanY>yLimit;
     }
 
     private boolean alternateDiagonal() {
@@ -642,18 +623,16 @@ public final class M3GSceneRenderer implements SceneRenderer {
         RawImage raw = texture.rImg;
         if(!fast && Main.mipMapping && texture.mip != null && texture.mip.length > 0) {
             raw = texture.mip[0];
-            int minX = vertices[0].sx, maxX = minX, minY = vertices[0].sy, maxY = minY;
-            int minU = uv[0], maxU = minU, minV = uv[1], maxV = minV;
-            for(int i = 1; i < count; i++) {
-                minX = Math.min(minX, vertices[i].sx); maxX = Math.max(maxX, vertices[i].sx);
-                minY = Math.min(minY, vertices[i].sy); maxY = Math.max(maxY, vertices[i].sy);
-                minU = Math.min(minU, uv[i * 2]); maxU = Math.max(maxU, uv[i * 2]);
-                minV = Math.min(minV, uv[i * 2 + 1]); maxV = Math.max(maxV, uv[i * 2 + 1]);
+            materialMath.measure(vertices,count);
+            int minU=uv[0],maxU=minU,minV=uv[1],maxV=minV;
+            for(int i=1;i<count;i++) {
+                minU=Math.min(minU,uv[i*2]);maxU=Math.max(maxU,uv[i*2]);
+                minV=Math.min(minV,uv[i*2+1]);maxV=Math.max(maxV,uv[i*2+1]);
             }
             int factor = object.ny > 4000 || object.ny < -4000 || Main.q > 999 ? 2 : 3;
+            long screen=(materialMath.spanX+materialMath.spanY)/2*factor;
             for(int level = 1; level < texture.mip.length && level < 3; level++) {
                 if(raw == null || texture.mip[level] == null) break;
-                long screen = ((long)maxX - minX + (long)maxY - minY) / 2 * factor;
                 long texels = (((long)maxU - minU) * raw.w + ((long)maxV - minV) * raw.h) / 256;
                 if(screen >= texels) break;
                 raw = texture.mip[level];
