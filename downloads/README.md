@@ -1,5 +1,19 @@
 # Quantum — M3G preverified preview
 
+## Тестовая M3G-only сборка a470031
+
+[JAR с ресурсами Stlkr](Quantum_Stlkr_M3G_Test_a470031.jar) ·
+[JAD](Quantum_Stlkr_M3G_Test_a470031.jad) ·
+[Отчёт сборки](Quantum_Stlkr_M3G_Test_a470031.build-report.json).
+
+Этап 4a: native Scene и Canvas foreground оружия/прицелов/reload/overlay.
+Без профилировщика; JSR-184 обязателен, Software fallback отсутствует.
+442 ресурса совпадают с прежней полной сборкой, включая агрессивные конфиги.
+CLDC compile/preverify выполнены; на телефоне ещё не проверено.
+MIDlet ID прежний: перед установкой сохраните сейвы.
+Это отдельный тестовый файл; опубликованная двухрендерная сборка ниже не заменена.
+
+
 [Справочник эффектов опубликованной версии b0ee49b](../docs/m3g-modes-guide.md):
 0–13, DECAL/EXP/BLEND, спрайты, небо, урон/смерть/виньетка и CPU fallback.
 Это документация двухрендерной сборки ниже, **не готовой M3G-only версии**.
