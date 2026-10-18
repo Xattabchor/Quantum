@@ -25,6 +25,10 @@ final class M3GPolygonBatch {
     private final Fog fog=new Fog();
     private final TriangleStripArray[] indexCache=new TriangleStripArray[MAX_VERTICES/3];
     private VertexBuffer buffer;
+    // One grow-only set: do not make a two-triangle packet a 192-vertex buffer.
+    private int capacity;
+    private float appliedScale;
+    private boolean scaleReady;
     private VertexArray positions,coords,colors;
     private Texture2D texture;
     private PolygonMode polygon;
@@ -187,10 +191,17 @@ final class M3GPolygonBatch {
         if(vertices==0) {
             owner.renderSingle(g,count,scale,firstXYZ,firstUV,firstRGBA,indices,appearance);
         } else {
-            if(buffer==null) {
-                buffer=new VertexBuffer();positions=new VertexArray(MAX_VERTICES,3,2);
-                coords=new VertexArray(MAX_VERTICES,2,2);colors=new VertexArray(MAX_VERTICES,4,1);
-                buffer.setColors(colors);buffer.setTexCoords(0,coords,1.0f/256,null);
+            if(capacity<vertices) {
+                int nextCapacity=6;while(nextCapacity<vertices) nextCapacity*=2;
+                // Publish only a complete, matching set. On allocation/API failure
+                // the old buffer remains valid, never paired with partial arrays.
+                VertexBuffer next=new VertexBuffer();
+                VertexArray nextPositions=new VertexArray(nextCapacity,3,2);
+                VertexArray nextCoords=new VertexArray(nextCapacity,2,2);
+                VertexArray nextColors=new VertexArray(nextCapacity,4,1);
+                next.setColors(nextColors);next.setTexCoords(0,nextCoords,1.0f/256,null);
+                buffer=next;positions=nextPositions;coords=nextCoords;colors=nextColors;
+                capacity=nextCapacity;scaleReady=false;
             }
             positions.set(0,vertices,xyz);coords.set(0,vertices,uv);colors.set(0,vertices,rgba);
             // With no eye-space Fog, a common positive factor per polygon cancels
@@ -198,7 +209,11 @@ final class M3GPolygonBatch {
             // integer homogeneous weight: no re-quantization or shared-edge drift.
             // Native Fog still requires an EXACT common eye-space scale. Fog
             // packing now shares a binary depth lattice when representable.
-            buffer.setPositions(positions,fogged?scale:1.0f,null);
+            float positionScale=fogged?scale:1.0f;
+            if(!scaleReady || appliedScale!=positionScale) {
+                buffer.setPositions(positions,positionScale,null);
+                appliedScale=positionScale;scaleReady=true;
+            }
             int triangles=vertices/3;
             if(indexCache[triangles-1]==null) {
                 int[] lengths=new int[triangles];for(int i=0;i<triangles;i++) lengths[i]=3;

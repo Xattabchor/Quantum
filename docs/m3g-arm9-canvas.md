@@ -1,5 +1,8 @@
 # ARM9 / OMAP 1710: облегчение native Canvas foreground
 
+**Следующий этап:** [world buffers и position bindings](m3g-arm9-world-buffers.md).
+Числа ниже относятся к Canvas-этапу `db03b82`.
+
 18.10.2026. База — `8ec625e`, код TreeFix `e1dc319`.
 Продолжение [предыдущих ARM9-оптимизаций](m3g-arm9-omap1710.md) и
 [native Canvas этапа 4a](m3g-canvas-foreground.md).

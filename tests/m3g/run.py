@@ -231,8 +231,8 @@ public class Fog {public static final int EXPONENTIAL=80,LINEAR=81;public int co
  public void setLinear(float n,float f){if(f<=n)throw new IllegalArgumentException("fog range");near=n;far=f;}
 }''',
 "javax/microedition/m3g/VertexArray.java": '''package javax.microedition.m3g;
-public class VertexArray {public static int created,sets;public int capacity;public short[] shorts;public byte[] bytes;int components;
- public VertexArray(int count,int components,int size){this.components=components;this.capacity=count;created++;}
+public class VertexArray {public static int created,sets,failAt;public int capacity;public short[] shorts;public byte[] bytes;int components;
+ public VertexArray(int count,int components,int size){this.components=components;this.capacity=count;created++;if(created==failAt)throw new OutOfMemoryError("VertexArray allocation");}
  public void set(int start,int count,short[] p){sets++;shorts=new short[count*components];System.arraycopy(p,0,shorts,0,shorts.length);}
  public void set(int start,int count,byte[] p){sets++;bytes=new byte[count*components];System.arraycopy(p,0,bytes,0,bytes.length);}
 }''',
@@ -573,6 +573,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                         "-cp", classpath, "code.Rendering.Level13Probe", str(resource_jar)], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.CanvasImagesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.Arm9CanvasTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.Arm9WorldBuffersTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.WeaponCanvasTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.RequiredM3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativeFallbackAuditTest"], check=True)

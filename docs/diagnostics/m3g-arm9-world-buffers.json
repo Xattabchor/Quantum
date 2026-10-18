@@ -1,0 +1,170 @@
+{
+  "date": "2026-10-18",
+  "base_commit": "4fe5c00",
+  "build": {
+    "classes": 154,
+    "code_methods": 1967,
+    "stackmap_attributes": 1067,
+    "class_versions": [
+      [
+        47,
+        0
+      ]
+    ],
+    "jar_sha256": "fe9ecb719f25276d6d116b9c9eb2e63eed8608f9291dee3a9e33afaa68a0b6f8",
+    "resource_files": 442,
+    "source_files": 144,
+    "preverifier": "ProGuard -microedition (CLDC StackMap)",
+    "tools_sha256": {
+      "ecj.jar": "5d53b25fd09b8d83157634af682b4c64bce9def70f6533f81d9115526057ae69",
+      "proguard.jar": "bd9b6c58daf01e5088b86fc8aa99ae9af53d3821c622e5e01d68db97ee82f2eb",
+      "cldc11.jar": "1c3ec9a7057bd3b4daf7a6474cf508676b51066b4e56cbebbe7b326a90efe87a",
+      "midp21.jar": "0a0bc48207dd8bedea027968c3c9bdcf5dadd37be42e356d0802c81a8fa2c43f",
+      "jsr135.jar": "34fb379affaa83b7941307c51071eb363ce15ddf451510866cdb54f009defca5",
+      "jsr184.jar": "161a49bb715dd732f75ff1a39fbf524cae307e7b4596feb2c6830315da75165b",
+      "jsr75_file.jar": "b66a74c215f48d3f319757d1a5f1d7773016defe17344631682be4051c7802f3"
+    },
+    "resource_archive_sha256": "95337f8953acc79514219e70d9dc4f95189c638e3463b6acee5f131abcfb5282",
+    "frame_profile": false,
+    "runtime_tested": false
+  },
+  "class_comparison": {
+    "unchanged_classes": 151,
+    "changed_classes": [
+      "code/Rendering/M3GPolygonBatch.class",
+      "code/Rendering/M3GSceneRenderer$CachedTexture.class",
+      "code/Rendering/M3GSceneRenderer.class"
+    ],
+    "added_classes": [],
+    "removed_classes": [],
+    "cached_texture_note": "Only four +2 source-line metadata bytes changed; no field or method code change."
+  },
+  "work_contracts": {
+    "two_triangle_initial_buffer_capacity_before": 192,
+    "two_triangle_initial_buffer_capacity_after": 6,
+    "capacity_growth_steps": [
+      6,
+      12,
+      24,
+      48,
+      96,
+      192
+    ],
+    "capacity_is_grow_only_not_exact_for_every_packet": true,
+    "retained_buffer_sets": 1,
+    "initial_vertex_array_logical_payload_bytes_before": 2688,
+    "initial_vertex_array_logical_payload_bytes_after": 84,
+    "worst_retained_vertex_array_logical_payload_bytes": 2688,
+    "native_driver_allocations_and_peak_heap_not_measured": true,
+    "single_triangle_quad_20_draw_scale_binding_calls_before": 20,
+    "single_triangle_quad_20_draw_scale_binding_calls_after": 6,
+    "warm_unchanged_buffer_scale_binding_calls_after": 0,
+    "draws_triangle_order_xyz_uv_rgba_fog_unchanged": true
+  },
+  "tests": {
+    "normal_suite": "PASS",
+    "active_frame_profile_suite": "PASS",
+    "cldc_preverify": "PASS",
+    "negative_controls": [
+      "old batch fails small capacity contract",
+      "old SceneRenderer fails unchanged triangle/quad scale contract"
+    ],
+    "capacity_growth_and_warm_reuse": "PASS",
+    "atomic_growth_oom_and_recovery": "PASS",
+    "fog_scale_transitions_discard_and_dispose": "PASS",
+    "textview": "PASS",
+    "framebuffer": "PASS",
+    "python_test_count": 14
+  },
+  "fixtures": [
+    {
+      "name": "arm9-world2-worlds",
+      "rows": 2384,
+      "exact_rows_equal_to_previous_arm9": true,
+      "rows_sha256": "f355d4ea5b33ed7d97fea7f9bc917835f67a04c815f82d99dd7ee11b6a09a2ad",
+      "audits": [
+        {
+          "tag": "world-level1",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level2",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level3",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level4",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level5",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level6",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level7",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level8",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level9",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level10",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level11",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level12",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level13",
+          "cpu_dispatches": 0
+        }
+      ]
+    },
+    {
+      "name": "arm9-world2-level12",
+      "rows": 320,
+      "exact_rows_equal_to_previous_arm9": true,
+      "rows_sha256": "06368f7f4257b91fa4d7d998c860694e1be20995b305c33ad245d81fa89da836",
+      "audits": [
+        {
+          "tag": "objects-level12",
+          "cpu_dispatches": 0
+        }
+      ]
+    },
+    {
+      "name": "arm9-world2-level13",
+      "rows": 320,
+      "exact_rows_equal_to_previous_arm9": true,
+      "rows_sha256": "b257adffb7a7896040f4b030f0e6e32541fc8d9e4e8dcd4d57309e3762ceec2d",
+      "audits": [
+        {
+          "tag": "objects-level13",
+          "cpu_dispatches": 0
+        }
+      ]
+    }
+  ],
+  "identical_resource_files": 442,
+  "device_tested": false,
+  "fps_measured": false,
+  "cpu_benchmark_or_kvm_measured": false,
+  "gameplay_quality_or_config_changed": false
+}

@@ -42,6 +42,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final byte[] colors = new byte[16];
     private final float[] work = new float[12];
     private final VertexBuffer[] buffers = new VertexBuffer[2];
+    // These two buffers own stable position arrays; contents change, bindings do not.
+    private final float[] positionScales={Float.NaN,Float.NaN};
     private final VertexArray[] posArrays = new VertexArray[2];
     private final VertexArray[] uvArrays = new VertexArray[2];
     private final VertexArray[] colorArrays = new VertexArray[2];
@@ -283,6 +285,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         } finally {
             bound = false;
             surface = null;projectionReady=false;
+            positionScales[0]=positionScales[1]=Float.NaN;
             skyRenderer = null;
             screenLines = null;
             spriteRenderer = null;
@@ -320,7 +323,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
                     TexturingPers.move,false,positions,work);
             if(scale==0) return false;
             posArrays[1].set(0,4,positions);
-            buffers[1].setPositions(posArrays[1],scale,null);
+            setPositionScale(1,scale);
             uniformColors(4,sky.color,255);
             colorArrays[1].set(0,4,colors);
             setTexture(null);setFog(null);
@@ -414,7 +417,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             if(!batchable) flushBatch(g);
             int fillSlot = count - 3;
             if(!batchable) posArrays[fillSlot].set(0, count, positions);
-            if(!batchable) buffers[fillSlot].setPositions(posArrays[fillSlot], scale, null);
+            if(!batchable) setPositionScale(fillSlot,scale);
             setFog(null);
             setTexture(null);
             setBlend(CompositingMode.REPLACE);
@@ -460,7 +463,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         int slot = count - 3;
         if(!batchable) posArrays[slot].set(0, count, positions);
         if(!batchable) uvArrays[slot].set(0, count, coords);
-        if(!batchable) buffers[slot].setPositions(posArrays[slot], scale, null);
+        if(!batchable) setPositionScale(slot,scale);
         setFog(null);
         setTexture(nativeTexture);
         setFunction(nativeTexture,mode==11?Texture2D.FUNC_DECAL:mode==5?Texture2D.FUNC_BLEND:Texture2D.FUNC_MODULATE);
@@ -521,11 +524,18 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
     }
 
+    private void setPositionScale(int slot,float scale) {
+        if(positionScales[slot]!=scale) {
+            buffers[slot].setPositions(posArrays[slot],scale,null);
+            positionScales[slot]=scale;
+        }
+    }
+
     void renderSingle(DirectX7 g,int count,float scale,short[] xyz,short[] uv,byte[] rgba,
             TriangleStripArray triangles,Appearance state) {
         int slot=count-3;
         posArrays[slot].set(0,count,xyz);uvArrays[slot].set(0,count,uv);colorArrays[slot].set(0,count,rgba);
-        buffers[slot].setPositions(posArrays[slot],scale,null);
+        setPositionScale(slot,scale);
         bind(g);restoreCamera(g);renderNative(g,buffers[slot],triangles,state);
     }
 
