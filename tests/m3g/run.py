@@ -14,6 +14,8 @@ TEST = Path(__file__).resolve().parent
 APP = ROOT / "build/cldc/Quantum-unverified.jar"
 API = ROOT / "build/cldc/api.jar"
 JAVA = os.environ.get("JAVA", "java")
+LEVEL41_PROBE = bool(os.environ.get("QUANTUM_LEVEL41_PROBE"))
+WORLD_REASONS = bool(os.environ.get("QUANTUM_WORLD_PROBE")) or LEVEL41_PROBE
 
 # Mesh skies use a transactional native submission, not forced CPU rasterization.
 house = (ROOT / "src/code/Gameplay/Map/House.java").read_text()
@@ -336,7 +338,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     # Validate on-device frame-profile copies against the same API contracts.
     # Requires a prior build_cldc.py --profile-frame; not a timing benchmark.
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
-        if os.environ.get("QUANTUM_WORLD_PROBE"):
+        if WORLD_REASONS:
             raise ValueError("Run frame timing and world-reason instrumentation separately")
         with zipfile.ZipFile(APP) as app:
             if "code/Rendering/FrameProfile.class" not in app.namelist():
@@ -347,7 +349,9 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
         sources.append(ROOT / "tests/frame_profile/FrameProfileSuiteRunner.java")
     # Optional diagnostics instrument TEMPORARY source copies only. Production
     # sources, published classes and rendering decisions remain untouched.
-    if os.environ.get("QUANTUM_WORLD_PROBE"):
+    if WORLD_REASONS:
+        if LEVEL41_PROBE:
+            sources += [ROOT / "src/code/Rendering/DirectX7.java", ROOT / "src/code/Gameplay/Map/LightMapper.java"]
         instrumented = []
         for source in sources:
             if source.name == "M3GPolygonBatch.java":
@@ -388,6 +392,16 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                 marker = "return pack(vertices,count,cx,cy,distance,true,positions,work);"
                 assert content.count(marker) == 1
                 content = content.replace(marker, "return WorldBottleneckProbe.fogResult(false,pack(vertices,count,cx,cy,distance,true,positions,work));")
+            elif LEVEL41_PROBE and source.name == "DirectX7.java":
+                content = source.read_text()
+                marker = "public void transformAndProjectVertices(Mesh ms, Matrix matrix) {"
+                assert content.count(marker) == 1
+                content = content.replace(marker, marker + "\nif(code.Rendering.Level41Probe.counting) code.Rendering.Level41Probe.projected+=ms.getVertices().length;")
+            elif LEVEL41_PROBE and source.name == "LightMapper.java":
+                content = source.read_text()
+                marker = "new Object().getClass().getResourceAsStream(lightdataFile)"
+                assert content.count(marker) == 1
+                content = content.replace(marker, "code.Rendering.Level41Probe.class.getResourceAsStream(lightdataFile)")
             else:
                 instrumented.append(source)
                 continue
@@ -421,6 +435,11 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
             raise ValueError("QUANTUM_WORLD_PROBE requires QUANTUM_RESOURCE_JAR")
         subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
                         "code.Rendering.WorldBottleneckProbe"], check=True)
+    if LEVEL41_PROBE:
+        if not resource_jar:
+            raise ValueError("QUANTUM_LEVEL41_PROBE requires QUANTUM_RESOURCE_JAR")
+        subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
+                        "code.Rendering.Level41Probe"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModeOptimizationAuditTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteTest"], check=True)
