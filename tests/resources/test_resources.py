@@ -10,7 +10,43 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from game_resources import inventory, read_resources
-from build_cldc import restore_unicode_resources
+from build_cldc import overlay_resources, restore_unicode_resources
+
+
+class ResourceOverlayTest(unittest.TestCase):
+    def test_override_is_opt_in_and_preserves_other_bytes(self):
+        original = {'level12.txt': b'DIST=39000\r\n', 'other.png': b'\xff\x00'}
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'level12.txt').write_bytes(b'DIST=30000\r\n\xc0')
+            (root / 'nested').mkdir()
+            (root / 'nested/new.txt').write_bytes(b'new')
+            result = overlay_resources(original, root)
+        self.assertEqual(result['level12.txt'], b'DIST=30000\r\n\xc0')
+        self.assertEqual(result['other.png'], original['other.png'])
+        self.assertEqual(result['nested/new.txt'], b'new')
+        self.assertEqual(original['level12.txt'], b'DIST=39000\r\n')
+
+    def test_reject_code_and_manifest(self):
+        for name in ('Main.class', 'old.CLASS', 'META-INF/MANIFEST.MF', 'meta-inf/old.sf'):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b'not an asset')
+                with self.assertRaises(ValueError):
+                    overlay_resources({}, root)
+
+    def test_missing_directory(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with self.assertRaises(ValueError):
+                overlay_resources({}, Path(temp) / 'missing')
+
+    def test_stlkr_level12_changes_only_distance(self):
+        original = read_resources(ROOT / 'Stlkr by ebk.jar (1).zip')['level12.txt']
+        optimized = (ROOT / 'configs/stlkr/level12.txt').read_bytes()
+        self.assertEqual(original.count(b'DIST=39000\r\n'), 1)
+        self.assertEqual(optimized, original.replace(b'DIST=39000\r\n', b'DIST=30000\r\n'))
 
 
 class ResourceArchiveTest(unittest.TestCase):

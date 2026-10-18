@@ -146,6 +146,21 @@ def audit_jar(path):
     return counts
 
 
+def overlay_resources(resources, directory):
+    """Apply an opt-in game-specific overlay, never executable/manifest files."""
+    directory = Path(directory)
+    if not directory.is_dir():
+        raise ValueError("Missing resource overlay directory: " + str(directory))
+    result = dict(resources)
+    for path in sorted(directory.rglob("*")):
+        if path.is_file():
+            name = path.relative_to(directory).as_posix()
+            if name.lower().endswith(".class") or name.upper().startswith("META-INF/"):
+                raise ValueError("Not a resource overlay file: " + name)
+            result[name] = path.read_bytes()
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--java", default="java")
@@ -155,10 +170,20 @@ def main():
     parser.add_argument("--output-dir", type=Path, default=ROOT / "artifacts")
     parser.add_argument("--resource-archive", type=Path,
                         help="Optional user game ZIP/JAR; assets only, never its classes or manifest")
+    parser.add_argument("--resource-overlay", type=Path,
+                        help="Opt-in directory overriding game assets (requires --resource-archive)")
     parser.add_argument("--profile-frame", action="store_true",
                         help="Diagnostic-only source copies with exclusive per-frame wall-clock HUD")
     args = parser.parse_args()
     archive_resources = read_resources(args.resource_archive) if args.resource_archive else {}
+    if args.resource_overlay and not args.resource_archive:
+        parser.error("--resource-overlay requires --resource-archive")
+    if args.resource_overlay:
+        # Validate before compiling; overlays take precedence over archive and res/.
+        try:
+            overlay_resources({}, args.resource_overlay)
+        except ValueError as error:
+            parser.error(str(error))
     ecj, proguard = args.ecj_jar.resolve(), args.proguard_jar.resolve()
     apis = [(args.api_dir / name).resolve() for name in API_NAMES]
     for path in [ecj, proguard] + apis:
@@ -214,6 +239,8 @@ def main():
         for path in sorted((ROOT / "res").rglob("*")):
             if path.is_file() and path.name != "README.md":
                 resources[path.relative_to(ROOT / "res").as_posix()] = path.read_bytes()
+        if args.resource_overlay:
+            resources = overlay_resources(resources, args.resource_overlay)
         with zipfile.ZipFile(work / "Quantum-unverified.jar", "w", zipfile.ZIP_DEFLATED) as jar:
             jar.writestr("META-INF/MANIFEST.MF", manifest)
             for path in sorted(classes.rglob("*.class")):
@@ -242,6 +269,10 @@ def main():
                    "resource_archive_sha256": sha256(args.resource_archive) if args.resource_archive else None,
                    "frame_profile": args.profile_frame,
                    "runtime_tested": False})
+    if args.resource_overlay:
+        result["resource_overlay_sha256"] = {
+            name: hashlib.sha256(data).hexdigest()
+            for name, data in overlay_resources({}, args.resource_overlay).items()}
     (output / "build-report.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))
     print("Artifacts:", output)
