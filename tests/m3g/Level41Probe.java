@@ -98,7 +98,7 @@ public final class Level41Probe {
         WorldBottleneckProbe.clipAttempts=WorldBottleneckProbe.clipRecovered=WorldBottleneckProbe.clipTriangles=WorldBottleneckProbe.clipDiscards=0;
     }
     private static void sample(House house,Skybox sky,int[] position,int yaw,int pitch,String part,ScreenLines rain) throws Exception {
-        DirectX7 g=new DirectX7(240,320);g.setRenderer(DirectX7.M3G);
+        DirectX7 g=new DirectX7(240,320);g.setRenderer(DirectX7.M3G);if(Boolean.getBoolean("quantum.m3gRequired"))g.requireM3G();
         Matrix rx=new Matrix(),ry=new Matrix(),camera=new Matrix();rx.setRotX(pitch);ry.setRotY(yaw);
         camera.mul(ry,rx);camera.setPosition(position[0],position[1],position[2]);g.setCamera(camera);
         int skyD=0,worldD=0,rainD=0,solidD=0,queued=0;
@@ -145,7 +145,41 @@ public final class Level41Probe {
         }
         WorldBottleneckProbe.active=false;g.destroy();
     }
+    private static void riverSweep(Mesh mesh,Texture river) {
+        if(river.drawmode!=7)return;
+        DirectX7 g=new DirectX7(240,320);g.setRenderer(DirectX7.M3G);g.requireM3G();
+        M3GSceneRenderer renderer=new M3GSceneRenderer();int cases=0,face=0;
+        RawImage original=river.rImg;RawImage[] originalMip=river.mip;
+        for(int frame=0;frame<4;frame++) {
+            river.rImg=river.animMIP[frame].rImg;river.mip=river.animMIP[frame].mip;
+            for(RenderObject object:mesh.getPolygons()) {
+                if(!(object instanceof Polygon4V) || ((Polygon4V)object).tex!=4)continue;
+                Polygon4V q=(Polygon4V)object;Vertex[] v={q.a,q.b,q.c,q.d};face++;
+                for(int point=0;point<5;point++)for(int height:new int[]{64,256,1503})
+                    for(int pitch:new int[]{0,30,60,85})for(int yaw=0;yaw<360;yaw+=45) {
+                        int x=point==4?(q.a.x+q.c.x)/2:v[point].x;
+                        int z=point==4?(q.a.z+q.c.z)/2:v[point].z;
+                        int y=(q.a.y+q.c.y)/2+height;
+                        Matrix rx=new Matrix(),ry=new Matrix(),camera=new Matrix();rx.setRotX(pitch);ry.setRotY(yaw);
+                        camera.mul(ry,rx);camera.setPosition(x,y,z);g.setCamera(camera);
+                        g.transformAndProjectVertices(v,g.getInvCamera());
+                        if(!q.isVisible(0,0,g.width,g.height))continue;
+                        boolean ok=renderer.draw(g,q,river,false);
+                        if(!ok) {
+                            String detail="river7 face="+face+" pos="+x+","+y+","+z+" yaw="+yaw+" pitch="+pitch;
+                            for(Vertex a:v)detail+=" xyz="+a.x+","+a.y+","+a.z+" view="+a.getViewX()+","+a.getViewY()+","+a.rz+" screen="+a.sx+","+a.sy;
+                            throw new AssertionError(detail);
+                        }
+                        renderer.finish(g);Graphics3D.history.clear();cases++;
+                    }
+            }
+        }
+        river.rImg=original;river.mip=originalMip;
+        renderer.dispose();g.destroy();check(face==96 && cases>400,"river sweep did not cover real faces");
+        System.out.println("PASS L41 river7 real lighted quads faces=24 frames=4 visible poses="+cases);
+    }
     public static void main(String[] args) throws Exception {
+        NativeFallbackAudit.begin("level41");
         Method cut=LevelLoader.class.getDeclaredMethod("cutLevelFile",String.class);cut.setAccessible(true);
         String[] data=(String[])cut.invoke(null,text("/level41.txt"));
         check(data.length==2,"real level parser lost WTEX block");
@@ -180,6 +214,7 @@ public final class Level41Probe {
         ScreenLines rain=new ScreenLines();for(int i=0;i<16;i++) rain.line(8+14*i,20+12*i,9+14*i,30+12*i,1,0x99d49f,false);
         Map<RawImage,int[]> originals=new IdentityHashMap<RawImage,int[]>();
         for(RawImage raw:images.values()) originals.put(raw,raw.img.clone());
+        riverSweep(meshes[0],textures.textures[4]);
         for(int[] xz:new int[][]{{0,0},{-60000,-60000}}) {
             Height height=new Height();height.getPosition().set(xz[0],30000,xz[1]);house.computeHeight(0,height);
             int floor=height.getHeight();check(floor!=Integer.MIN_VALUE,"probe point has no ground");
@@ -188,7 +223,7 @@ public final class Level41Probe {
                 for(String component:new String[]{"sky","world+solid","combined","flash"}) sample(house,sky,position,yaw,pitch,component,rain);
         }
         for(Map.Entry<RawImage,int[]> entry:originals.entrySet()) check(Arrays.equals(entry.getKey().img,entry.getValue()),"level41 source pixels changed");
-        house.destroy();
+        NativeFallbackAudit.end();house.destroy();
         System.out.println("PASS level41 actual config+WTEX+shared images+animation / lightmap / House+3x3 chunks / model sky+world+16 rain+flash / native draw attribution / no source mutation (not FPS)");
     }
 }

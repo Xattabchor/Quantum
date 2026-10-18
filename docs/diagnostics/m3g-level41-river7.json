@@ -1,0 +1,164 @@
+{
+  "date": "2026-10-18",
+  "base_commit": "0653358",
+  "error": "M3G required: unsupported object code.Rendering.Meshes.LightedPolygon4V material=7",
+  "cause": "near/far homogeneous position precision failure; mode 7 was excluded from bounded depth-band retry",
+  "fix": "allow existing ordered depth-band retry for mode 7 only; no Software replay, weaker precision tolerance, or material change",
+  "build": {
+    "classes": 154,
+    "code_methods": 1967,
+    "stackmap_attributes": 1067,
+    "class_versions": [
+      [
+        47,
+        0
+      ]
+    ],
+    "jar_sha256": "fa1d6cc328bbfb6555f71695e662772db47dc27c566591374cb6e94a675bff9c",
+    "resource_files": 505,
+    "source_files": 144,
+    "preverifier": "ProGuard -microedition (CLDC StackMap)",
+    "tools_sha256": {
+      "ecj.jar": "5d53b25fd09b8d83157634af682b4c64bce9def70f6533f81d9115526057ae69",
+      "proguard.jar": "bd9b6c58daf01e5088b86fc8aa99ae9af53d3821c622e5e01d68db97ee82f2eb",
+      "cldc11.jar": "1c3ec9a7057bd3b4daf7a6474cf508676b51066b4e56cbebbe7b326a90efe87a",
+      "midp21.jar": "0a0bc48207dd8bedea027968c3c9bdcf5dadd37be42e356d0802c81a8fa2c43f",
+      "jsr135.jar": "34fb379affaa83b7941307c51071eb363ce15ddf451510866cdb54f009defca5",
+      "jsr184.jar": "161a49bb715dd732f75ff1a39fbf524cae307e7b4596feb2c6830315da75165b",
+      "jsr75_file.jar": "b66a74c215f48d3f319757d1a5f1d7773016defe17344631682be4051c7802f3"
+    },
+    "resource_archive_sha256": "b6be7a932ef45c12a3ac97d8d588f4875ecaf679392dc5342444622983a2f956",
+    "frame_profile": false,
+    "runtime_tested": false,
+    "resource_overlay_sha256": {
+      "level41.txt": "b482c8cb8900a3bde61a6c0e2eadbd57f2781721d6c18c67ed1bbd146c00b74b"
+    }
+  },
+  "class_delta_from_previous_arm9": [
+    "code/Rendering/M3GSceneRenderer.class"
+  ],
+  "resource_delta_from_q92": {
+    "total": 505,
+    "identical_files": 504,
+    "changed_files": [
+      "level41.txt"
+    ],
+    "change": "only append ,7 to animated river WTEX line; keep all four frames and 8 fps"
+  },
+  "negative_controls": {
+    "actual_geometry_scan": "old path rejects first actual river quad near surface",
+    "normal_required_transaction": "disabling mode7 depth retry reproduces exact screenshot exception"
+  },
+  "tests": {
+    "normal_m3g_suite": "PASS",
+    "active_frame_profile_suite": "PASS",
+    "cldc_preverify": "PASS",
+    "original_level41_river_faces": 24,
+    "original_png_animation_frames": 4,
+    "visible_pose_frame_cases": 11532,
+    "level41_full_world_sky_rain_flash_rows": 256,
+    "level41_warm_B_T_readbacks_copies": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "level41_strict_cpu_dispatches": 0,
+    "first_actual_quad_half_open_pixel_coverage": "no double-covered pixel; not real GPU raster",
+    "synthetic_four_frame_transactions": "PASS HW ON/OFF and perspective/affine, MODULATE, warm B0 T0, source preservation",
+    "textview": "PASS",
+    "framebuffer": "PASS",
+    "python_test_count": 14,
+    "stlkr_real_tree_crossing_frames": 1182
+  },
+  "fixtures": [
+    {
+      "name": "river7-worlds",
+      "rows": 2384,
+      "equal_to_previous_arm9": true,
+      "rows_sha256": "f355d4ea5b33ed7d97fea7f9bc917835f67a04c815f82d99dd7ee11b6a09a2ad",
+      "audits": [
+        {
+          "tag": "world-level1",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level2",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level3",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level4",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level5",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level6",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level7",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level8",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level9",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level10",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level11",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level12",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level13",
+          "cpu_dispatches": 0
+        }
+      ]
+    },
+    {
+      "name": "river7-level12",
+      "rows": 320,
+      "equal_to_previous_arm9": true,
+      "rows_sha256": "06368f7f4257b91fa4d7d998c860694e1be20995b305c33ad245d81fa89da836",
+      "audits": [
+        {
+          "tag": "objects-level12",
+          "cpu_dispatches": 0
+        }
+      ]
+    },
+    {
+      "name": "river7-level13",
+      "rows": 320,
+      "equal_to_previous_arm9": true,
+      "rows_sha256": "b257adffb7a7896040f4b030f0e6e32541fc8d9e4e8dcd4d57309e3762ceec2d",
+      "audits": [
+        {
+          "tag": "objects-level13",
+          "cpu_dispatches": 0
+        }
+      ]
+    }
+  ],
+  "device_tested": false,
+  "fps_measured": false,
+  "other_q92_levels_native_gameplay_tested": false,
+  "stlkr_jar_replaced": false
+}

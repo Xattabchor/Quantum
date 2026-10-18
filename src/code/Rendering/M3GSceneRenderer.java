@@ -447,9 +447,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(clipped) {
             setColors(g,object,count,mode);
             if(worldClip==null) worldClip=new WorldClipGeometry();
-            // Retry depth bands only for these REPLACE/cutout materials.
-            // Blended materials keep their old path; never reorder their coverage.
-            if(!worldClip.prepare(g,vertices,count,coords,colors,distance,perspective,nativeFog,alternate,hardwarePerspective,mode==0 || mode==3 || mode==6 || mode==9 || mode==13)) return false;
+            // Retry depth bands for REPLACE/cutout and MODULATE (mode 7).
+            // Bands partition each original triangle in order; never blend a
+            // whole polygon twice or switch an animated river back to REPLACE.
+            if(!worldClip.prepare(g,vertices,count,coords,colors,distance,perspective,nativeFog,alternate,hardwarePerspective,mode==0 || mode==3 || mode==6 || mode==7 || mode==9 || mode==13)) return false;
             if(worldClip.triangles==0) return true; // Completely clipped, no upload/barrier.
         }
         // Standard native fog is a single pass for HQ/LQ and affine UVs alike.

@@ -24,8 +24,8 @@ if sum((LEVEL41_PROBE, LEVEL12_PROBE, LEVEL13_PROBE, STLKR_ALL_PROBE)) > 1:
 WORLD_REASONS = bool(os.environ.get("QUANTUM_WORLD_PROBE")) or LEVEL41_PROBE or STLKR_PROBE
 REQUIRE_NATIVE = bool(os.environ.get("QUANTUM_REQUIRE_NATIVE"))
 NATIVE_AUDIT = bool(os.environ.get("QUANTUM_NATIVE_COMPAT_AUDIT")) or REQUIRE_NATIVE
-if NATIVE_AUDIT and not STLKR_PROBE:
-    raise ValueError("Native compatibility audit requires a Stlkr level probe")
+if NATIVE_AUDIT and not (STLKR_PROBE or LEVEL41_PROBE):
+    raise ValueError("Native compatibility audit requires a level probe")
 NATIVE_OPTIONS = (["-Dquantum.nativeAudit=true"] if NATIVE_AUDIT else []) + (
     ["-Dquantum.requireNative=true", "-Dquantum.m3gRequired=true"] if REQUIRE_NATIVE else [])
 
@@ -436,7 +436,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                     marker = "textures.addElement(cached);cachedPixels += size;"
                     assert content.count(marker) == 1
                     content = content.replace(marker, marker + "\n        Level13Probe.upload(cached.texture,image,kind);")
-                marker = "worldClip.prepare(g,vertices,count,coords,colors,distance,perspective,nativeFog,alternate,hardwarePerspective,mode==0 || mode==3 || mode==6 || mode==9 || mode==13)"
+                marker = "worldClip.prepare(g,vertices,count,coords,colors,distance,perspective,nativeFog,alternate,hardwarePerspective,mode==0 || mode==3 || mode==6 || mode==7 || mode==9 || mode==13)"
                 assert content.count(marker) == 1
                 content = content.replace(marker, "WorldBottleneckProbe.clipResult(worldClip," + marker + ")")
             elif source.name == "ProjectedGeometry.java":
@@ -538,7 +538,8 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     if resource_jar:
         resource_jar = Path(resource_jar).resolve()
         with zipfile.ZipFile(resource_jar) as assets:
-            if any(n.lower().endswith(".class") for n in assets.namelist()):
+            resource_names = set(assets.namelist())
+            if any(n.lower().endswith(".class") for n in resource_names):
                 raise ValueError("QUANTUM_RESOURCE_JAR must contain assets only; run scripts/game_resources.py")
         # Assets take precedence even if the latest APP was built with a
         # different game archive; the verified resource JAR contains no code.
@@ -547,8 +548,14 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     if resource_jar:
         subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
                         "code.Rendering.GameResourcesTest", str(resource_jar)], check=True)
-        subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
-                        "code.Rendering.SpriteCrossingTest", "real-trees"], check=True)
+        tree_names = {"gamedata/objects/textree1.png", "gamedata/objects/textree2.png"}
+        if tree_names.issubset(resource_names):
+            subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
+                            "code.Rendering.SpriteCrossingTest", "real-trees"], check=True)
+        elif STLKR_PROBE:
+            raise ValueError("Stlkr probe archive must include both real tree fixtures")
+        else:
+            print("SKIP Stlkr-specific real tree PNG fixture: not in this game archive; synthetic crossing still runs", flush=True)
     if os.environ.get("QUANTUM_WORLD_PROBE"):
         if not resource_jar:
             raise ValueError("QUANTUM_WORLD_PROBE requires QUANTUM_RESOURCE_JAR")
@@ -557,7 +564,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     if LEVEL41_PROBE:
         if not resource_jar:
             raise ValueError("QUANTUM_LEVEL41_PROBE requires QUANTUM_RESOURCE_JAR")
-        subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
+        subprocess.run([JAVA] + NATIVE_OPTIONS + ["-Djava.awt.headless=true", "-cp", classpath,
                         "code.Rendering.Level41Probe"], check=True)
     if STLKR_ALL_PROBE:
         if not resource_jar:
@@ -597,6 +604,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyBackgroundTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.WorldClipTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.WorldDepthBandsTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.RiverMode7Test"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.Arm9PreparationTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativePrepTest"], check=True)

@@ -14,6 +14,9 @@ I wrote it when I was just learning Java and OOP, so the code quality is really 
 
 ## M3G / JSR-184
 
+[Исправление Level41: анимированная река, material=7](docs/m3g-level41-river7.md) —
+native MODULATE near/far recovery без Software fallback; отдельный overlay q92.
+
 [Продолжение ARM9: world buffers и position bindings](docs/m3g-arm9-world-buffers.md) —
 малый начальный буфер и устранение повторных M3G привязок; без изменения качества.
 
