@@ -2,6 +2,7 @@ package code.Rendering;
 
 import code.HUD.DeveloperMenu;
 import code.Rendering.Meshes.Mesh;
+import code.Rendering.Meshes.MeshImage;
 import code.Math.Matrix;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
@@ -288,6 +289,15 @@ this.buffer.resetTex();
    /** Shared dispatch, including the polygons of animated MeshImage objects. */
    public void drawRenderObject(RenderObject object, Texture texture, boolean fast) {
        if(nativePass) {
+           // The exact engine MeshImage wrapper only animates/projects/queues
+           // polygons; it never paints display. Let its children decide whether
+           // a CPU barrier is needed, instead of round-tripping every NPC/mesh.
+           if(object instanceof MeshImage && object.getClass()==MeshImage.class
+                   && ((MeshImage)object).getMesh()!=null
+                   && ((MeshImage)object).getMesh().getClass()==Mesh.class) {
+               if(fast) object.renderFast(this,texture);else object.render(this,texture);
+               return;
+           }
            if(sceneRenderer.draw(this, object, texture, fast)) return;
            // CPU materials/unsupported sprites must see all prior M3G pixels.
            sceneRenderer.barrier(this);

@@ -45,16 +45,16 @@ public final class LinesTest {
         DirectX7 g=M3GTest.renderer();int calls=Graphics3D.calls,uploads=Graphics3D.uploads;
         check(g.renderScreenLines(batch(65)),"native rain overlay unavailable");
         check(Graphics3D.calls==calls+3,"65 segments must use 3 calls, not 65");
-        check(last().indices.length==128 && last().lengths.length==32,"independent strip indices");
-        for(int i=0;i<32;i++) check(last().lengths[i]==4,"strip must contain four vertices");
+        check(last().indices.length==4 && last().lengths.length==1,"independent strip indices");
+        for(int i=0;i<last().lengths.length;i++) check(last().lengths[i]==4,"strip must contain four vertices");
         check(!last().fog && (last().colors[0]&255)==0xab && (last().colors[1]&255)==0xcd
                 && (last().colors[2]&255)==0xef,"opaque RGB / fog isolation");
-        check(last().colorComponents==3 && last().colors.length==128*3,"weather still sends alpha components");
+        check(last().colorComponents==3 && last().colors.length==last().indices.length*3,"weather still sends alpha components");
         check(!last().textured && last().coords==null && last().blend==CompositingMode.REPLACE,
                 "weather still uses texture/UV/alpha blending");
         check(Graphics3D.uploads==uploads,"weather uploaded a bitmap");
         check(g.display[0]==0xffabcdef,"RGB colors lost implicit opaque alpha");
-        for(int i=4;i<128;i++) check(last().positions[i*3]==0 && last().positions[i*3+1]==0,"unused strips contain stale geometry");
+        for(int i=4;i<last().indices.length;i++) check(last().positions[i*3]==0 && last().positions[i*3+1]==0,"unused strips contain stale geometry");
         check(Graphics3D.target==null,"overlay target not released");
         M3GTest.Marker marker=new M3GTest.Marker(false);M3GTest.submit(g,marker,null,0);
         check(g.renderScreenLines(batch(1)) && marker.calls==0,"overlay consumed the scene queue");
@@ -62,7 +62,7 @@ public final class LinesTest {
         b=batch(1);b.line(0,0,5,5,1000,0,false);calls=Graphics3D.calls;
         check(!g.renderScreenLines(b) && Graphics3D.calls==calls && g.getRendererError()==null,"partial unsupported batch");
         g.resize(240,320);check(g.renderScreenLines(batch(1)),"resize lost line renderer");g.destroy();
-        System.out.println("PASS 32-strip batching / RGB / no bridges / degenerate tail / queue and resize");
+        System.out.println("PASS 32-strip ceiling / bounded buckets / RGB / no bridges / degenerate tail / queue and resize");
 
         // Alternating RGB, including black and ARGB input, stays opaque. State
         // must remain independent of textured/transparent world materials.

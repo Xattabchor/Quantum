@@ -122,8 +122,8 @@ public final class WorldClipTest {
             g.beginFrameStats();M3GTest.submit(g,new SolidSky(0x123456),null,0);g.renderBackground();M3GTest.submit(g,image,null,0);
             g.renderGameFrameImage(null,false,false,null,0,null);
             check(meshFace.a.hasView(g) && meshFace.a.getViewX()==-20+frame*3,"MeshImage used stale/wrong view matrix");
-            // The pre-existing MeshImage wrapper itself has one barrier; clipping must not add another.
-            if(frame>0) check(g.getM3GCpuBarriers()==1 && g.getM3GDrawCalls()==2,"MeshImage clipped geometry fell back or disappeared B="+g.getM3GCpuBarriers()+" D="+g.getM3GDrawCalls()+" active="+g.isM3GActive());
+            // Known MeshImage now dispatches its children without a wrapper CPU barrier.
+            if(frame>0) check(g.getM3GCpuBarriers()==0 && g.getM3GDrawCalls()==2,"MeshImage clipped geometry fell back or disappeared B="+g.getM3GCpuBarriers()+" D="+g.getM3GDrawCalls()+" active="+g.isM3GActive());
         }
         g.destroy();System.out.println("PASS actual MeshImage dispatch / mesh projection overload / moving model matrix / clipped native batching");
 

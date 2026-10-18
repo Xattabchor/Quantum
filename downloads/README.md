@@ -2,6 +2,16 @@
 
 CLDC 1.1 / MIDP 2.0. Preverified with ProGuard 6.2.2 -microedition.
 
+**18.10.2026 — оптимизация M3G для ARM9 / OMAP1710:** убраны лишние
+framebuffer round trips точного MeshImage; нужные CPU barriers детей сохранены.
+В прогретом тесте 20 meshes: **D:21 → 2, B:20 → 0**, без перестановки геометрии.
+Для 16 видимых капель передаются **64 вершины вместо 128**; native rain/snow
+сохранены. World projection переиспользуется, смежная текстура не сканирует
+Vector. Software и все 505 оригинальных ресурсов сохранены. Это сокращение
+работы/API transfers, не замер FPS и не утверждение о 3D-ускорителе OMAP1710.
+[Результаты, ограничения памяти и проверки](../docs/m3g-arm9-omap1710.md).
+SHA-256 текущего движка: `d7a03d96d0855d4d7103d11a67b12da10a68478073414a2f21c1b6491e707374`.
+
 **18.10.2026 — material 12 = native EXP Fog:** M3G world-полигоны используют
 Fog.EXPONENTIAL. Для материалов режима 12 в общих параметрах level.txt:
 
@@ -15,7 +25,7 @@ Density больше — туман гуще; 0 отключает. Без кл�
 EXP учитывается в batching/clipping; CPU replay использует экспоненциальные
 vertex factors, не прежний dithering. Native sky shader EXP не поддерживает.
 [Единицы плотности, ограничения и проверки](../docs/m3g-mode12-exp-fog.md).
-SHA-256 текущего движка: `6e5a20684be2fc03fc7e60f67d4e5ae6092f8ab5c94c144fb5e150a523daa3be`.
+SHA-256 предыдущего движка: `6e5a20684be2fc03fc7e60f67d4e5ae6092f8ab5c94c144fb5e150a523daa3be`.
 
 **18.10.2026 — material 11 = native DECAL:** для M3G world и model sky
 используется Texture2D.FUNC_DECAL с исходной RGBA-альфой, без Fog/dithering.

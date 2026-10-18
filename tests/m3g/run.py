@@ -142,9 +142,9 @@ public class Background {
  public void setDepthClearEnable(boolean b){depthClear=b;}
 }''',
 "javax/microedition/m3g/Transform.java": '''package javax.microedition.m3g;
-public class Transform { public float[] matrix; public void set(float[] m){matrix=m;} }''',
+public class Transform { public static int created; public float[] matrix; public Transform(){created++;} public void set(float[] m){matrix=m.clone();} }''',
 "javax/microedition/m3g/Camera.java": '''package javax.microedition.m3g;
-public class Camera {public Transform projection;public void setGeneric(Transform t){projection=t;
+public class Camera {public static int generics; public Transform projection;public void setGeneric(Transform t){generics++;projection=t;
  if(t.matrix[14]!=-1 || t.matrix[11]==0)throw new AssertionError("projection");
 }}''',
 "javax/microedition/m3g/CompositingMode.java": '''package javax.microedition.m3g;
@@ -204,13 +204,14 @@ public class VertexBuffer {public VertexArray colors,coords,positions,normals;pu
 }''',
 "javax/microedition/m3g/TriangleStripArray.java": '''package javax.microedition.m3g;
 public class TriangleStripArray {public static int created;public int[] indices,lengths;
- public TriangleStripArray(int start,int[] lengths){created++;this.lengths=lengths;int count=0;for(int n:lengths) count+=n;indices=new int[count];for(int n=0;n<count;n++) indices[n]=start+n;}
+ public TriangleStripArray(int start,int[] lengths){if(Boolean.getBoolean("weather.indices.fail"))throw new OutOfMemoryError("weather indices");created++;this.lengths=lengths;int count=0;for(int n:lengths) count+=n;indices=new int[count];for(int n=0;n<count;n++) indices[n]=start+n;}
  public TriangleStripArray(int[] indices,int[] lengths){created++;this.indices=indices;this.lengths=lengths;}
 }''',
 "javax/microedition/m3g/Image2D.java": '''package javax.microedition.m3g;
 public class Image2D {public static final int RGBA=100,LUMINANCE=97; public byte[] pixels,encoded;public int width,height,format;
  public Image2D(int f,int w,int h,byte[] p){
   if(Graphics3D.target!=null)throw new AssertionError("texture upload with bound target");
+  if(f==RGBA && Boolean.getBoolean("texture.upload.fail"))throw new OutOfMemoryError("texture memory");
   if(f==LUMINANCE && Boolean.getBoolean("effects.upload.fail"))throw new OutOfMemoryError("effect mask memory");
   encoded=p;format=f;width=w;height=h;Graphics3D.uploads++;
   if(f==LUMINANCE){pixels=new byte[w*h*4];for(int i=0;i<w*h;i++){pixels[i*4]=pixels[i*4+1]=pixels[i*4+2]=p[i];pixels[i*4+3]=(byte)255;}}
@@ -463,6 +464,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ImagePresentationTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyBackgroundTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.WorldClipTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.Arm9PreparationTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativePrepTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativeLightingTest"], check=True)
@@ -491,7 +493,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BakedNoFogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MuzzleGlowTest"], check=True)
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
-        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest", "Mode12FogTest"):
+        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest", "Mode12FogTest", "Arm9PreparationTest"):
             subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameProfileSuiteRunner",
                             "code.Rendering." + test], check=True)
     # Remove the optional API for a real class-loading fallback test.

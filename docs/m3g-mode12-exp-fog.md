@@ -1,5 +1,8 @@
 # M3G material 12 → EXP Fog — 18.10.2026
 
+Историческая EXP-сборка dd898a4. Текущий downloads/Quantum.jar дополнительно
+содержит [оптимизацию для ARM9/OMAP1710](m3g-arm9-omap1710.md); EXP сохранён.
+
 JSR-184 предоставляет `Fog.EXPONENTIAL` (80) и `Fog.setDensity(float)`.
 Режим 12 выбранного M3G теперь использует этот API для мировых 3D-полигонов,
 вместо прежнего alias 0. Это именно EXP, не EXP² и не линейный Fog.

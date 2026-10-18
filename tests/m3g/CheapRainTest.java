@@ -37,7 +37,7 @@ public final class CheapRainTest {
                     check(Math.abs(16-draw.positions[v*3+1]*draw.scale-geometry.xy[v*2+1])<0.1,"rain Y/letterbox geometry changed");
                 }
                 int live=0;
-                for(int i=0;i<32;i++) if(draw.positions[i*12]!=0 || draw.positions[i*12+1]!=0) live++;
+                for(int i=0;i<draw.indices.length/4;i++) if(draw.positions[i*12]!=0 || draw.positions[i*12+1]!=0) live++;
                 check(live==Math.min(16,count),"native rain cap isn't 16");
                 check((draw.colors[0]&255)==0x90 && (draw.colors[1]&255)==0xa0 && (draw.colors[2]&255)==0xb0,"native depth color changed");
             }

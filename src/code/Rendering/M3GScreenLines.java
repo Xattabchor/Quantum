@@ -12,16 +12,13 @@ final class M3GScreenLines {
     private final VertexArray colors=new VertexArray(VERTICES,3,1);
     private final short[] packed=new short[VERTICES*3];
     private final byte[] rgb=new byte[VERTICES*3];
-    private final TriangleStripArray indices;
+    // Six bounded power-of-two strip counts: no exact-count cache explosion.
+    private final TriangleStripArray[] indexCache=new TriangleStripArray[6];
     private final Appearance appearance=new Appearance();
     private final ScreenLineGeometry geometry=new ScreenLineGeometry();
 
     M3GScreenLines(M3GSceneRenderer owner,Graphics3D graphics) {
         this.owner=owner;this.graphics=graphics;
-        int[] verts=new int[VERTICES],lengths=new int[SEGMENTS];
-        for(int i=0;i<VERTICES;i++) verts[i]=i;
-        for(int i=0;i<SEGMENTS;i++) lengths[i]=4;
-        indices=new TriangleStripArray(verts,lengths);
         PolygonMode polygon=new PolygonMode();polygon.setCulling(PolygonMode.CULL_NONE);
         owner.registerPolygonMode(polygon);
         appearance.setPolygonMode(polygon);
@@ -51,23 +48,26 @@ final class M3GScreenLines {
                 packed[p+2]=(short)-precision;
                 rgb[c]=(byte)(color>>16);rgb[c+1]=(byte)(color>>8);rgb[c+2]=(byte)color;
             }
-            if(++size==SEGMENTS) {render(g,precision);size=0;}
+            if(++size==SEGMENTS) {render(g,precision,size);size=0;}
         }
-        if(size>0) {
-            // Fixed-size index buffer: unused strips are degenerate, not bridges
-            // between particles and not stale geometry from the previous batch.
-            for(int i=size*4;i<VERTICES;i++) {
-                packed[i*3]=packed[i*3+1]=0;packed[i*3+2]=(short)-precision;
-            }
-            render(g,precision);
-        }
+        if(size>0) render(g,precision,size);
         return true;
     }
-    private void render(DirectX7 g,int precision) {
-        positions.set(0,VERTICES,packed);colors.set(0,VERTICES,rgb);
+    private void render(DirectX7 g,int precision,int size) {
+        int segments=1,slot=0;
+        while(segments<size) {segments<<=1;slot++;}
+        int count=segments*4;
+        // Only the small bucket tail is degenerate. Old larger packets can
+        // remain in native arrays, but their vertices are never indexed here.
+        for(int i=size*4;i<count;i++) {packed[i*3]=packed[i*3+1]=0;packed[i*3+2]=(short)-precision;}
+        if(indexCache[slot]==null) {
+            int[] lengths=new int[segments];for(int i=0;i<segments;i++) lengths[i]=4;
+            indexCache[slot]=new TriangleStripArray(0,lengths);
+        }
+        positions.set(0,count,packed);colors.set(0,count,rgb);
         buffer.setPositions(positions,1.0f/precision,null);
         owner.bind(g);owner.restoreCamera(g);
-        owner.renderNative(g,buffer,indices,appearance);
+        owner.renderNative(g,buffer,indexCache[slot],appearance);
     }
     private static short round(float value) {
         int v=(int)(value+(value<0?-0.5f:0.5f));

@@ -23,6 +23,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final M3GMaterialMath materialMath=new M3GMaterialMath();
     private final M3GPolygonBatch.State batchState=new M3GPolygonBatch.State();
     private CachedTexture lastTexture;
+    // One native Transform/Java array, not a pair of allocations per bind.
+    private final Transform worldProjection=new Transform();
+    private final float[] worldProjectionData={0,0,0,0,0,0,0,0,0,0,-1,-0.02f,0,0,-1,0};
+    private int projectionWidth,projectionHeight,projectionX,projectionY;
+    private boolean projectionReady;
     private boolean batchable;
     private float buffersScale;
     private static final int[] TRI={0,1,2}, QUAD={0,1,3,1,2,3}, ALT_QUAD={0,1,2,0,2,3},
@@ -156,14 +161,16 @@ public final class M3GSceneRenderer implements SceneRenderer {
             surface = Image.createImage(g.width, g.height);
         // Copy the CPU background, skybox, and any earlier software segment.
         if(preserve) surface.getGraphics().drawRGB(g.display, 0, g.width, 0, 0, g.width, g.height, false);
-        Transform projection = new Transform();
-        projection.set(new float[]{
-            2.0f / g.width, 0, -(2.0f * g.centreX / g.width - 1), 0,
-            0, 2.0f / g.height, -(1 - 2.0f * g.centreY / g.height), 0,
-            0, 0, -1, -0.02f,
-            0, 0, -1, 0
-        });
-        camera.setGeneric(projection);
+        if(!projectionReady || projectionWidth!=g.width || projectionHeight!=g.height
+                || projectionX!=g.centreX || projectionY!=g.centreY) {
+            worldProjectionData[0]=2.0f/g.width;
+            worldProjectionData[2]=-(2.0f*g.centreX/g.width-1);
+            worldProjectionData[5]=2.0f/g.height;
+            worldProjectionData[6]=-(1-2.0f*g.centreY/g.height);
+            worldProjection.set(worldProjectionData);camera.setGeneric(worldProjection);
+            projectionWidth=g.width;projectionHeight=g.height;projectionX=g.centreX;projectionY=g.centreY;
+            projectionReady=true;
+        }
         graphics.bindTarget(surface.getGraphics(), false, 0);
         bound = true;
         graphics.setViewport(0, 0, g.width, g.height);
@@ -260,7 +267,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             if(bound) graphics.releaseTarget();
         } finally {
             bound = false;
-            surface = null;
+            surface = null;projectionReady=false;
             skyRenderer = null;
             screenLines = null;
             spriteRenderer = null;
@@ -595,6 +602,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private static boolean powerOfTwo(int n) { return n > 0 && (n & (n - 1)) == 0; }
 
     private Texture2D findTexture(RawImage image, int kind) {
+        CachedTexture last=lastTexture;
+        if(last!=null && last.image==image && last.pixels==image.img
+                && last.width==image.w && last.height==image.h && last.kind==kind) return last.texture;
         for(int i = 0; i < textures.size(); i++) {
             CachedTexture cached = (CachedTexture)textures.elementAt(i);
             if(cached.image == image && cached.pixels == image.img && cached.width == image.w
@@ -617,6 +627,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         while(textures.size() > 0 && (textures.size() >= CACHE_ENTRIES || cachedPixels + size > CACHE_PIXELS)) {
             CachedTexture oldest = (CachedTexture)textures.elementAt(0);
             cachedPixels -= oldest.cost;
+            if(lastTexture==oldest) lastTexture=null;
             textures.removeElementAt(0);
         }
         byte[] rgba = new byte[size * 4];

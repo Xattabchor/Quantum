@@ -123,7 +123,7 @@ public final class Level41Probe {
                     check(!draw.fog,"mode 9/sky inherited native distance Fog");
                     if(draw.projection[0]==1 && draw.projection[5]==1) skyD++;
                     else if(draw.textured) worldD++;
-                    else if(draw.positions.length==128*3) rainD++;
+                    else if(draw.colorComponents==3) rainD++;
                     else solidD++;
                 }
                 check(rainD==1 && skyD+worldD+rainD+solidD==g.getM3GDrawCalls(),"draw attribution mismatch");
