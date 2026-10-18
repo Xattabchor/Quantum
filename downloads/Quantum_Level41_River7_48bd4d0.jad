@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: AE-MODS.RU
+MIDlet-1: Quantum,,code.utils.Main
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_Level41_River7_48bd4d0.jar
+MIDlet-Jar-Size: 9790631

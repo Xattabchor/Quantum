@@ -1,0 +1,44 @@
+{
+  "classes": 154,
+  "code_methods": 1967,
+  "stackmap_attributes": 1067,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "jar_sha256": "fa1d6cc328bbfb6555f71695e662772db47dc27c566591374cb6e94a675bff9c",
+  "resource_files": 505,
+  "source_files": 144,
+  "preverifier": "ProGuard -microedition (CLDC StackMap)",
+  "tools_sha256": {
+    "ecj.jar": "5d53b25fd09b8d83157634af682b4c64bce9def70f6533f81d9115526057ae69",
+    "proguard.jar": "bd9b6c58daf01e5088b86fc8aa99ae9af53d3821c622e5e01d68db97ee82f2eb",
+    "cldc11.jar": "1c3ec9a7057bd3b4daf7a6474cf508676b51066b4e56cbebbe7b326a90efe87a",
+    "midp21.jar": "0a0bc48207dd8bedea027968c3c9bdcf5dadd37be42e356d0802c81a8fa2c43f",
+    "jsr135.jar": "34fb379affaa83b7941307c51071eb363ce15ddf451510866cdb54f009defca5",
+    "jsr184.jar": "161a49bb715dd732f75ff1a39fbf524cae307e7b4596feb2c6830315da75165b",
+    "jsr75_file.jar": "b66a74c215f48d3f319757d1a5f1d7773016defe17344631682be4051c7802f3"
+  },
+  "resource_archive_sha256": "b6be7a932ef45c12a3ac97d8d588f4875ecaf679392dc5342444622983a2f956",
+  "frame_profile": false,
+  "runtime_tested": false,
+  "resource_overlay_sha256": {
+    "level41.txt": "b482c8cb8900a3bde61a6c0e2eadbd57f2781721d6c18c67ed1bbd146c00b74b"
+  },
+  "source_commit": "48bd4d04bd7a60fd9e9f1ce8acd0a14ed80e70b9",
+  "test_build": true,
+  "jar_file": "Quantum_Level41_River7_48bd4d0.jar",
+  "jad_file": "Quantum_Level41_River7_48bd4d0.jad",
+  "game_archive": "q 92 20251201y.jar.zip, not Stlkr",
+  "resource_overlay": "configs/level41-river7",
+  "resource_files_unchanged_from_original": 504,
+  "resource_files_changed_from_original": [
+    "level41.txt"
+  ],
+  "native_api_doubles_level41_tested": true,
+  "device_tested": false,
+  "fps_measured": false,
+  "other_q92_levels_native_gameplay_tested": false
+}

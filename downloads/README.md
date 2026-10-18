@@ -1,5 +1,28 @@
 # Quantum — M3G preverified preview
 
+## Level41: исправление анимированной реки mode7, тест 48bd4d0
+
+[JAR с исходными ресурсами q92](Quantum_Level41_River7_48bd4d0.jar) ·
+[JAD](Quantum_Level41_River7_48bd4d0.jad) ·
+[Отчёт сборки](Quantum_Level41_River7_48bd4d0.build-report.json).
+
+**Это q92 с Level41, не Stlkr.** Исправлена ошибка `M3G required: unsupported object
+code.Rendering.Meshes.LightedPolygon4V material=7`: [ordered depth-band
+retry для MODULATE](../docs/m3g-level41-river7.md), без Software fallback.
+В overlay только river WTEX явно назначен mode7; четыре исходных PNG и 8 fps
+анимации сохранены. Остальные 504 ресурса побайтно равны исходному q92 ZIP;
+геометрия, lightmap, DIST, погода и scripts не изменены. ARM9 оптимизации включены.
+
+11532 видимых river pose-frame случаев / 24 реальных quads / четыре кадра — PASS;
+256 полных Level41 rows — warm B0 T0, strict CPU dispatch 0. Stlkr regression
+строки неизменны. На устройстве и в полном игровом loop ещё не проверено;
+прочие уровни q92 не прошли required-M3G gameplay аудит. Без профилировщика,
+JSR-184 обязателен. Старые JAR/PDF сохранены.
+
+**Перед установкой сохраните сейвы:** MIDlet ID прежний, установка может заменить
+другую установленную Quantum и использовать её RMS. Проверка этой сборки —
+загрузка Level41, подход к реке/берегу, разные ракурсы и смена animation frames.
+
 ## ARM9 / OMAP 1710: world buffers, тестовая сборка 9905fff
 
 [JAR с ресурсами Stlkr](Quantum_Stlkr_M3G_ARM9_9905fff.jar) ·
