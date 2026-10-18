@@ -1,13 +1,18 @@
 # Сборка Quantum: оригинальный Software и M3G
 
-Программный рендер использует оригинальный `Graphics.drawRGB` для вывода кадра,
-фонов паузы и меню. Автоматический выбор Nokia DirectGraphics удалён вместе с
-адаптером и зависимостью от Nokia UI API. Это касается и вывода результата M3G:
-его readback, как и прежде, попадает в общий `DirectX7.display`, затем в MIDP.
+**Текущая ветка:** [обязательный M3G-путь Scene, этап 3](m3g-required-path.md).
+Software не выбирается для gameplay; legacy API и его классы остаются до
+следующих этапов. Публикуемые downloads пока относятся к двухрендерной b0ee49b.
 
-Сам программный растеризатор, форматы ресурсов и игровая логика не заменялись.
-Сохранены `flushAlpha`, исходные RGB/ARGB-буферы, параметры clipping/translation
-и отладочная карта перерисовки. Переключатель Software/M3G и M3G-туман сохранены.
+Сохранённый legacy Software API использует исходный Graphics.drawRGB.
+GameScreen выводит успешный M3G Image через drawImage; pause snapshot и
+необходимые CPU/resource переходы сохраняют readback. Nokia DirectGraphics,
+адаптер и зависимость от Nokia UI API не возвращаются.
+
+Форматы ресурсов и игровая логика не заменялись. Compile/preverify сами по себе
+не доказывают отсутствие всех прямых pixel writes или готовность полного
+M3G-only приложения. Для оценки текущей совместимости нужны required-path
+fixtures и запуск на устройстве.
 
 ## NetBeans / Java ME SDK
 

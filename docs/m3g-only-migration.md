@@ -1,9 +1,12 @@
 # M3G-only: контракт совместимости и начало переноса
 
-**Обновление: [этап 2 — native depth bands](m3g-depth-bands.md) уже в коде.**
-Ниже сохранены контракт и исторические результаты аудита `f566f7e`.
-Его 448 CPU dispatches в текущем Stlkr world-наборе устранены; strict gate
-теперь проходит. Это по-прежнему не завершённая M3G-only версия.
+**Текущий этап: [3 — обязательный M3G-путь Scene](m3g-required-path.md).**
+В gameplay убраны CPU replay и его backup, Software больше не выбирается в меню;
+ошибки native/JSR-184 дают явную диагностику. Samplers физически ещё в JAR,
+HUD/оружие/меню остаются LCDUI — перенос приложения не завершён.
+[Этап 2 — depth bands](m3g-depth-bands.md) также в коде.
+Ниже сохранены контракт и **исторический** аудит этапа 1 (`f566f7e`):
+его 448 CPU dispatches в текущем Stlkr world-наборе устранены; strict gate проходит.
 
 18.10.2026. Пользователь одобрил работу в текущей ветке с возможностью отката.
 **Точка возврата — `b0ee49b`**: прежний движок с Software и агрессивными
@@ -123,12 +126,13 @@ Strict gate:
 
 1. **Сделано:** зафиксировать контракт, измерить CPU fallback, добавить strict
    gate, убедиться, что старый движок/ресурсы/режимы ещё не менялись.
-2. Исправить нативные near/viewport clipping и представление сложных полигонов;
+2. **Сделано в этапе 2:** исправить нативные near/viewport clipping и представление сложных полигонов;
    сохранить порядок, UV/цвета и Fog. Добавить регрессии для фактических отказов,
    не ослабляя точность/тесты только ради зелёного статуса.
-3. Подготовить M3G-only path без whole-frame CPU replay, программных samplers,
-   копии framebuffer для восстановления и переключателя Software. Ошибки API
-   должны быть явными; отсутствие JSR-184 больше не запускает Software.
+3. **Runtime-путь сделан в этапе 3:** required Scene без whole-frame CPU replay,
+   backup и выбора Software; отсутствие JSR-184 — явная ошибка. Физическое
+   удаление samplers/legacy API ещё впереди: общий guard не заменяет аудит
+   прямых pixel writes и оставшихся 2D consumers.
 4. Перенести оставшиеся pixel effects, оружие/HUD/bitmap text и presentation;
    проверить паузу, скриншоты, resize, недостаток памяти и смену уровней.
 5. Отдельно переносить CPU-проекцию world/model geometry на native
@@ -153,5 +157,6 @@ QUANTUM_RESOURCE_JAR="$PWD/build/native-compat/resources/resources.jar" \
 JAVA/ECJ_JAR указывают на установленные Java/ECJ. Заменить probe-флаг на
 `QUANTUM_LEVEL12_PROBE=1` или `QUANTUM_LEVEL13_PROBE=1` для набора с объектами.
 `QUANTUM_REQUIRE_NATIVE=1` включает audit и завершает probe ошибкой при первом
-ненулевом CPU dispatch count. В текущем all-worlds наборе **ошибка ожидается**.
+ненулевом CPU dispatch count. На этапе 1 all-worlds gate ожидаемо падал. После этапов 2/3 он проходит;
+REQUIRE_NATIVE теперь включает также реальный обязательный runtime-путь в probes.
 Все hooks добавляются во временные тестовые копии; в published classes их нет.

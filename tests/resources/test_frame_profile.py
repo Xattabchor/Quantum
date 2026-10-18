@@ -35,7 +35,7 @@ class FrameProfileSourcesTest(unittest.TestCase):
             self.assertIn('FrameProfile.INTERACT', game)
             self.assertIn('FrameProfile.UPDATE', game)
             self.assertIn('FrameProfile.VERTEX', copies[1].read_text())
-            self.assertIn('FrameProfile.SORT', copies[1].read_text())
+            self.assertEqual(copies[1].read_text().count('FrameProfile.SORT'), 4)
             self.assertIn('FrameProfile.PACK', copies[3].read_text())
 
     def test_fail_closed_if_anchor_changes(self):

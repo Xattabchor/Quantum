@@ -159,7 +159,7 @@ public final class Level13Probe {
     private static void sample(House house,Skybox sky,String label,int[] feet,int yaw,int pitch,String part) throws Exception {
         // DirectX7.destroy resets shared level globals. Restore them for EVERY
         // fresh sample, otherwise mode3 silently falls back at fDist=1.
-        configureLevel();DirectX7 g=new DirectX7(240,320);g.setRenderer(DirectX7.M3G);
+        configureLevel();DirectX7 g=new DirectX7(240,320);g.setRenderer(DirectX7.M3G);if(Boolean.getBoolean("quantum.m3gRequired"))g.requireM3G();
         Matrix rx=new Matrix(),ry=new Matrix(),cam=new Matrix();rx.setRotX(pitch);ry.setRotY(yaw);cam.mul(ry,rx);
         cam.setPosition(feet[0],feet[1]+1503,feet[2]);g.setCamera(cam);sky.rotateX=pitch;sky.rotateY=yaw;
         int room=house.calcPart(-1,feet[0],feet[1],feet[2],true);

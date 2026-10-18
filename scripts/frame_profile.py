@@ -77,9 +77,14 @@ def instrument_direct(text):
         ('System.arraycopy(display, 0, frameBackup, 0, display.length);', 'BACKUP'),
         ('System.arraycopy(frameBackup, 0, display, 0, display.length);', 'BACKUP'),
         ('buffer.sort(0, buffer.getSize() - 1);', 'SORT'),
-        ('backgroundBuffer.sort(0,backgroundBuffer.getSize()-1);', 'SORT'),
+        ('buffer.sort(0,buffer.getSize()-1);', 'SORT'),
     ):
         text = replace_once(text, call, region(call, category))
+    # Legacy and required gameplay each own an ordered background queue.
+    call = 'backgroundBuffer.sort(0,backgroundBuffer.getSize()-1);'
+    if text.count(call) != 2:
+        raise ValueError('background sort anchors changed')
+    text = text.replace(call, region(call, 'SORT'))
     return text
 
 

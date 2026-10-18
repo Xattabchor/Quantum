@@ -13,6 +13,7 @@ public final class DirectX7 {
    private int rendererMode = SOFTWARE;
    private SceneRenderer sceneRenderer;
    private boolean rendererFailed, nativePass;
+   private boolean m3gRequired;
    private boolean staticLightmapPass, expFogPass;
    private int[] frameBackup;
    private String rendererError;
@@ -135,7 +136,15 @@ this.buffer.resetTex();
 
    /** Synchronize an image-only frame before exposing writable CPU pixels. */
    public final int[] getDisplay() {
-      syncFrameImage();
+      if(m3gRequired && rendererFailed) throw requiredFailure(rendererError);
+      try {syncFrameImage();}
+      catch(RuntimeException ex) {
+          if(m3gRequired) throw requiredFailure(ex.toString());
+          throw ex;
+      } catch(OutOfMemoryError ex) {
+          if(m3gRequired) throw requiredFailure("not enough memory for M3G snapshot");
+          throw ex;
+      }
       return this.display;
    }
 
@@ -199,11 +208,64 @@ this.buffer.resetTex();
    /** Changing the requested mode also permits a fresh attempt after a failure. */
    public void setRenderer(int mode) {
        if(mode != SOFTWARE && mode != M3G) throw new IllegalArgumentException("renderer");
+       if(m3gRequired && mode!=M3G) throw new IllegalArgumentException("M3G is required");
        if(mode == rendererMode) return;
        releaseRenderer();
        rendererMode = mode;
        rendererFailed = false;
        rendererError = null;
+   }
+
+   /** Gameplay migration latch. Legacy tools/tests retain the dual-renderer API,
+    * but a required scene can never switch back to CPU rasterization. */
+   public void requireM3G() {
+       if(m3gRequired) return;
+       setRenderer(M3G);
+       frameBackup=null;
+       m3gRequired=true;
+   }
+
+   public boolean isM3GRequired() {return m3gRequired;}
+
+   /** Only an explicit user retry (or resize) clears a required backend failure. */
+   public void retryM3G() {
+       if(!m3gRequired) throw new IllegalStateException("M3G is not required");
+       resetQueues();
+       discardFrameImage();
+       releaseRenderer();
+       rendererFailed=false;
+       rendererError=null;
+       clearDisplay(0); // Never reuse partial failure pixels as an open-sky base.
+   }
+
+   private IllegalStateException requiredFailure(String message) {
+       if(!rendererFailed || rendererError==null) rendererError=message;
+       rendererFailed=true;
+       // A partially submitted image must never be shown or read back as a frame.
+       discardFrameImage();
+       nativePass=false;
+       if(sceneRenderer!=null) {
+           try {sceneRenderer.dispose();}
+           catch(RuntimeException ex) { }
+           catch(NoClassDefFoundError ex) { }
+           catch(OutOfMemoryError ex) { }
+       }
+       sceneRenderer=null;
+       frameBackup=null;
+       return new IllegalStateException("M3G required: "+rendererError);
+   }
+
+   private void checkRequiredState(boolean allowM3G) {
+       if(rendererFailed) throw requiredFailure(rendererError);
+       if(!allowM3G || rendererMode!=M3G) throw requiredFailure("CPU rasterization disabled");
+       if(flushAlpha) throw requiredFailure("flushAlpha is not supported by the M3G Image target");
+       if(DeveloperMenu.renderPolygonsOverwrite)
+           throw requiredFailure("CPU overdraw visualization is not supported");
+   }
+
+   private void ensureNativeRenderer() throws Exception {
+       if(sceneRenderer==null) sceneRenderer=(SceneRenderer)
+               Class.forName("code.Rendering.M3GSceneRenderer").newInstance();
    }
 
    public int getRenderer() { return rendererMode; }
@@ -299,15 +361,19 @@ this.buffer.resetTex();
                return;
            }
            if(sceneRenderer.draw(this, object, texture, fast)) return;
-           // CPU materials/unsupported sprites must see all prior M3G pixels.
+           if(m3gRequired) throw requiredFailure("unsupported object "+object.getClass().getName()
+                   +" material="+(texture==null?"none":String.valueOf(texture.drawmode)));
+           // Legacy CPU materials must see all prior M3G pixels.
            sceneRenderer.barrier(this);
        }
+       if(m3gRequired) throw requiredFailure("draw outside native frame: "+object.getClass().getName());
        drawSoftwareObject(object,texture,fast);
    }
 
    /** CPU-only dispatch for a whole-mesh fallback; never re-enter native sky
     * rendering after its atomic material/geometry validation has rejected it. */
    public void drawSoftwareObject(RenderObject object,Texture texture,boolean fast) {
+       if(m3gRequired) throw requiredFailure("CPU dispatch disabled: "+object.getClass().getName());
        if(frameImage!=null) syncFrameImage();
        if(rendererMode==M3G && texture!=null && texture.drawmode==11) {
            if(decalFallback==null) decalFallback=new Mode11Decal();
@@ -449,6 +515,7 @@ this.buffer.resetTex();
    }
 
    private boolean render(boolean allowM3G,FrameEffects effects,ScreenLines weather,boolean imageOutput) {
+       if(m3gRequired) return renderRequired(allowM3G,effects,weather,imageOutput);
        lx = camera.m03;
        ly = camera.m13;
        lz = camera.m23;
@@ -514,6 +581,60 @@ this.buffer.resetTex();
        }
    }
 
+   /** Required gameplay transaction: no backup, CPU dispatch, or whole-frame
+    * replay. CPU resource barriers/readback for partial frames remain allowed. */
+   private boolean renderRequired(boolean allowM3G,FrameEffects effects,ScreenLines weather,boolean imageOutput) {
+       try {
+           checkRequiredState(allowM3G);
+           lx=camera.m03;ly=camera.m13;lz=camera.m23;
+           buffer.sort(0,buffer.getSize()-1);
+           if(backgroundPending) backgroundBuffer.sort(0,backgroundBuffer.getSize()-1);
+           if(imageOutput && opaqueFrameBackground()) discardFrameImage();
+           else syncFrameImage();
+           ensureNativeRenderer();
+           if(effects!=null) sceneRenderer.prepareEffects(this,effects);
+           if(weather!=null) sceneRenderer.prepareWeather(this,weather);
+           nativePass=true;
+           drawBuffer();
+           if(effects!=null) drawRenderObject(effects,null,false);
+           if(weather!=null && weather.count>0 && !sceneRenderer.draw(this,weather,null,false))
+               throw requiredFailure("unsupported native weather");
+           if(imageOutput) {
+               frameImage=sceneRenderer.finishImage(this);
+               frameImageBuffer=frameImage==null?null:display;
+           } else sceneRenderer.finish(this);
+           return weather!=null;
+       } catch(Exception ex) {
+           throw requiredFailure(ex.toString());
+       } catch(NoClassDefFoundError ex) {
+           throw requiredFailure(ex.toString());
+       } catch(OutOfMemoryError ex) {
+           throw requiredFailure("not enough memory for M3G");
+       } finally {
+           nativePass=false;
+           resetQueues();
+       }
+   }
+
+   private boolean renderRequiredOverlay(RenderObject effect) {
+       try {
+           checkRequiredState(true);
+           if(nativePass) throw requiredFailure("nested native overlay");
+           syncFrameImage();
+           ensureNativeRenderer();
+           if(!sceneRenderer.draw(this,effect,null,false))
+               throw requiredFailure("unsupported overlay "+effect.getClass().getName());
+           sceneRenderer.finish(this);
+           return true;
+       } catch(Exception ex) {
+           throw requiredFailure(ex.toString());
+       } catch(NoClassDefFoundError ex) {
+           throw requiredFailure(ex.toString());
+       } catch(OutOfMemoryError ex) {
+           throw requiredFailure("not enough memory for M3G overlay");
+       }
+   }
+
    public boolean canRenderM3G() {
        return rendererMode == M3G && !rendererFailed && !flushAlpha
                && !DeveloperMenu.renderPolygonsOverwrite;
@@ -522,6 +643,10 @@ this.buffer.resetTex();
    /** Post-effect overlay before LCDUI flush. False means use original LCDUI
     * weather; this method never consumes/replays the scene's object queue. */
    public boolean renderScreenLines(ScreenLines lines) {
+       if(m3gRequired) {
+           checkRequiredState(true);
+           if(nativePass) throw requiredFailure("nested native weather");
+       }
        if(!canRenderM3G() || nativePass) return false;
        if(lines.count == 0) return true;
        return renderOverlay(lines);
@@ -529,6 +654,7 @@ this.buffer.resetTex();
 
    /** Best-effort native overlay; no CPU replay and no scene-queue consumption. */
    public boolean renderOverlay(RenderObject effect) {
+       if(m3gRequired) return renderRequiredOverlay(effect);
        if(!canRenderM3G() || nativePass) return false;
        syncFrameImage();
        boolean saved = false;
@@ -571,6 +697,7 @@ this.buffer.resetTex();
    public boolean renderMuzzleGlow(code.Gameplay.Map.House house,int part) {return false;}
 
    public final void drawLine(int x1, int y1, int x2, int y2, int fat, int col) {
+       if(m3gRequired) throw requiredFailure("CPU line rasterization disabled");
        if(frameImage!=null) syncFrameImage();
        int tmp;
        if(y1>y2) {tmp=y1; y1=y2; y2=tmp;tmp=x1; x1=x2; x2=tmp;}
@@ -607,6 +734,18 @@ this.buffer.resetTex();
    }
 
    public final void flush(Graphics g, int x, int y) {
+       try {flushFrame(g,x,y);}
+       catch(RuntimeException ex) {
+           if(m3gRequired) throw requiredFailure(ex.toString());
+           throw ex;
+       } catch(OutOfMemoryError ex) {
+           if(m3gRequired) throw requiredFailure("not enough memory for M3G presentation");
+           throw ex;
+       }
+   }
+
+   private void flushFrame(Graphics g,int x,int y) {
+       if(m3gRequired && rendererFailed) throw requiredFailure(rendererError);
        if(frameImage!=null && frameImageBuffer==display && rendererMode==M3G
                && !imagePresentationFailed && !flushAlpha && !DeveloperMenu.renderPolygonsOverwrite) {
            try {g.drawImage(frameImage,x,y,Graphics.TOP|Graphics.LEFT);return;}

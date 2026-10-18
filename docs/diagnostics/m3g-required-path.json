@@ -1,0 +1,179 @@
+{
+  "date": "2026-10-18",
+  "stage": 3,
+  "status": "required scene runtime, not a complete M3G-only application",
+  "base_commit": "a8e87f8",
+  "rollback_commit": "b0ee49b",
+  "stage2_commit": "a57582a",
+  "runtime_policy": "Scene.requireM3G; no CPU dispatch/replay backup; strict probes enable the actual required runtime",
+  "build": {
+    "classes": 150,
+    "code_methods": 1927,
+    "stackmap_attributes": 1043,
+    "class_versions": [
+      [
+        47,
+        0
+      ]
+    ],
+    "jar_sha256": "5336efb0882a86cb8b84c5a3fed84f7f30c334093cb41bb7b45b0b6bc9c02c77",
+    "resource_files": 0,
+    "source_files": 142,
+    "preverifier": "ProGuard -microedition (CLDC StackMap)",
+    "tools_sha256": {
+      "ecj.jar": "5d53b25fd09b8d83157634af682b4c64bce9def70f6533f81d9115526057ae69",
+      "proguard.jar": "bd9b6c58daf01e5088b86fc8aa99ae9af53d3821c622e5e01d68db97ee82f2eb",
+      "cldc11.jar": "1c3ec9a7057bd3b4daf7a6474cf508676b51066b4e56cbebbe7b326a90efe87a",
+      "midp21.jar": "0a0bc48207dd8bedea027968c3c9bdcf5dadd37be42e356d0802c81a8fa2c43f",
+      "jsr135.jar": "34fb379affaa83b7941307c51071eb363ce15ddf451510866cdb54f009defca5",
+      "jsr184.jar": "161a49bb715dd732f75ff1a39fbf524cae307e7b4596feb2c6830315da75165b",
+      "jsr75_file.jar": "b66a74c215f48d3f319757d1a5f1d7773016defe17344631682be4051c7802f3"
+    },
+    "resource_archive_sha256": null,
+    "frame_profile": false,
+    "runtime_tested": false
+  },
+  "class_comparison_to_stage2": {
+    "unchanged_classes": 143,
+    "changed_classes": [
+      "code/Gameplay/GameScreen.class",
+      "code/Gameplay/Map/Scene.class",
+      "code/HUD/Setting.class",
+      "code/Rendering/DirectX7.class",
+      "code/utils/Main.class",
+      "code/utils/WeatherGenerator.class"
+    ],
+    "added_classes": [
+      "code/HUD/RendererErrorScreen.class"
+    ],
+    "removed_classes": []
+  },
+  "fixtures": [
+    {
+      "fixture": "required-worlds",
+      "rows": 2384,
+      "unchanged_rows": 2384,
+      "rows_sha256": "f355d4ea5b33ed7d97fea7f9bc917835f67a04c815f82d99dd7ee11b6a09a2ad",
+      "match": "full diagnostic rows, including native stream hashes where reported",
+      "audit": [
+        {
+          "tag": "world-level1",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level2",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level3",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level4",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level5",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level6",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level7",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level8",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level9",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level10",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level11",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level12",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level13",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "positive-control",
+          "cpu_dispatches": 0
+        }
+      ]
+    },
+    {
+      "fixture": "required-level12",
+      "rows": 320,
+      "unchanged_rows": 320,
+      "rows_sha256": "be3cca5812510b65ab683da100b85e5969d673bf2761710df4ca82ac3dc425ef",
+      "match": "full diagnostic rows, including native stream hashes where reported",
+      "audit": [
+        {
+          "tag": "objects-level12",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "positive-control",
+          "cpu_dispatches": 0
+        }
+      ]
+    },
+    {
+      "fixture": "required-level13",
+      "rows": 320,
+      "unchanged_rows": 320,
+      "rows_sha256": "0febf415919c610873161d4e79754786dcb320face4deb5e2f88f2539ca98837",
+      "match": "full diagnostic rows, including native stream hashes where reported",
+      "audit": [
+        {
+          "tag": "objects-level13",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "positive-control",
+          "cpu_dispatches": 0
+        }
+      ]
+    }
+  ],
+  "tests": {
+    "required_runtime_contracts": "PASS",
+    "missing_jsr184_required_runtime": "PASS",
+    "legacy_api_regressions": "PASS",
+    "profile_build_and_active_hooks": "PASS including RequiredM3GTest",
+    "midp_framebuffer": "PASS legacy API",
+    "python_resources_and_profile": {
+      "passed": 14
+    }
+  },
+  "removed_backup_payload": {
+    "formula": "width * height * 4",
+    "example_width": 240,
+    "example_height": 320,
+    "example_bytes": 307200
+  },
+  "remaining": [
+    "legacy CPU sampler classes and non-required DirectX7 API",
+    "CPU projection/clipping and resource processing",
+    "CPU display and resource barriers/readbacks",
+    "LCDUI HUD, weapon, menus and legacy sampler benchmark",
+    "direct pixel consumers and dynamic gameplay need further audit",
+    "unsupported capabilities explicitly fail; EXP SkyMesh not implemented",
+    "real phone visual, UI, memory, pause and FPS validation pending"
+  ],
+  "published_downloads_changed": false,
+  "resource_configs_changed": false
+}

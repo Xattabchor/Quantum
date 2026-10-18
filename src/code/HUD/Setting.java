@@ -50,7 +50,7 @@ public final class Setting extends Selectable {
 	}
 
     private int itemCount() {
-        return 21+(hasLangSelect()?1:0)+(Main.renderer==DirectX7.M3G?1:0);
+        return 21+(hasLangSelect()?1:0);
     }
 
     private void setItems() {
@@ -148,11 +148,6 @@ public final class Setting extends Selectable {
         ms[i] = false;
         i++;
         var2[i] = lang.get("DEBUG") + ":" + (DeveloperMenu.debugMode ? lang.get("ON") : lang.get("OFF"));
-        ms[i] = false;
-        i++;
-        String rendererLabel = lang.get("RENDERER");
-        if(rendererLabel == null) rendererLabel = "Renderer";
-        var2[i] = rendererLabel + ": " + (Main.renderer == DirectX7.M3G ? "M3G (experimental)" : "Software");
         ms[i] = false;
         i++;
         if(Main.renderer==DirectX7.M3G) {
@@ -299,8 +294,6 @@ public final class Setting extends Selectable {
             if(menu instanceof PauseScreen) ((PauseScreen) menu).reloadText();
 		}
         id++;
-        if(var1 == id) Main.renderer = Main.renderer == DirectX7.M3G ? DirectX7.SOFTWARE : DirectX7.M3G;
-        id++;
         if(Main.renderer==DirectX7.M3G && var1==id) Main.m3gPerspective=false;
         this.setItems();
         this.repaint();
@@ -380,8 +373,6 @@ public final class Setting extends Selectable {
             if(menu instanceof Menu) ((Menu) menu).reloadText();
             if(menu instanceof PauseScreen) ((PauseScreen) menu).reloadText();
         }
-        id++;
-        if(var1 == id) Main.renderer = Main.renderer == DirectX7.M3G ? DirectX7.SOFTWARE : DirectX7.M3G;
         id++;
         if(Main.renderer==DirectX7.M3G && var1==id) Main.m3gPerspective=true;
         this.setItems();

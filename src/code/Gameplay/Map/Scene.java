@@ -63,6 +63,7 @@ public class Scene {
         frame = 0;
         need = null;
         g3d = new DirectX7(width, height);
+        g3d.requireM3G();
         this.house = house;
         this.start = start;
         this.finish = finish;

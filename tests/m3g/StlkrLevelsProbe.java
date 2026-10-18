@@ -56,7 +56,7 @@ public final class StlkrLevelsProbe {
         return w.prepareM3G(g);
     }
     private static void sample(int number,GameIni level,House house,Skybox sky,String label,int[] feet,int room,int yaw,int pitch) throws Exception {
-        configure(level);DirectX7 g=new DirectX7(240,320);g.setRenderer(DirectX7.M3G);
+        configure(level);DirectX7 g=new DirectX7(240,320);g.setRenderer(DirectX7.M3G);if(Boolean.getBoolean("quantum.m3gRequired"))g.requireM3G();
         Matrix x=new Matrix(),y=new Matrix(),camera=new Matrix();x.setRotX(pitch);y.setRotY(yaw);camera.mul(y,x);
         camera.setPosition(feet[0],feet[1]+1503,feet[2]);g.setCamera(camera);
         if(sky!=null){sky.rotateX=pitch;sky.rotateY=yaw;}

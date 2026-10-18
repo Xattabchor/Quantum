@@ -12,6 +12,7 @@ import code.HUD.GUIScreen;
 import code.HUD.GameHelp;
 import code.HUD.Menu;
 import code.HUD.PauseScreen;
+import code.HUD.RendererErrorScreen;
 import code.HUD.TitleScreen;
 import code.Math.Matrix;
 import code.Math.Vector3D;
@@ -340,7 +341,7 @@ public final class GameScreen extends MyCanvas {
         boolean nativeWeather = false;
         int playerHeight = player.getEyesHeight();
 
-        g3d.setRenderer(Main.renderer);
+        g3d.requireM3G();
         g3d.beginFrameStats();
         Matrix playerMat = player.getCharacter().getTransform();
         int renderFrom;
@@ -435,6 +436,8 @@ public final class GameScreen extends MyCanvas {
                 nativeWeather=g3d.renderGameFrameImage(vignette,playerDied,player.isDamaged(),
                         scene.getHouse(),renderFrom,wg==null?null:wg.prepareM3G(g3d));
             else g3d.render();
+            if(wg!=null && !nativeWeather)
+                throw new IllegalStateException("native weather was not submitted");
             g3d.shootIntensity -= QFPS.frameTime;
             if(g3d.shootIntensity < 0) g3d.shootIntensity = 0;
             
@@ -445,7 +448,11 @@ public final class GameScreen extends MyCanvas {
 
             if(vignette != null && g3d.getRenderer()==DirectX7.SOFTWARE) applyVignette(g3d.getDisplay());
         } catch (Exception ext) {
-            if(DeveloperMenu.debugMode) ext.printStackTrace();
+            showRendererFailure(ext.toString());
+            return;
+        } catch (OutOfMemoryError ext) {
+            showRendererFailure("not enough memory for M3G frame");
+            return;
         }
         
         int screenY = (height - g3d.getHeight()) / 2;
@@ -463,7 +470,11 @@ public final class GameScreen extends MyCanvas {
         try {
             scene.flush(g, 0, screenY);
         } catch (Exception ext) {
-            if(DeveloperMenu.debugMode) ext.printStackTrace();
+            showRendererFailure(ext.toString());
+            return;
+        } catch (OutOfMemoryError ext) {
+            showRendererFailure("not enough memory for M3G presentation");
+            return;
         }
 
         if(DeveloperMenu.drawPortals) scene.house.drawPortals(g, 0, screenY);
@@ -674,6 +685,30 @@ public final class GameScreen extends MyCanvas {
         QFPS.frame();
         repaint();
         //this.serviceRepaints();
+    }
+
+    /** A failed scene is not presented and simulation does not advance unseen. */
+    private void showRendererFailure(String message) {
+        finishDraw=true;
+        paused=true;
+        keys.reset();
+        stop();
+        if(Main.musicPlayer.hasPlayer()) {
+            musTime=Main.musicPlayer.getTime();
+            stopMus();
+        }
+        QFPS.miniReset();
+        Main.setCurrent(new RendererErrorScreen(main,this,message));
+    }
+
+    public void retryRenderer() {
+        scene.getG3D().retryM3G();
+        keys.reset();
+        paused=false;
+        finishDraw=true;
+        start();
+        Main.setCurrent(this);
+        if(Main.isMusic) startMus(musTime);
     }
 
     protected final void pointerPressed(int x, int y) {
@@ -1140,7 +1175,13 @@ public final class GameScreen extends MyCanvas {
         
         stop();
         QFPS.miniReset();
-        Main.setCurrent(new PauseScreen(main, this, scene.getG3D().getDisplay(), musTime));
+        try {
+            Main.setCurrent(new PauseScreen(main, this, scene.getG3D().getDisplay(), musTime));
+        } catch(Exception ex) {
+            showRendererFailure(ex.toString());
+        } catch(OutOfMemoryError ex) {
+            showRendererFailure("not enough memory for pause snapshot");
+        }
     }
     
     public void gameEnd() {

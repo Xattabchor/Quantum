@@ -371,7 +371,10 @@ float yy=y*1.3f*3*frameTime/80/50;
   /** Snapshot geometry only: no bind, readback, drawing or simulation update. */
   public ScreenLines prepareM3G(DirectX7 g) {
       setRenderer(g.getRenderer());
-      if(!g.canRenderM3G() || code.HUD.DeveloperMenu.drawPortals) return null;
+      if(!g.canRenderM3G() || code.HUD.DeveloperMenu.drawPortals) {
+          if(g.isM3GRequired()) throw new IllegalStateException("native weather unavailable");
+          return null;
+      }
       try {
           if(nativeParticles==null) nativeParticles=new ScreenLines();
           nativeParticles.clear();
@@ -404,7 +407,8 @@ float yy=y*1.3f*3*frameTime/80/50;
           }
           return nativeParticles;
       } catch(OutOfMemoryError ex) {
-          return null; // Allocation before native submission: original LCDUI fallback.
+          if(g.isM3GRequired()) throw ex;
+          return null; // Legacy callers retain LCDUI fallback.
       }
   }
 

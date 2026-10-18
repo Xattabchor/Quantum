@@ -1,11 +1,11 @@
 # Quantum  
 J2ME 3D Game engine based on Iceberg 3D.  
 
-Uses software rendering and zone/portal-based culling. Frames are presented through the original MIDP Graphics.drawRGB path.
+Uses zone/portal-based culling. The development branch now requires M3G for gameplay; published b0ee49b downloads retain Software + M3G.
 Supports some kind of scripting (should be replaced with lua!), has its own lightmapper.  
 I wrote it when I was just learning Java and OOP, so the code quality is really low, but maybe this engine can be useful to someone.  
 
-## Оригинальный программный рендер
+## Опубликованная версия b0ee49b: Software / M3G
 
 Для Software восстановлен исходный вывод через MIDP `Graphics.drawRGB`,
 включая фон паузы и меню. Nokia DirectGraphics и зависимость от Nokia UI API
@@ -14,12 +14,19 @@ I wrote it when I was just learning Java and OOP, so the code quality is really 
 
 ## M3G / JSR-184
 
-**M3G-only перенос: этап 2 — native near/far depth bands.**
-В контрольных наборах Stlkr geometry CPU dispatches 448 → 0; strict gate проходит.
-Софтрендер ещё не вырезан, HUD/оружие не перенесены целиком; downloads прежние.
-[Изменения, проверки и ограничения этапа 2](docs/m3g-depth-bands.md) ·
-[Контракт режимов и план переноса](docs/m3g-only-migration.md).
-Точка возврата до переноса: `b0ee49b`.
+**M3G-only перенос: этап 3 — обязательный native-путь Scene.**
+В текущем коде игровой кадр больше не откатывается в Software и не создаёт
+backup для CPU replay. Отсутствие JSR-184/неподдержанный объект/ошибка native
+открывают диагностику с Retry M3G / Menu. Переключатель Software убран.
+Материалы и файлы сохранены; все 13 world-fixtures и level12/13 с объектами
+проходят strict-путь с **0 CPU dispatch**. Это не замер FPS и не полная проверка игры.
+Старые samplers пока остаются в JAR; HUD/оружие/меню ещё LCDUI. Downloads прежние.
+[Этап 3: изменения, границы и проверки](docs/m3g-required-path.md) ·
+[Этап 2: depth bands](docs/m3g-depth-bands.md) ·
+[Контракт и план](docs/m3g-only-migration.md). Точка возврата: **`b0ee49b`**.
+
+**Дальнейший обзор описывает опубликованную двухрендерную b0ee49b, а не
+обязательный native-путь текущего переноса.**
 
 Добавлен экспериментальный второй рендер: **Settings → Renderer → M3G**.
 По умолчанию работает Software. M3G растеризует поддерживаемые полигоны

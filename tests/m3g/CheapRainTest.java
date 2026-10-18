@@ -70,7 +70,7 @@ public final class CheapRainTest {
         w=rain(1);w.lighting=true;w.lastLighting=System.currentTimeMillis();g=M3GTest.renderer();
         check(w.paintM3G(g),"storm rain failed");
         check((Graphics3D.history.lastElement().colors[0]&255)==255,"rain lightning color lost");g.destroy();
-        w=rain(100);Graphics original=lcd(),software=lcd();w.paint(original,13);
+        w=rain(100);w.setRenderer(DirectX7.SOFTWARE);Graphics original=lcd(),software=lcd();w.paint(original,13);
         w.paintAfterScene(software,13,DirectX7.SOFTWARE,false);
         check(software.lineCalls==100,"Software rain was capped");
         for(int i=0;i<100;i++) check(Arrays.equals(original.lineHistory.elementAt(i),software.lineHistory.elementAt(i)),"Software rain changed");

@@ -82,7 +82,7 @@ public final class Main extends MIDlet {
     public static boolean hidesight;
     public static int fogQ = 2; //0-off 1 - lq 2 - hq
     public static int pixelsQ = 2; //0-4xmax 1 - 2xmax 2 - 1xmax
-    public static int renderer = DirectX7.SOFTWARE;
+    public static final int renderer = DirectX7.M3G;
     public static boolean m3gPerspective = true;
     public static int persQ = 2;
     public static int availableLevel = 1; // номер доступного уровня
@@ -271,12 +271,8 @@ public final class Main extends MIDlet {
     }
 
     private static void loadRendererSettings() {
-        // Independent stores preserve the original settings and Renderer records.
-        renderer = "M3G".equals(settings.getNoLang("RENDERER")) ? DirectX7.M3G : DirectX7.SOFTWARE;
-        byte[] rendererSetting = RmsUtils.openStore("Quantum.Renderer");
-        if(rendererSetting != null && rendererSetting.length == 1
-                && (rendererSetting[0] == DirectX7.SOFTWARE || rendererSetting[0] == DirectX7.M3G))
-            renderer = rendererSetting[0];
+        // M3G-only gameplay ignores the old Renderer choice without deleting its
+        // store or changing the original settings/game-save record layouts.
         m3gPerspective = settings.getIntNoLang("M3G_PERSPECTIVE",1)!=0;
         byte[] perspectiveSetting = RmsUtils.openStore("Quantum.M3GPerspective");
         if(perspectiveSetting!=null && perspectiveSetting.length==1

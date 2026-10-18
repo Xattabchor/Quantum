@@ -27,7 +27,7 @@ NATIVE_AUDIT = bool(os.environ.get("QUANTUM_NATIVE_COMPAT_AUDIT")) or REQUIRE_NA
 if NATIVE_AUDIT and not STLKR_PROBE:
     raise ValueError("Native compatibility audit requires a Stlkr level probe")
 NATIVE_OPTIONS = (["-Dquantum.nativeAudit=true"] if NATIVE_AUDIT else []) + (
-    ["-Dquantum.requireNative=true"] if REQUIRE_NATIVE else [])
+    ["-Dquantum.requireNative=true", "-Dquantum.m3gRequired=true"] if REQUIRE_NATIVE else [])
 
 
 # Mesh skies use a transactional native submission, not forced CPU rasterization.
@@ -52,6 +52,12 @@ assert "wg.paintM3G(g3d)" not in game and "g3d.renderMuzzleGlow(" not in game
 assert game.index("wg.prepareM3G(g3d)") < game.index("scene.flush(g, 0, screenY)")
 assert "nativeWeather=g3d.renderGameFrameImage(vignette,playerDied,player.isDamaged()," in game
 assert "wg.paintAfterScene(g, screenY, g3d.getRenderer(), nativeWeather);" in game
+assert "g3d.requireM3G();" in game and "g3d.setRenderer(Main.renderer)" not in game
+assert "g3d.requireM3G();" in (ROOT / "src/code/Gameplay/Map/Scene.java").read_text()
+assert "public static final int renderer = DirectX7.M3G;" in (ROOT / "src/code/utils/Main.java").read_text()
+settings_source=(ROOT / "src/code/HUD/Setting.java").read_text()
+assert "Main.renderer =" not in settings_source and '"Software"' not in settings_source
+assert "showRendererFailure(ext.toString());" in game
 assert game.index("scene.flush(g, 0, screenY)") < game.index("wg.paintAfterScene(") < game.index("player.arsenal.drawWeapon(")
 assert game.index("g3d.renderGameFrameImage(") < game.index("player.arsenal.drawWeapon(")
 frame_source=(ROOT / "src/code/Rendering/DirectX7.java").read_text()
@@ -535,6 +541,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                         "-Dlevel.probe=" + ("12" if LEVEL12_PROBE else "13"),
                         "-Dlevel13.fogOff=" + ("true" if os.environ.get("QUANTUM_LEVEL12_FOG_OFF" if LEVEL12_PROBE else "QUANTUM_LEVEL13_FOG_OFF") else "false"),
                         "-cp", classpath, "code.Rendering.Level13Probe", str(resource_jar)], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.RequiredM3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativeFallbackAuditTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModeOptimizationAuditTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
@@ -588,7 +595,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BakedNoFogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MuzzleGlowTest"], check=True)
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
-        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest", "Mode12FogTest", "Arm9PreparationTest", "FogRebaseTest", "FogSolidTest", "SpriteBatchTest"):
+        for test in ("RequiredM3GTest", "FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest", "Mode12FogTest", "Arm9PreparationTest", "FogRebaseTest", "FogSolidTest", "SpriteBatchTest"):
             if test == "FogRebaseTest" and os.environ.get("QUANTUM_FOG_REBASE_REFERENCE"):
                 continue
             if test == "SpriteBatchTest" and os.environ.get("QUANTUM_SPRITE_BATCH_REFERENCE"):
@@ -602,6 +609,8 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
         for name in src.namelist():
             if not name.startswith("javax/microedition/m3g/"):
                 dst.writestr(name, src.read(name))
+    subprocess.run([JAVA, "-cp", os.pathsep.join(map(str, (classes, APP, no_m3g_api))),
+                    "code.Rendering.RequiredMissingM3GTest"], check=True)
     for options in ([], ["hardware-perspective-off"]):
         subprocess.run([JAVA, "-cp", os.pathsep.join(map(str, (classes, APP, no_m3g_api))),
                         "code.Rendering.MissingM3GTest"] + options, check=True)
