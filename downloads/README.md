@@ -1,5 +1,24 @@
 # Quantum — M3G preverified preview
 
+## ARM9 / OMAP 1710: тестовая сборка db03b82
+
+[JAR с ресурсами Stlkr](Quantum_Stlkr_M3G_ARM9_db03b82.jar) ·
+[JAD](Quantum_Stlkr_M3G_ARM9_db03b82.jad) ·
+[Отчёт сборки](Quantum_Stlkr_M3G_ARM9_db03b82.build-report.json).
+
+[Оптимизация native Canvas foreground](../docs/m3g-arm9-canvas.md): соседние
+packets до 16 quads, exact vertex counts, меньше attribute updates/делений,
+array LRU без Vector и reusable source scratch. Синтетический mixed case:
+D14→5, VertexArray.set 42→10; reload D5→1. Это не замер FPS телефона.
+Все 442 ресурса прежние, tree-crossing fix сохранён; NPC, погода, DIST и качество
+не менялись. 13 world-fixtures и level12/13 с объектами: CPU dispatch 0,
+диагностические строки совпадают с TreeFix.
+
+Без профилировщика, JSR-184 обязателен; на реальном OMAP ещё не проверено.
+Это переносимый Java ME JAR, а не ARM-native машинный код. Есть обмен памяти на
+меньше GC/API работы (source scratch до 64 KiB плюс lazy packet pools).
+Перед установкой сохраните сейвы: MIDlet ID прежний. Предыдущие сборки сохранены.
+
 ## Исправленная тестовая сборка TreeFix e1dc319
 
 [JAR с ресурсами Stlkr](Quantum_Stlkr_M3G_TreeFix_e1dc319.jar) ·

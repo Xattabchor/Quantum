@@ -1,0 +1,35 @@
+{
+  "classes": 154,
+  "code_methods": 1966,
+  "stackmap_attributes": 1066,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "jar_sha256": "95337f8953acc79514219e70d9dc4f95189c638e3463b6acee5f131abcfb5282",
+  "resource_files": 442,
+  "source_files": 144,
+  "preverifier": "ProGuard -microedition (CLDC StackMap)",
+  "tools_sha256": {
+    "ecj.jar": "5d53b25fd09b8d83157634af682b4c64bce9def70f6533f81d9115526057ae69",
+    "proguard.jar": "bd9b6c58daf01e5088b86fc8aa99ae9af53d3821c622e5e01d68db97ee82f2eb",
+    "cldc11.jar": "1c3ec9a7057bd3b4daf7a6474cf508676b51066b4e56cbebbe7b326a90efe87a",
+    "midp21.jar": "0a0bc48207dd8bedea027968c3c9bdcf5dadd37be42e356d0802c81a8fa2c43f",
+    "jsr135.jar": "34fb379affaa83b7941307c51071eb363ce15ddf451510866cdb54f009defca5",
+    "jsr184.jar": "161a49bb715dd732f75ff1a39fbf524cae307e7b4596feb2c6830315da75165b",
+    "jsr75_file.jar": "b66a74c215f48d3f319757d1a5f1d7773016defe17344631682be4051c7802f3"
+  },
+  "resource_archive_sha256": "b955cf2797e297ea62733ef2741e14435606bfa45ac14785b21d2c8345fa956c",
+  "frame_profile": false,
+  "runtime_tested": false,
+  "source_commit": "db03b82385121d6fff322059f8536eb6e6659b24",
+  "test_build": true,
+  "target": "ARM9 / OMAP 1710 overhead-oriented portable Java ME; not ARM-native code",
+  "jar_file": "Quantum_Stlkr_M3G_ARM9_db03b82.jar",
+  "jad_file": "Quantum_Stlkr_M3G_ARM9_db03b82.jad",
+  "unchanged_resource_files": 442,
+  "device_tested": false,
+  "fps_measured": false
+}
