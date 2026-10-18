@@ -129,6 +129,7 @@ public final class Level41Probe {
                 if(part.equals("sky") || part.equals("combined")) check(skyD==1,"level41 model sky must fit one native batch");
                 else check(skyD==0,"unexpected model sky draw");
                 if(part.equals("sky")) check(worldD==0 && solidD==0,"world/solid leaked into sky-only sample");
+                if(part.equals("sky")) check(g.getM3GCpuBarriers()==0 && Image.getRGBCalls==reads && Graphics.drawRGBCalls==uploads,"opaque level41 sky retained framebuffer roundtrip");
                 check(solidD==(part.equals("world+solid")?1:0),"solid background attribution mismatch");
                 check(g.getM3GTextureUploads()==0,"level41 seven-image warm cache unexpectedly reuploaded");
                 check(WorldBottleneckProbe.scaleSplits==0,"mode 9 split on Fog scale");

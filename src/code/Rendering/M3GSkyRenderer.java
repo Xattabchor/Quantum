@@ -23,6 +23,8 @@ final class M3GSkyRenderer {
     private float batchUVScale;
     private final SkyGeometry clipper = new SkyGeometry();
     private final RenderObjectBuffer ordered = new RenderObjectBuffer();
+    private boolean clearBackground;
+    private int backgroundColor;
     private float scale;
     private int x1,y1,x2,y2;
 
@@ -80,6 +82,8 @@ final class M3GSkyRenderer {
         matrix[10] = matrix[14] = -1; matrix[11] = -0.02f;
         projection.set(matrix); camera.setGeneric(projection);
         try {
+            clearBackground=sky.clearsBackground(g);
+            if(clearBackground) backgroundColor=sky.backgroundColor();
             for(int i = 0; i < polygons.length; i++) {
                 RenderObject p = polygons[i];
                 if(p instanceof Polygon3V) {
@@ -126,7 +130,7 @@ final class M3GSkyRenderer {
         } finally {
             // A failed native call is replayed atomically by DirectX7. Discard
             // pending geometry even when failure happened before the last flush.
-            size=0; batchRaw=null;
+            size=0; batchRaw=null; clearBackground=false;
             ordered.resetTex(); ordered.reset();
             // Restore the ordinary camera/viewport even if the next queue entry
             // is a level polygon. No extra framebuffer readback is needed here.
@@ -186,7 +190,9 @@ final class M3GSkyRenderer {
             for(int i=0;i<lengths.length;i++) lengths[i]=3;
             indices[slot]=new TriangleStripArray(0,lengths);
         }
-        owner.bind(g);
+        boolean clear=clearBackground;clearBackground=false;
+        if(clear) owner.clearSky(g,backgroundColor);
+        else owner.bind(g);
         graphics.setCamera(camera,null);
         owner.renderNative(g,buffer,indices[slot],appearance);
     }

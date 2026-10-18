@@ -397,11 +397,14 @@ this.buffer.resetTex();
    }
 
    /** Only a known complete FIRST background makes previous pixels irrelevant.
-    * Do not assume that a sky mesh, a portal crop or world geometry covers all. */
+    * Sky meshes need an explicit closed/opaque/viewport certificate and base;
+    * a portal crop or world geometry alone never makes this assumption. */
    private boolean opaqueFrameBackground() {
        if(!backgroundPending || backgroundBuffer.getSize()==0) return false;
        RenderObject object=backgroundBuffer.getBuffer()[backgroundBuffer.getSize()-1].obj;
        if(object instanceof SolidSky || object instanceof SkyFlash) return true;
+       if(object instanceof code.Rendering.Meshes.SkyMesh)
+           return ((code.Rendering.Meshes.SkyMesh)object).clearsBackground(this);
        if(object instanceof PanoramaSky) {
            PanoramaSky sky=(PanoramaSky)object;
            return sky.x1==0 && sky.y1==0 && sky.x2==width && sky.y2==height && sky.startY<=sky.endY;

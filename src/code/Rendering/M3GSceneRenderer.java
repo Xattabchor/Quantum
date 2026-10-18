@@ -215,6 +215,17 @@ public final class M3GSceneRenderer implements SceneRenderer {
         finish(g);
     }
 
+    /** Complete native base; shared by lightning and certified closed skies. */
+    void clearSky(DirectX7 g,int rgb) {
+        if(flashBackground==null) {
+            flashBackground=new Background();
+            flashBackground.setColorClearEnable(true);flashBackground.setDepthClearEnable(false);
+        }
+        flashBackground.setColor(0xff000000 | rgb);
+        bind(g,false);
+        graphics.clear(flashBackground);
+    }
+
     void renderNative(DirectX7 g,VertexBuffer vertices,TriangleStripArray indices,Appearance material) {
         g.frameDrawCalls++; // API attempts, including a call that throws.
         graphics.render(vertices,indices,material,null);
@@ -293,15 +304,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             return true;
         }
         if(object instanceof SkyFlash) {
-            if(flashBackground == null) {
-                flashBackground = new Background();
-                flashBackground.setColor(0xff000000 | SkyFlash.COLOR);
-                flashBackground.setColorClearEnable(true);
-                flashBackground.setDepthClearEnable(false);
-            }
-            // The clear overwrites the complete target; don't upload old pixels.
-            bind(g,false);
-            graphics.clear(flashBackground);
+            clearSky(g,SkyFlash.COLOR);
             return true;
         }
         if(object instanceof ScreenLines) {
