@@ -333,6 +333,57 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     # Compile the current adapter against the doubles, not copies of its logic.
     sources += [ROOT / "src/code/Rendering" / name for name in
                 ("M3GSceneRenderer.java", "M3GFrameEffects.java", "M3GMaterialMath.java", "M3GPolygonBatch.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
+    # Optional diagnostics instrument TEMPORARY source copies only. Production
+    # sources, published classes and rendering decisions remain untouched.
+    if os.environ.get("QUANTUM_WORLD_PROBE"):
+        instrumented = []
+        for source in sources:
+            if source.name == "M3GPolygonBatch.java":
+                content = source.read_text()
+                marker = "(size==0?firstOrder.length:size)+order.length>MAX_VERTICES)) flush(g);"
+                assert content.count(marker) == 1
+                content = content.replace(marker, """(size==0?firstOrder.length:size)+order.length>MAX_VERTICES)) {
+                    WorldBottleneckProbe.split(texture!=tex,
+                        polygon!=poly || this.blend!=blend || this.function!=function
+                        || blendColor!=source.blendColor || levelFilter!=level || imageFilter!=filter
+                        || this.threshold!=threshold || this.fogged!=fogged || fogColor!=color
+                        || this.near!=near || this.far!=far,
+                        fogged && this.scale!=scale,
+                        (size==0?firstOrder.length:size)+order.length>MAX_VERTICES);
+                    flush(g);
+                }""")
+            elif source.name == "M3GSceneRenderer.java":
+                content = source.read_text()
+                start = content.index("    public boolean draw(")
+                end = content.index("    private int fillColor(", start)
+                before = content[:start]
+                lines = content[start:end].splitlines(keepends=True)
+                for i, line in enumerate(lines):
+                    reason = "geometry-pack" if "if(scale == 0)" in line else "native-line-%d" % (len(before.splitlines()) + i + 1)
+                    lines[i] = line.replace("return false;", 'return WorldBottleneckProbe.reject("%s");' % reason)
+                content = before + "".join(lines) + content[end:]
+            elif source.name == "ProjectedGeometry.java":
+                lines = source.read_text().splitlines(keepends=True)
+                for i, line in enumerate(lines):
+                    reason = ("behind-camera" if "v.rz" in line else
+                              "weight-precision" if "if(q <= 0" in line else
+                              "position-overflow" if "if(x < -32767" in line else
+                              "screen-range" if "if(x>32767" in line else "pack-line-%d" % (i + 1))
+                    lines[i] = line.replace("return 0;", 'return WorldBottleneckProbe.packReject("%s");' % reason)
+                content = "".join(lines)
+                assert content.count("if(valid) return scale;") == 1
+                content = content.replace("if(valid) return scale;", "if(valid) return WorldBottleneckProbe.fogResult(true,scale);")
+                marker = "return pack(vertices,count,cx,cy,distance,true,positions,work);"
+                assert content.count(marker) == 1
+                content = content.replace(marker, "return WorldBottleneckProbe.fogResult(false,pack(vertices,count,cx,cy,distance,true,positions,work));")
+            else:
+                instrumented.append(source)
+                continue
+            path = temp / "probe-sources" / source.name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content)
+            instrumented.append(path)
+        sources = instrumented
     if os.environ.get("ECJ_JAR"):
         compiler = [JAVA, "-jar", os.environ["ECJ_JAR"], "-8", "-proc:none", "-nowarn"]
     else:
@@ -353,6 +404,11 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     if resource_jar:
         subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
                         "code.Rendering.GameResourcesTest", str(resource_jar)], check=True)
+    if os.environ.get("QUANTUM_WORLD_PROBE"):
+        if not resource_jar:
+            raise ValueError("QUANTUM_WORLD_PROBE requires QUANTUM_RESOURCE_JAR")
+        subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
+                        "code.Rendering.WorldBottleneckProbe"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModeOptimizationAuditTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteTest"], check=True)
