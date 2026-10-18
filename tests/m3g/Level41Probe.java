@@ -180,7 +180,7 @@ public final class Level41Probe {
             Height height=new Height();height.getPosition().set(xz[0],30000,xz[1]);house.computeHeight(0,height);
             int floor=height.getHeight();check(floor!=Integer.MIN_VALUE,"probe point has no ground");
             int[] position={xz[0],floor+1503,xz[1]};
-            for(int pitch:new int[]{0,60,85}) for(int yaw:new int[]{0,90,180,270})
+            for(int pitch:new int[]{0,30,60,85}) for(int yaw:new int[]{0,45,90,135,180,225,270,315})
                 for(String component:new String[]{"sky","world+solid","combined","flash"}) sample(house,sky,position,yaw,pitch,component,rain);
         }
         for(Map.Entry<RawImage,int[]> entry:originals.entrySet()) check(Arrays.equals(entry.getKey().img,entry.getValue()),"level41 source pixels changed");
