@@ -126,7 +126,7 @@ public final class Level41Probe {
                     else solidD++;
                 }
                 check(rainD==1 && skyD+worldD+rainD+solidD==g.getM3GDrawCalls(),"draw attribution mismatch");
-                if(part.equals("sky") || part.equals("combined")) check(skyD>0,"model sky fell back to CPU");
+                if(part.equals("sky") || part.equals("combined")) check(skyD==1,"level41 model sky must fit one native batch");
                 else check(skyD==0,"unexpected model sky draw");
                 if(part.equals("sky")) check(worldD==0 && solidD==0,"world/solid leaked into sky-only sample");
                 check(solidD==(part.equals("world+solid")?1:0),"solid background attribution mismatch");

@@ -24,13 +24,14 @@ public final class SkyTest {
     private static void submit(DirectX7 g,SkyMesh sky,Matrix transform,int left,int top,int right,int bottom) {
         sky.set(transform,left,top,right,bottom);M3GTest.submit(g,sky,null,0);g.render();
     }
-    private static float[] screen(Graphics3D.Draw draw,int width,int height) {
+    private static float[] screen(Graphics3D.Draw draw,int offset,int width,int height) {
         float[] p=new float[6];
         for(int i=0;i<3;i++) {
-            float w=-draw.positions[i*3+2];
+            int index=draw.indices[offset+i];
+            float w=-draw.positions[index*3+2];
             check(w>0,"native sky vertex behind homogeneous camera");
-            p[i*2]=(draw.positions[i*3]/w-draw.projection[2]+1)*width/2;
-            p[i*2+1]=(1-draw.positions[i*3+1]/w+draw.projection[6])*height/2;
+            p[i*2]=(draw.positions[index*3]/w-draw.projection[2]+1)*width/2;
+            p[i*2+1]=(1-draw.positions[index*3+1]/w+draw.projection[6])*height/2;
             check(!draw.fog,"level fog leaked into sky");
         }
         return p;
@@ -46,14 +47,19 @@ public final class SkyTest {
     private static void coverage(int first,int width,int height,int left,int top,int right,int bottom) {
         int count=Graphics3D.history.size()-first;
         check(count>0,"no native sky triangles");
-        float[][] triangles=new float[count][];
+        int total=0;
+        for(int i=first;i<Graphics3D.history.size();i++) total+=Graphics3D.history.elementAt(i).indices.length/3;
+        float[][] triangles=new float[total][];int next=0;
         for(int i=0;i<count;i++) {
             Graphics3D.Draw d=Graphics3D.history.elementAt(first+i);
             check(d.projection[0]==1 && d.projection[5]==1,"ordinary projected polygon camera used for sky");
-            triangles[i]=screen(d,width,height);
-            for(int j=0;j<3;j++) {
-                check(triangles[i][2*j]>=left-0.1 && triangles[i][2*j]<=right+0.1,"sky viewport X");
-                check(triangles[i][2*j+1]>=top-0.1 && triangles[i][2*j+1]<=bottom+0.1,"sky viewport Y");
+            for(int length:d.lengths) check(length==3,"sky strips joined unrelated triangles");
+            for(int offset=0;offset<d.indices.length;offset+=3) {
+                float[] triangle=screen(d,offset,width,height);triangles[next++]=triangle;
+                for(int j=0;j<3;j++) {
+                    check(triangle[2*j]>=left-0.1 && triangle[2*j]<=right+0.1,"sky viewport X");
+                    check(triangle[2*j+1]>=top-0.1 && triangle[2*j+1]<=bottom+0.1,"sky viewport Y");
+                }
             }
         }
         // Geometric coverage only: these doubles do NOT rasterize triangles.
@@ -155,7 +161,13 @@ public final class SkyTest {
         // Failure after an actual native sky draw must restore the pre-pass pixels
         // and replay the whole original sky, not leave half native/half CPU faces.
         g=M3GTest.renderer();DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
-        Matrix identity=new Matrix();sky=cube();sky.set(identity,0,0,32,32);
+        Matrix identity=new Matrix();sky=cube();
+        // Exceed one batch so the injected failure occurs AFTER a successful
+        // native batch, not before any sky work or in an unrelated draw.
+        RenderObject[] faces=sky.mesh.getPolygons(),many=new RenderObject[faces.length*64];
+        for(int i=0;i<many.length;i++) many[i]=faces[i%faces.length];
+        sky=new SkyMesh(new Mesh(sky.mesh.getVertices(),many,sky.mesh.getTexture()));
+        sky.set(identity,0,0,32,32);
         M3GTest.submit(cpu,sky,null,0);cpu.render();
         Graphics3D.failAt=Graphics3D.calls+2;
         submit(g,sky,identity,0,0,32,32);Graphics3D.failAt=0;

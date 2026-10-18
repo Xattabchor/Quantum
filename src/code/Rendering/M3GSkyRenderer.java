@@ -14,9 +14,13 @@ final class M3GSkyRenderer {
     private final Appearance appearance = new Appearance();
     private final CompositingMode composite = new CompositingMode();
     private final VertexBuffer buffer = new VertexBuffer();
-    private final VertexArray positions = new VertexArray(3,3,2), uv = new VertexArray(3,2,2);
-    private final TriangleStripArray indices = new TriangleStripArray(0,new int[]{3});
-    private final short[] packed = new short[9], coords = new short[6];
+    private static final int MAX_VERTICES = 192; // 64 ordered triangles, bounded CLDC memory.
+    private final VertexArray positions = new VertexArray(MAX_VERTICES,3,2), uv = new VertexArray(MAX_VERTICES,2,2);
+    private final TriangleStripArray[] indices = new TriangleStripArray[MAX_VERTICES/3];
+    private final short[] packed = new short[MAX_VERTICES*3], coords = new short[MAX_VERTICES*2];
+    private int size, batchMode;
+    private RawImage batchRaw;
+    private float batchUVScale;
     private final SkyGeometry clipper = new SkyGeometry();
     private final RenderObjectBuffer ordered = new RenderObjectBuffer();
     private float scale;
@@ -93,18 +97,22 @@ final class M3GSkyRenderer {
                 RenderObject p = items[i].obj; Texture t = items[i].tex;
                 RawImage raw = t.rImg;
                 int mode=DirectX7.m3gDrawMode(t.drawmode);
-                boolean alpha = mode == 1 || (mode == 4 && raw.alphaMixing);
-                // Shared bounded texture cache; animation and array replacement
-                // have the same invalidation semantics as level materials.
-                Texture2D texture = owner.texture(g,raw,mode==2?M3GSceneRenderer.ADD_TEXTURE
-                        :alpha ? M3GSceneRenderer.ALPHA_TEXTURE : M3GSceneRenderer.OPAQUE_TEXTURE);
-                texture.setBlending(mode==5?Texture2D.FUNC_BLEND:Texture2D.FUNC_MODULATE);
-                if(mode==5) texture.setBlendColor(DirectX7.getM3GBlendColor());
-                appearance.setTexture(0,texture); appearance.setFog(null);
-                composite.setBlending(mode==2?CompositingMode.ALPHA_ADD
-                        :mode==7?CompositingMode.MODULATE:mode==10?CompositingMode.MODULATE_X2
-                        :alpha ? CompositingMode.ALPHA : CompositingMode.REPLACE);
-                composite.setAlphaThreshold(alpha ? 0 : owner.textureCutoutThreshold());
+                // Flush BEFORE a different material can mutate a cached texture
+                // or cause an upload barrier. Never reorder transparent faces.
+                if(batchRaw!=raw || batchMode!=mode) {
+                    flush(g);
+                    batchRaw=raw; batchMode=mode;
+                    boolean alpha = mode == 1 || (mode == 4 && raw.alphaMixing);
+                    Texture2D texture = owner.texture(g,raw,mode==2?M3GSceneRenderer.ADD_TEXTURE
+                            :alpha ? M3GSceneRenderer.ALPHA_TEXTURE : M3GSceneRenderer.OPAQUE_TEXTURE);
+                    texture.setBlending(mode==5?Texture2D.FUNC_BLEND:Texture2D.FUNC_MODULATE);
+                    if(mode==5) texture.setBlendColor(DirectX7.getM3GBlendColor());
+                    appearance.setTexture(0,texture); appearance.setFog(null);
+                    composite.setBlending(mode==2?CompositingMode.ALPHA_ADD
+                            :mode==7?CompositingMode.MODULATE:mode==10?CompositingMode.MODULATE_X2
+                            :alpha ? CompositingMode.ALPHA : CompositingMode.REPLACE);
+                    composite.setAlphaThreshold(alpha ? 0 : owner.textureCutoutThreshold());
+                }
                 if(p instanceof Polygon3V) {
                     Polygon3V a = (Polygon3V)p;
                     triangle(g,raw,a.a,a.au,a.av,a.b,a.bu,a.bv,a.c,a.cu,a.cv);
@@ -114,7 +122,11 @@ final class M3GSkyRenderer {
                     triangle(g,raw,a.b,a.bu,a.bv,a.c,a.cu,a.cv,a.d,a.du,a.dv);
                 }
             }
+            flush(g);
         } finally {
+            // A failed native call is replayed atomically by DirectX7. Discard
+            // pending geometry even when failure happened before the last flush.
+            size=0; batchRaw=null;
             ordered.resetTex(); ordered.reset();
             // Restore the ordinary camera/viewport even if the next queue entry
             // is a level polygon. No extra framebuffer readback is needed here.
@@ -150,15 +162,33 @@ final class M3GSkyRenderer {
         clipper.clip(g,a,au,av,b,bu,bv,c,cu,cv,x1,y1,x2,y2);
         float uvScale = Math.max(256,Math.max(Math.max(Math.abs((float)au),Math.abs((float)av)),
                 Math.max(Math.max(Math.abs((float)bu),Math.abs((float)bv)),Math.max(Math.abs((float)cu),Math.abs((float)cv))))) / 30000;
+        if(clipper.count<3) return;
+        // Keep the ORIGINAL per-triangle UV quantization. Only identical scales
+        // can share a batch; re-scaling old shorts would drift shared UV edges.
+        if(size>0 && batchUVScale!=uvScale) flush(g);
+        batchUVScale=uvScale;
         for(int i = 1; i+1 < clipper.count; i++) {
-            pack(0,0,uvScale); pack(1,i,uvScale); pack(2,i+1,uvScale);
-            positions.set(0,3,packed); uv.set(0,3,coords);
-            buffer.setPositions(positions,scale,null);
-            buffer.setTexCoords(0,uv,uvScale/256,null);
-            owner.bind(g);
-            graphics.setCamera(camera,null);
-            owner.renderNative(g,buffer,indices,appearance);
+            if(size+3>MAX_VERTICES) flush(g);
+            pack(size,0,uvScale); pack(size+1,i,uvScale); pack(size+2,i+1,uvScale);
+            size+=3;
         }
+    }
+
+    private void flush(DirectX7 g) {
+        if(size==0) return;
+        int count=size; size=0; // Never retry a partially failed submission.
+        positions.set(0,count,packed); uv.set(0,count,coords);
+        buffer.setPositions(positions,scale,null);
+        buffer.setTexCoords(0,uv,batchUVScale/256,null);
+        int slot=count/3-1;
+        if(indices[slot]==null) {
+            int[] lengths=new int[count/3];
+            for(int i=0;i<lengths.length;i++) lengths[i]=3;
+            indices[slot]=new TriangleStripArray(0,lengths);
+        }
+        owner.bind(g);
+        graphics.setCamera(camera,null);
+        owner.renderNative(g,buffer,indices[slot],appearance);
     }
 
     private void pack(int slot,int index,float uvScale) {

@@ -1,14 +1,14 @@
 {
   "classes": 145,
-  "code_methods": 1852,
-  "stackmap_attributes": 993,
+  "code_methods": 1853,
+  "stackmap_attributes": 994,
   "class_versions": [
     [
       47,
       0
     ]
   ],
-  "jar_sha256": "645a187d933b8df9fc43887296c0a70fbcaf646dd935b007f9523c1baec2b7dd",
+  "jar_sha256": "ca57f35d867357cd4a670da6c9076dbb87087ab083478137f294d2fc18b1ae92",
   "resource_files": 0,
   "source_files": 137,
   "preverifier": "ProGuard -microedition (CLDC StackMap)",
@@ -21,5 +21,7 @@
     "jsr184.jar": "161a49bb715dd732f75ff1a39fbf524cae307e7b4596feb2c6830315da75165b",
     "jsr75_file.jar": "b66a74c215f48d3f319757d1a5f1d7773016defe17344631682be4051c7802f3"
   },
+  "resource_archive_sha256": null,
+  "frame_profile": false,
   "runtime_tested": false
 }
