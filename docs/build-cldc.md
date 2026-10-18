@@ -1,6 +1,7 @@
 # Сборка Quantum: оригинальный Software и M3G
 
-**Текущая ветка:** [обязательный M3G-путь Scene, этап 3](m3g-required-path.md).
+**Текущая ветка:** [этап 4a — native Canvas foreground](m3g-canvas-foreground.md),
+поверх [обязательного M3G-пути Scene этапа 3](m3g-required-path.md).
 Software не выбирается для gameplay; legacy API и его классы остаются до
 следующих этапов. Публикуемые downloads пока относятся к двухрендерной b0ee49b.
 

@@ -58,8 +58,13 @@ assert "public static final int renderer = DirectX7.M3G;" in (ROOT / "src/code/u
 settings_source=(ROOT / "src/code/HUD/Setting.java").read_text()
 assert "Main.renderer =" not in settings_source and '"Software"' not in settings_source
 assert "showRendererFailure(ext.toString());" in game
-assert game.index("scene.flush(g, 0, screenY)") < game.index("wg.paintAfterScene(") < game.index("player.arsenal.drawWeapon(")
-assert game.index("g3d.renderGameFrameImage(") < game.index("player.arsenal.drawWeapon(")
+assert game.index("scene.flush(g, 0, screenY)") < game.index("wg.paintAfterScene(") < game.index("player.arsenal.drawWeaponNative(")
+assert game.index("g3d.renderGameFrameImage(") < game.index("player.arsenal.drawWeaponNative(")
+assert game.index("scene.flush(g, 0, screenY)") < game.index("drawPortals(g,",game.index("scene.flush(g, 0, screenY)")) < game.index("wg.paintAfterScene(")
+assert game.index("foreground.drawImage(overlay,") < game.index("player.arsenal.drawWeaponNative(") < game.index("player.arsenal.drawReloadAnimationNative(") < game.index("foreground.drawImage(imgSight,") < game.index("g3d.renderCanvasImages(g,foreground)") < game.index("boolean lowAmmo, lowHP;")
+for old_call in ("g.drawImage(overlay,", "g.drawImage(imgSight,", "player.arsenal.drawWeapon(g,", "player.arsenal.drawReloadAnimation(g,"):
+    assert old_call not in game, old_call
+
 frame_source=(ROOT / "src/code/Rendering/DirectX7.java").read_text()
 assert "scene.getG3D().getDisplay(), musTime" in game  # pause must synchronize lazy native pixels
 assert not (ROOT / "src/code/Rendering/MuzzleGlow.java").exists()
@@ -109,29 +114,42 @@ public final class Manager {public static String[] getSupportedContentTypes(Stri
 "javax/microedition/lcdui/Image.java": '''package javax.microedition.lcdui;
 public class Image {
  public static int getRGBCalls,creates;
- public int[] pixels; int w,h;
+ public int[] pixels; public int reads; int w,h;
  public static Image createImage(int w,int h) { creates++; Image i=new Image(); i.w=w;i.h=h;i.pixels=new int[w*h];return i; }
  public int getWidth(){return w;} public int getHeight(){return h;}
  public Graphics getGraphics(){return new Graphics(this);}
  public void getRGB(int[] p,int o,int s,int x,int y,int w,int h){
-  getRGBCalls++;
+  getRGBCalls++;reads++;
   if(Boolean.getBoolean("readback.fail"))throw new IllegalStateException("readback");
   for(int j=0;j<h;j++)System.arraycopy(pixels,(y+j)*this.w+x,p,o+j*s,w);
  }
 }''',
 "javax/microedition/lcdui/Graphics.java": '''package javax.microedition.lcdui;
 public class Graphics {
- public static final int TOP=16,LEFT=4;
+ public static final int TOP=16,LEFT=4,BOTTOM=32,RIGHT=8,HCENTER=1,VCENTER=2;
  public Image image; public static int drawRGBCalls,drawImageCalls;
  private int tx,ty,cx,cy,cw,ch;
  Graphics(Image i){image=i;cw=i.w;ch=i.h;}
  public void translate(int x,int y){tx+=x;ty+=y;}
+ public int getTranslateX(){return tx;} public int getTranslateY(){return ty;}
+ public int getClipX(){return cx-tx;} public int getClipY(){return cy-ty;}
+ public int getClipWidth(){return cw;} public int getClipHeight(){return ch;}
  public void setClip(int x,int y,int w,int h){cx=x+tx;cy=y+ty;cw=w;ch=h;}
+ public static class ImageDraw {public Image source;public int sx,sy,w,h,transform,x,y,anchor;}
+ public java.util.Vector<ImageDraw> imageHistory=new java.util.Vector<ImageDraw>();
+ private void record(Image src,int sx,int sy,int w,int h,int transform,int x,int y,int anchor){
+  ImageDraw d=new ImageDraw();d.source=src;d.sx=sx;d.sy=sy;d.w=w;d.h=h;d.transform=transform;d.x=x;d.y=y;d.anchor=anchor;imageHistory.add(d);
+ }
+ public void drawRegion(Image src,int sx,int sy,int w,int h,int transform,int x,int y,int anchor){
+  record(src,sx,sy,w,h,transform,x,y,anchor);
+ }
  public void drawImage(Image src,int x,int y,int anchor){
   drawImageCalls++;
   if(Boolean.getBoolean("image.blit.fail"))throw new IllegalArgumentException("blit");
   if(Boolean.getBoolean("image.blit.oom"))throw new OutOfMemoryError("blit memory");
-  if(anchor!=(TOP|LEFT))throw new AssertionError("anchor");
+  record(src,0,0,src.w,src.h,0,x,y,anchor);
+  if((anchor&HCENTER)!=0)x-=src.w/2;else if((anchor&RIGHT)!=0)x-=src.w;
+  if((anchor&VCENTER)!=0)y-=src.h/2;else if((anchor&BOTTOM)!=0)y-=src.h;
   blit(src.pixels,0,src.w,x,y,src.w,src.h,false);
  }
  private void blit(int[] p,int o,int s,int x,int y,int w,int h,boolean alpha){
@@ -146,9 +164,16 @@ public class Graphics {
  }
  public int color,lineCalls,rectCalls,lastX,lastY,lastX2,lastY2,colorCalls;
  public java.util.Vector<int[]> lineHistory=new java.util.Vector<int[]>();
- public void setColor(int c){color=c;colorCalls++;}
+ public void setColor(int c){color=c;colorCalls++;} public int getColor(){return color;}
+ public void drawRect(int x,int y,int w,int h){if(w<0||h<0)return;fillRect(x,y,w+1,1);if(h>0)fillRect(x,y+h,w+1,1);for(int j=1;j<h;j++){fillRect(x,y+j,1,1);fillRect(x+w,y+j,1,1);}}
  public void drawLine(int x,int y,int x2,int y2){lineCalls++;lastX=x;lastY=y;lastX2=x2;lastY2=y2;lineHistory.add(new int[]{x,y,x2,y2,color});}
- public void fillRect(int x,int y,int w,int h){rectCalls++;lastX=x;lastY=y;lastX2=x+w;lastY2=y+h;}
+ public void fillRect(int x,int y,int w,int h){
+  rectCalls++;lastX=x;lastY=y;lastX2=x+w;lastY2=y+h;
+  if(image==null||w<=0||h<=0)return;x+=tx;y+=ty;
+  int l=Math.max(0,Math.max(cx,x)),t=Math.max(0,Math.max(cy,y));
+  int r=Math.min(image.w,Math.min(cx+cw,x+w)),b=Math.min(image.h,Math.min(cy+ch,y+h));
+  for(int j=t;j<b;j++)for(int i=l;i<r;i++)image.pixels[j*image.w+i]=color|0xff000000;
+ }
  public void drawRGB(int[] p,int o,int s,int x,int y,int w,int h,boolean a){
   drawRGBCalls++;
   blit(p,o,s,x,y,w,h,a);
@@ -169,8 +194,8 @@ public class Camera {public static int generics; public Transform projection;pub
 "javax/microedition/m3g/CompositingMode.java": '''package javax.microedition.m3g;
 public class CompositingMode {
  public static final int ALPHA=64,ALPHA_ADD=65,MODULATE=66,MODULATE_X2=67,REPLACE=68;
- public boolean depth; public int blend; public float threshold;
- public void setDepthTestEnable(boolean b){depth=b;} public void setDepthWriteEnable(boolean b){}
+ public boolean depth,depthTest=true,depthWrite=true; public int blend; public float threshold;
+ public void setDepthTestEnable(boolean b){depth=depthTest=b;} public void setDepthWriteEnable(boolean b){depthWrite=b;}
  public void setBlending(int b){blend=b;} public void setAlphaThreshold(float f){threshold=f;}
 }''',
 "javax/microedition/m3g/PolygonMode.java": '''package javax.microedition.m3g;
@@ -248,18 +273,19 @@ public class Graphics3D {
  public static int calls,uploads,binds,releases,failAt,before,clears;
  public static VertexBuffer lastVertices; public static TriangleStripArray lastIndices;public static Appearance lastAppearance;
  public static Graphics target; public static Camera camera;
- public static class Draw {
+ public static class Draw {public boolean depthTest,depthWrite;public int viewportWidth,viewportHeight;
   public Texture2D source;public int blend,function,blendColor,fogColor,fogMode,textureAlpha,filter,colorComponents,cull,winding,sample;public boolean textured,perspective;public float near,far,density,threshold;public boolean fog;
   public byte[] colors;public int[] indices,lengths; public short[] positions,coords,normals;public boolean lit,tracking;public int lights,diffuse,ambient,emissive,specular;public float ambientIntensity,directionalIntensity,omniIntensity,omniQuadratic;public float[] omniPosition;public float[] lightMatrix;public float scale,uvScale;public float[] projection;
  }
  public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
  public static Graphics3D getInstance(){return INSTANCE;}
- public static Hashtable getProperties(){Hashtable p=new Hashtable();p.put("maxTextureDimension",Integer.valueOf(256));return p;}
- public void bindTarget(Object g,boolean depth,int hints){
+ public int viewportWidth,viewportHeight;
+ public static Hashtable getProperties(){Hashtable p=new Hashtable();p.put("maxTextureDimension",Integer.getInteger("m3g.maxTexture",256));return p;}
+ public void bindTarget(Object g,boolean depth,int hints){if(Boolean.getBoolean("canvas.bind.fail"))throw new IllegalStateException("bind");
   if(target!=null)throw new AssertionError("target leak");target=(Graphics)g;binds++;
  }
  public void releaseTarget(){if(target==null)throw new AssertionError("double release");target=null;releases++;if(Boolean.getBoolean("release.fail"))throw new IllegalStateException("release");}
- public void setViewport(int x,int y,int w,int h){} public void setCamera(Camera c,Transform t){camera=c;} public void resetLights(){lights.removeAllElements();lightTransforms.removeAllElements();}
+ public void setViewport(int x,int y,int w,int h){if(Boolean.getBoolean("canvas.viewport.fail"))throw new IllegalStateException("viewport");viewportWidth=w;viewportHeight=h;} public void setCamera(Camera c,Transform t){camera=c;} public void resetLights(){lights.removeAllElements();lightTransforms.removeAllElements();}
  public static java.util.Vector<Light> lights=new java.util.Vector<Light>();
  public static java.util.Vector<float[]> lightTransforms=new java.util.Vector<float[]>();
  public int addLight(Light l,Transform t){if(Boolean.getBoolean("lights.fail") || (lights.size()==1 && Boolean.getBoolean("lights.second.fail")) || (l.mode==Light.OMNI && Boolean.getBoolean("omni.fail")))throw new IllegalStateException("light");
@@ -287,6 +313,7 @@ public class Graphics3D {
   draw.cull=a.polygon==null?PolygonMode.CULL_BACK:a.polygon.cull;draw.winding=a.polygon==null?PolygonMode.WINDING_CCW:a.polygon.winding;
   draw.colors=c.clone();draw.indices=i.indices.clone();draw.lengths=i.lengths;draw.textureAlpha=p[3]&255;
   draw.positions=v.positions.shorts.clone();draw.coords=v.coords==null || v.coords.shorts==null?null:v.coords.shorts.clone();draw.scale=v.scale;draw.uvScale=v.uvScale;
+  draw.depthTest=a.comp.depthTest;draw.depthWrite=a.comp.depthWrite;draw.viewportWidth=viewportWidth;draw.viewportHeight=viewportHeight;
   draw.lights=lights.size();draw.lit=a.material!=null;
   draw.normals=v.normals==null?null:v.normals.shorts.clone();
   double lightingScale=1;
@@ -358,7 +385,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     sources += sorted(TEST.glob("*.java"))
     # Compile the current adapter against the doubles, not copies of its logic.
     sources += [ROOT / "src/code/Rendering" / name for name in
-                ("Vertex.java", "Mode11Decal.java", "Mode12Fog.java", "TexturingAffine.java", "TexturingPers.java", "TexturingFloors.java", "M3GSceneRenderer.java", "M3GFrameEffects.java", "M3GMaterialMath.java", "M3GPolygonBatch.java", "ProjectedGeometry.java", "WorldClipGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "SkyCoverage.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
+                ("Vertex.java", "Mode11Decal.java", "Mode12Fog.java", "TexturingAffine.java", "TexturingPers.java", "TexturingFloors.java", "M3GSceneRenderer.java", "M3GCanvasImages.java", "ScreenImages.java", "M3GFrameEffects.java", "M3GMaterialMath.java", "M3GPolygonBatch.java", "ProjectedGeometry.java", "WorldClipGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "SkyCoverage.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
     # Validate on-device frame-profile copies against the same API contracts.
     # Requires a prior build_cldc.py --profile-frame; not a timing benchmark.
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
@@ -541,6 +568,8 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                         "-Dlevel.probe=" + ("12" if LEVEL12_PROBE else "13"),
                         "-Dlevel13.fogOff=" + ("true" if os.environ.get("QUANTUM_LEVEL12_FOG_OFF" if LEVEL12_PROBE else "QUANTUM_LEVEL13_FOG_OFF") else "false"),
                         "-cp", classpath, "code.Rendering.Level13Probe", str(resource_jar)], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.CanvasImagesTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.WeaponCanvasTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.RequiredM3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativeFallbackAuditTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModeOptimizationAuditTest"], check=True)
@@ -595,7 +624,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BakedNoFogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MuzzleGlowTest"], check=True)
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
-        for test in ("RequiredM3GTest", "FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest", "Mode12FogTest", "Arm9PreparationTest", "FogRebaseTest", "FogSolidTest", "SpriteBatchTest"):
+        for test in ("CanvasImagesTest", "WeaponCanvasTest", "RequiredM3GTest", "FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest", "Mode12FogTest", "Arm9PreparationTest", "FogRebaseTest", "FogSolidTest", "SpriteBatchTest"):
             if test == "FogRebaseTest" and os.environ.get("QUANTUM_FOG_REBASE_REFERENCE"):
                 continue
             if test == "SpriteBatchTest" and os.environ.get("QUANTUM_SPRITE_BATCH_REFERENCE"):

@@ -15,7 +15,13 @@ public final class RequiredMissingM3GTest {
         // Even an empty frame must diagnose unavailable required capabilities.
         try {g.render();}catch(IllegalStateException expected){failed=true;}
         M3GTest.check(failed && g.getRendererError()!=null,"empty required frame ignored missing API");
+        g.retryM3G();ScreenImages foreground=new ScreenImages();foreground.reset(32,32);foreground.fillRect(0,0,10,10);
+        failed=false;
+        try {g.renderCanvasImages(javax.microedition.lcdui.Image.createImage(32,32).getGraphics(),foreground);}
+        catch(IllegalStateException expected){failed=true;}
+        M3GTest.check(failed && g.getRendererError()!=null && foreground.count==0,
+                "Canvas foreground ignored missing API or retained commands");
         g.destroy();
-        System.out.println("PASS missing JSR-184 -> explicit required-M3G failure / zero CPU object calls / empty frame / explicit retry");
+        System.out.println("PASS missing JSR-184 -> explicit required-M3G failure / zero CPU object calls / empty frame / explicit retry / Canvas foreground");
     }
 }

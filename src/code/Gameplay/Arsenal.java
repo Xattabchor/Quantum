@@ -1,5 +1,7 @@
 package code.Gameplay;
 
+import code.Rendering.ScreenImages;
+
 import code.utils.WeaponCreator;
 import javax.microedition.lcdui.Graphics;
 
@@ -72,6 +74,24 @@ public class Arsenal {
         } else {
             weapon.drawSight(g, 0, y, width, height);
         }
+    }
+
+    public final void drawWeaponNative(ScreenImages images,int y,int width,int height,GameScreen gs) {
+        Weapon weapon=currentWeapon();
+        if(weapon==null) return;
+        if(!gs.player.zoom || !weapon.hasZoom) weapon.drawNative(images,0,y,width,height);
+        else weapon.drawSightNative(images,0,y,width,height);
+    }
+
+    public final void drawReloadAnimationNative(ScreenImages images,Graphics state,int y,int width,int height) {
+        Weapon weapon=currentWeapon();
+        if(weapon==null || !weapon.isReloading()) return;
+        width/=2;
+        int maxY=Math.max(height/50,6),x=width-width/2,y2=height-maxY-2+y;
+        int perc=weapon.reloadingPercentage();
+        state.setColor(0xffffff); // Preserve LCDUI state for the remaining HUD, not pixels.
+        images.setColor(0xffffff);images.drawRect(x,y2,width,maxY);
+        images.fillRect(x,y2,width*perc/100,maxY);
     }
 
     //Прорисовка полоски перезарядки

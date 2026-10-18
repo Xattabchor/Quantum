@@ -681,6 +681,26 @@ this.buffer.resetTex();
        return false;
    }
 
+   /** Canvas-only foreground: never materialize/replay the world Image. */
+   public void renderCanvasImages(Graphics target,ScreenImages images) {
+       try {
+           if(!m3gRequired) throw new IllegalStateException("foreground requires M3G scene policy");
+           checkRequiredState(true);
+           if(nativePass) throw requiredFailure("foreground inside world transaction");
+           if(images.count==0) return;
+           ensureNativeRenderer();
+           sceneRenderer.drawCanvasImages(this,images,target);
+       } catch(Exception ex) {
+           throw requiredFailure(ex.toString());
+       } catch(NoClassDefFoundError ex) {
+           throw requiredFailure(ex.toString());
+       } catch(OutOfMemoryError ex) {
+           throw requiredFailure("not enough memory for M3G foreground");
+       } finally {
+           images.clear();
+       }
+   }
+
    /** New level-local RGB is reset to black on missing/invalid input. */
    public static void configureM3GBlend(String value) {Mode5Blend.configure(value);}
    public static int getM3GBlendColor() {return Mode5Blend.color();}

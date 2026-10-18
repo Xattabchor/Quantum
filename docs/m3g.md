@@ -1,6 +1,8 @@
 # Второй рендер: M3G / JSR-184 (экспериментальный)
 
-**Текущая ветка:** [этап 3 — обязательный M3G-путь игровой Scene](m3g-required-path.md).
+**Текущая ветка:** [этап 4a — native Canvas foreground](m3g-canvas-foreground.md)
+поверх [обязательной Scene этапа 3](m3g-required-path.md). Оружие/прицелы/reload/overlay
+перенесены; остальные HUD/text/icons и меню ещё LCDUI.
 Выбор Software и CPU replay в gameplay отключены; самплеры и LCDUI ещё не удалены.
 Дальнейшие разделы сохраняют историю двухрендерной реализации.
 
@@ -231,7 +233,9 @@ RMS/ресурсных ключей нет. Show QFPS позволяет скр�
 
 - **D**: вызовы Graphics3D.render всех helpers/packet draws, включая sky, sprites,
   post, flash, weather и вызов, бросивший исключение. Это не triangles/objects;
-  Graphics3D.clear и LCDUI/HUD не считаются draw-вызовами.
+  Graphics3D.clear и оставшиеся LCDUI-вызовы не считаются draw-вызовами.
+  Native Canvas foreground этапа 4a считается: D на quad, T на загруженный tile;
+  B не растёт от чтения исходного Image ресурса (это не world readback).
 - **B**: промежуточные native->CPU/resource barrier с реальным bound target,
   включая flush ожидающего batch перед CPU-полигоном/холодной текстурой. Финальный
   frame readback, простое завершение packet и finish без target не входят в B.

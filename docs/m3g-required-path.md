@@ -3,6 +3,9 @@
 18.10.2026. Продолжение [depth bands, этап 2](m3g-depth-bands.md).
 Точка возврата к опубликованному Software + M3G движку — **`b0ee49b`**.
 
+**Продолжение:** [этап 4a — native Canvas foreground](m3g-canvas-foreground.md)
+уже переносит оружие/прицелы/перезарядку и overlay; ниже зафиксирован этап 3.
+
 **Сделано:** игровая Scene требует M3G; нет автоматического CPU dispatch,
 whole-frame replay и backup-массива для восстановления кадра в этом пути.
 **Не сделано:** физическое удаление legacy samplers и перенос всего HUD,

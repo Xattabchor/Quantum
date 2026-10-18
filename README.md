@@ -14,13 +14,17 @@ I wrote it when I was just learning Java and OOP, so the code quality is really 
 
 ## M3G / JSR-184
 
-**M3G-only перенос: этап 3 — обязательный native-путь Scene.**
-В текущем коде игровой кадр больше не откатывается в Software и не создаёт
-backup для CPU replay. Отсутствие JSR-184/неподдержанный объект/ошибка native
-открывают диагностику с Retry M3G / Menu. Переключатель Software убран.
+**M3G-only перенос: этап 4a — native Canvas foreground.**
+Оружие, обычная вспышка выстрела, scope/crosshair, полоса перезарядки и timed
+overlay перенесены в отдельный M3G-проход после вывода сцены. NPOT-изображения
+разбиваются на POT tiles без снижения разрешения; зеркалирование и порядок сохранены.
+[Обязательный Scene-путь этапа 3](docs/m3g-required-path.md) остаётся без
+Software replay/backup, с диагностикой Retry M3G / Menu.
 Материалы и файлы сохранены; все 13 world-fixtures и level12/13 с объектами
 проходят strict-путь с **0 CPU dispatch**. Это не замер FPS и не полная проверка игры.
-Старые samplers пока остаются в JAR; HUD/оружие/меню ещё LCDUI. Downloads прежние.
+Старые samplers остаются в JAR; остальные HUD/text/icons и меню ещё LCDUI.
+Downloads прежние; телефон, визуальное смешивание LCDUI/M3G и FPS ещё не проверены.
+[Этап 4a: изменения, проверки и ограничения](docs/m3g-canvas-foreground.md) ·
 [Этап 3: изменения, границы и проверки](docs/m3g-required-path.md) ·
 [Этап 2: depth bands](docs/m3g-depth-bands.md) ·
 [Контракт и план](docs/m3g-only-migration.md). Точка возврата: **`b0ee49b`**.

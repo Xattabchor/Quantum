@@ -94,13 +94,14 @@ def instrument_native(text):
     for call, category in (
         ('surface.getGraphics().drawRGB(g.display, 0, g.width, 0, 0, g.width, g.height, false);', 'UPLOAD'),
         ('graphics.bindTarget(surface.getGraphics(), false, 0);', 'API'),
+        ('graphics.bindTarget(target,false,0);', 'API'),
         ('graphics.clear(flashBackground);', 'API'),
         ('result.getRGB(g.display,0,g.width,0,0,g.width,g.height);', 'READ'),
     ):
         text = replace_once(text, call, region(call, category))
-    # releaseTarget appears in both normal finish and exceptional disposal.
+    # World finish, exceptional disposal and Canvas foreground release.
     call = 'graphics.releaseTarget();'
-    if text.count(call) != 2:
+    if text.count(call) != 3:
         raise ValueError('releaseTarget anchors changed')
     text = text.replace(call, region(call, 'API'))
     return text

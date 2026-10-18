@@ -14,6 +14,7 @@ import code.Math.MathUtils2;
 import code.Math.Matrix;
 import code.Math.Vector3D;
 import code.Rendering.DirectX7;
+import code.Rendering.ScreenImages;
 import code.Rendering.Meshes.Polygon3V;
 import code.Rendering.Meshes.Polygon4V;
 import code.Rendering.RenderObject;
@@ -142,7 +143,10 @@ public final class Weapon {
     public short getDamageValue() {
         return damageValue;
     }
-    public final void draw(Graphics g, int x, int y, int width, int height) {
+    public final void draw(Graphics g,int x,int y,int width,int height) {draw(g,null,x,y,width,height);}
+    public final void drawNative(ScreenImages images,int x,int y,int width,int height) {draw(null,images,x,y,width,height);}
+
+    private void draw(Graphics g,ScreenImages images,int x,int y,int width,int height) {
         if (imgWeapon == null && fileWeapon != null) createSprite(width, height);
         
         if ((sight == null && fileSight != null) || (sightWeapon == null && fileSightWeapon != null)) 
@@ -170,36 +174,36 @@ public final class Weapon {
             if (twoHands || !leftHand) {
             if (isFire()) {
                 if (imgFire != null) 
-                    g.drawImage(imgFire, width - dx_fire + dx + x, height - dy_fire + dy + y, 3); // 3=2+1 = VCENTER+HCENTER
+                    drawImage(g,images,imgFire, width - dx_fire + dx + x, height - dy_fire + dy + y, 3); // 3=2+1 = VCENTER+HCENTER
                 
             }
             if(imgWeapon != null) 
-                g.drawImage(imgWeapon, width + dx + x, height + dy + y, 40); // 40=32+8 = BOTTOM+RIGHT
+                drawImage(g,images,imgWeapon, width + dx + x, height + dy + y, 40); // 40=32+8 = BOTTOM+RIGHT
             }
             
             if (twoHands || leftHand) {
                 if (isFire() && imgFire != null) 
-                        g.drawRegion(imgFire, 0, 0, imgFire.getWidth(), imgFire.getHeight(), 2, oldWidth-(width - dx_fire + dx + x), height - dy_fire + dy + y, 3); // 3=2+1 = VCENTER+HCENTER
+                        drawRegion(g,images,imgFire, 0, 0, imgFire.getWidth(), imgFire.getHeight(), 2, oldWidth-(width - dx_fire + dx + x), height - dy_fire + dy + y, 3); // 3=2+1 = VCENTER+HCENTER
                 
                 if(imgWeapon != null) 
-                    g.drawRegion(imgWeapon, 0, 0, imgWeapon.getWidth(), imgWeapon.getHeight(), 2, oldWidth-(width + dx + x), height + dy + y, 36); // 36=32+4 = BOTTOM+LEFT
+                    drawRegion(g,images,imgWeapon, 0, 0, imgWeapon.getWidth(), imgWeapon.getHeight(), 2, oldWidth-(width + dx + x), height + dy + y, 36); // 36=32+4 = BOTTOM+LEFT
             }
         } else {
             if (twoHands || !leftHand) {
             if (isFire()) {
                 if(imgFire != null) 
-                    g.drawImage(imgFire, width + dx + x, height + dy + y, 40); // 40=32+8 = BOTTOM+RIGHT
+                    drawImage(g,images,imgFire, width + dx + x, height + dy + y, 40); // 40=32+8 = BOTTOM+RIGHT
             } else if(imgWeapon != null) {
-                g.drawImage(imgWeapon, width + dx + x, height + dy + y, 40); // 40=32+8 = BOTTOM+RIGHT
+                drawImage(g,images,imgWeapon, width + dx + x, height + dy + y, 40); // 40=32+8 = BOTTOM+RIGHT
             }
             }
 
             if (twoHands || leftHand) {
                 if (isFire()) {
                     if (imgFire != null) 
-                        g.drawRegion(imgFire, 0, 0, imgFire.getWidth(), imgFire.getHeight(), 2, oldWidth-(width + dx + x), height + dy + y, 36);// 3=2+1 = VCENTER+HCENTER
+                        drawRegion(g,images,imgFire, 0, 0, imgFire.getWidth(), imgFire.getHeight(), 2, oldWidth-(width + dx + x), height + dy + y, 36);// 3=2+1 = VCENTER+HCENTER
                 } else if(imgWeapon != null) {
-                    g.drawRegion(imgWeapon, 0, 0, imgWeapon.getWidth(), imgWeapon.getHeight(), 2, oldWidth-(width + dx + x), height + dy + y, 36); // 36=32+4 = BOTTOM+LEFT
+                    drawRegion(g,images,imgWeapon, 0, 0, imgWeapon.getWidth(), imgWeapon.getHeight(), 2, oldWidth-(width + dx + x), height + dy + y, 36); // 36=32+4 = BOTTOM+LEFT
                 }
             }
         }
@@ -209,8 +213,11 @@ public final class Weapon {
 
     }
 
-    public final void drawSight(Graphics g, int x, int y, int width, int height) {
-        if (ignoreSightOnDraw) draw(g, x, y, width, height);
+    public final void drawSight(Graphics g,int x,int y,int width,int height) {drawSight(g,null,x,y,width,height);}
+    public final void drawSightNative(ScreenImages images,int x,int y,int width,int height) {drawSight(null,images,x,y,width,height);}
+
+    private void drawSight(Graphics g,ScreenImages images,int x,int y,int width,int height) {
+        if (ignoreSightOnDraw) draw(g,images,x,y,width,height);
         
         if ((sight == null && fileSight != null) || (sightWeapon == null && fileSightWeapon != null)) 
             createSights(width, height);
@@ -224,18 +231,26 @@ public final class Weapon {
         
         if (sightWeapon != null) {
             if (!twoHands) {
-                g.drawImage(sightWeapon, width / 2, height + y + dy, Graphics.BOTTOM | Graphics.HCENTER);
+                drawImage(g,images,sightWeapon, width / 2, height + y + dy, Graphics.BOTTOM | Graphics.HCENTER);
             } else {
-                g.drawImage(sightWeapon, width / 2, height + y + dy, Graphics.BOTTOM | Graphics.LEFT);
-                g.drawRegion(sightWeapon, 0, 0, sightWeapon.getWidth(), sightWeapon.getHeight(), Sprite.TRANS_MIRROR, width / 2, height + y + dy, Graphics.BOTTOM | Graphics.RIGHT);
+                drawImage(g,images,sightWeapon, width / 2, height + y + dy, Graphics.BOTTOM | Graphics.LEFT);
+                drawRegion(g,images,sightWeapon, 0, 0, sightWeapon.getWidth(), sightWeapon.getHeight(), Sprite.TRANS_MIRROR, width / 2, height + y + dy, Graphics.BOTTOM | Graphics.RIGHT);
             }
         }
-        if (sight != null) g.drawImage(sight, 0, y, Graphics.TOP | Graphics.LEFT);
+        if (sight != null) drawImage(g,images,sight, 0, y, Graphics.TOP | Graphics.LEFT);
         
         if (meleeAnim) {
             dx = (short) (dx_max - dx);
             dy = (short) (dy_max - dy);
         }
+    }
+
+    private static void drawImage(Graphics g,ScreenImages images,Image image,int x,int y,int anchor) {
+        if(images!=null) images.drawImage(image,x,y,anchor);else g.drawImage(image,x,y,anchor);
+    }
+    private static void drawRegion(Graphics g,ScreenImages images,Image image,int sx,int sy,int w,int h,int transform,int x,int y,int anchor) {
+        if(images!=null) images.drawRegion(image,sx,sy,w,h,transform,x,y,anchor);
+        else g.drawRegion(image,sx,sy,w,h,transform,x,y,anchor);
     }
 
     public void renderSplinter(DirectX7 g3d) {

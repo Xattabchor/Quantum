@@ -59,6 +59,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private M3GSpriteRenderer spriteRenderer;
     private M3GPanoramaRenderer panoramaRenderer;
     private M3GFrameEffects frameEffects;
+    private M3GCanvasImages canvasImages;
     private Background flashBackground;
     private boolean bound;
     private int cachedPixels;
@@ -209,6 +210,16 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(spriteRenderer!=null) spriteRenderer.flush(g);
     }
 
+    void bindCanvasTarget(javax.microedition.lcdui.Graphics target) {graphics.bindTarget(target,false,0);}
+    void releaseCanvasTarget() {graphics.releaseTarget();}
+
+    /** A separate target pass AFTER scene presentation, in original HUD order. */
+    public void drawCanvasImages(DirectX7 g,ScreenImages images,javax.microedition.lcdui.Graphics target) {
+        if(bound) throw new IllegalStateException("foreground while scene target is bound");
+        if(canvasImages==null) canvasImages=new M3GCanvasImages(this,graphics,maxTexture);
+        canvasImages.draw(g,images,target);
+    }
+
     public void prepareEffects(DirectX7 g,FrameEffects effects) {
         if(frameEffects==null) frameEffects=new M3GFrameEffects(this,graphics,maxTexture);
         frameEffects.prepare(g,effects);
@@ -276,7 +287,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             screenLines = null;
             spriteRenderer = null;
             panoramaRenderer = null;
-            frameEffects = null;
+            frameEffects = null;canvasImages=null;
             flashBackground = null;
             polygonModes.removeAllElements();polygonModes.addElement(polygon);polygonModes.addElement(screenPolygon);
             textures.removeAllElements();lastTexture=null;

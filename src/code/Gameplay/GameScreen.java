@@ -18,6 +18,7 @@ import code.Math.Matrix;
 import code.Math.Vector3D;
 import code.Rendering.Camera;
 import code.Rendering.DirectX7;
+import code.Rendering.ScreenImages;
 import code.Rendering.Meshes.Mesh;
 import code.utils.*;
 import code.utils.canvas.*;
@@ -47,6 +48,7 @@ public final class GameScreen extends MyCanvas {
     public static boolean bloom = false;
 
     private boolean finishDraw = true;
+    private ScreenImages foreground;
     private Object lookAtObj = null;
     public long musTime = 0, usmem = 0;
     public Vector3D newPos;
@@ -185,6 +187,7 @@ public final class GameScreen extends MyCanvas {
             newPos = null;
             lookAtObj = null;
             delayDialogs.removeAllElements();
+            foreground=null;
             scene.destroy();
             scene = null;
             Asset.clear();
@@ -486,32 +489,49 @@ public final class GameScreen extends MyCanvas {
             if(!redrawInfo) g.setClip(0, screenY, width, g3d.getHeight());
         }
 
-        if(overlay != null) {
-            if(System.currentTimeMillis() - overlayStart < overlayTimeOut) {
-                g.drawImage(overlay, getWidth() / 2, getHeight() / 2, 3);
-            } else overlay = null;
+        try {
+            if(foreground==null) foreground=new ScreenImages();
+            foreground.reset(width,height);
+            foreground.setClip(g.getClipX(),g.getClipY(),g.getClipWidth(),g.getClipHeight());
+            if(overlay != null) {
+                if(System.currentTimeMillis() - overlayStart < overlayTimeOut) {
+                    foreground.drawImage(overlay, getWidth() / 2, getHeight() / 2, 3);
+                } else overlay = null;
+            }
+
+            if(!Main.hideHud) {
+
+                if(!playerDied && player.arsenal.current != -1) {
+                    g.setClip(0, screenY, g3d.getWidth(), g3d.getHeight());
+                    foreground.setClip(g.getClipX(),g.getClipY(),g.getClipWidth(),g.getClipHeight());
+                
+                    if(player.show2D()) player.arsenal.drawWeaponNative(foreground, screenY, g3d.getWidth(), g3d.getHeight(), this);
+                    player.arsenal.drawReloadAnimationNative(foreground, g, screenY, g3d.getWidth(), g3d.getHeight());
+                
+                    g.setClip(0, 0, width, height);
+                    if(!redrawInfo) g.setClip(0, screenY, width, g3d.getHeight());
+                    foreground.setClip(g.getClipX(),g.getClipY(),g.getClipWidth(),g.getClipHeight());
+                }
+            
+                if((weapon != null || !Main.hidesight) &&
+                        ((weapon != null && !player.zoom) || weapon == null || (player.canAttack() && !player.show2D()))
+                        ) {
+                    if(imgHand == null || lookAtObj == null || !MainCanvas.pstros) {
+                        foreground.drawImage(imgSight, g3d.getWidth() / 2, screenY + g3d.getHeight() / 2, 3);
+                    }
+                }
+            
+            }
+            g3d.renderCanvasImages(g,foreground);
+        } catch(Exception ex) {
+            if(foreground!=null) foreground.clear();
+            showRendererFailure(ex.toString());return;
+        } catch(OutOfMemoryError ex) {
+            if(foreground!=null) foreground.clear();
+            showRendererFailure("not enough memory for M3G foreground");return;
         }
 
         if(!Main.hideHud) {
-
-            if(!playerDied && player.arsenal.current != -1) {
-                g.setClip(0, screenY, g3d.getWidth(), g3d.getHeight());
-                
-                if(player.show2D()) player.arsenal.drawWeapon(g, screenY, g3d.getWidth(), g3d.getHeight(), this);
-                player.arsenal.drawReloadAnimation(g, screenY, g3d.getWidth(), g3d.getHeight());
-                
-                g.setClip(0, 0, width, height);
-                if(!redrawInfo) g.setClip(0, screenY, width, g3d.getHeight());
-            }
-            
-            if((weapon != null || !Main.hidesight) && 
-                    ((weapon != null && !player.zoom) || weapon == null || (player.canAttack() && !player.show2D()))
-                    ) {
-                if(imgHand == null || lookAtObj == null || !MainCanvas.pstros) {
-                    g.drawImage(imgSight, g3d.getWidth() / 2, screenY + g3d.getHeight() / 2, 3);
-                }
-            }
-            
             boolean lowAmmo, lowHP;
             lowAmmo = lowHP = false;
             

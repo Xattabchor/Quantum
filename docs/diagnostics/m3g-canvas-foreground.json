@@ -1,0 +1,224 @@
+{
+  "date": "2026-10-18",
+  "stage": "4a",
+  "base_commit": "30d250c",
+  "rollback_commit": "b0ee49b",
+  "status": "native Canvas weapon/scope/muzzle/reload/crosshair/timed overlay, not complete M3G-only application",
+  "build": {
+    "classes": 153,
+    "code_methods": 1961,
+    "stackmap_attributes": 1061,
+    "class_versions": [
+      [
+        47,
+        0
+      ]
+    ],
+    "jar_sha256": "b484f0e3d846b1211527a62e9f4d2cead46477ea80aff564f24b0653f08cce7a",
+    "resource_files": 0,
+    "source_files": 144,
+    "preverifier": "ProGuard -microedition (CLDC StackMap)",
+    "tools_sha256": {
+      "ecj.jar": "5d53b25fd09b8d83157634af682b4c64bce9def70f6533f81d9115526057ae69",
+      "proguard.jar": "bd9b6c58daf01e5088b86fc8aa99ae9af53d3821c622e5e01d68db97ee82f2eb",
+      "cldc11.jar": "1c3ec9a7057bd3b4daf7a6474cf508676b51066b4e56cbebbe7b326a90efe87a",
+      "midp21.jar": "0a0bc48207dd8bedea027968c3c9bdcf5dadd37be42e356d0802c81a8fa2c43f",
+      "jsr135.jar": "34fb379affaa83b7941307c51071eb363ce15ddf451510866cdb54f009defca5",
+      "jsr184.jar": "161a49bb715dd732f75ff1a39fbf524cae307e7b4596feb2c6830315da75165b",
+      "jsr75_file.jar": "b66a74c215f48d3f319757d1a5f1d7773016defe17344631682be4051c7802f3"
+    },
+    "resource_archive_sha256": null,
+    "frame_profile": false,
+    "runtime_tested": false
+  },
+  "class_comparison_to_stage3": {
+    "unchanged_classes": 143,
+    "changed_classes": [
+      "code/Gameplay/Arsenal.class",
+      "code/Gameplay/GameScreen.class",
+      "code/Gameplay/Weapon.class",
+      "code/Rendering/DirectX7.class",
+      "code/Rendering/M3GSceneRenderer$CachedTexture.class",
+      "code/Rendering/M3GSceneRenderer.class",
+      "code/Rendering/SceneRenderer.class"
+    ],
+    "added_classes": [
+      "code/Rendering/M3GCanvasImages$Tile.class",
+      "code/Rendering/M3GCanvasImages.class",
+      "code/Rendering/ScreenImages.class"
+    ],
+    "removed_classes": []
+  },
+  "tests": {
+    "native_canvas_command_reconstruction": {
+      "anchors": 8,
+      "mirror_variants": 2,
+      "source_image": [
+        271,
+        233
+      ],
+      "canvas": [
+        301,
+        279
+      ],
+      "rgba": true,
+      "subregions": true,
+      "clips": true,
+      "rect_outlines": true,
+      "not_a_gpu_rasterizer": true
+    },
+    "independent_weapon_layout_reference": {
+      "commit": "30d250c",
+      "cases": 1280,
+      "passes": true
+    },
+    "reload_layout_percentage_and_lcdui_state": {
+      "cases": 36,
+      "passes": true
+    },
+    "hardware_texture_limit_variants": [
+      64,
+      127
+    ],
+    "warm_fitting_working_set": {
+      "source_getrgb": 0,
+      "texture_uploads": 0,
+      "cpu_barriers": 0
+    },
+    "world_snapshot_and_following_world_camera": "PASS",
+    "bounded_cache_and_release_invalidation": "PASS",
+    "foreground_faults": [
+      "source getRGB",
+      "texture upload",
+      "bindTarget",
+      "viewport",
+      "OutOfMemoryError",
+      "render",
+      "releaseTarget",
+      "nonzero Graphics translation",
+      "missing JSR-184"
+    ],
+    "normal_native_and_legacy_suite": "PASS",
+    "frame_profile_build_and_active_suite": "PASS",
+    "midp_framebuffer": "PASS",
+    "python_resources_and_profile": {
+      "passed": 14
+    }
+  },
+  "world_fixtures": [
+    {
+      "fixture": "canvas-worlds",
+      "rows": 2384,
+      "identical_to_stage3": 2384,
+      "rows_sha256": "f355d4ea5b33ed7d97fea7f9bc917835f67a04c815f82d99dd7ee11b6a09a2ad",
+      "audit": [
+        {
+          "tag": "world-level1",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level2",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level3",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level4",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level5",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level6",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level7",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level8",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level9",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level10",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level11",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level12",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level13",
+          "cpu_dispatches": 0
+        }
+      ]
+    },
+    {
+      "fixture": "canvas-level12",
+      "rows": 320,
+      "identical_to_stage3": 320,
+      "rows_sha256": "be3cca5812510b65ab683da100b85e5969d673bf2761710df4ca82ac3dc425ef",
+      "audit": [
+        {
+          "tag": "objects-level12",
+          "cpu_dispatches": 0
+        }
+      ]
+    },
+    {
+      "fixture": "canvas-level13",
+      "rows": 320,
+      "identical_to_stage3": 320,
+      "rows_sha256": "0febf415919c610873161d4e79754786dcb320face4deb5e2f88f2539ca98837",
+      "audit": [
+        {
+          "tag": "objects-level13",
+          "cpu_dispatches": 0
+        }
+      ]
+    }
+  ],
+  "limits": {
+    "max_commands": 256,
+    "max_prepared_quads": 512,
+    "max_tile_edge": 128,
+    "max_cached_tiles": 64,
+    "cached_pixel_budget": 262144,
+    "cached_rgba_payload_budget_bytes": 1048576,
+    "cache_budget_is_not_total_or_peak_heap": true
+  },
+  "cache_contract": "source Image content is stable after decode/resize; releaseRenderer/retry/destroy invalidates; working sets exceeding the cache can reupload",
+  "order": [
+    "present world Image",
+    "LCDUI portal debug",
+    "weather post-scene debug",
+    "timed overlay",
+    "weapon/scope and real muzzle image",
+    "reload",
+    "crosshair",
+    "remaining LCDUI HUD/text/icons"
+  ],
+  "remaining": [
+    "HUD bitmap text/icons, black bars and menus still LCDUI",
+    "legacy samplers, benchmark and direct pixel consumers still present",
+    "CPU projection/clipping, resource decode/resize, display/snapshot/readbacks retained",
+    "native Canvas/LCDUI synchronization, real visual output, gameplay and FPS not device tested",
+    "a late Canvas failure can follow already-presented world/partial foreground; explicit error screen replaces it without CPU replay"
+  ],
+  "published_downloads_changed": false,
+  "resource_configs_changed": false,
+  "runtime_tested": false
+}
