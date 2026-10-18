@@ -1,0 +1,420 @@
+{
+  "baseline": "original archive configs on engine d8b99a3 (same engine classes as 619dc39)",
+  "phone_tested": false,
+  "fps_measured": false,
+  "probe": "tests/m3g/StlkrLevelsProbe.java",
+  "method": "240x320, start + each room bounding-box center, yaw 0..315 step45, pitch 0/45, fourth frame warm; world+configured sky+fixed rain, no objects/AI/physics/roof/lightning/vignette",
+  "known_original_asset_issue": "level2 references promzona.vla absent from source archive; original default vertex brightness retained",
+  "unchanged_class_entries": 149,
+  "total_resource_entries": 442,
+  "changed_resource_entries": 13,
+  "unchanged_resource_entries": 429,
+  "levels": {
+    "1": {
+      "poses": 256,
+      "draws_before": 3173,
+      "draws_after": 2361,
+      "max_draws_before": 160,
+      "max_draws_after": 38,
+      "triangles_before": 12038,
+      "triangles_after": 7937,
+      "improved_poses": 117,
+      "unchanged_poses": 139,
+      "regressed_poses": [],
+      "max_draw_reduction": 127,
+      "config": {
+        "DIST": {
+          "before": 38000,
+          "after": 20000
+        },
+        "FOGD": {
+          "before": 28000,
+          "after": 16000
+        }
+      },
+      "before_rows_sha256": "cd45ab2741dd0d6527c2f1fd2dd2d24c3061978bb6cb0f1c5bd7040788f85555",
+      "after_rows_sha256": "6e88a40b6ff2d564c01555383bdb81c521d5273111de39ffe8731cef1dbe9bb7"
+    },
+    "2": {
+      "poses": 32,
+      "draws_before": 185,
+      "draws_after": 154,
+      "max_draws_before": 17,
+      "max_draws_after": 16,
+      "triangles_before": 2734,
+      "triangles_after": 1693,
+      "improved_poses": 13,
+      "unchanged_poses": 19,
+      "regressed_poses": [],
+      "max_draw_reduction": 7,
+      "config": {
+        "DIST": {
+          "before": null,
+          "after": 18000
+        }
+      },
+      "before_rows_sha256": "d1cf4cf21ec6519b5884e0a3d480ebeb909320f797a28a05d4223e3c3047dea9",
+      "after_rows_sha256": "ec4fb734662f4d9cda297e6a19ff043c8082a6da8f590d5e5c95f468c310af2f"
+    },
+    "3": {
+      "poses": 32,
+      "draws_before": 39,
+      "draws_after": 39,
+      "max_draws_before": 3,
+      "max_draws_after": 3,
+      "triangles_before": 1393,
+      "triangles_after": 1303,
+      "improved_poses": 0,
+      "unchanged_poses": 32,
+      "regressed_poses": [],
+      "max_draw_reduction": 0,
+      "config": {
+        "DIST": {
+          "before": null,
+          "after": 10000
+        }
+      },
+      "before_rows_sha256": "643e9a346238a08059e888623ec301881c581c93aac04255b638dc003d1ea3ed",
+      "after_rows_sha256": "06bf557eb59f0dc75d7f196424b5b28a1532159f0f7347e75d1d12be7e119858"
+    },
+    "4": {
+      "poses": 32,
+      "draws_before": 34,
+      "draws_after": 34,
+      "max_draws_before": 2,
+      "max_draws_after": 2,
+      "triangles_before": 801,
+      "triangles_after": 793,
+      "improved_poses": 0,
+      "unchanged_poses": 32,
+      "regressed_poses": [],
+      "max_draw_reduction": 0,
+      "config": {
+        "DIST": {
+          "before": null,
+          "after": 8000
+        }
+      },
+      "before_rows_sha256": "b98c089987e16879f558d70caa7e8f2c0146f12866c26755cece6a9cc1eee821",
+      "after_rows_sha256": "1fed5763e1284c0264c2a8b2f8bb0d9775c69b0d95091286ba7c220b93629b6b"
+    },
+    "5": {
+      "poses": 256,
+      "draws_before": 3513,
+      "draws_after": 2728,
+      "max_draws_before": 168,
+      "max_draws_after": 39,
+      "triangles_before": 12550,
+      "triangles_after": 8538,
+      "improved_poses": 112,
+      "unchanged_poses": 144,
+      "regressed_poses": [],
+      "max_draw_reduction": 134,
+      "config": {
+        "DIST": {
+          "before": 39000,
+          "after": 20000
+        },
+        "FOGD": {
+          "before": 19000,
+          "after": 16000
+        }
+      },
+      "before_rows_sha256": "1e45179b052c9810a1295afad941388d1180815d154b8721c0b0c7751df1d573",
+      "after_rows_sha256": "0f06b534f10a906a745357ecd06237652ac989d7bd848427946b548726810aae"
+    },
+    "6": {
+      "poses": 256,
+      "draws_before": 3001,
+      "draws_after": 2216,
+      "max_draws_before": 166,
+      "max_draws_after": 37,
+      "triangles_before": 12550,
+      "triangles_after": 8538,
+      "improved_poses": 112,
+      "unchanged_poses": 144,
+      "regressed_poses": [],
+      "max_draw_reduction": 134,
+      "config": {
+        "DIST": {
+          "before": 39000,
+          "after": 20000
+        },
+        "FOGD": {
+          "before": 19000,
+          "after": 16000
+        }
+      },
+      "before_rows_sha256": "5f1604ff3ee4efbfad8d288cf36ba39f43a023d9927a0effd87bbdfcbb0ce142",
+      "after_rows_sha256": "655d60aec0082eb71667ec91aa8a700281845aef0d53cdacc737dfd17335e8ef"
+    },
+    "7": {
+      "poses": 160,
+      "draws_before": 4353,
+      "draws_after": 3063,
+      "max_draws_before": 82,
+      "max_draws_after": 44,
+      "triangles_before": 15307,
+      "triangles_after": 9389,
+      "improved_poses": 84,
+      "unchanged_poses": 76,
+      "regressed_poses": [],
+      "max_draw_reduction": 51,
+      "config": {
+        "DIST": {
+          "before": 39000,
+          "after": 22000
+        },
+        "FOGD": {
+          "before": 26000,
+          "after": 18000
+        }
+      },
+      "before_rows_sha256": "430b123b152322f07b64b8a370da9ca8f95b431c179c568528a8599b5e56a4e7",
+      "after_rows_sha256": "0e43a0aa26307441497559c4aedfa93148e4e67364063bb36e372f5f8fbc0e20"
+    },
+    "8": {
+      "poses": 256,
+      "draws_before": 3203,
+      "draws_after": 2361,
+      "max_draws_before": 167,
+      "max_draws_after": 38,
+      "triangles_before": 12224,
+      "triangles_after": 7937,
+      "improved_poses": 117,
+      "unchanged_poses": 139,
+      "regressed_poses": [],
+      "max_draw_reduction": 134,
+      "config": {
+        "DIST": {
+          "before": 39000,
+          "after": 20000
+        },
+        "FOGD": {
+          "before": 20000,
+          "after": 16000
+        }
+      },
+      "before_rows_sha256": "d781b5e9049a9417c7efe2aeaa3fc06339014faca6331dd6dd86dd6b023dedd0",
+      "after_rows_sha256": "0adc33dadadeb76226c2346c0bba4be12b9fc64d39f416db2675c6a8c0eef8b0"
+    },
+    "9": {
+      "poses": 368,
+      "draws_before": 2434,
+      "draws_after": 2176,
+      "max_draws_before": 29,
+      "max_draws_after": 25,
+      "triangles_before": 10941,
+      "triangles_after": 9389,
+      "improved_poses": 75,
+      "unchanged_poses": 293,
+      "regressed_poses": [],
+      "max_draw_reduction": 19,
+      "config": {
+        "DIST": {
+          "before": 20000,
+          "after": 12000
+        },
+        "FOGD": {
+          "before": 19000,
+          "after": 10000
+        }
+      },
+      "before_rows_sha256": "0f7869cc970e16e105b137256407c83d1b27a228e1206178246f8f16a9dcfd18",
+      "after_rows_sha256": "a14207f0e494ef82f1c3b71625afce3a96ea378136e9d5428b8f9be6ec734818"
+    },
+    "10": {
+      "poses": 64,
+      "draws_before": 773,
+      "draws_after": 717,
+      "max_draws_before": 57,
+      "max_draws_after": 52,
+      "triangles_before": 2983,
+      "triangles_after": 2683,
+      "improved_poses": 11,
+      "unchanged_poses": 53,
+      "regressed_poses": [],
+      "max_draw_reduction": 11,
+      "config": {
+        "DIST": {
+          "before": 40800,
+          "after": 24000
+        },
+        "FOGD": {
+          "before": 40500,
+          "after": 20000
+        }
+      },
+      "before_rows_sha256": "dc7f08c6bef3a008dfde23b08619caebd71d95a237911c096a3cfb58c2f1e091",
+      "after_rows_sha256": "a48f5191807793ad602a76d825d77cc18678a8a5427a9fde6269f0242851e3df"
+    },
+    "11": {
+      "poses": 256,
+      "draws_before": 3173,
+      "draws_after": 2361,
+      "max_draws_before": 160,
+      "max_draws_after": 38,
+      "triangles_before": 12038,
+      "triangles_after": 7937,
+      "improved_poses": 117,
+      "unchanged_poses": 139,
+      "regressed_poses": [],
+      "max_draw_reduction": 127,
+      "config": {
+        "DIST": {
+          "before": 38000,
+          "after": 20000
+        },
+        "FOGD": {
+          "before": 28000,
+          "after": 16000
+        }
+      },
+      "before_rows_sha256": "b503e42242b11f1b4b5169ca19da363ed66a8bfc61055c23a07071f55f2e061f",
+      "after_rows_sha256": "cb67f805a31d6a44d5d45eeffaec54e7f72bb659b5939d55337bace33be3be91"
+    },
+    "12": {
+      "poses": 160,
+      "draws_before": 4353,
+      "draws_after": 3063,
+      "max_draws_before": 82,
+      "max_draws_after": 44,
+      "triangles_before": 15307,
+      "triangles_after": 9389,
+      "improved_poses": 84,
+      "unchanged_poses": 76,
+      "regressed_poses": [],
+      "max_draw_reduction": 51,
+      "config": {
+        "DIST": {
+          "before": 39000,
+          "after": 22000
+        },
+        "FOGD": {
+          "before": 26000,
+          "after": 18000
+        }
+      },
+      "before_rows_sha256": "1a97cbc202a58b12b7438be21e2fe6b40cabbf73953041d550775177b7041858",
+      "after_rows_sha256": "a1b4fc20a98e5ee5023bf95b7b5b5edfb056aa2592b48671eb8ffc923ff70eb3"
+    },
+    "13": {
+      "poses": 256,
+      "draws_before": 2805,
+      "draws_after": 2361,
+      "max_draws_before": 67,
+      "max_draws_after": 38,
+      "triangles_before": 10313,
+      "triangles_after": 7937,
+      "improved_poses": 106,
+      "unchanged_poses": 150,
+      "regressed_poses": [],
+      "max_draw_reduction": 42,
+      "config": {
+        "DIST": {
+          "before": 30000,
+          "after": 20000
+        },
+        "FOGD": {
+          "before": 22000,
+          "after": 16000
+        }
+      },
+      "before_rows_sha256": "d5099e3627c3008a3d518b818cf9d015c3a3dcc49522823e702e9a9b577d253a",
+      "after_rows_sha256": "143ddb0755a7d717e46f6be48b1cbd21c37e7e056ecd72fe1ecdd12f564c4753"
+    }
+  },
+  "objects_probes": {
+    "12": {
+      "world": {
+        "poses": 80,
+        "draws_before": 2027,
+        "draws_after": 1444,
+        "max_draws_before": 99,
+        "max_draws_after": 49,
+        "triangles_before": 6831,
+        "triangles_after": 4360,
+        "improved_poses": 30,
+        "unchanged_poses": 50,
+        "regressed_poses": [],
+        "max_draw_reduction": 64
+      },
+      "objects": {
+        "poses": 80,
+        "draws_before": 2412,
+        "draws_after": 1812,
+        "max_draws_before": 105,
+        "max_draws_after": 69,
+        "triangles_before": 7981,
+        "triangles_after": 5474,
+        "improved_poses": 30,
+        "unchanged_poses": 50,
+        "regressed_poses": [],
+        "max_draw_reduction": 67
+      }
+    },
+    "13": {
+      "world": {
+        "poses": 80,
+        "draws_before": 929,
+        "draws_after": 834,
+        "max_draws_before": 50,
+        "max_draws_after": 50,
+        "triangles_before": 3060,
+        "triangles_after": 2599,
+        "improved_poses": 24,
+        "unchanged_poses": 55,
+        "regressed_poses": [
+          {
+            "sample": "soldiers",
+            "yaw": "180",
+            "pitch": "0",
+            "before": "12",
+            "after": "14"
+          }
+        ],
+        "max_draw_reduction": 12
+      },
+      "objects": {
+        "poses": 80,
+        "draws_before": 1049,
+        "draws_after": 941,
+        "max_draws_before": 75,
+        "max_draws_after": 71,
+        "triangles_before": 3162,
+        "triangles_after": 2701,
+        "improved_poses": 25,
+        "unchanged_poses": 54,
+        "regressed_poses": [
+          {
+            "sample": "soldiers",
+            "yaw": "180",
+            "pitch": "0",
+            "before": "12",
+            "after": "14"
+          }
+        ],
+        "max_draw_reduction": 12
+      }
+    }
+  },
+  "all_worlds_totals": {
+    "poses": 2384,
+    "draws_before": 31039,
+    "draws_after": 23634,
+    "max_draws_before": 168,
+    "max_draws_after": 52,
+    "triangles_before": 121179,
+    "triangles_after": 83463,
+    "improved_poses": 948,
+    "unchanged_poses": 1436,
+    "regressed_poses": [],
+    "max_draw_reduction": 134
+  },
+  "tests": {
+    "resource_unit_tests": 11,
+    "resource_and_frame_profile_unit_tests": 14,
+    "all_worlds_warm_poses": 2384,
+    "m3g_suite_pass_lines": 186
+  }
+}

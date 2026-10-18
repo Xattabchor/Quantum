@@ -8,7 +8,7 @@
       0
     ]
   ],
-  "jar_sha256": "b7307cc5fd1b6e653ac03debccb36616ecbfb71e324fc0a5cecd24404bb69692",
+  "jar_sha256": "23d890bffa9fd9fd1534ea38133ea6e4e5a19c2c1ae9cf56044111a4257a2072",
   "resource_files": 442,
   "source_files": 141,
   "preverifier": "ProGuard -microedition (CLDC StackMap)",
@@ -25,6 +25,18 @@
   "frame_profile": false,
   "runtime_tested": false,
   "resource_overlay_sha256": {
-    "level12.txt": "ce1ad22d12d37bcc12d6d763f9d528ef5c31df465e7bebe2e2461cf598952716"
+    "level1.txt": "9c6fdd58a13ddf9f13341460efd204a483eb1dc6d94ac32fedc0603fee326353",
+    "level10.txt": "452e91392466f13ac34dec331fe94d08c2c55b3176c4451eb917b378a19c8e15",
+    "level11.txt": "eaa17d498021a049f02639621fd9bd6cee19b4adbef90aeb4c46c295f2f7bd6f",
+    "level12.txt": "56a5081a2c75cf1cc3245821cff16204b3755f24286da0bc1ece8b8605e215d6",
+    "level13.txt": "db8efc44c87db80d8ae0bf3d4438243c663709bb59392199d4126d9a43c6cc87",
+    "level2.txt": "764c76f0bfd4c380f3f992c9c957c01aa92129e31447af208e78735185ad460e",
+    "level3.txt": "1bb3420a28f41a4a3e85eb475498c4bff26b8c9bf97c08b23453361552763f67",
+    "level4.txt": "1e97059bb28a269bbb33f143e71474ea5cd96f61de5493e3ae6112163355f02a",
+    "level5.txt": "4724c3348bc64bab22c91807a4957eb506f1ec161b14355abcaf94be58078ebd",
+    "level6.txt": "368c6d30cfd37fca109a3b804449e7398fa8efca09445e1220ef7bf42b23bec1",
+    "level7.txt": "037971240df4ecaebcd85ccb3bb1b1a3840283152b24d6d1170215698a2ea671",
+    "level8.txt": "d08be71549395e9ff5b26a21eb09fce11594b9f31dcc45b2dc0e7e3450515e01",
+    "level9.txt": "6a65f08f72366482a8bae00bdef6c65651a958771c3b0d06b8c05a12bf2556e1"
   }
 }

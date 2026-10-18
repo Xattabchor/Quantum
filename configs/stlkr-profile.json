@@ -1,0 +1,128 @@
+{
+  "name": "Stlkr aggressive distance profile",
+  "archive_sha256": "3c77d2fe5db203e4571cdb12aea5d26721058fca327e2a39edce733492719f19",
+  "changed_keys": [
+    "DIST",
+    "FOGD"
+  ],
+  "levels": {
+    "1": {
+      "DIST": {
+        "before": 38000,
+        "after": 20000
+      },
+      "FOGD": {
+        "before": 28000,
+        "after": 16000
+      }
+    },
+    "2": {
+      "DIST": {
+        "before": null,
+        "after": 18000
+      }
+    },
+    "3": {
+      "DIST": {
+        "before": null,
+        "after": 10000
+      }
+    },
+    "4": {
+      "DIST": {
+        "before": null,
+        "after": 8000
+      }
+    },
+    "5": {
+      "DIST": {
+        "before": 39000,
+        "after": 20000
+      },
+      "FOGD": {
+        "before": 19000,
+        "after": 16000
+      }
+    },
+    "6": {
+      "DIST": {
+        "before": 39000,
+        "after": 20000
+      },
+      "FOGD": {
+        "before": 19000,
+        "after": 16000
+      }
+    },
+    "7": {
+      "DIST": {
+        "before": 39000,
+        "after": 22000
+      },
+      "FOGD": {
+        "before": 26000,
+        "after": 18000
+      }
+    },
+    "8": {
+      "DIST": {
+        "before": 39000,
+        "after": 20000
+      },
+      "FOGD": {
+        "before": 20000,
+        "after": 16000
+      }
+    },
+    "9": {
+      "DIST": {
+        "before": 20000,
+        "after": 12000
+      },
+      "FOGD": {
+        "before": 19000,
+        "after": 10000
+      }
+    },
+    "10": {
+      "DIST": {
+        "before": 40800,
+        "after": 24000
+      },
+      "FOGD": {
+        "before": 40500,
+        "after": 20000
+      }
+    },
+    "11": {
+      "DIST": {
+        "before": 38000,
+        "after": 20000
+      },
+      "FOGD": {
+        "before": 28000,
+        "after": 16000
+      }
+    },
+    "12": {
+      "DIST": {
+        "before": 39000,
+        "after": 22000
+      },
+      "FOGD": {
+        "before": 26000,
+        "after": 18000
+      }
+    },
+    "13": {
+      "DIST": {
+        "before": 30000,
+        "after": 20000
+      },
+      "FOGD": {
+        "before": 22000,
+        "after": 16000
+      }
+    }
+  }
+}

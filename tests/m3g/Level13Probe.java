@@ -59,13 +59,13 @@ public final class Level13Probe {
         InputStream in=Level13Probe.class.getResourceAsStream(n);
         if(in==null)throw new IllegalArgumentException("Missing Stlkr resource: "+n);return in;
     }
-    private static String text(String n) throws Exception {
+    static String text(String n) throws Exception {
         try(InputStream in=resource(n)) {
             ByteArrayOutputStream b=new ByteArrayOutputStream();byte[] bytes=new byte[8192];int k;
             while((k=in.read(bytes))!=-1)b.write(bytes,0,k);return new String(b.toByteArray(),"windows-1251").replace("\r","");
         }
     }
-    private static Mesh[] decode(String n,float scale,MultyTexture t) throws Exception {
+    static Mesh[] decode(String n,float scale,MultyTexture t) throws Exception {
         Method m=Room.class.getDeclaredMethod("createFrom3d",String.class,DataInputStream.class,
             Float.TYPE,Float.TYPE,Float.TYPE,MultyTexture.class);m.setAccessible(true);
         try(DataInputStream in=new DataInputStream(resource(n))) {
@@ -74,7 +74,7 @@ public final class Level13Probe {
             check(in.available()==0,"unconsumed model data "+n);return meshes;
         }
     }
-    private static void seedImages(String jar) throws Exception {
+    static void seedImages(String jar) throws Exception {
         Field f=Asset.class.getDeclaredField("table");f.setAccessible(true);Hashtable cache=(Hashtable)f.get(null);
         try(ZipFile zip=new ZipFile(jar)) {
             Enumeration<? extends ZipEntry> entries=zip.entries();

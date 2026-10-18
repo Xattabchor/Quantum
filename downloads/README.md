@@ -1,5 +1,28 @@
 # Quantum — M3G preverified preview
 
+**18.10.2026 — агрессивный профиль всех 13 уровней Stlkr:**
+на открытых картах DIST 20000–24000 и более плотный Fog; канализация 12000,
+бар 10000, комната 8000, промзона 18000 (статический mode9 без Fog).
+**Дальняя видимость заметно сокращена**. Не удалены погода, NPC, задания или
+скрипты; меняются только DIST/FOGD. Оригинальный архив сохранён.
+
+Все 13 world-карт проверены на 2384 ракурсах: сумма D **31039 → 23634 (−23,9%)**.
+В отдельных проверках с idle-объектами: level12 максимум **105 → 69**,
+level13 **75 → 71** относительно исходных конфигов. В одном ракурсе level13
+стало на 2 draws больше. Уровни 3/4 не выиграли по D. Это **не FPS телефона**.
+[Параметры всех уровней, методика и откат](../docs/stlkr-all-levels-aggressive.md).
+
+**Текущая полная Stlkr:** [JAR](Quantum_Stlkr_FogBatch_ARM9.jar) /
+[JAD](Quantum_Stlkr_FogBatch_ARM9.jad), **10075378 байт**, SHA-256
+`23d890bffa9fd9fd1534ea38133ea6e4e5a19c2c1ae9cf56044111a4257a2072`.
+[Все 13 конфигов ZIP](Stlkr_Aggressive_Levels.zip) ·
+[Build report](Quantum_Stlkr_FogBatch_ARM9.build-report.json).
+149 классов движка прежние; изменены только 13 из 442 ресурсов.
+`Quantum.jar` без игровых ресурсов не обновлялся. Опциональный overlay:
+`--resource-overlay configs/stlkr`, только вместе с исходным Stlkr-архивом.
+
+**Ниже — история предыдущих этапов; их хеши и настройки не описывают текущий JAR.**
+
 **18.10.2026 — отдельный оптимизированный конфиг Stlkr level12:**
 `DIST=39000 → 30000`; туман `FOGD=26000`, дождь, объекты и скрипты прежние.
 Это **сокращение дальности**, не визуально идентичная оптимизация.
@@ -9,7 +32,7 @@
 [Описание, выбор настроек и откат](../docs/level12-config-optimization.md) ·
 [Изменённый level12.txt](../configs/stlkr/level12.txt).
 
-**Текущая полная Stlkr:** [JAR](Quantum_Stlkr_FogBatch_ARM9.jar) /
+**Полная Stlkr предыдущего этапа:** [JAR](Quantum_Stlkr_FogBatch_ARM9.jar) /
 [JAD](Quantum_Stlkr_FogBatch_ARM9.jad), **10075348 байт**, SHA-256
 `b7307cc5fd1b6e653ac03debccb36616ecbfb71e324fc0a5cecd24404bb69692`.
 [Build report полной сборки](Quantum_Stlkr_FogBatch_ARM9.build-report.json).

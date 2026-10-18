@@ -17,9 +17,10 @@ JAVA = os.environ.get("JAVA", "java")
 LEVEL41_PROBE = bool(os.environ.get("QUANTUM_LEVEL41_PROBE"))
 LEVEL12_PROBE = bool(os.environ.get("QUANTUM_LEVEL12_PROBE"))
 LEVEL13_PROBE = bool(os.environ.get("QUANTUM_LEVEL13_PROBE"))
-STLKR_PROBE = LEVEL12_PROBE or LEVEL13_PROBE
-if sum((LEVEL41_PROBE, LEVEL12_PROBE, LEVEL13_PROBE)) > 1:
-    raise ValueError("Run level41, level12 and level13 probes separately")
+STLKR_ALL_PROBE = bool(os.environ.get("QUANTUM_STLKR_LEVELS_PROBE"))
+STLKR_PROBE = LEVEL12_PROBE or LEVEL13_PROBE or STLKR_ALL_PROBE
+if sum((LEVEL41_PROBE, LEVEL12_PROBE, LEVEL13_PROBE, STLKR_ALL_PROBE)) > 1:
+    raise ValueError("Run level41, level12, level13 and all-Stlkr probes separately")
 WORLD_REASONS = bool(os.environ.get("QUANTUM_WORLD_PROBE")) or LEVEL41_PROBE or STLKR_PROBE
 
 # Mesh skies use a transactional native submission, not forced CPU rasterization.
@@ -362,7 +363,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     if WORLD_REASONS:
         if LEVEL41_PROBE or STLKR_PROBE:
             sources.append(ROOT / "src/code/Rendering/DirectX7.java")
-        if LEVEL41_PROBE:
+        if LEVEL41_PROBE or STLKR_ALL_PROBE:
             sources.append(ROOT / "src/code/Gameplay/Map/LightMapper.java")
         instrumented = []
         for source in sources:
@@ -417,11 +418,12 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                 assert content.count(marker) == 1
                 probe = "Level13Probe" if STLKR_PROBE else "Level41Probe"
                 content = content.replace(marker, marker + "\nif(code.Rendering."+probe+".counting) code.Rendering."+probe+".projected+=ms.getVertices().length;")
-            elif LEVEL41_PROBE and source.name == "LightMapper.java":
+            elif (LEVEL41_PROBE or STLKR_ALL_PROBE) and source.name == "LightMapper.java":
                 content = source.read_text()
                 marker = "new Object().getClass().getResourceAsStream(lightdataFile)"
                 assert content.count(marker) == 1
-                content = content.replace(marker, "code.Rendering.Level41Probe.class.getResourceAsStream(lightdataFile)")
+                probe = "StlkrLevelsProbe" if STLKR_ALL_PROBE else "Level41Probe"
+                content = content.replace(marker, "code.Rendering."+probe+".class.getResourceAsStream(lightdataFile)")
             else:
                 instrumented.append(source)
                 continue
@@ -507,7 +509,12 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
             raise ValueError("QUANTUM_LEVEL41_PROBE requires QUANTUM_RESOURCE_JAR")
         subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
                         "code.Rendering.Level41Probe"], check=True)
-    if STLKR_PROBE:
+    if STLKR_ALL_PROBE:
+        if not resource_jar:
+            raise ValueError("All-Stlkr probe requires QUANTUM_RESOURCE_JAR")
+        subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
+                        "code.Rendering.StlkrLevelsProbe", str(resource_jar)], check=True)
+    if LEVEL12_PROBE or LEVEL13_PROBE:
         if not resource_jar:
             raise ValueError("Stlkr level probe requires QUANTUM_RESOURCE_JAR")
         subprocess.run([JAVA, "-Djava.awt.headless=true",

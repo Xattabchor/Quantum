@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Resource ZIP reader tests; no SDK, emulator or game archive required."""
 from pathlib import Path
+import hashlib
+import json
+import re
 import struct
 import sys
 import tempfile
@@ -42,11 +45,45 @@ class ResourceOverlayTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 overlay_resources({}, Path(temp) / 'missing')
 
-    def test_stlkr_level12_changes_only_distance(self):
-        original = read_resources(ROOT / 'Stlkr by ebk.jar (1).zip')['level12.txt']
-        optimized = (ROOT / 'configs/stlkr/level12.txt').read_bytes()
-        self.assertEqual(original.count(b'DIST=39000\r\n'), 1)
-        self.assertEqual(optimized, original.replace(b'DIST=39000\r\n', b'DIST=30000\r\n'))
+    def test_all_stlkr_levels_only_change_distance_and_fog(self):
+        archive = ROOT / 'Stlkr by ebk.jar (1).zip'
+        resources = read_resources(archive)
+        profile = json.loads((ROOT / 'configs/stlkr-profile.json').read_text())
+        self.assertEqual(hashlib.sha256(archive.read_bytes()).hexdigest(), profile['archive_sha256'])
+        self.assertEqual(set(profile['levels']), {str(i) for i in range(1, 14)})
+        directory = ROOT / 'configs/stlkr'
+        self.assertEqual({p.name for p in directory.iterdir()}, {'level%d.txt' % i for i in range(1, 14)})
+        for number, changes in profile['levels'].items():
+            name = 'level%s.txt' % number
+            original = resources[name]
+            expected = original
+            newline = b'\r\n' if b'\r\n' in original else b'\n'
+            with self.subTest(level=number):
+                self.assertLessEqual(set(changes), {'DIST', 'FOGD'})
+                for key, values in changes.items():
+                    self.assertGreater(values['after'], 0)
+                    if values['before'] is not None:
+                        self.assertLess(values['after'], values['before'])
+                        pattern = rb'(?m)^' + key.encode() + b'=' + str(values['before']).encode() + rb'(?=\r?$)'
+                        expected, count = re.subn(pattern, key.encode() + b'=' + str(values['after']).encode(), expected)
+                        self.assertEqual(count, 1)
+                    else:
+                        self.assertEqual(key, 'DIST')
+                        self.assertNotRegex(original, rb'(?m)^DIST=')
+                        expected = expected.replace(b'START=', b'DIST=' + str(values['after']).encode() + newline + b'START=', 1)
+                optimized = (directory / name).read_bytes()
+                self.assertEqual(optimized, expected)
+                # No NPC, quest, spawn, weather, palette, mode or geometry edits.
+                self.assertEqual(original.partition(b'[')[2], optimized.partition(b'[')[2])
+
+    def test_aggressive_fog_end_remains_inside_draw_distance(self):
+        profile = json.loads((ROOT / 'configs/stlkr-profile.json').read_text())
+        for number, changes in profile['levels'].items():
+            if 'FOGD' in changes:
+                with self.subTest(level=number):
+                    self.assertGreaterEqual(changes['DIST']['after'] - changes['FOGD']['after'], 2000)
+            else:
+                self.assertIn(number, ('2', '3', '4'))
 
 
 class ResourceArchiveTest(unittest.TestCase):

@@ -8,7 +8,7 @@ Build with assets: add `--resource-archive 'q 92 20251201y.jar.zip'` to
 `scripts/build_cldc.py`, preferably with a separate `--output-dir` under `build/`.
 Without that option, the existing resource-free build behavior is unchanged.
 
-Stlkr's optional level12 distance profile lives in `configs/stlkr/`, not here,
+Stlkr's optional aggressive all-13-level distance profile lives in `configs/stlkr/`, not here,
 so it cannot silently override another game's levels. Apply it explicitly with
 `--resource-overlay configs/stlkr` together with the Stlkr `--resource-archive`.
-See [level12 config optimization](../docs/level12-config-optimization.md).
+See [all-level Stlkr profile](../docs/stlkr-all-levels-aggressive.md).
