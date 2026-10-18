@@ -1,5 +1,25 @@
 # Quantum — M3G preverified preview
 
+## ARM9 / OMAP 1710: world buffers, тестовая сборка 9905fff
+
+[JAR с ресурсами Stlkr](Quantum_Stlkr_M3G_ARM9_9905fff.jar) ·
+[JAD](Quantum_Stlkr_M3G_ARM9_9905fff.jad) ·
+[Отчёт сборки](Quantum_Stlkr_M3G_ARM9_9905fff.build-report.json).
+
+Дополнение к предыдущему Canvas ARM9: [grow-only world buffers и кеш привязок
+positions](../docs/m3g-arm9-world-buffers.md). Первый packet из двух треугольников
+получает ёмкость 6 вместо 192 вершин; при необходимости она растёт до 192.
+Это не сокращение отрисовываемых треугольников или гарантия меньшего GPU времени.
+В fixture с 20 triangle/quad draws и изменением scale — 20→6 вызовов setPositions.
+Качество, игровая логика и все 442 ресурса сохранены. Strict native строки
+13 world-fixtures и level12/13 с idle objects совпадают с предыдущим ARM9;
+CPU dispatch = 0. TreeFix и Canvas batching сохранены.
+
+Без профилировщика, JSR-184 обязателен. На самом OMAP ещё не проверялось,
+FPS/heap не измерены. Один retained world-buffer set, но постепенный рост может
+создавать дополнительный cold garbage до GC. Перед установкой сохраните сейвы:
+MIDlet ID прежний. Предыдущие JAR/JAD и PDF не заменяются.
+
 ## ARM9 / OMAP 1710: тестовая сборка db03b82
 
 [JAR с ресурсами Stlkr](Quantum_Stlkr_M3G_ARM9_db03b82.jar) ·

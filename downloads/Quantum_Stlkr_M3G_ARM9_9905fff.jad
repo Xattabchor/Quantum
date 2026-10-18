@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: AE-MODS.RU
+MIDlet-1: Quantum,,code.utils.Main
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_Stlkr_M3G_ARM9_9905fff.jar
+MIDlet-Jar-Size: 10091149
