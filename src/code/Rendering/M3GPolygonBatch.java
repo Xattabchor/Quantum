@@ -7,8 +7,8 @@ final class M3GPolygonBatch {
     static final class State {
         Texture2D texture;
         PolygonMode polygon;
-        int blend,function,blendColor,imageFilter=Texture2D.FILTER_NEAREST,fogColor;
-        float threshold,near,far;
+        int blend,function,blendColor,imageFilter=Texture2D.FILTER_NEAREST,fogColor,fogMode=Fog.LINEAR;
+        float threshold,near,far,density;
         boolean fogged;
     }
 
@@ -27,9 +27,11 @@ final class M3GPolygonBatch {
     private VertexArray positions,coords,colors;
     private Texture2D texture;
     private PolygonMode polygon;
-    private int blend,function,blendColor,levelFilter,imageFilter,fogColor;
-    private float threshold,near,far,scale;
+    private int blend,function,blendColor,levelFilter,imageFilter,fogColor,fogMode;
+    private float threshold,near,far,scale,density;
     private boolean fogged;
+    private int appliedFogMode=Fog.LINEAR;
+    private float appliedDensity=-1;
     private int firstCount,size;
     private int[] firstOrder;
     private TriangleStripArray firstIndices;
@@ -49,17 +51,19 @@ final class M3GPolygonBatch {
         boolean fogged=source.fogged;
         int color=fogged?source.fogColor:0;
         float near=fogged?source.near:0,far=fogged?source.far:0;
+        int fogMode=fogged?source.fogMode:Fog.LINEAR;
+        float density=fogged?source.density:0;
         // Capture desired state BEFORE flushing: a cached Texture2D may already
         // have been changed by preparation of the next material.
         if(firstCount!=0 && (texture!=tex || polygon!=poly || this.blend!=blend
                 || this.function!=function || blendColor!=source.blendColor || levelFilter!=level || imageFilter!=filter
                 || this.threshold!=threshold || this.fogged!=fogged || fogColor!=color
-                || this.near!=near || this.far!=far || (fogged && this.scale!=scale)
+                || this.near!=near || this.far!=far || this.fogMode!=fogMode || this.density!=density || (fogged && this.scale!=scale)
                 || (size==0?firstOrder.length:size)+order.length>MAX_VERTICES)) flush(g);
         if(firstCount==0) {
             texture=tex;polygon=poly;this.blend=blend;this.function=function;blendColor=source.blendColor;
             levelFilter=level;imageFilter=filter;this.threshold=threshold;
-            this.fogged=fogged;fogColor=color;this.near=near;this.far=far;this.scale=scale;
+            this.fogged=fogged;fogColor=color;this.near=near;this.far=far;this.scale=scale;this.fogMode=fogMode;this.density=density;
             firstCount=count;firstOrder=order;firstIndices=indices;
             System.arraycopy(positions,0,firstXYZ,0,count*3);
             System.arraycopy(coords,0,firstUV,0,count*2);
@@ -89,7 +93,14 @@ final class M3GPolygonBatch {
         appearance.setPolygonMode(polygon);appearance.setTexture(0,texture);
         composite.setBlending(blend);composite.setAlphaThreshold(threshold);
         if(texture!=null) {texture.setBlending(function);if(function==Texture2D.FUNC_BLEND) texture.setBlendColor(blendColor);texture.setFiltering(levelFilter,imageFilter);}
-        if(fogged) {fog.setColor(fogColor);fog.setLinear(near,far);appearance.setFog(fog);}
+        if(fogged) {
+            if(appliedFogMode!=fogMode) {fog.setMode(fogMode);appliedFogMode=fogMode;}
+            fog.setColor(fogColor);
+            if(fogMode==Fog.EXPONENTIAL) {
+                if(appliedDensity!=density) {fog.setDensity(density);appliedDensity=density;}
+            } else fog.setLinear(near,far);
+            appearance.setFog(fog);
+        }
         else appearance.setFog(null);
         if(vertices==0) {
             owner.renderSingle(g,count,scale,firstXYZ,firstUV,firstRGBA,indices,appearance);

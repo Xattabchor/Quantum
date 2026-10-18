@@ -651,7 +651,7 @@ final int df
         int u, v, du, dv;
         int uz_2, vz_2, wz_2, u_2, v_2; //����� �����
 int col,f,c1,isz,isz2,c2;
-int fogcolor=DirectX7.fogc;
+int fogcolor=g3d.getRasterFogColor();
 int fogcolor2=fogcolor&0x00FF00;
 fogcolor=fogcolor&0xFF00FF;
 

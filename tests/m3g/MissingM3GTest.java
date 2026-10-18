@@ -61,7 +61,9 @@ public final class MissingM3GTest {
         for(int mode:new int[]{11,12}) {
             g=M3GTest.renderer();DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
             Texture t=M3GTest.texture(0xffa1b2c3);t.drawmode=(byte)mode;
-            M3GTest.submit(cpu,M3GTest.triangle(),M3GTest.texture(0xffa1b2c3),0);cpu.render();
+            if(mode==12) {
+                cpu.setRenderer(DirectX7.M3G);M3GTest.submit(cpu,M3GTest.triangle(),t,0);cpu.renderSoftware();
+            } else {M3GTest.submit(cpu,M3GTest.triangle(),M3GTest.texture(0xffa1b2c3),0);cpu.render();}
             M3GTest.submit(g,M3GTest.triangle(),t,0);g.render();
             M3GTest.check(!g.isM3GActive() && java.util.Arrays.equals(cpu.display,g.display) && t.drawmode==mode,
                     "missing API revived dithering or changed material "+mode);

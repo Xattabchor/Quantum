@@ -12,7 +12,7 @@ public final class DirectX7 {
    private int rendererMode = SOFTWARE;
    private SceneRenderer sceneRenderer;
    private boolean rendererFailed, nativePass;
-   private boolean staticLightmapPass;
+   private boolean staticLightmapPass, expFogPass;
    private int[] frameBackup;
    private String rendererError;
    private FrameEffects frameEffects;
@@ -232,9 +232,9 @@ this.buffer.resetTex();
        System.out.println("M3G disabled: " + message);
    }
 
-   /** M3G retains only mode 12 as an unlit mode 0 alias; 11 is DECAL. */
+   /** Native material numbers: 11 DECAL, 12 EXP fog. */
    public static byte m3gDrawMode(byte mode) {
-       return mode == 12 ? (byte)0 : mode;
+       return mode;
    }
 
    /** CPU equivalent of native MODULATE; source alpha is handled as cutout. */
@@ -304,8 +304,12 @@ this.buffer.resetTex();
            texture=decalFallback.texture(texture);
        }
        byte originalMode = texture == null ? 0 : texture.drawmode;
-       boolean alias = rendererMode == M3G && texture != null && m3gDrawMode(originalMode) != originalMode;
-       if(alias) texture.drawmode = m3gDrawMode(originalMode);
+       boolean exp=rendererMode==M3G && originalMode==12;
+       byte cpuMode=exp?(byte)(code.utils.Main.fogQ>0 && Mode12Fog.density()>0?3:0):m3gDrawMode(originalMode);
+       boolean alias=rendererMode==M3G && texture!=null && cpuMode!=originalMode;
+       if(alias) texture.drawmode=cpuMode;
+       boolean previousExp=expFogPass;
+       expFogPass=exp && cpuMode==3;
        boolean previous = staticLightmapPass;
        staticLightmapPass = rendererMode == M3G && texture != null
                && (texture.drawmode == 9 || texture.drawmode == 13);
@@ -314,9 +318,13 @@ this.buffer.resetTex();
            else object.render(this, texture);
        } finally {
            staticLightmapPass = previous;
+           expFogPass=previousExp;
            if(alias) texture.drawmode = originalMode;
        }
    }
+
+   public boolean isExpFogPass() {return expFogPass;}
+   public int getRasterFogColor() {return expFogPass?Mode12Fog.color():fogc;}
 
    public boolean isStaticLightmapPass() { return staticLightmapPass; }
 
@@ -540,6 +548,9 @@ this.buffer.resetTex();
    /** New level-local RGB is reset to black on missing/invalid input. */
    public static void configureM3GBlend(String value) {Mode5Blend.configure(value);}
    public static int getM3GBlendColor() {return Mode5Blend.color();}
+   public static void configureM3GExpFog(String color,String density) {Mode12Fog.configure(color,density);}
+   public static int getM3GExpFogColor() {return Mode12Fog.color();}
+   public static float getM3GExpFogDensity() {return Mode12Fog.density();}
 
    /** Compatibility hooks: mode 5 no longer has lights or a shot pulse. */
    public Mode5WeaponLight getMode5WeaponLight() {return null;}

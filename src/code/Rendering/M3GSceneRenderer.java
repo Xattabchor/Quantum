@@ -326,13 +326,14 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
         if(texture == null) return false;
         int mode = DirectX7.m3gDrawMode(texture.drawmode);
-        // Modes 7/10 use MODULATE/MODULATE_X2, 11 uses DECAL, 12 aliases 0.
+        // Modes 7/10 use MODULATE/MODULATE_X2, 11 uses DECAL, 12 uses native exponential Fog.
         if(mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4
-                && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 10 && mode != 11 && mode != 13) return false;
+                && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 10 && mode != 11 && mode != 12 && mode != 13) return false;
+        boolean exponential=mode==12;
         boolean nativeFog=Main.fogQ>0
-                && (mode==3 || mode==6);
+                && (mode==3 || mode==6 || (exponential && Mode12Fog.density()>0));
         // Invalid native ranges retain the original CPU material fallback.
-        if(nativeFog && DirectX7.fDist<=1) return false;
+        if(nativeFog && !exponential && DirectX7.fDist<=1) return false;
         Class type = object.getClass();
         if(type != Polygon3V.class && type != Polygon4V.class
                 && type != LightedPolygon3V.class && type != LightedPolygon4V.class
@@ -357,15 +358,15 @@ public final class M3GSceneRenderer implements SceneRenderer {
         materialMath.resetBounds();
         boolean fastPath = fast || (Main.persQ == 0 && !Main.mipMapping);
         boolean alternate = count == 4 && type == Polygon4V.class && !fastPath
-                && (mode == 3 || mode == 6) && Main.fogQ > 0 && alternateDiagonal();
+                && (mode == 3 || mode == 6 || (exponential && nativeFog)) && Main.fogQ > 0 && alternateDiagonal();
         indices[1] = alternate ? alternateQuad : baseQuad;
         TriangleStripArray[] quadTriangles = alternate ? alternateQuadTriangles : baseQuadTriangles;
         boolean perspective = usePerspective(texture, count, fastPath);
         // TexturingPers interpolates 1 / (move - rz), not 1 / (distY - rz).
         // distY only controls screen projection and changes with the FOV.
         int distance = TexturingPers.move;
-        float fogFar=nativeFog?materialMath.fogFar(distance):0;
-        if(nativeFog && !(fogFar>1.0f)) return false;
+        float fogFar=nativeFog && !exponential?materialMath.fogFar(distance):0;
+        if(nativeFog && !exponential && !(fogFar>1.0f)) return false;
         if(nativeFog && !perspective) selectPolygonMode(affineFogPolygon);
         float scale = nativeFog
                 ? ProjectedGeometry.packFog(vertices,count,g.centreX,g.centreY,distance,positions,work)
@@ -442,13 +443,15 @@ public final class M3GSceneRenderer implements SceneRenderer {
         setThreshold(kind==ALPHA_TEXTURE?0:nativeEntry.cutoutThreshold);
 
         // Modes 9/13 keep only baked vertex colors, with no distance Fog.
-        // Native Fog remains a separate stage for modes 3/6 only.
+        // Native Fog: linear for 3/6, exponential for 12.
         if(!clipped) setColors(g, object, count, mode);
         if(!batchable) colorArrays[slot].set(0, count, colors);
         if(nativeFog) {
             // Packed eye distance = 1 - rz/move, not raw engine depth.
-            batchState.near=1.0f;batchState.far=fogFar;
-            batchState.fogColor=mode==3?DirectX7.fogc&0xffffff:0;
+            batchState.fogMode=exponential?Fog.EXPONENTIAL:Fog.LINEAR;
+            batchState.density=exponential?Mode12Fog.density():0;
+            batchState.near=exponential?0:1.0f;batchState.far=fogFar;
+            batchState.fogColor=exponential?Mode12Fog.color():mode==3?DirectX7.fogc&0xffffff:0;
             setFog(fog);
         }
         if(clipped) {

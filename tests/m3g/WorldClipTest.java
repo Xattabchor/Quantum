@@ -85,7 +85,7 @@ public final class WorldClipTest {
         check(clip.triangles==1 && Graphics3D.calls==calls,"partial quad preflight submitted a native triangle");g.destroy();
         System.out.println("PASS whole-quad preflight / later triangle precision failure / no partial native submission");
 
-        for(int mode:new int[]{0,1,2,3,4,5,6,7,9,10,11,13}) {
+        for(int mode:new int[]{0,1,2,3,4,5,6,7,9,10,11,12,13}) {
             g=renderer();DirectX7.setFogDist(1000);source=crossing(g);
             ColorLightedPolygon3V p=new ColorLightedPolygon3V(source[0],source[2],source[1],(byte)0,(byte)0,(byte)255,(byte)0,(byte)0,(byte)255);
             p.ar=255;p.ag=0;p.ab=0;p.br=0;p.bg=255;p.bb=0;p.cr=0;p.cg=0;p.cb=255;
@@ -100,16 +100,16 @@ public final class WorldClipTest {
                 boolean textured=false;
                 for(int n=first;n<Graphics3D.history.size();n++) {
                     Graphics3D.Draw d=Graphics3D.history.elementAt(n);if(!d.textured) continue;textured=true;
-                    check(d.fog==(mode==3 || mode==6),"clip inherited wrong Fog");
+                    check(d.fog==(mode==3 || mode==6 || mode==12),"clip inherited wrong Fog");
                     if(!Main.m3gPerspective) check(!d.perspective,"HW OFF lost during clipping");
-                    if((mode==3 || mode==6) && Main.persQ==0) check(!d.perspective,"affine Fog enabled perspective UV");
+                    if((mode==3 || mode==6 || mode==12) && Main.persQ==0) check(!d.perspective,"affine Fog enabled perspective UV");
                     check(d.cull==javax.microedition.m3g.PolygonMode.CULL_BACK,"clipped world lost backface culling");
                 }
                 check(textured,"crossing geometry silently disappeared: "+mode);
             }
             check(p.ar==255 && p.bg==255 && p.cb==255,"clip mutated static RGB");g.destroy();
         }
-        System.out.println("PASS native clipped materials 0/1/2/3/4/5/6/7/9/10/11/13 / warm B:0 / Fog+culling / static RGB preserved");
+        System.out.println("PASS native clipped materials 0/1/2/3/4/5/6/7/9/10/11/12/13 / warm B:0 / Fog+culling / static RGB preserved");
 
         Main.persQ=4;Main.m3gPerspective=true;
         g=renderer();source=crossing(g);Texture meshTexture=M3GTest.texture(0xff557799);

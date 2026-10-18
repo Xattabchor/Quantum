@@ -2,13 +2,28 @@
 
 CLDC 1.1 / MIDP 2.0. Preverified with ProGuard 6.2.2 -microedition.
 
+**18.10.2026 — material 12 = native EXP Fog:** M3G world-полигоны используют
+Fog.EXPONENTIAL. Для материалов режима 12 в общих параметрах level.txt:
+
+```ini
+M3G_EXP_FOG_COLOR=128,144,160
+M3G_EXP_FOG_DENSITY=0.05
+```
+
+Density больше — туман гуще; 0 отключает. Без ключей: обычный FOGC и density
+0.02. Fog quality OFF отключает эффект. LINEAR 3/6, DECAL 11 и Software сохранены.
+EXP учитывается в batching/clipping; CPU replay использует экспоненциальные
+vertex factors, не прежний dithering. Native sky shader EXP не поддерживает.
+[Единицы плотности, ограничения и проверки](../docs/m3g-mode12-exp-fog.md).
+SHA-256 текущего движка: `6e5a20684be2fc03fc7e60f67d4e5ae6092f8ab5c94c144fb5e150a523daa3be`.
+
 **18.10.2026 — material 11 = native DECAL:** для M3G world и model sky
 используется Texture2D.FUNC_DECAL с исходной RGBA-альфой, без Fog/dithering.
 Текстура смешивается с белым цветом вершины, не с фоном кадра: A=0 даёт белый,
-не отверстие. CPU fallback/replay воспроизводит эту формулу; mode 12 и Software
-не изменены. Clipping, cache/batching и certified sky B:0 сохранены.
+не отверстие. CPU fallback/replay воспроизводит эту формулу; Software не изменён.
+Mode 12 позднее заменён на EXP Fog — см. правку выше. Clipping, cache/batching и certified sky B:0 сохранены.
 [Формула, ограничения и проверки](../docs/m3g-mode11-decal.md).
-SHA-256 текущего движка: `d3130d0d7ad2d32b3572c80f2732d69ab0cafb9976f6438de1946085042bcc19`.
+SHA-256 предыдущего движка: `d3130d0d7ad2d32b3572c80f2732d69ab0cafb9976f6438de1946085042bcc19`.
 
 **18.10.2026 — отсечение геометрии для native M3G:** пересекающие near plane
 полигоны и чрезмерно выходящие за viewport грани теперь подготавливаются
@@ -119,10 +134,10 @@ UV/mip/перспектива и batching сохранены, отдельног
 примерно нейтрален, тёмное затемняет, светлое осветляет. Сохраняются UV/mip,
 кэш/batching; CPU fallback/replay также использует ×2, без прежнего dithering.
 Материал 1 остаётся ALPHA, 2 — ADD, 7 — MODULATE; Software не изменён.
-Dithering-режим 12 в M3G отключён и рисуется как 0, также при CPU replay.
-Режим 11 теперь DECAL с белой основой и сохранением alpha текстуры, включая
-соответствующий CPU replay. В Software исходные эффекты сохранены;
-номера материалов в ресурсах менять не нужно.
+Материал 12 в M3G — EXP Fog с level-ключами density/color и соответствующим
+CPU replay; 11 — DECAL с белой основой и сохранением alpha текстуры.
+В Software исходные dithering-эффекты сохранены; номера материалов
+в ресурсах менять не нужно.
 Гроза в M3G упрощена: светло-серое небо на прежние 135 мс через native clear,
 без ветвей молнии, текстур и засветки мира. Удалён отдельный additive overlay.
 При ошибках сохраняется простое светлое небо; Software-грозу изменения не затрагивают.
@@ -233,7 +248,8 @@ Software и исходные ресурсы не изменены.
 Подробности: [M3G](../docs/m3g.md).
 
 Аудит смены режимов: исправлен незаметный CPU fallback модельного неба с новым
-режимом 10; небо поддерживает 0/1/2/4/5/7/10/11 нативно и alias 12→0. Исправлен
+режимом 10; небо поддерживает 0/1/2/4/5/7/10/11 нативно.
+Fog-материалы 3/6/12 имеют консервативный whole-sky CPU fallback. Исправлен
 CPU-only dispatch/replay неба, убран лишний старый Fog-расчёт ALPHA-режима 1.
 Сквозной синтетический тест всех мировых режимов 0..13: 100 совместимых граней
 → 2 draws; на прогретом кадре B=0/T=0, один bind/readback в legacy eager API.

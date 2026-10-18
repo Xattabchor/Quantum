@@ -925,7 +925,7 @@ int f22=(fogc&0x00FF00)*sz2;
         int y_start = a.sy; //������� �� Y �� �������
         int y_end = c.sy < g3d.height ? c.sy : g3d.height; // ����� �� Y �� �������
 
-if(Main.fogQ==2 && Main.forceLQFog==false) { paintAffine_3_HQ(
+if(g3d.isExpFogPass() || (Main.fogQ==2 && Main.forceLQFog==false)) { paintAffine_3_HQ(
          x_start, x_end,
          y_start, y_end,
          u_start, u_end,
@@ -1100,21 +1100,27 @@ static final void paintAffine_3_HQ(
         int du,int dv,
         DirectX7 g3d, Texture texture) {
     
-    int fogcolor=DirectX7.fogc;
+    int fogcolor=g3d.getRasterFogColor();
 int fogcolor2=fogcolor&0x00FF00;
 fogcolor=fogcolor&0xFF00FF;
-int af=-a.rz*0xFF/DirectX7.fDist;
+int af,bf,cf;
+if(g3d.isExpFogPass()) {af=Mode12Fog.factor(a.rz);bf=Mode12Fog.factor(b.rz);cf=Mode12Fog.factor(c.rz);}
+else {
+af=-a.rz*0xFF/DirectX7.fDist;
 if(af>0xFF) af=0xFF;
 if(af<0) af=0;
 af=0xFF-af;
-int bf=-b.rz*0xFF/DirectX7.fDist;
+bf=-b.rz*0xFF/DirectX7.fDist;
 if(bf>0xFF) bf=0xFF;
 if(bf<0) bf=0;
 bf=0xFF-bf;
-int cf=-c.rz*0xFF/DirectX7.fDist;
+cf=-c.rz*0xFF/DirectX7.fDist;
 if(cf>0xFF) cf=0xFF;
 if(cf<0) cf=0;
 cf=0xFF-cf;
+}
+
+
 
 
             final int[] tex = texture.rImg.img;

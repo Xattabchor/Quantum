@@ -52,6 +52,7 @@ assert game.index("wg.setRenderer(Main.renderer)") < game.index("wg.moveY((int) 
 weapon = (ROOT / "src/code/Gameplay/Weapon.java").read_text()
 assert "if(shootLight) {" in weapon and "g3d.startWeaponLight();" not in weapon
 assert 'DirectX7.configureM3GBlend(lvl.get("M3G_BLEND_COLOR"));' in loader
+assert 'DirectX7.configureM3GExpFog(lvl.get("M3G_EXP_FOG_COLOR"),lvl.get("M3G_EXP_FOG_DENSITY"));' in loader
 
 # Successful native material/sprite fog must not reintroduce CPU fading/masks.
 scene_source=(ROOT / "src/code/Rendering/M3GSceneRenderer.java").read_text()
@@ -179,8 +180,9 @@ public class Material {
  public void setShininess(float s){}public void setVertexColorTrackingEnable(boolean b){tracking=b;}
 }''',
 "javax/microedition/m3g/Fog.java": '''package javax.microedition.m3g;
-public class Fog {public static final int LINEAR=81;public int color;public float near,far;
- public void setMode(int m){if(m!=LINEAR)throw new AssertionError("fog mode");}
+public class Fog {public static final int EXPONENTIAL=80,LINEAR=81;public int color,mode=LINEAR;public float near,far,density=1;
+ public void setMode(int m){if(m!=LINEAR && m!=EXPONENTIAL)throw new AssertionError("fog mode");if(m==EXPONENTIAL && Boolean.getBoolean("exp.unsupported"))throw new IllegalArgumentException("EXP unavailable");mode=m;}
+ public void setDensity(float d){if(!(d>=0) || Float.isInfinite(d))throw new IllegalArgumentException("fog density");density=d;}
  public void setColor(int c){color=c;}
  public void setLinear(float n,float f){if(f<=n)throw new IllegalArgumentException("fog range");near=n;far=f;}
 }''',
@@ -227,7 +229,7 @@ public class Graphics3D {
  public static VertexBuffer lastVertices; public static TriangleStripArray lastIndices;public static Appearance lastAppearance;
  public static Graphics target; public static Camera camera;
  public static class Draw {
-  public int blend,function,blendColor,fogColor,textureAlpha,filter,colorComponents,cull,winding,sample;public boolean textured,perspective;public float near,far,threshold;public boolean fog;
+  public int blend,function,blendColor,fogColor,fogMode,textureAlpha,filter,colorComponents,cull,winding,sample;public boolean textured,perspective;public float near,far,density,threshold;public boolean fog;
   public byte[] colors;public int[] indices,lengths; public short[] positions,coords,normals;public boolean lit,tracking;public int lights,diffuse,ambient,emissive,specular;public float ambientIntensity,directionalIntensity,omniIntensity,omniQuadratic;public float[] omniPosition;public float[] lightMatrix;public float scale,uvScale;public float[] projection;
  }
  public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
@@ -292,7 +294,7 @@ public class Graphics3D {
   }
   draw.projection=camera.projection.matrix.clone();
   draw.fog=a.fog!=null;
-  if(draw.fog){draw.fogColor=a.fog.color;draw.near=a.fog.near;draw.far=a.fog.far;}
+  if(draw.fog){draw.fogMode=a.fog.mode;draw.density=a.fog.density;draw.fogColor=a.fog.color;draw.near=a.fog.near;draw.far=a.fog.far;}
   history.add(draw);
   // Sample only the first vertex/texel to test blending equations. This is NOT
   // triangle rasterization or a visual substitute for a JSR-184 implementation.
@@ -306,7 +308,7 @@ public class Graphics3D {
     if(draw.function==Texture2D.FUNC_DECAL) src=((c[k]&255)*(255-(p[3]&255))+(p[k]&255)*(p[3]&255))/255;
     if(draw.lit) src=Math.min(255,(int)((p[k]&255)*lightingScale+0.5));
     if(draw.fog){float z=-v.positions.shorts[2]*v.scale;
-     float f=Math.max(0,Math.min(1,(z-draw.near)/(draw.far-draw.near)));
+     float f=draw.fogMode==Fog.EXPONENTIAL?(float)(1-Math.exp(-draw.density*z)):Math.max(0,Math.min(1,(z-draw.near)/(draw.far-draw.near)));
      src=Math.round(src*(1-f)+((draw.fogColor>>(16-k*8))&255)*f);
     }
     int dst=(before>>(16-k*8))&255;
@@ -336,7 +338,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     sources += sorted(TEST.glob("*.java"))
     # Compile the current adapter against the doubles, not copies of its logic.
     sources += [ROOT / "src/code/Rendering" / name for name in
-                ("Vertex.java", "Mode11Decal.java", "M3GSceneRenderer.java", "M3GFrameEffects.java", "M3GMaterialMath.java", "M3GPolygonBatch.java", "ProjectedGeometry.java", "WorldClipGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "SkyCoverage.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
+                ("Vertex.java", "Mode11Decal.java", "Mode12Fog.java", "TexturingAffine.java", "TexturingPers.java", "TexturingFloors.java", "M3GSceneRenderer.java", "M3GFrameEffects.java", "M3GMaterialMath.java", "M3GPolygonBatch.java", "ProjectedGeometry.java", "WorldClipGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "SkyCoverage.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
     # Validate on-device frame-profile copies against the same API contracts.
     # Requires a prior build_cldc.py --profile-frame; not a timing benchmark.
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
@@ -365,7 +367,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                         polygon!=poly || this.blend!=blend || this.function!=function
                         || blendColor!=source.blendColor || levelFilter!=level || imageFilter!=filter
                         || this.threshold!=threshold || this.fogged!=fogged || fogColor!=color
-                        || this.near!=near || this.far!=far,
+                        || this.near!=near || this.far!=far || this.fogMode!=fogMode || this.density!=density,
                         fogged && this.scale!=scale,
                         (size==0?firstOrder.length:size)+order.length>MAX_VERTICES);
                     flush(g);
@@ -476,6 +478,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.CombinedPassTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.DitherDisabledTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.Mode11DecalTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.Mode12FogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GeometryTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogPackingTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.RenderStatsTest"], check=True)
@@ -488,7 +491,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BakedNoFogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MuzzleGlowTest"], check=True)
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
-        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest"):
+        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest", "Mode12FogTest"):
             subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameProfileSuiteRunner",
                             "code.Rendering." + test], check=True)
     # Remove the optional API for a real class-loading fallback test.

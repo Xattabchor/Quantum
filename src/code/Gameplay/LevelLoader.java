@@ -174,6 +174,7 @@ public class LevelLoader {
 
         GameScreen.bloom = getBoolean("BLOOM", lvl, setting, false);
         DirectX7.configureM3GBlend(lvl.get("M3G_BLEND_COLOR"));
+        DirectX7.configureM3GExpFog(lvl.get("M3G_EXP_FOG_COLOR"),lvl.get("M3G_EXP_FOG_DENSITY"));
         DirectX7.lightdiry = (short) getInt("LIGHT_Y", lvl, setting, 4096);
         DirectX7.lightdirx = (short) getInt("LIGHT_X", lvl, setting, -4096);
         DirectX7.lightdirz = (short) getInt("LIGHT_Z", lvl, setting, 4096);

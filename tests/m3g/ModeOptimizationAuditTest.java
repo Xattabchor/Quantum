@@ -28,7 +28,7 @@ public final class ModeOptimizationAuditTest {
         g.render();
     }
     static void cpuSkyAliases() {
-        for(int mode:new int[]{11,12}) {
+        for(int mode:new int[]{11}) {
             DirectX7 actual=M3GTest.renderer(),expected=M3GTest.renderer();
             DirectX7.fDist=100;DirectX7.waterDistance=100;
             M3GTest.submit(actual,sky(mode),null,0);actual.renderSoftware();

@@ -94,7 +94,7 @@ public final class FogTest {
             submit(g,flat(500),texture(mode,0x80d06020));
             check(last().textureAlpha==255,"native Fog changed nonzero/opaque semantics");
             nearColor(g.display[0],mix(0xd06020,(mode==3)?DirectX7.fogc:0,127));
-            for(int plain:new int[]{0,1,2,4,5,7,8,9,10,11,12,13}) {
+            for(int plain:new int[]{0,1,2,4,5,7,8,9,10,11,13}) {
                 submit(g,M3GTest.triangle(),texture(plain,0x80abcdef));check(!last().fog,"Fog leaked into material "+plain);
             }
             Main.fogQ=1;Main.forceLQFog=true;

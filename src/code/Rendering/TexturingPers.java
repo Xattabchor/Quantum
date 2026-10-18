@@ -198,6 +198,7 @@ x1++;
             if (cf < 0) cf = 0;
         }
         
+        if(g3d.isExpFogPass()) {af=Mode12Fog.factor(a.rz);bf=Mode12Fog.factor(b.rz);cf=Mode12Fog.factor(c.rz);}
         if (texture.drawmode == 9 || texture.drawmode == 13) {
             af = al;
             bf = bl;
@@ -1108,7 +1109,7 @@ final int df_start,final int df_end,
 final int df
 ) {
 
-    if(Main.fogQ==2 && Main.forceLQFog==false) {
+    if(g3d.isExpFogPass() || (Main.fogQ==2 && Main.forceLQFog==false)) {
     paintMiniTrianglePers_3_HQ(g3d, texture, y_start, y_end,
                     x_start, wz_start, uz_start, vz_start,
                     x_end, wz_end, uz_end, vz_end,
@@ -1296,7 +1297,7 @@ if(q>999) {
         final int dvz4=dvz*q;
         final int dwz4=dwz*q;
 int col,f,tf,tf2;
-int fogcolor=DirectX7.fogc;
+int fogcolor=g3d.getRasterFogColor();
 int fogcolor2=fogcolor&0x00FF00;
 fogcolor=fogcolor&0xFF00FF;
 

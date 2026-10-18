@@ -1,5 +1,8 @@
 # M3G material 11 → DECAL — 18.10.2026
 
+> Следующая правка: [material 12 → EXP Fog](m3g-mode12-exp-fog.md).
+> Описание mode 12 как alias 0 ниже относится к предыдущей сборке adc5596.
+
 Режим 11 в выбранном M3G больше не является alias режима 0. Для world polygons
 и модельного SkyMesh выставляется настоящий `Texture2D.FUNC_DECAL` (226).
 Mode 12 остаётся alias 0, Software mode 11/12 — прежние dithering-эффекты.
