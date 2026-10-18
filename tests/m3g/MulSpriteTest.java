@@ -104,14 +104,17 @@ public final class MulSpriteTest {
             int[] map={0,0xff000045,0xff000000,0xffffffff,0xff202080,0x40808020,0xff808080,0xffabcdef};
             s=SpriteTest.sprite(new Texture(new RawImage(map,4,2),false,null),2);s.color=color;s.fog=true;
             s.pos.sx=-4;s.pos.sy=-2;s.size.sx=28;s.size.sy=30;s.mirX=color%2==0;s.mirY=color%3==0;
-            reference(cpu,s);if(failure==5) reference(cpu,s);
+            // Different channel mask guarantees a second native packet now
+            // that compatible adjacent sprites can share a draw.
+            Sprite second=SpriteTest.sprite(s.textures[0],2);second.color=(color+1)%7;
+            reference(cpu,s);if(failure==5) reference(cpu,second);
             if(failure==0) Graphics3D.failAt=Graphics3D.calls+1;
             if(failure==1) System.setProperty("readback.fail","true");
             if(failure==2) System.setProperty("m3g.oom","true");
             if(failure==3) g.flushAlpha=true;
             if(failure==4) {g.setRenderer(DirectX7.SOFTWARE);s.render(g,null);check(!Arrays.equals(g.display,cpu.display),"Software MUL replaced");g.destroy();cpu.destroy();continue;}
             if(failure==5) Graphics3D.failAt=Graphics3D.calls+2;
-            M3GTest.submit(g,s,null,0);if(failure==5) M3GTest.submit(g,s,null,1);
+            M3GTest.submit(g,s,null,0);if(failure==5) M3GTest.submit(g,second,null,1);
             if(failure==6) g.renderSoftware();else g.render();
             Graphics3D.failAt=0;System.clearProperty("readback.fail");System.clearProperty("m3g.oom");
             check(Arrays.equals(g.display,cpu.display) && Graphics3D.target==null,"MUL CPU replay mismatch "+color+"/"+failure);

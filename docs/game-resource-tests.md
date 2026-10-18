@@ -124,3 +124,8 @@ Fog-пакетов, отказов упаковки и переходов frameb
 flag. Preverified classfile bytes не меняются; ресурсы не переименовываются
 по догадке. Регрессия проверяет испорченные local/central flags и точные
 исходные имя/байты. Все 442 ресурса Stlkr проверены после упаковки.
+
+[Batching спрайтов NPC](m3g-npc-sprite-batching.md) проверяется через
+`SpriteBatchTest` и `QUANTUM_SPRITE_BATCH_REFERENCE=1` (test-only reference).
+В текущих 80 позах level13 все draw counts и 320 ordered streams остались
+прежними; синтетические 70 совместимых billboards дают 3 sprite draws.

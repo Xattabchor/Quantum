@@ -18,6 +18,18 @@ final class M3GSpriteRenderer {
     private final Fog fog=new Fog();
     private final short[] xyz=new short[12],uv=new short[8];
     private final byte[] rgba=new byte[16];
+    // Adjacent compatible billboards only; never sort NPCs by texture.
+    private static final int MAX_SPRITES=32;
+    private static final int[] ORDER={0,1,3,1,2,3};
+    private final short[] firstXYZ=new short[12],firstUV=new short[8];
+    private short[] batchXYZ,batchUV;
+    private VertexBuffer batchBuffer;
+    private VertexArray batchPositions,batchCoords;
+    private final TriangleStripArray[] batchIndices=new TriangleStripArray[MAX_SPRITES];
+    private int pending,blend,levelFilter,imageFilter,fogColor;
+    private Texture2D image;
+    private boolean fogged;
+    private float scale,far,threshold;
 
     M3GSpriteRenderer(M3GSceneRenderer owner,Graphics3D graphics) {
         this.owner=owner;this.graphics=graphics;
@@ -27,6 +39,7 @@ final class M3GSpriteRenderer {
         composite.setDepthTestEnable(false);composite.setDepthWriteEnable(false);
         fog.setMode(Fog.LINEAR);
         buffer.setTexCoords(0,coords,1.0f/4096,null);buffer.setColors(colors);
+        color(0xffffff,255);
     }
 
     boolean draw(DirectX7 g,Sprite sprite) {
@@ -70,24 +83,31 @@ final class M3GSpriteRenderer {
             far=owner.fogFar(TexturingPers.move);
             if(!(eye>0) || !(far>1)) return false;
         }
-        Texture2D image=owner.texture(g,raw,kind);
+        Texture2D desired=owner.texture(g,raw,kind);
         float cutoutThreshold=owner.textureCutoutThreshold();
-        positions.set(0,4,xyz);coords.set(0,4,uv);
-        // All four vertices share the same Z. Scaling XYZ together preserves
-        // the original screen rectangle/UV interpolation but gives Fog real Z.
-        buffer.setPositions(positions,eye/precision,null);
-        if(fogged) {
-            fog.setLinear(1.0f,far);
-            fog.setColor(DirectX7.standartDrawmode==6?0:DirectX7.fogc&0xffffff);
-        }
-        appearance.setFog(fogged?fog:null);appearance.setTexture(0,image);
-        image.setBlending(Texture2D.FUNC_MODULATE);
-        composite.setBlending(sprite.mode==2?CompositingMode.MODULATE:
+        float scale=eye/precision;
+        int blend=sprite.mode==2?CompositingMode.MODULATE:
                 sprite.mode==1?CompositingMode.ALPHA_ADD:
-                alpha?CompositingMode.ALPHA:CompositingMode.REPLACE);
-        composite.setAlphaThreshold(alpha || sprite.mode==1?0:cutoutThreshold);
-        color(0xffffff,255);
-        render(g);
+                alpha?CompositingMode.ALPHA:CompositingMode.REPLACE;
+        float threshold=alpha || sprite.mode==1?0:cutoutThreshold;
+        int fogColor=fogged?(DirectX7.standartDrawmode==6?0:DirectX7.fogc&0xffffff):0;
+        int level=Texture2D.FILTER_BASE_LEVEL,filter=owner.textureImageFilter();
+        // Keep exact eye depth: unrelated Fog scales deliberately split.
+        // Snapshot all state before a later cache lookup can mutate Texture2D.
+        if(pending!=0 && (pending==MAX_SPRITES || image!=desired || this.blend!=blend
+                || this.threshold!=threshold || this.scale!=scale || this.fogged!=fogged
+                || this.far!=far || this.fogColor!=fogColor
+                || levelFilter!=level || imageFilter!=filter)) flush(g);
+        if(pending==0) {
+            image=desired;this.blend=blend;this.threshold=threshold;this.scale=scale;
+            this.fogged=fogged;this.far=far;this.fogColor=fogColor;
+            levelFilter=level;imageFilter=filter;
+            System.arraycopy(xyz,0,firstXYZ,0,12);System.arraycopy(uv,0,firstUV,0,8);
+        } else {
+            if(pending==1) {prepareBatch();append(firstXYZ,firstUV,0);}
+            append(xyz,uv,pending);
+        }
+        pending++;
         return true;
     }
 
@@ -103,7 +123,48 @@ final class M3GSpriteRenderer {
         }
         colors.set(0,4,rgba);
     }
-    private void render(DirectX7 g) {
-        owner.bind(g);owner.restoreCamera(g);owner.renderNative(g,buffer,indices,appearance);
+    private void prepareBatch() {
+        if(batchBuffer!=null) return;
+        int vertices=MAX_SPRITES*4;
+        batchXYZ=new short[vertices*3];batchUV=new short[vertices*2];
+        batchPositions=new VertexArray(vertices,3,2);batchCoords=new VertexArray(vertices,2,2);
+        VertexArray white=new VertexArray(vertices,4,1);byte[] rgba=new byte[vertices*4];
+        for(int i=0;i<rgba.length;i++) rgba[i]=(byte)255;
+        white.set(0,vertices,rgba);
+        batchBuffer=new VertexBuffer();batchBuffer.setColors(white);
+        batchBuffer.setTexCoords(0,batchCoords,1.0f/4096,null);
+    }
+
+    private void append(short[] source,short[] texture,int sprite) {
+        System.arraycopy(source,0,batchXYZ,sprite*12,12);
+        System.arraycopy(texture,0,batchUV,sprite*8,8);
+    }
+
+    void flush(DirectX7 g) {
+        int count=pending;if(count==0) return;
+        pending=0; // A failed native packet is recovered by full CPU replay.
+        appearance.setTexture(0,image);image.setBlending(Texture2D.FUNC_MODULATE);
+        image.setFiltering(levelFilter,imageFilter);
+        composite.setBlending(blend);composite.setAlphaThreshold(threshold);
+        if(fogged) {fog.setLinear(1.0f,far);fog.setColor(fogColor);}
+        appearance.setFog(fogged?fog:null);
+        VertexBuffer drawBuffer=buffer;TriangleStripArray drawIndices=indices;
+        if(count==1) {
+            positions.set(0,4,firstXYZ);coords.set(0,4,firstUV);
+            buffer.setPositions(positions,scale,null);
+        } else {
+            int vertices=count*4;
+            batchPositions.set(0,vertices,batchXYZ);batchCoords.set(0,vertices,batchUV);
+            batchBuffer.setPositions(batchPositions,scale,null);
+            if(batchIndices[count-1]==null) {
+                int[] lengths=new int[count*2],order=new int[count*6];
+                for(int i=0;i<lengths.length;i++) lengths[i]=3;
+                for(int i=0;i<count;i++) for(int j=0;j<6;j++) order[i*6+j]=i*4+ORDER[j];
+                batchIndices[count-1]=new TriangleStripArray(order,lengths);
+            }
+            drawBuffer=batchBuffer;drawIndices=batchIndices[count-1];
+        }
+        owner.bind(g);owner.restoreCamera(g);owner.renderNative(g,drawBuffer,drawIndices,appearance);
+        image=null;
     }
 }

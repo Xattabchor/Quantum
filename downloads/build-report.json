@@ -1,14 +1,14 @@
 {
   "classes": 149,
-  "code_methods": 1896,
-  "stackmap_attributes": 1019,
+  "code_methods": 1901,
+  "stackmap_attributes": 1022,
   "class_versions": [
     [
       47,
       0
     ]
   ],
-  "jar_sha256": "b086af16b5617be66692c9e2201b6b100847c3dfeb02c89f3c777d3d62e4d0d4",
+  "jar_sha256": "4b5b222c8b56409533b8cf31561b1eb1de128c04000ee62fd46bbbb530c4775d",
   "resource_files": 0,
   "source_files": 141,
   "preverifier": "ProGuard -microedition (CLDC StackMap)",

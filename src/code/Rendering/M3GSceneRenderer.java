@@ -203,7 +203,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 && (long)w*h<=CACHE_PIXELS && (long)raw.w*raw.h<=raw.img.length;
     }
 
-    private void flushBatch(DirectX7 g) {if(batch!=null) batch.flush(g);}
+    private void flushPolygons(DirectX7 g) {if(batch!=null) batch.flush(g);}
+    private void flushBatch(DirectX7 g) {
+        flushPolygons(g);
+        if(spriteRenderer!=null) spriteRenderer.flush(g);
+    }
 
     public void prepareEffects(DirectX7 g,FrameEffects effects) {
         if(frameEffects==null) frameEffects=new M3GFrameEffects(this,graphics,maxTexture);
@@ -282,7 +286,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     public boolean draw(DirectX7 g, RenderObject object, Texture texture, boolean fast) {
         batchable=false;
-        if(!(object instanceof Polygon3V) && !(object instanceof Polygon4V)) flushBatch(g);
+        if(object instanceof Sprite) flushPolygons(g);
+        else {
+            if(spriteRenderer!=null) spriteRenderer.flush(g);
+            if(!(object instanceof Polygon3V) && !(object instanceof Polygon4V)) flushPolygons(g);
+        }
         if(hardwarePerspective!=Main.m3gPerspective) {
             flushBatch(g);
             hardwarePerspective=Main.m3gPerspective;
@@ -617,6 +625,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     // Capture immediately after texture(): a later lookup changes lastTexture.
     float textureCutoutThreshold() {return lastTexture.cutoutThreshold;}
+    int textureImageFilter() {return lastTexture.filter;}
 
     private Texture2D createTexture(DirectX7 g,RawImage image,int kind) {
         boolean mul=kind>=SPRITE_MUL && kind<=SPRITE_MUL+6;

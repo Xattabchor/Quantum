@@ -444,6 +444,22 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
             else:
                 reference_sources.append(source)
         sources = reference_sources
+    # Diagnostic reference only: flush adjacent sprites before each dispatch.
+    # Native Fog/texture conversion remain enabled; never alter release source.
+    if os.environ.get("QUANTUM_SPRITE_BATCH_REFERENCE"):
+        reference_sources = []
+        for source in sources:
+            if source.name == "M3GSceneRenderer.java":
+                content = source.read_text()
+                marker = "if(object instanceof Sprite) flushPolygons(g);"
+                assert content.count(marker) == 1
+                path = temp / "sprite-batch-reference" / source.name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content.replace(marker, "if(object instanceof Sprite) {flushPolygons(g); if(spriteRenderer!=null) spriteRenderer.flush(g);}"))
+                reference_sources.append(path)
+            else:
+                reference_sources.append(source)
+        sources = reference_sources
     if os.environ.get("ECJ_JAR"):
         compiler = [JAVA, "-jar", os.environ["ECJ_JAR"], "-8", "-proc:none", "-nowarn"]
     else:
@@ -483,6 +499,8 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModeOptimizationAuditTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteTest"], check=True)
+    if not os.environ.get("QUANTUM_SPRITE_BATCH_REFERENCE"):
+        subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteBatchTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MulSpriteTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.PerspectiveToggleTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BackfaceTest"], check=True)
@@ -527,8 +545,10 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BakedNoFogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MuzzleGlowTest"], check=True)
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
-        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest", "Mode12FogTest", "Arm9PreparationTest", "FogRebaseTest"):
+        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest", "Mode12FogTest", "Arm9PreparationTest", "FogRebaseTest", "SpriteBatchTest"):
             if test == "FogRebaseTest" and os.environ.get("QUANTUM_FOG_REBASE_REFERENCE"):
+                continue
+            if test == "SpriteBatchTest" and os.environ.get("QUANTUM_SPRITE_BATCH_REFERENCE"):
                 continue
             subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameProfileSuiteRunner",
                             "code.Rendering." + test], check=True)

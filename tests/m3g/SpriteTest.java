@@ -142,15 +142,16 @@ public final class SpriteTest {
         for(int failure=0;failure<6;failure++) {
             g=M3GTest.renderer();DirectX7 cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
             s=sprite(M3GTest.texture(0x804181f1),3);s.fog=true;s.render(cpu,null);
-            if(failure==5) s.render(cpu,null);
+            Sprite second=sprite(s.textures[0],3);second.fog=true;second.pos.rz=-800;
+            if(failure==5) second.render(cpu,null);
             if(failure==0) Graphics3D.failAt=Graphics3D.calls+1;
             if(failure==1) System.setProperty("readback.fail","true");
             if(failure==2) System.setProperty("m3g.oom","true");
             if(failure==3) g.flushAlpha=true;
             if(failure==4) DeveloperMenu.renderPolygonsOverwrite=true;
-            if(failure==5) Graphics3D.failAt=Graphics3D.calls+2; // Second sprite after a successful fogged draw.
+            if(failure==5) Graphics3D.failAt=Graphics3D.calls+2; // Different eye depth: second packet after a successful fogged draw.
             if(failure==4) {cpu.clearDisplay(0);s.render(cpu,null);}
-            M3GTest.submit(g,s,null,0);if(failure==5) M3GTest.submit(g,s,null,1);g.render();
+            M3GTest.submit(g,s,null,0);if(failure==5) M3GTest.submit(g,second,null,1);g.render();
             Graphics3D.failAt=0;System.clearProperty("readback.fail");System.clearProperty("m3g.oom");DeveloperMenu.renderPolygonsOverwrite=false;
             check(Arrays.equals(cpu.display,g.display) && Graphics3D.target==null,"sprite failure wasn't completely replayed "+failure);
             g.destroy();cpu.destroy();
