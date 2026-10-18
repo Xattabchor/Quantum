@@ -15,7 +15,10 @@ APP = ROOT / "build/cldc/Quantum-unverified.jar"
 API = ROOT / "build/cldc/api.jar"
 JAVA = os.environ.get("JAVA", "java")
 LEVEL41_PROBE = bool(os.environ.get("QUANTUM_LEVEL41_PROBE"))
-WORLD_REASONS = bool(os.environ.get("QUANTUM_WORLD_PROBE")) or LEVEL41_PROBE
+LEVEL13_PROBE = bool(os.environ.get("QUANTUM_LEVEL13_PROBE"))
+if LEVEL41_PROBE and LEVEL13_PROBE:
+    raise ValueError("Run level41 and level13 probes separately")
+WORLD_REASONS = bool(os.environ.get("QUANTUM_WORLD_PROBE")) or LEVEL41_PROBE or LEVEL13_PROBE
 
 # Mesh skies use a transactional native submission, not forced CPU rasterization.
 house = (ROOT / "src/code/Gameplay/Map/House.java").read_text()
@@ -230,7 +233,7 @@ public class Graphics3D {
  public static VertexBuffer lastVertices; public static TriangleStripArray lastIndices;public static Appearance lastAppearance;
  public static Graphics target; public static Camera camera;
  public static class Draw {
-  public int blend,function,blendColor,fogColor,fogMode,textureAlpha,filter,colorComponents,cull,winding,sample;public boolean textured,perspective;public float near,far,density,threshold;public boolean fog;
+  public Texture2D source;public int blend,function,blendColor,fogColor,fogMode,textureAlpha,filter,colorComponents,cull,winding,sample;public boolean textured,perspective;public float near,far,density,threshold;public boolean fog;
   public byte[] colors;public int[] indices,lengths; public short[] positions,coords,normals;public boolean lit,tracking;public int lights,diffuse,ambient,emissive,specular;public float ambientIntensity,directionalIntensity,omniIntensity,omniQuadratic;public float[] omniPosition;public float[] lightMatrix;public float scale,uvScale;public float[] projection;
  }
  public static java.util.Vector<Draw> history=new java.util.Vector<Draw>();
@@ -261,7 +264,7 @@ public class Graphics3D {
    int offset=(a.tex.image.width/2+a.tex.image.height/2*a.tex.image.width)*4;
    p=new byte[]{p[offset],p[offset+1],p[offset+2],p[offset+3]};
   }
-  Draw draw=new Draw();draw.blend=a.comp.blend;draw.function=a.tex==null?Texture2D.FUNC_MODULATE:a.tex.function;draw.filter=a.tex==null?0:a.tex.filter;
+  Draw draw=new Draw();draw.source=a.tex;draw.blend=a.comp.blend;draw.function=a.tex==null?Texture2D.FUNC_MODULATE:a.tex.function;draw.filter=a.tex==null?0:a.tex.filter;
   draw.blendColor=a.tex==null?0:a.tex.blendColor;
   draw.sample=((p[0]&255)<<24)|((p[1]&255)<<16)|((p[2]&255)<<8)|(p[3]&255);draw.threshold=a.comp.threshold;
   draw.colorComponents=v.colors.components;draw.textured=a.tex!=null;draw.perspective=a.polygon==null || a.polygon.perspective;
@@ -355,8 +358,10 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     # Optional diagnostics instrument TEMPORARY source copies only. Production
     # sources, published classes and rendering decisions remain untouched.
     if WORLD_REASONS:
+        if LEVEL41_PROBE or LEVEL13_PROBE:
+            sources.append(ROOT / "src/code/Rendering/DirectX7.java")
         if LEVEL41_PROBE:
-            sources += [ROOT / "src/code/Rendering/DirectX7.java", ROOT / "src/code/Gameplay/Map/LightMapper.java"]
+            sources.append(ROOT / "src/code/Gameplay/Map/LightMapper.java")
         instrumented = []
         for source in sources:
             if source.name == "M3GPolygonBatch.java":
@@ -383,6 +388,10 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                     reason = "geometry-clip" if "worldClip.prepare" in line else "geometry-pack" if "if(scale == 0)" in line else "native-line-%d" % (len(before.splitlines()) + i + 1)
                     lines[i] = line.replace("return false;", 'return WorldBottleneckProbe.reject("%s");' % reason)
                 content = before + "".join(lines) + content[end:]
+                if LEVEL13_PROBE:
+                    marker = "textures.addElement(cached);cachedPixels += size;"
+                    assert content.count(marker) == 1
+                    content = content.replace(marker, marker + "\n        Level13Probe.upload(cached.texture,image,kind);")
                 marker = "worldClip.prepare(g,vertices,count,coords,colors,distance,perspective,nativeFog,alternate,hardwarePerspective)"
                 assert content.count(marker) == 1
                 content = content.replace(marker, "WorldBottleneckProbe.clipResult(worldClip," + marker + ")")
@@ -400,11 +409,12 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                 marker = "return pack(vertices,count,cx,cy,distance,true,positions,work);"
                 assert content.count(marker) == 1
                 content = content.replace(marker, "return WorldBottleneckProbe.fogResult(false,pack(vertices,count,cx,cy,distance,true,positions,work));")
-            elif LEVEL41_PROBE and source.name == "DirectX7.java":
+            elif (LEVEL41_PROBE or LEVEL13_PROBE) and source.name == "DirectX7.java":
                 content = source.read_text()
                 marker = "public void transformAndProjectVertices(Mesh ms, Matrix matrix) {"
                 assert content.count(marker) == 1
-                content = content.replace(marker, marker + "\nif(code.Rendering.Level41Probe.counting) code.Rendering.Level41Probe.projected+=ms.getVertices().length;")
+                probe = "Level13Probe" if LEVEL13_PROBE else "Level41Probe"
+                content = content.replace(marker, marker + "\nif(code.Rendering."+probe+".counting) code.Rendering."+probe+".projected+=ms.getVertices().length;")
             elif LEVEL41_PROBE and source.name == "LightMapper.java":
                 content = source.read_text()
                 marker = "new Object().getClass().getResourceAsStream(lightdataFile)"
@@ -448,6 +458,12 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
             raise ValueError("QUANTUM_LEVEL41_PROBE requires QUANTUM_RESOURCE_JAR")
         subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
                         "code.Rendering.Level41Probe"], check=True)
+    if LEVEL13_PROBE:
+        if not resource_jar:
+            raise ValueError("QUANTUM_LEVEL13_PROBE requires QUANTUM_RESOURCE_JAR")
+        subprocess.run([JAVA, "-Djava.awt.headless=true",
+                        "-Dlevel13.fogOff=" + ("true" if os.environ.get("QUANTUM_LEVEL13_FOG_OFF") else "false"),
+                        "-cp", classpath, "code.Rendering.Level13Probe", str(resource_jar)], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModeOptimizationAuditTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteTest"], check=True)
