@@ -42,7 +42,7 @@ public final class OpaqueTextureTest {
             Main.m3gPerspective=correction;DirectX7 g=renderer();
             Texture opaque=texture(false),cutout=texture(true);opaque.drawmode=cutout.drawmode=(byte)mode;
             int[] original=opaque.rImg.img.clone();
-            world(g,opaque,0);world(g,cutout,mode==1?0:0.5f);
+            world(g,opaque,0);world(g,cutout,mode==1 || mode==11?0:0.5f);
             check(Graphics3D.lastAppearance.tex.image.pixels[15]==0,"hole alpha changed");
             world(g,opaque,0);check(Arrays.equals(original,opaque.rImg.img),"original texture changed");g.destroy();
         }

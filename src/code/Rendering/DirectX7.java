@@ -16,6 +16,7 @@ public final class DirectX7 {
    private int[] frameBackup;
    private String rendererError;
    private FrameEffects frameEffects;
+   private Mode11Decal decalFallback;
    private Image frameImage;
    private int[] frameImageBuffer;
    private boolean imagePresentationFailed;
@@ -221,6 +222,7 @@ this.buffer.resetTex();
        sceneRenderer = null;
        frameBackup = null;
        frameEffects = null;
+       decalFallback = null;
    }
 
    private void failRenderer(String message) {
@@ -230,9 +232,9 @@ this.buffer.resetTex();
        System.out.println("M3G disabled: " + message);
    }
 
-   /** M3G deliberately disables legacy dithering materials, treating them as 0. */
+   /** M3G retains only mode 12 as an unlit mode 0 alias; 11 is DECAL. */
    public static byte m3gDrawMode(byte mode) {
-       return mode >= 11 && mode <= 12 ? (byte)0 : mode;
+       return mode == 12 ? (byte)0 : mode;
    }
 
    /** CPU equivalent of native MODULATE; source alpha is handled as cutout. */
@@ -297,6 +299,10 @@ this.buffer.resetTex();
     * rendering after its atomic material/geometry validation has rejected it. */
    public void drawSoftwareObject(RenderObject object,Texture texture,boolean fast) {
        if(frameImage!=null) syncFrameImage();
+       if(rendererMode==M3G && texture!=null && texture.drawmode==11) {
+           if(decalFallback==null) decalFallback=new Mode11Decal();
+           texture=decalFallback.texture(texture);
+       }
        byte originalMode = texture == null ? 0 : texture.drawmode;
        boolean alias = rendererMode == M3G && texture != null && m3gDrawMode(originalMode) != originalMode;
        if(alias) texture.drawmode = m3gDrawMode(originalMode);

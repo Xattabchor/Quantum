@@ -156,7 +156,11 @@ public final class SkyCoverage {
         if(materials==null || materials.textures==null || materials.textures.length==0) return false;
         Texture[] ts=materials.textures;boolean changed=images==null || images.length!=ts.length;
         for(int n=0;n<ts.length;n++) {
-            if(ts[n]==null || DirectX7.m3gDrawMode(ts[n].drawmode)!=0 || ts[n].rImg==null || ts[n].rImg.img==null) return false;
+            if(ts[n]==null || ts[n].rImg==null || ts[n].rImg.img==null) return false;
+            int mode=DirectX7.m3gDrawMode(ts[n].drawmode);
+            // DECAL also has opaque white vertex alpha. Keep the same conservative
+            // nonzero-texel certificate/cache as mode 0, including mode switches.
+            if(mode!=0 && mode!=11) return false;
             RawImage r=ts[n].rImg;
             if(!changed && (images[n]!=r || pixels[n]!=r.img || widths[n]!=r.w || heights[n]!=r.h)) changed=true;
         }

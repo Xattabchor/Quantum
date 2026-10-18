@@ -215,7 +215,7 @@ public class Image2D {public static final int RGBA=100,LUMINANCE=97; public byte
   else pixels=p;
  } }''',
 "javax/microedition/m3g/Texture2D.java": '''package javax.microedition.m3g;
-public class Texture2D {public static final int FILTER_BASE_LEVEL=208,FILTER_NEAREST=210,FILTER_LINEAR=209,WRAP_CLAMP=240,WRAP_REPEAT=241,FUNC_MODULATE=227,FUNC_ADD=224,FUNC_BLEND=225;
+public class Texture2D {public static final int FILTER_BASE_LEVEL=208,FILTER_NEAREST=210,FILTER_LINEAR=209,WRAP_CLAMP=240,WRAP_REPEAT=241,FUNC_MODULATE=227,FUNC_ADD=224,FUNC_BLEND=225,FUNC_DECAL=226;
  public Image2D image;public int function,blendColor,filter,wrapS,wrapT;public Texture2D(Image2D i){image=i;}
  public void setFiltering(int a,int b){filter=b;} public void setWrapping(int a,int b){wrapS=a;wrapT=b;} public void setBlending(int n){function=n;} public void setBlendColor(int rgb){blendColor=rgb&0xffffff;} }''',
 "javax/microedition/m3g/Graphics3D.java": '''package javax.microedition.m3g;
@@ -297,11 +297,13 @@ public class Graphics3D {
   // Sample only the first vertex/texel to test blending equations. This is NOT
   // triangle rasterization or a visual substitute for a JSR-184 implementation.
   int alpha=(p[3]&255)*(v.colors.components==3?255:c[3]&255)/255;
+  if(draw.function==Texture2D.FUNC_DECAL) alpha=v.colors.components==3?255:c[3]&255;
   if(alpha/255.0f>=a.comp.threshold){
    int out=0xff000000;
    for(int k=0;k<3;k++){
     int src=draw.function==Texture2D.FUNC_ADD?Math.min(255,(p[k]&255)+(c[k]&255)):(p[k]&255)*(c[k]&255)/255;
     if(draw.function==Texture2D.FUNC_BLEND) src=((c[k]&255)*(255-(p[k]&255))+((draw.blendColor>>(16-k*8))&255)*(p[k]&255))/255;
+    if(draw.function==Texture2D.FUNC_DECAL) src=((c[k]&255)*(255-(p[3]&255))+(p[k]&255)*(p[3]&255))/255;
     if(draw.lit) src=Math.min(255,(int)((p[k]&255)*lightingScale+0.5));
     if(draw.fog){float z=-v.positions.shorts[2]*v.scale;
      float f=Math.max(0,Math.min(1,(z-draw.near)/(draw.far-draw.near)));
@@ -334,7 +336,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     sources += sorted(TEST.glob("*.java"))
     # Compile the current adapter against the doubles, not copies of its logic.
     sources += [ROOT / "src/code/Rendering" / name for name in
-                ("Vertex.java", "M3GSceneRenderer.java", "M3GFrameEffects.java", "M3GMaterialMath.java", "M3GPolygonBatch.java", "ProjectedGeometry.java", "WorldClipGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "SkyCoverage.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
+                ("Vertex.java", "Mode11Decal.java", "M3GSceneRenderer.java", "M3GFrameEffects.java", "M3GMaterialMath.java", "M3GPolygonBatch.java", "ProjectedGeometry.java", "WorldClipGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "SkyCoverage.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
     # Validate on-device frame-profile copies against the same API contracts.
     # Requires a prior build_cldc.py --profile-frame; not a timing benchmark.
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
@@ -473,6 +475,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.PanoramaTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.CombinedPassTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.DitherDisabledTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.Mode11DecalTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GeometryTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogPackingTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.RenderStatsTest"], check=True)
@@ -485,7 +488,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BakedNoFogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MuzzleGlowTest"], check=True)
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
-        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest"):
+        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest"):
             subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameProfileSuiteRunner",
                             "code.Rendering." + test], check=True)
     # Remove the optional API for a real class-loading fallback test.

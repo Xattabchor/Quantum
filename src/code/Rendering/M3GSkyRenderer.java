@@ -58,7 +58,7 @@ final class M3GSkyRenderer {
             Texture t = materials.textures[material];
             if(t == null || !owner.supportsTexture(t.rImg)) return false;
             int mode=DirectX7.m3gDrawMode(t.drawmode);
-            if(mode!=0 && mode!=1 && mode!=2 && mode!=4 && mode!=5 && mode!=7 && mode!=10) return false;
+            if(mode!=0 && mode!=1 && mode!=2 && mode!=4 && mode!=5 && mode!=7 && mode!=10 && mode!=11) return false;
         }
         float far = g.distY;
         Vertex[] vertices = sky.mesh.getVertices();
@@ -108,14 +108,14 @@ final class M3GSkyRenderer {
                     batchRaw=raw; batchMode=mode;
                     boolean alpha = mode == 1 || (mode == 4 && raw.alphaMixing);
                     Texture2D texture = owner.texture(g,raw,mode==2?M3GSceneRenderer.ADD_TEXTURE
-                            :alpha ? M3GSceneRenderer.ALPHA_TEXTURE : M3GSceneRenderer.OPAQUE_TEXTURE);
-                    texture.setBlending(mode==5?Texture2D.FUNC_BLEND:Texture2D.FUNC_MODULATE);
+                            :alpha || mode==11 ? M3GSceneRenderer.ALPHA_TEXTURE : M3GSceneRenderer.OPAQUE_TEXTURE);
+                    texture.setBlending(mode==11?Texture2D.FUNC_DECAL:mode==5?Texture2D.FUNC_BLEND:Texture2D.FUNC_MODULATE);
                     if(mode==5) texture.setBlendColor(DirectX7.getM3GBlendColor());
                     appearance.setTexture(0,texture); appearance.setFog(null);
                     composite.setBlending(mode==2?CompositingMode.ALPHA_ADD
                             :mode==7?CompositingMode.MODULATE:mode==10?CompositingMode.MODULATE_X2
                             :alpha ? CompositingMode.ALPHA : CompositingMode.REPLACE);
-                    composite.setAlphaThreshold(alpha ? 0 : owner.textureCutoutThreshold());
+                    composite.setAlphaThreshold(alpha || mode==11 ? 0 : owner.textureCutoutThreshold());
                 }
                 if(p instanceof Polygon3V) {
                     Polygon3V a = (Polygon3V)p;

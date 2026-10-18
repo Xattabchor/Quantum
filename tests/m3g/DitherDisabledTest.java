@@ -7,10 +7,10 @@ import java.util.Arrays;
 import javax.microedition.m3g.CompositingMode;
 import javax.microedition.m3g.Graphics3D;
 
-/** 11/12 are mode 0 aliases in M3G, including CPU fallback/replay. */
+/** Mode 12 remains a mode 0 alias; 11 now has native DECAL semantics. */
 public final class DitherDisabledTest {
     private static void check(boolean b,String why) { M3GTest.check(b,why); }
-    private static RenderObject polygon(int kind) {
+    static RenderObject polygon(int kind) {
         Polygon3V p=M3GTest.triangle();Vertex a=p.a,b=p.b,c=p.c,d=M3GTest.vertex(10,10,-200);
         if(kind==0) return p;
         if(kind==1) return new Polygon4V(a,b,d,c,(byte)0,(byte)0,(byte)255,(byte)0,(byte)255,(byte)255,(byte)0,(byte)255);
@@ -22,7 +22,7 @@ public final class DitherDisabledTest {
     private static void submit(DirectX7 g,RenderObject p,Texture t) {M3GTest.submit(g,p,t,0);g.render();}
     public static void main(String[] args) {
         Main.mipMapping=false;Main.forceLQFog=false;
-        for(int kind=0;kind<6;kind++) for(int mode:new int[]{11,12}) {
+        for(int kind=0;kind<6;kind++) for(int mode:new int[]{12}) {
             DirectX7 g=M3GTest.renderer();Texture t=M3GTest.texture(0x80a1b2c3);RenderObject p=polygon(kind);
             int uploads=Graphics3D.uploads;
             for(int pers:new int[]{0,4}) for(int quality:new int[]{0,2}) for(boolean mip:new boolean[]{false,true}) {
@@ -44,10 +44,10 @@ public final class DitherDisabledTest {
             Texture hole=M3GTest.texture(0);hole.drawmode=(byte)mode;g.clearDisplay(0x123456);submit(g,p,hole);
             check(g.display[0]==0x123456,"alias filled mode0 cutout");g.destroy();
         }
-        System.out.println("PASS disabled dithering11/12 = native mode0 / six polygon types / perspective+fog+mip / zero distances / cache+cutout");
+        System.out.println("PASS disabled dithering12 = native mode0 / six polygon types / perspective+fog+mip / zero distances / cache+cutout");
 
         Main.persQ=4;Main.fogQ=2;Main.mipMapping=false;DirectX7.fDist=1000;DirectX7.waterDistance=1000;
-        for(int mode:new int[]{11,12}) for(int scenario=0;scenario<4;scenario++) {
+        for(int mode:new int[]{12}) for(int scenario=0;scenario<4;scenario++) {
             DirectX7 g=M3GTest.renderer(),cpu=new DirectX7(32,32);cpu.clearDisplay(0x123456);
             Texture t=M3GTest.texture(0xffa1b2c3),zero=M3GTest.texture(0xffa1b2c3);t.drawmode=(byte)mode;
             Polygon3V p=M3GTest.triangle(),reference=M3GTest.triangle();

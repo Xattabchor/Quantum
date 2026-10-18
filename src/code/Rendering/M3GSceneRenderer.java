@@ -326,9 +326,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
         if(texture == null) return false;
         int mode = DirectX7.m3gDrawMode(texture.drawmode);
-        // Modes 7/10 use MODULATE/MODULATE_X2; modes 11/12 alias 0.
+        // Modes 7/10 use MODULATE/MODULATE_X2, 11 uses DECAL, 12 aliases 0.
         if(mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4
-                && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 10 && mode != 13) return false;
+                && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 10 && mode != 11 && mode != 13) return false;
         boolean nativeFog=Main.fogQ>0
                 && (mode==3 || mode==6);
         // Invalid native ranges retain the original CPU material fallback.
@@ -422,7 +422,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
         // Standard native fog is a single pass for HQ/LQ and affine UVs alike.
         batchable=true;
-        int kind = mode == 2 ? ADD_TEXTURE : mode == 1 || (mode == 4 && raw.alphaMixing) ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
+        int kind = mode == 2 ? ADD_TEXTURE : mode == 1 || mode == 11 || (mode == 4 && raw.alphaMixing) ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
         // Cache eviction/uploads are done outside a bound target.
         Texture2D nativeTexture = texture(g, raw, kind);
         CachedTexture nativeEntry=lastTexture;
@@ -433,12 +433,12 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(!batchable) buffers[slot].setPositions(posArrays[slot], scale, null);
         setFog(null);
         setTexture(nativeTexture);
-        setFunction(nativeTexture,mode==5?Texture2D.FUNC_BLEND:Texture2D.FUNC_MODULATE);
+        setFunction(nativeTexture,mode==11?Texture2D.FUNC_DECAL:mode==5?Texture2D.FUNC_BLEND:Texture2D.FUNC_MODULATE);
         batchState.blendColor=mode==5?DirectX7.getM3GBlendColor():0;
         setBlend(mode == 2 ? CompositingMode.ALPHA_ADD
                 : mode == 10 ? CompositingMode.MODULATE_X2
                 : mode == 7 ? CompositingMode.MODULATE
-                : kind == ALPHA_TEXTURE ? CompositingMode.ALPHA : CompositingMode.REPLACE);
+                : kind == ALPHA_TEXTURE && mode!=11 ? CompositingMode.ALPHA : CompositingMode.REPLACE);
         setThreshold(kind==ALPHA_TEXTURE?0:nativeEntry.cutoutThreshold);
 
         // Modes 9/13 keep only baked vertex colors, with no distance Fog.
