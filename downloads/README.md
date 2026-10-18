@@ -1,6 +1,20 @@
 # Quantum — M3G preverified preview
 
-## Тестовая M3G-only сборка a470031
+## Исправленная тестовая сборка TreeFix e1dc319
+
+[JAR с ресурсами Stlkr](Quantum_Stlkr_M3G_TreeFix_e1dc319.jar) ·
+[JAD](Quantum_Stlkr_M3G_TreeFix_e1dc319.jad) ·
+[Отчёт](Quantum_Stlkr_M3G_TreeFix_e1dc319.build-report.json).
+
+Исправлены отказ native fog при проходе через плоскость спрайта и сбой/цикл
+переноса текста диагностики. [Причины и проверки](../docs/m3g-sprite-crossing-fix.md).
+1182 тестовых crossing frames, включая PNG обоих деревьев Stlkr; это API doubles,
+не проверка на телефоне. Все 442 ресурса прежние; коллизии не менялись.
+Без профилировщика, JSR-184 обязателен, CPU fallback нет.
+Перед установкой сохраните сейвы: MIDlet ID прежний.
+Старые тестовые и опубликованные файлы ниже не заменены.
+
+## Тестовая M3G-only сборка a470031 (до исправления деревьев)
 
 [JAR с ресурсами Stlkr](Quantum_Stlkr_M3G_Test_a470031.jar) ·
 [JAD](Quantum_Stlkr_M3G_Test_a470031.jad) ·
