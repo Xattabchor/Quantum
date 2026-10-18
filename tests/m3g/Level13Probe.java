@@ -19,7 +19,7 @@ import javax.microedition.lcdui.Image;
 import javax.microedition.m3g.Graphics3D;
 import javax.microedition.m3g.Texture2D;
 
-/** Stlkr level13 snapshot diagnostic on current M3G. Not AI/gameplay/GPU timing.
+/** Stlkr level12/13 snapshot diagnostic on current M3G. Not AI/gameplay/GPU timing.
  * Real decoders, House/portals, MeshObject/SpriteObject and NPC idle render.
  * Uploaded archive classes are excluded; PNG fixture decoding uses ImageIO.
  */
@@ -27,6 +27,9 @@ public final class Level13Probe {
     public static boolean counting;
     public static int projected;
     private static boolean active;
+    private static final int LEVEL=Integer.getInteger("level.probe",13);
+    private static final String TAG="L"+LEVEL;
+    private static final Set<RawImage> worldImages=Collections.newSetFromMap(new IdentityHashMap<RawImage,Boolean>());
     private static final boolean FOG_OFF=Boolean.getBoolean("level13.fogOff");
     private static GameIni levelConfig;
     private static void configureLevel() {
@@ -48,12 +51,12 @@ public final class Level13Probe {
             nativeNames.put(texture,kind==M3GSceneRenderer.PANORAMA_TEXTURE?"sky":
                 kind==M3GSceneRenderer.SPRITE_CUTOUT || kind==M3GSceneRenderer.SPRITE_ALPHA
                     || kind==M3GSceneRenderer.SPRITE_ADD || kind>=M3GSceneRenderer.SPRITE_MUL?"sprite":
-                name.equals("/gamedata/maps/kordon/kordon.png")?"world":"mesh");
+                worldImages.contains(raw)?"world":"mesh");
         }
     }
     private static InputStream resource(String n) {
         InputStream in=Level13Probe.class.getResourceAsStream(n);
-        if(in==null)throw new IllegalArgumentException("Missing level13 resource: "+n);return in;
+        if(in==null)throw new IllegalArgumentException("Missing Stlkr resource: "+n);return in;
     }
     private static String text(String n) throws Exception {
         try(InputStream in=resource(n)) {
@@ -84,12 +87,27 @@ public final class Level13Probe {
         }
         // Fixture preseed avoids MIDP image loading on desktop. It is not a
         // phone heap measurement or a request to load all PNGs in the game.
-        System.out.println("L13 fixture PNGs="+names.size());
+        System.out.println(TAG+" fixture PNGs="+names.size());
     }
     private static int[] pos(String s){return GameIni.createPos(s,',');}
     private static void add(House house,RoomObject o,GameIni obj,GameIni level) {
         LevelLoader.loadRM(obj,o,level,obj.get("PRESET"));house.addObject(o);
         check(o.getPart()!=-1,"render object outside House "+o.getPosX()+","+o.getPosZ());objects.add(o);
+    }
+    private static String setting(GameIni obj,String name,String fallback) {
+        String key=obj.get("PRESET");
+        return obj.getDef(name,key==null?Main.settings.getDef(name,fallback):Main.settings.getDef(key,name,Main.settings.getDef(name,fallback)));
+    }
+    private static ScreenLines rain(DirectX7 g) {
+        check("RAIN".equals(levelConfig.get("WEATHER")),"expected level12 rain");
+        WeatherGenerator w=new WeatherGenerator(g.width,g.height,levelConfig.getInt("WEATHER_PARTICLES_COUNT",170),
+            0xaabbdd,0x666666,0xffffff,0xcaccdf,false,null,4,levelConfig.getInt("WEATHER_PARTICLES_SIZE",22),120,160,2,10);
+        check(levelConfig.get("WEATHER_COLOR_NEAR")==null && levelConfig.get("WEATHER_COLOR_FAR")==null
+            && Main.settings.get("WEATHER_COLOR_NEAR")==null && Main.settings.get("WEATHER_COLOR_FAR")==null,"custom rain colors need fixture support");
+        w.generate=1;w.setRenderer(DirectX7.M3G);
+        // Deterministic active rain snapshot, not random simulation/roof/lightning.
+        for(int i=0;i<w.info.length/2;i++){w.info[i*2]=1;w.info[i*2+1]=10+i*8;w.coords[i*2]=20+i*19;w.coords[i*2+1]=25+i*21;}
+        return w.prepareM3G(g);
     }
     private static void loadObjects(House house,GameIni level,String file) throws Exception {
         int meshCount=0,spriteCount=0,npcCount=0,spawnerGroups=0;
@@ -108,9 +126,11 @@ public final class Level13Probe {
                     add(house,npc,obj,level);npcCount++;
                     for(Sprite s:new Sprite[]{npc.stayFront,npc.staySide,npc.stayBack})if(s!=null)sprites.add(s);
                 } else if(type.equals("MESH")) {
-                    MultyTexture t=new MultyTexture(obj.get("TEX"),false);
-                    MeshObject m=new MeshObject(decode(obj.get("MODEL"),obj.getFloat("SCALE",1),t),t,p[0],p[1],p[2],false);
-                    m.getCharacter().getTransform().rotY(obj.getInt("ROT",0));m.addsz=obj.getInt("ADDSZ",m.addsz);
+                    MultyTexture t=new MultyTexture(LEVEL==12?setting(obj,"TEX",null):obj.get("TEX"),false);
+                    float scale=LEVEL==12?Float.parseFloat(setting(obj,"SCALE",setting(obj,"MODEL_SCALE","1"))):obj.getFloat("SCALE",1);
+                    MeshObject m=new MeshObject(decode(LEVEL==12?setting(obj,"MODEL",null):obj.get("MODEL"),scale,t),t,p[0],p[1],p[2],false);
+                    if(LEVEL==12)Asset.applyMeshEffects(m.animation.getMesh(),setting(obj,"DRAW_MODES",null));
+                    m.getCharacter().getTransform().rotY(obj.getInt("ROT",0));m.addsz=LEVEL==12?Integer.parseInt(setting(obj,"ADDSZ",String.valueOf(m.addsz))):obj.getInt("ADDSZ",m.addsz);
                     add(house,m,obj,level);meshCount++;
                 } else {
                     Texture[] tex;String[] paths=StringTools.cutOnStrings(obj.get("TEX"),',');tex=new Texture[paths.length];
@@ -124,12 +144,13 @@ public final class Level13Probe {
                 }
             }
         }
-        System.out.println("L13 objects mesh="+meshCount+" sprite="+spriteCount+" idleNPC="+npcCount+" inactiveSpawnerGroups="+spawnerGroups+" total="+objects.size());
-        check(meshCount==5 && spriteCount==23 && npcCount==5 && spawnerGroups==4,"level13 object inventory changed");
+        System.out.println(TAG+" objects mesh="+meshCount+" sprite="+spriteCount+" idleNPC="+npcCount+" inactiveSpawnerGroups="+spawnerGroups+" total="+objects.size());
+        check(LEVEL==13?meshCount==5 && spriteCount==23 && npcCount==5 && spawnerGroups==4:
+            meshCount==6 && spriteCount==1 && npcCount==5 && spawnerGroups==1,"level object inventory changed");
     }
     private static void resetReasons() {
         WorldBottleneckProbe.active=true;
-        WorldBottleneckProbe.textureSplits=WorldBottleneckProbe.stateSplits=WorldBottleneckProbe.scaleSplits=WorldBottleneckProbe.capacitySplits=0;
+        WorldBottleneckProbe.textureSplits=WorldBottleneckProbe.stateSplits=WorldBottleneckProbe.scaleSplits=WorldBottleneckProbe.capacitySplits=WorldBottleneckProbe.scaleOnlySplits=0;
         WorldBottleneckProbe.clipAttempts=WorldBottleneckProbe.clipRecovered=WorldBottleneckProbe.clipTriangles=WorldBottleneckProbe.clipDiscards=0;
         WorldBottleneckProbe.rejects.clear();WorldBottleneckProbe.packRejects.clear();
         WorldBottleneckProbe.fogShared=WorldBottleneckProbe.fogLegacy=0;projected=0;
@@ -155,27 +176,28 @@ public final class Level13Probe {
             sky.draw=true;sky.addViewport(0,0,g.width,g.height);
             house.render(null,g,House.getParts(house,room,cam),feet[0],feet[2]);
             int queued=((RenderObjectBuffer)q.get(g)).getSize();
-            g.renderGameFrameImage(null,false,false,house,room,null);counting=false;
-            check(g.isM3GActive(),"level13 native backend failed: "+g.getRendererError());
-            check(DirectX7.standartDrawmode==3 && DirectX7.fDist==22000 && DirectX7.drDist==30000 && DirectX7.fogc==0x2f1028,"sample lost level globals");
-            int world=0,mesh=0,sprite=0,background=0,triangles=0;
+            g.renderGameFrameImage(null,false,false,house,room,LEVEL==12?rain(g):null);counting=false;
+            check(g.isM3GActive(),"Stlkr native backend failed: "+g.getRendererError());
+            check(DirectX7.standartDrawmode==3 && DirectX7.fDist==levelConfig.getInt("FOGD",1) && DirectX7.drDist==levelConfig.getInt("DIST",1),"sample lost level globals");
+            int world=0,mesh=0,sprite=0,background=0,weatherDraws=0,triangles=0;
             for(Graphics3D.Draw d:Graphics3D.history) {
-                String kind=d.source==null?"sky":nativeNames.get(d.source);check(kind!=null,"missing native texture attribution");
-                if(kind.equals("world") || kind.equals("mesh")) {
+                String kind=d.source==null?(LEVEL==12 && d.cull==javax.microedition.m3g.PolygonMode.CULL_BACK?"mesh":
+                    LEVEL==12 && d.colorComponents==3?"weather":"sky"):nativeNames.get(d.source);check(kind!=null,"missing native texture attribution");
+                if(kind.equals("world") || (LEVEL==13 && kind.equals("mesh"))) {
                     check(d.fog!=FOG_OFF,"world/mesh lost configured native Fog");
                     if(!FOG_OFF)check(d.fogMode==javax.microedition.m3g.Fog.LINEAR,"mode3 not LINEAR");
                 }
                 if(kind.equals("world"))world++;else if(kind.equals("mesh"))mesh++;
-                else if(kind.equals("sprite"))sprite++;else background++;
+                else if(kind.equals("sprite"))sprite++;else if(kind.equals("weather"))weatherDraws++;else background++;
                 if(d.cull==javax.microedition.m3g.PolygonMode.CULL_BACK)triangles+=d.indices.length/3;
             }
-            check(world+mesh+sprite+background==g.getM3GDrawCalls(),"draw attribution mismatch");
+            check(world+mesh+sprite+background+weatherDraws==g.getM3GDrawCalls(),"draw attribution mismatch");
             if(frame==3)check(g.getM3GTextureUploads()==0,"warm snapshot reuploaded textures");
-            if(frame==0 || frame==3)System.out.println("L13 part="+part+" fog="+(FOG_OFF?"off":"on")+" sample="+label+" phase="+(frame==0?"cold":"warm")
+            if(frame==0 || frame==3)System.out.println(TAG+" part="+part+" fog="+(FOG_OFF?"off":"on")+" sample="+label+" phase="+(frame==0?"cold":"warm")
                 +" room="+room+" pos="+cam.m03+","+cam.m13+","+cam.m23+" yaw="+yaw+" pitch="+pitch+" projected="+projected+" queued="+queued
                 +" D="+g.getM3GDrawCalls()+" sky="+background+" world="+world+" mesh="+mesh+" sprites="+sprite+" triangles="+triangles
-                +" B="+g.getM3GCpuBarriers()+" T="+g.getM3GTextureUploads()+" readbacks="+(Image.getRGBCalls-reads)+" copies="+(Graphics.drawRGBCalls-copies)
-                +" textureSplits="+WorldBottleneckProbe.textureSplits+" stateSplits="+WorldBottleneckProbe.stateSplits+" scaleSplits="+WorldBottleneckProbe.scaleSplits+" capacitySplits="+WorldBottleneckProbe.capacitySplits
+                +(LEVEL==12?" weather="+weatherDraws:"")+" B="+g.getM3GCpuBarriers()+" T="+g.getM3GTextureUploads()+" readbacks="+(Image.getRGBCalls-reads)+" copies="+(Graphics.drawRGBCalls-copies)
+                +" textureSplits="+WorldBottleneckProbe.textureSplits+" stateSplits="+WorldBottleneckProbe.stateSplits+" scaleSplits="+WorldBottleneckProbe.scaleSplits+" capacitySplits="+WorldBottleneckProbe.capacitySplits+(LEVEL==12?" scaleOnlySplits="+WorldBottleneckProbe.scaleOnlySplits:"")
                 +" fogShared="+WorldBottleneckProbe.fogShared+" fogLegacy="+WorldBottleneckProbe.fogLegacy+" clipAttempts="+WorldBottleneckProbe.clipAttempts+" clipRecovered="+WorldBottleneckProbe.clipRecovered+" clipTriangles="+WorldBottleneckProbe.clipTriangles
                 +" stream="+stream()+" rejects="+WorldBottleneckProbe.rejects+" packRejects="+WorldBottleneckProbe.packRejects);
         }
@@ -218,35 +240,42 @@ public final class Level13Probe {
         for(byte b:digest){int n=b&255;if(n<16)hex.append('0');hex.append(Integer.toHexString(n));}return hex.toString();
     }
     public static void main(String[] args) throws Exception {
-        String file=text("/level13.txt");Method cut=LevelLoader.class.getDeclaredMethod("cutLevelFile",String.class);cut.setAccessible(true);
+        String file=text("/level"+LEVEL+".txt");Method cut=LevelLoader.class.getDeclaredMethod("cutLevelFile",String.class);cut.setAccessible(true);
         GameIni level=new GameIni(((String[])cut.invoke(null,file))[0],false);Main.settings=new GameIni(text("/setting.txt"),true);
-        check("/gamedata/maps/kordon/kordon.3d".equals(level.get("WORLD_MODEL")),"wrong level13 archive");
+        check(LEVEL==12 || LEVEL==13,"unsupported Stlkr level");
+        check(level.get("WORLD_MODEL").equals(LEVEL==12?"/gamedata/maps/pripyat/pripyat.3d":"/gamedata/maps/kordon/kordon.3d"),"wrong Stlkr archive");
         Main.pixelsQ=2;Main.persQ=4;Main.fogQ=FOG_OFF?0:2;Main.mipMapping=false;Main.m3gPerspective=true;Main.floorOffsetSZ=0;Main.isSounds=false;
         DirectX7.standartDrawmode=(byte)level.getInt("DMODE",0);DirectX7.setDrDist(level.getInt("DIST",Integer.MAX_VALUE));DirectX7.setFogDist(level.getInt("FOGD",1));
         DirectX7.fogc=level.getInt("FOGCR",0)<<16|level.getInt("FOGCG",0)<<8|level.getInt("FOGCB",0);
         levelConfig=level;seedImages(args[0]);code.AI.misc.Blood.blood=Asset.getTexture(Main.settings.get("BLOOD_SPRITE"));MultyTexture t=new MultyTexture(level.get("WORLD_TEXTURE"),true);
-        check(t.textures.length==2 && t.textures[0].rImg==t.textures[1].rImg,"world texture alias not shared");
+        if(LEVEL==13)check(t.textures.length==2 && t.textures[0].rImg==t.textures[1].rImg,"world texture alias not shared");
+        for(Texture texture:t.textures)worldImages.add(texture.rImg);
         Mesh[] meshes=decode(level.get("WORLD_MODEL"),level.getFloat("WORLD_SCALE",1),t);
         Room.chunkSize=5000;Room.chunkSizeRender=level.getInt("CHUNK_SIZE",Main.settings.getInt("CHUNK_SIZE",0));
         House house=HouseCreator.create(meshes,false,null,level.getInt("OPTIMIZE_LEVEL_MODEL",1)==1);
-        int vertices=0,polygons=0,triangles=0;int[] materials=new int[2];
+        int vertices=0,polygons=0,triangles=0;int[] materials=new int[t.textures.length];
         for(Room r:house.getRooms()) {
             Mesh m=r.getMesh();vertices+=m.getVertices().length;polygons+=m.getPolygons().length;
             for(RenderObject p:m.getPolygons()){triangles+=p instanceof Polygon3V?1:2;materials[p instanceof Polygon3V?((Polygon3V)p).tex:((Polygon4V)p).tex]++;}
         }
-        System.out.println("L13 world rooms="+house.getRooms().length+" vertices="+vertices+" polygons="+polygons+" triangles="+triangles+" materials="+Arrays.toString(materials)+" chunk="+Room.chunkSizeRender+" dmode="+DirectX7.standartDrawmode+" dist="+DirectX7.drDist+" fogd="+DirectX7.fDist);
+        if(LEVEL==12)check(house.getRooms().length==9 && polygons==1621 && triangles==3178 && t.textures.length==3,"level12 map inventory changed");
+        System.out.println(TAG+" world rooms="+house.getRooms().length+" vertices="+vertices+" polygons="+polygons+" triangles="+triangles+" materials="+Arrays.toString(materials)+" chunk="+Room.chunkSizeRender+" dmode="+DirectX7.standartDrawmode+" dist="+DirectX7.drDist+" fogd="+DirectX7.fDist);
         String[] p=level.get("SKYBOX_2D").split(",");byte mode=DirectX7.standartDrawmode;DirectX7.standartDrawmode=0;
         Skybox sky=new Skybox(Asset.getTexture(p[0]),level.getFloat("SKYBOX_REPEAT_X",2),level.getFloat("SKYBOX_REPEAT_Y",1),
-            Integer.parseInt(p[2]),Float.parseFloat(p[1]),Float.parseFloat(p[3]),0,0x2f1028);
+            Integer.parseInt(p[2]),Float.parseFloat(p[1]),Float.parseFloat(p[3]),0,DirectX7.fogc);
         DirectX7.standartDrawmode=mode;sky.skyboxAlways=true;house.setSkybox(sky);
         loadObjects(house,level,file);
-        check(level.get("WEATHER")==null && Main.settings.get("WEATHER")==null,"unexpected weather; probe must implement actual configuration");
+        if(LEVEL==13)check(level.get("WEATHER")==null && Main.settings.get("WEATHER")==null,"unexpected weather; probe must implement actual configuration");
         Map<RawImage,int[]> hashes=new IdentityHashMap<RawImage,int[]>();for(RawImage raw:names.keySet())hashes.put(raw,raw.img.clone());
         String[] labels={"start","camp","rzavy","bandits","soldiers"};
         int[][] feet={pos(level.get("START")),{-110001,-3757,-115102},{-104423,-3676,-128113},{-79398,-3176,-20632},{-32789,936,-8797}};
+        if(LEVEL==12) {
+            labels=new String[]{"start","north-zombie","central-zombie","south-zombie","helicopter"};
+            feet=new int[][]{pos(level.get("START")),{1607,0,-35579},{34507,0,6122},{76610,0,-36271},{5676,0,13025}};
+        }
         for(int i=0;i<feet.length;i++)for(int pitch:new int[]{0,45})for(int yaw=0;yaw<360;yaw+=45)
             for(String part:FOG_OFF?new String[]{"objects"}:new String[]{"world","objects"})sample(house,sky,labels[i],feet[i],yaw,pitch,part);
         for(RawImage raw:names.keySet())check(Arrays.equals(hashes.get(raw),raw.img),"original pixels mutated");
-        house.destroy();System.out.println("PASS level13 actual world+panorama / 5 meshes+23 sprites+5 idle NPC / no weather / 80 poses x cold+warm / optional Fog OFF is diagnostic only / source pixels unchanged (not FPS/gameplay)");
+        house.destroy();System.out.println("PASS level"+LEVEL+" actual world+panorama / fixed idle objects / configured weather snapshot / 80 poses x cold+warm / optional Fog OFF is diagnostic only / source pixels unchanged (not FPS/gameplay)");
     }
 }

@@ -138,3 +138,11 @@ flag. Preverified classfile bytes не меняются; ресурсы не п�
 очередь скриптов. Физический шаг в AI fixture отключён. Native probes level13
 и level41 по-прежнему проверяют упорядоченные потоки/counters, не FPS.
 [Методика и ограничения](ai-selection-optimization.md).
+
+## Draw-вызовы Stlkr level12
+
+`QUANTUM_LEVEL12_PROBE=1` включает снимки реального level12 с порталами,
+тремя материалами мира, mesh presets, idle NPC и фиксированным дождём.
+[Методика, результаты и ограничения](m3g-level12-draw-diagnostic.md).
+Флаг `QUANTUM_LEVEL12_FOG_OFF=1` — только контрольный тест в child JVM,
+не изменение конфигов или тумана опубликованной игры.

@@ -19,7 +19,7 @@ import javax.microedition.lcdui.Image;
  */
 public final class WorldBottleneckProbe {
     static boolean active;
-    static int textureSplits,stateSplits,scaleSplits,capacitySplits,fogShared,fogLegacy;
+    static int textureSplits,stateSplits,scaleSplits,capacitySplits,scaleOnlySplits,fogShared,fogLegacy;
     static int clipAttempts,clipRecovered,clipTriangles,clipDiscards;
     public static boolean clipResult(WorldClipGeometry geometry,boolean success) {
         if(active) {
@@ -40,6 +40,7 @@ public final class WorldBottleneckProbe {
     }
     public static void split(boolean texture,boolean state,boolean scale,boolean capacity) {
         if(!active) return;
+        if(scale && !texture && !state && !capacity) scaleOnlySplits++;
         if(texture) textureSplits++;if(state) stateSplits++;if(scale) scaleSplits++;if(capacity) capacitySplits++;
     }
     public static boolean reject(String reason) {
@@ -110,7 +111,7 @@ public final class WorldBottleneckProbe {
         for(int pitch:new int[]{0,60}) for(int yaw:new int[]{0,90,180,270}) {
             Matrix camera=new Matrix(),rx=new Matrix(),ry=new Matrix();rx.setRotX(pitch);ry.setRotY(yaw);camera.mul(ry,rx);camera.setPosition(px,py,pz);g.setCamera(camera);
             for(int frame=0;frame<2;frame++) {
-                textureSplits=stateSplits=scaleSplits=capacitySplits=fogShared=fogLegacy=0;rejects.clear();packRejects.clear();
+                textureSplits=stateSplits=scaleSplits=capacitySplits=scaleOnlySplits=fogShared=fogLegacy=0;rejects.clear();packRejects.clear();
                 active=frame==1;g.beginFrameStats();
                 int rgb=Image.getRGBCalls,copies=Graphics.drawRGBCalls;
                 M3GTest.submit(g,new SolidSky(0x123456),null,0);g.renderBackground();
