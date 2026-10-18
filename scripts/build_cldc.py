@@ -16,7 +16,12 @@ from pathlib import Path
 import struct
 import subprocess
 import zipfile
-from game_resources import read_resources
+if __package__:
+    from .game_resources import read_resources
+    from .frame_profile import prepare_sources
+else:
+    from game_resources import read_resources
+    from frame_profile import prepare_sources
 
 ROOT = Path(__file__).resolve().parents[1]
 API_NAMES = ("cldc11.jar", "midp21.jar", "jsr135.jar",
@@ -125,6 +130,8 @@ def main():
     parser.add_argument("--output-dir", type=Path, default=ROOT / "artifacts")
     parser.add_argument("--resource-archive", type=Path,
                         help="Optional user game ZIP/JAR; assets only, never its classes or manifest")
+    parser.add_argument("--profile-frame", action="store_true",
+                        help="Diagnostic-only source copies with exclusive per-frame wall-clock HUD")
     args = parser.parse_args()
     archive_resources = read_resources(args.resource_archive) if args.resource_archive else {}
     ecj, proguard = args.ecj_jar.resolve(), args.proguard_jar.resolve()
@@ -158,6 +165,8 @@ def main():
                         merged.writestr(name, jar.read(name))
                         seen.add(name)
     sources = sorted(p for d in source_dirs for p in d.rglob("*.java"))
+    if args.profile_frame:
+        sources = prepare_sources(ROOT, sources, work / "frame-profile-src")
     # A fresh directory avoids including stale classes from a previous build.
     import tempfile
     with tempfile.TemporaryDirectory(prefix="classes-", dir=work) as temp:
@@ -168,9 +177,10 @@ def main():
              "-source", "1.3", "-target", "1.3", "-encoding", "UTF-8", "-proc:none",
              "-nowarn", "-bootclasspath", str(work / "api.jar"), "-d", str(classes),
              "@" + str(source_args)], "compile.log")
-        manifest = ("Manifest-Version: 1.0\r\nMIDlet-Name: Quantum\r\n"
+        app_name = "Quantum Profile" if args.profile_frame else "Quantum"
+        manifest = ("Manifest-Version: 1.0\r\nMIDlet-Name: " + app_name + "\r\n"
                     "MIDlet-Version: 1.0.0\r\nMIDlet-Vendor: AE-MODS.RU\r\n"
-                    "MIDlet-1: Quantum,,code.utils.Main\r\n"
+                    "MIDlet-1: " + app_name + ",,code.utils.Main\r\n"
                     "MicroEdition-Configuration: CLDC-1.1\r\n"
                     "MicroEdition-Profile: MIDP-2.0\r\n\r\n")
         resources = dict(archive_resources)
@@ -204,6 +214,7 @@ def main():
                    "preverifier": "ProGuard -microedition (CLDC StackMap)",
                    "tools_sha256": {p.name: sha256(p) for p in [ecj, proguard] + apis},
                    "resource_archive_sha256": sha256(args.resource_archive) if args.resource_archive else None,
+                   "frame_profile": args.profile_frame,
                    "runtime_tested": False})
     (output / "build-report.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))

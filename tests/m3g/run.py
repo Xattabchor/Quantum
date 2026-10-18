@@ -333,6 +333,18 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     # Compile the current adapter against the doubles, not copies of its logic.
     sources += [ROOT / "src/code/Rendering" / name for name in
                 ("M3GSceneRenderer.java", "M3GFrameEffects.java", "M3GMaterialMath.java", "M3GPolygonBatch.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
+    # Validate on-device frame-profile copies against the same API contracts.
+    # Requires a prior build_cldc.py --profile-frame; not a timing benchmark.
+    if os.environ.get("QUANTUM_FRAME_PROFILE"):
+        if os.environ.get("QUANTUM_WORLD_PROBE"):
+            raise ValueError("Run frame timing and world-reason instrumentation separately")
+        with zipfile.ZipFile(APP) as app:
+            if "code/Rendering/FrameProfile.class" not in app.namelist():
+                raise ValueError("Build with --profile-frame first")
+        names = {"M3GSceneRenderer.java", "ProjectedGeometry.java"}
+        sources = [ROOT / "build/cldc/frame-profile-src/code/Rendering" / p.name
+                   if p.name in names else p for p in sources]
+        sources.append(ROOT / "tests/frame_profile/FrameProfileSuiteRunner.java")
     # Optional diagnostics instrument TEMPORARY source copies only. Production
     # sources, published classes and rendering decisions remain untouched.
     if os.environ.get("QUANTUM_WORLD_PROBE"):
@@ -447,6 +459,10 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.StaticLightTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BakedNoFogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MuzzleGlowTest"], check=True)
+    if os.environ.get("QUANTUM_FRAME_PROFILE"):
+        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest"):
+            subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameProfileSuiteRunner",
+                            "code.Rendering." + test], check=True)
     # Remove the optional API for a real class-loading fallback test.
     shutil.rmtree(classes / "javax/microedition/m3g")
     no_m3g_api = temp / "api-without-m3g.jar"
