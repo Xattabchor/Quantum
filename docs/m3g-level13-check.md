@@ -4,8 +4,11 @@
 в `8eee325`. SHA-256 архива:
 `3c77d2fe5db203e4571cdb12aea5d26721058fca327e2a39edce733492719f19`.
 
-**Проверяется текущий Quantum M3G из `1e326c5`, не старые классы архива.**
-Production-код, готовый `downloads/Quantum.jar` и ресурсы не изменены.
+**Это исходная диагностика до оптимизации: Quantum M3G из `1e326c5`,
+не старые классы архива.** На этапе этой проверки production-код,
+готовый `downloads/Quantum.jar` и ресурсы не изменялись.
+Последующая [точная оптимизация Fog batching](m3g-fog-exact-rebase.md)
+сравнивается с этим baseline; исходный CSV сохранён без изменений.
 Использованы реальные модели/текстуры/конфиги, production decoders,
 House/порталы, MeshObject, SpriteObject и idle-render NPC. Вызовы M3G
 перехватываются API doubles: это не GPU raster и не FPS на OMAP1710.

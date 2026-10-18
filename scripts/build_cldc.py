@@ -32,6 +32,31 @@ def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def restore_unicode_resources(path, resources):
+    """Keep verified classes, restore original resource bytes/names/UTF-8 flags.
+
+    ProGuard 6.x writes UTF-8 entry names but can omit the ZIP UTF-8 flag.
+    Repack only builds with non-ASCII asset names; do not guess mojibake names.
+    Classfile contents (including CLDC StackMaps) are never transformed here.
+    """
+    if not any(not name.isascii() for name in resources):
+        return
+    temporary = path.with_name(path.name + '.resources.tmp')
+    try:
+        with zipfile.ZipFile(path) as source, zipfile.ZipFile(
+                temporary, 'w', zipfile.ZIP_DEFLATED) as target:
+            for entry in source.infolist():
+                if entry.filename.endswith('.class') or entry.filename == 'META-INF/MANIFEST.MF':
+                    target.writestr(entry, source.read(entry))
+            for name, data in sorted(resources.items()):
+                if name.lower().endswith('.class') or name.upper().startswith('META-INF/'):
+                    raise ValueError('Executable/metadata is not a game resource: ' + name)
+                target.writestr(name, data)
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def audit_jar(path):
     """Structural audit; actual CLDC data-flow preverification is ProGuard's job."""
     counts = {"classes": 0, "code_methods": 0, "stackmap_attributes": 0}
@@ -203,6 +228,7 @@ def main():
                       "-libraryjars api.jar\n-microedition\n-target 1.3\n"
                       "-dontshrink\n-dontoptimize\n-dontobfuscate\n-keepattributes *\n-verbose\n")
     run([args.java, "-jar", str(proguard), "@" + str(config)], "preverify.log")
+    restore_unicode_resources(work / "Quantum.jar", resources)
     result = audit_jar(work / "Quantum.jar")
     import shutil
     shutil.copyfile(work / "Quantum.jar", output / "Quantum.jar")

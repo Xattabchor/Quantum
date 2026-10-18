@@ -12,6 +12,7 @@ import java.io.*;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.zip.*;
+import java.security.MessageDigest;
 import javax.imageio.ImageIO;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
@@ -35,6 +36,7 @@ public final class Level13Probe {
     }
     private static final Map<RawImage,String> names=new IdentityHashMap<RawImage,String>();
     private static final Map<Texture2D,String> nativeNames=new IdentityHashMap<Texture2D,String>();
+    private static final Map<Texture2D,String> nativeSources=new IdentityHashMap<Texture2D,String>();
     private static final List<Sprite> sprites=new ArrayList<Sprite>();
     private static final List<RoomObject> objects=new ArrayList<RoomObject>();
     private static void check(boolean b,String why){M3GTest.check(b,why);}
@@ -42,6 +44,7 @@ public final class Level13Probe {
     public static void upload(Texture2D texture,RawImage raw,int kind) {
         if(active) {
             String name=names.get(raw);check(name!=null,"unattributed texture");
+            nativeSources.put(texture,name+":"+kind);
             nativeNames.put(texture,kind==M3GSceneRenderer.PANORAMA_TEXTURE?"sky":
                 kind==M3GSceneRenderer.SPRITE_CUTOUT || kind==M3GSceneRenderer.SPRITE_ALPHA
                     || kind==M3GSceneRenderer.SPRITE_ADD || kind>=M3GSceneRenderer.SPRITE_MUL?"sprite":
@@ -142,7 +145,7 @@ public final class Level13Probe {
         check(room!=-1,"camera feet outside map "+label);
         Field q=DirectX7.class.getDeclaredField("buffer");q.setAccessible(true);
         for(RoomObject o:objects)o.visible=part.equals("objects");
-        nativeNames.clear();active=true;
+        nativeNames.clear();nativeSources.clear();active=true;
         for(int frame=0;frame<4;frame++) {
             Graphics3D.history.clear();g.beginFrameStats();resetReasons();counting=true;
             int reads=Image.getRGBCalls,copies=Graphics.drawRGBCalls;
@@ -174,9 +177,45 @@ public final class Level13Probe {
                 +" B="+g.getM3GCpuBarriers()+" T="+g.getM3GTextureUploads()+" readbacks="+(Image.getRGBCalls-reads)+" copies="+(Graphics.drawRGBCalls-copies)
                 +" textureSplits="+WorldBottleneckProbe.textureSplits+" stateSplits="+WorldBottleneckProbe.stateSplits+" scaleSplits="+WorldBottleneckProbe.scaleSplits+" capacitySplits="+WorldBottleneckProbe.capacitySplits
                 +" fogShared="+WorldBottleneckProbe.fogShared+" fogLegacy="+WorldBottleneckProbe.fogLegacy+" clipAttempts="+WorldBottleneckProbe.clipAttempts+" clipRecovered="+WorldBottleneckProbe.clipRecovered+" clipTriangles="+WorldBottleneckProbe.clipTriangles
-                +" rejects="+WorldBottleneckProbe.rejects+" packRejects="+WorldBottleneckProbe.packRejects);
+                +" stream="+stream()+" rejects="+WorldBottleneckProbe.rejects+" packRejects="+WorldBottleneckProbe.packRejects);
         }
-        active=counting=WorldBottleneckProbe.active=false;g.destroy();Graphics3D.history.clear();nativeNames.clear();
+        active=counting=WorldBottleneckProbe.active=false;g.destroy();Graphics3D.history.clear();nativeNames.clear();nativeSources.clear();
+    }
+    private static void hashInt(MessageDigest hash,int n) {
+        hash.update((byte)(n>>>24));hash.update((byte)(n>>>16));hash.update((byte)(n>>>8));hash.update((byte)n);
+    }
+    // Packet-boundary-independent witness of every submitted triangle. For Fog,
+    // hash physical XYZ bits; otherwise hash screen XY and relative W (the
+    // per-polygon homogeneous scale cancels). Source labels include cache kind.
+    private static String stream() throws Exception {
+        MessageDigest hash=MessageDigest.getInstance("SHA-256");
+        for(Graphics3D.Draw d:Graphics3D.history) {
+            String state=(d.source==null?"untextured":nativeSources.get(d.source))+":"+d.blend+":"+d.function+":"+d.blendColor
+                +":"+d.filter+":"+d.threshold+":"+d.cull+":"+d.winding+":"+d.perspective+":"+d.fog+":"+d.fogMode
+                +":"+d.fogColor+":"+d.near+":"+d.far+":"+d.density+":"+d.colorComponents+":"+d.lit+":"+d.lights;
+            byte[] material=state.getBytes("UTF-8");int offset=0;
+            for(int length:d.lengths) {
+                for(int i=2;i<length;i++) {
+                    int a=d.indices[offset+i-2],b=d.indices[offset+i-1],c=d.indices[offset+i];
+                    if((i&1)!=0){int t=a;a=b;b=t;}
+                    hash.update(material);for(float v:d.projection)hashInt(hash,Float.floatToIntBits(v));
+                    for(int v:new int[]{a,b,c}) {
+                        if(d.fog)for(int k=0;k<3;k++)hashInt(hash,Float.floatToIntBits(d.positions[v*3+k]*d.scale));
+                        else {
+                            double z=-d.positions[v*3+2];
+                            for(double value:new double[]{d.positions[v*3]/z,d.positions[v*3+1]/z,z/-d.positions[a*3+2]}) {
+                                long bits=Double.doubleToLongBits(value);hashInt(hash,(int)(bits>>>32));hashInt(hash,(int)bits);
+                            }
+                        }
+                        if(d.textured)for(int k=0;k<2;k++)hashInt(hash,Float.floatToIntBits(d.coords[v*2+k]*d.uvScale));
+                        for(int k=0;k<d.colorComponents;k++)hash.update(d.colors[v*d.colorComponents+k]);
+                    }
+                }
+                offset+=length;
+            }
+        }
+        byte[] digest=hash.digest();StringBuffer hex=new StringBuffer();
+        for(byte b:digest){int n=b&255;if(n<16)hex.append('0');hex.append(Integer.toHexString(n));}return hex.toString();
     }
     public static void main(String[] args) throws Exception {
         String file=text("/level13.txt");Method cut=LevelLoader.class.getDeclaredMethod("cutLevelFile",String.class);cut.setAccessible(true);

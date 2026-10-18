@@ -18,6 +18,7 @@ final class M3GPolygonBatch {
     private final short[] xyz=new short[MAX_VERTICES*3],uv=new short[MAX_VERTICES*2];
     private final byte[] rgba=new byte[MAX_VERTICES*4];
     private final short[] firstXYZ=new short[12],firstUV=new short[8];
+    private final short[] rebasedXYZ=new short[12];
     private final byte[] firstRGBA=new byte[16];
     private final Appearance appearance=new Appearance();
     private final CompositingMode composite=new CompositingMode();
@@ -55,10 +56,18 @@ final class M3GPolygonBatch {
         float density=fogged?source.density:0;
         // Capture desired state BEFORE flushing: a cached Texture2D may already
         // have been changed by preparation of the next material.
-        if(firstCount!=0 && (texture!=tex || polygon!=poly || this.blend!=blend
+        boolean different=texture!=tex || polygon!=poly || this.blend!=blend
                 || this.function!=function || blendColor!=source.blendColor || levelFilter!=level || imageFilter!=filter
                 || this.threshold!=threshold || this.fogged!=fogged || fogColor!=color
-                || this.near!=near || this.far!=far || this.fogMode!=fogMode || this.density!=density || (fogged && this.scale!=scale)
+                || this.near!=near || this.far!=far || this.fogMode!=fogMode || this.density!=density;
+        // Exact powers-of-two rebasing only: keep XYZ * scale, screen endpoints,
+        // perspective weights and native Fog depth unchanged. No quantization.
+        if(firstCount!=0 && !different && fogged && this.scale!=scale
+                && (size==0?firstOrder.length:size)+order.length<=MAX_VERTICES
+                && rebase(scale,positions,count)) {
+            positions=rebasedXYZ;scale=this.scale;
+        }
+        if(firstCount!=0 && (different || (fogged && this.scale!=scale)
                 || (size==0?firstOrder.length:size)+order.length>MAX_VERTICES)) flush(g);
         if(firstCount==0) {
             texture=tex;polygon=poly;this.blend=blend;this.function=function;blendColor=source.blendColor;
@@ -72,6 +81,46 @@ final class M3GPolygonBatch {
         }
         if(size==0) append(firstXYZ,firstUV,firstRGBA,firstOrder);
         append(positions,coords,colors,order);
+    }
+
+    private boolean rebase(float incoming,short[] source,int count) {
+        int a=Float.floatToIntBits(scale),b=Float.floatToIntBits(incoming);
+        int ea=(a>>>23)&255,eb=(b>>>23)&255;
+        // Identical mantissas + normal positive exponents prove an exact binary
+        // ratio, without a soft-float divide on ARM9. Never merge unrelated
+        // legacy scales, NaN/Inf, zero, negative or denormal values.
+        if(a<=0 || b<=0 || ea==0 || eb==0 || ea==255 || eb==255
+                || ((a^b)&0x7fffff)!=0) return false;
+        int shift=Math.abs(ea-eb);
+        if(shift==0 || shift>15) return false;
+        short[] pending=size==0?firstXYZ:xyz;int length=(size==0?firstCount:size)*3;
+        int input=count*3;boolean pendingFine=a<b;
+        // Prefer the finer scale if the coarser packet fits after exact shift.
+        if(fits(pendingFine?source:pending,pendingFine?input:length,shift,false)) {
+            if(!pendingFine) convert(pending,pending,length,shift,false);
+            convert(source,rebasedXYZ,input,pendingFine?shift:0,false);
+            if(!pendingFine) scale=incoming;
+            return true;
+        }
+        // Coarsening is allowed only when EVERY component divides exactly.
+        // Preflight the whole packet before touching any pending vertex.
+        if(!fits(pendingFine?pending:source,pendingFine?length:input,shift,true)) return false;
+        if(pendingFine) convert(pending,pending,length,shift,true);
+        convert(source,rebasedXYZ,input,pendingFine?0:shift,true);
+        if(pendingFine) scale=incoming;
+        return true;
+    }
+    private static boolean fits(short[] values,int length,int shift,boolean divide) {
+        int mask=(1<<shift)-1;
+        for(int i=0;i<length;i++) {
+            int v=values[i];
+            if(divide) {if((v&mask)!=0) return false;}
+            else if((v<<shift) < -32767 || (v<<shift)>32767) return false;
+        }
+        return true;
+    }
+    private static void convert(short[] source,short[] target,int length,int shift,boolean divide) {
+        for(int i=0;i<length;i++) target[i]=(short)(divide?source[i]>>shift:source[i]<<shift);
     }
 
     private void append(short[] positions,short[] coords,byte[] colors,int[] order) {

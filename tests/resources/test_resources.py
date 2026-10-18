@@ -10,6 +10,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from game_resources import inventory, read_resources
+from build_cldc import restore_unicode_resources
 
 
 class ResourceArchiveTest(unittest.TestCase):
@@ -51,6 +52,41 @@ class ResourceArchiveTest(unittest.TestCase):
         for entries in ([], [('Old.class', b'code')]):
             with self.assertRaisesRegex(ValueError, 'No game resources'):
                 read_resources(self.archive(entries))
+
+    def test_unicode_packaging_preserves_verified_classes_and_original_assets(self):
+        name = 'gamedata/HUD/background2е.png'
+        payload = b'original binary resource\x00\xff'
+        bytecode = b'preverified class with unchanged StackMap bytes'
+        manifest = b'Manifest-Version: 1.0\r\n\r\n'
+        path = self.archive([('META-INF/MANIFEST.MF', manifest),
+                             ('code/Example.class', bytecode), (name, payload)])
+        # Reproduce ProGuard's missing UTF-8 flags in local + central headers.
+        with zipfile.ZipFile(path) as source:
+            offsets = [entry.header_offset for entry in source.infolist()]
+        raw = bytearray(path.read_bytes())
+        for offset in offsets:
+            flags = struct.unpack_from('<H', raw, offset + 6)[0]
+            struct.pack_into('<H', raw, offset + 6, flags & ~0x800)
+        offset = 0
+        while True:
+            offset = raw.find(b'PK\x01\x02', offset)
+            if offset < 0:
+                break
+            flags = struct.unpack_from('<H', raw, offset + 8)[0]
+            struct.pack_into('<H', raw, offset + 8, flags & ~0x800)
+            offset += 46
+        path.write_bytes(raw)
+        with zipfile.ZipFile(path) as broken:
+            self.assertNotIn(name, broken.namelist())
+        restore_unicode_resources(path, {name: payload})
+        with zipfile.ZipFile(path) as result:
+            self.assertEqual(set(result.namelist()),
+                             {'META-INF/MANIFEST.MF', 'code/Example.class', name})
+            self.assertEqual(result.read('code/Example.class'), bytecode)
+            self.assertEqual(result.read('META-INF/MANIFEST.MF'), manifest)
+            self.assertEqual(result.read(name), payload)
+            self.assertTrue(result.getinfo(name).flag_bits & 0x800)
+        self.assertFalse(path.with_name(path.name + '.resources.tmp').exists())
 
     def test_inventory(self):
         png = b'\x89PNG\r\n\x1a\n' + b'\0\0\0\rIHDR' + struct.pack('>II', 256, 128)

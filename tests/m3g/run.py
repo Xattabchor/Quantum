@@ -428,6 +428,22 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
             path.write_text(content)
             instrumented.append(path)
         sources = instrumented
+    # Test-only merge-disabled reference for exact ordered stream comparison.
+    # Never add a runtime/level option or modify the production source in place.
+    if os.environ.get("QUANTUM_FOG_REBASE_REFERENCE"):
+        reference_sources = []
+        for source in sources:
+            if source.name == "M3GPolygonBatch.java":
+                content = source.read_text()
+                marker = "&& rebase(scale,positions,count)"
+                assert content.count(marker) == 1
+                path = temp / "fog-rebase-reference" / source.name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content.replace(marker, "&& false"))
+                reference_sources.append(path)
+            else:
+                reference_sources.append(source)
+        sources = reference_sources
     if os.environ.get("ECJ_JAR"):
         compiler = [JAVA, "-jar", os.environ["ECJ_JAR"], "-8", "-proc:none", "-nowarn"]
     else:
@@ -499,6 +515,8 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.Mode12FogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.GeometryTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogPackingTest"], check=True)
+    if not os.environ.get("QUANTUM_FOG_REBASE_REFERENCE"):
+        subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogRebaseTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.RenderStatsTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyBatchTest", str(TEST / "sky-stream-golden.txt")], check=True)
@@ -509,7 +527,9 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BakedNoFogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MuzzleGlowTest"], check=True)
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
-        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest", "Mode12FogTest", "Arm9PreparationTest"):
+        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest", "Mode12FogTest", "Arm9PreparationTest", "FogRebaseTest"):
+            if test == "FogRebaseTest" and os.environ.get("QUANTUM_FOG_REBASE_REFERENCE"):
+                continue
             subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameProfileSuiteRunner",
                             "code.Rendering." + test], check=True)
     # Remove the optional API for a real class-loading fallback test.
