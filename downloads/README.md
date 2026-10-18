@@ -2,15 +2,30 @@
 
 CLDC 1.1 / MIDP 2.0. Preverified with ProGuard 6.2.2 -microedition.
 
+**18.10.2026 — точное упрощение полностью насыщенного native Fog:**
+в тяжёлой контрольной позе Stlkr level12 **D108 → 105**, в отдельных
+ракурсах до 7 draws меньше; 12/80 поз улучшены, ухудшений в наборе нет.
+Только непрозрачные поверхности, целиком за плотным LINEAR Fog. Видимая
+граница тумана и cutout/alpha сохранены; Fog не отключён. Level13 D75 прежний.
+Это небольшой выигрыш по API-вызовам, **не замер FPS телефона**.
+[Методика, ограничения и проверки](../docs/m3g-saturated-fog-batching.md).
+Текущий движок: **477604 байт**, SHA-256
+`af4461067cd430df34ea2eba585f9aa59a67d7578068e1eb968cd350c63c22b9`.
+Полная Stlkr: **[JAR](Quantum_Stlkr_FogBatch_ARM9.jar)** /
+[JAD](Quantum_Stlkr_FogBatch_ARM9.jad), **10075349 байт**, SHA-256
+`3aa534751a3b3cfa952be849dfc4328c8e0ba9f43cc6f9a5e6193d80f2845b76`.
+Все предыдущие Fog/Sprite/AI оптимизации включены, 442 ресурса неизменны.
+CLDC preverification пройдена; `runtime_tested=false`.
+
 **18.10.2026 — оптимизация CPU-нагрузки ИИ NPC:** один проход для врага и
 следования, ранняя фильтрация фракций, без временных FOV-векторов и с точной
 пограничной математикой. В тесте 96 NPC: чтения списка **36 864 → 9 216**;
 при FOV on sqrt **29 008 → 264**. Реакция, атаки, raycast и частота update
 не замедлялись. Это счётчики операций, **не FPS телефона**.
 [Проверки и ограничения](../docs/ai-selection-optimization.md).
-Текущий движок: **476884 байт**, SHA-256
+Движок этапа ИИ: **476884 байт**, SHA-256
 `d7d4527655a4b6807d0685f905cc5ab68c3d5601e883c80a02d413c32dbbe092`.
-Полная Stlkr: **[Quantum_Stlkr_FogBatch_ARM9.jar](Quantum_Stlkr_FogBatch_ARM9.jar)**
+Сборка этапа ИИ: **[Quantum_Stlkr_FogBatch_ARM9.jar](Quantum_Stlkr_FogBatch_ARM9.jar)**
 / [JAD](Quantum_Stlkr_FogBatch_ARM9.jad), **10074630 байт**, SHA-256
 `89746039134f288eb7c3767f56a8780a8d37f4eb21efc8964ad57201c87834f2`.
 Имя сохранено; включает Fog/Sprite batching и ИИ, все 442 ресурса неизменны.

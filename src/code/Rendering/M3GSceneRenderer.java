@@ -443,6 +443,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         Texture2D nativeTexture = texture(g, raw, kind);
         CachedTexture nativeEntry=lastTexture;
         batchState.imageFilter=nativeEntry.filter;
+        batchState.opaque=kind==OPAQUE_TEXTURE && nativeEntry.cutoutThreshold==0;
         int slot = count - 3;
         if(!batchable) posArrays[slot].set(0, count, positions);
         if(!batchable) uvArrays[slot].set(0, count, coords);

@@ -430,6 +430,21 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
             path.write_text(content)
             instrumented.append(path)
         sources = instrumented
+    # Disable only saturated-Fog folding in temporary sources, for a baseline.
+    if os.environ.get("QUANTUM_FOG_SOLID_REFERENCE"):
+        reference_sources = []
+        for source in sources:
+            if source.name == "M3GPolygonBatch.java":
+                content = source.read_text()
+                marker = "&& source.opaque && opaque"
+                assert content.count(marker) == 1
+                path = temp / "fog-solid-reference" / source.name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content.replace(marker,"&& false && source.opaque && opaque"))
+                reference_sources.append(path)
+            else:
+                reference_sources.append(source)
+        sources = reference_sources
     # Test-only merge-disabled reference for exact ordered stream comparison.
     # Never add a runtime/level option or modify the production source in place.
     if os.environ.get("QUANTUM_FOG_REBASE_REFERENCE"):
@@ -538,6 +553,8 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogPackingTest"], check=True)
     if not os.environ.get("QUANTUM_FOG_REBASE_REFERENCE"):
         subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogRebaseTest"], check=True)
+    if not os.environ.get("QUANTUM_FOG_SOLID_REFERENCE"):
+        subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FogSolidTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.RenderStatsTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyBatchTest", str(TEST / "sky-stream-golden.txt")], check=True)
@@ -548,7 +565,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BakedNoFogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MuzzleGlowTest"], check=True)
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
-        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest", "Mode12FogTest", "Arm9PreparationTest", "FogRebaseTest", "SpriteBatchTest"):
+        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest", "Mode11DecalTest", "Mode12FogTest", "Arm9PreparationTest", "FogRebaseTest", "FogSolidTest", "SpriteBatchTest"):
             if test == "FogRebaseTest" and os.environ.get("QUANTUM_FOG_REBASE_REFERENCE"):
                 continue
             if test == "SpriteBatchTest" and os.environ.get("QUANTUM_SPRITE_BATCH_REFERENCE"):

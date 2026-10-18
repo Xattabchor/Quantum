@@ -1,0 +1,123 @@
+{
+  "baseline_commit": "bec4f63",
+  "phone_tested": false,
+  "fps_measured": false,
+  "method": "strict native stream for ordinary triangles; independently canonicalized fully opaque, fully clamped LINEAR Fog result for saturated triangles",
+  "levels": {
+    "12": {
+      "rows": 320,
+      "visible_streams_equal": 320,
+      "strict_streams_equal": 273,
+      "world": {
+        "poses": 80,
+        "before_draws": 2076,
+        "after_draws": 2027,
+        "before_max": 101,
+        "after_max": 99,
+        "improved_poses": 12,
+        "regressed_poses": 0,
+        "max_reduction": 8,
+        "baseline_peak_after": {
+          "sample": "south-zombie",
+          "pos": "76610,1503,-36271",
+          "yaw": "0",
+          "pitch": "0",
+          "D": "99",
+          "world": "94",
+          "fogSolid": "2",
+          "mesh": "0",
+          "sprites": "0",
+          "sky": "2"
+        }
+      },
+      "objects": {
+        "poses": 80,
+        "before_draws": 2459,
+        "after_draws": 2412,
+        "before_max": 108,
+        "after_max": 105,
+        "improved_poses": 12,
+        "regressed_poses": 0,
+        "max_reduction": 7,
+        "baseline_peak_after": {
+          "sample": "south-zombie",
+          "pos": "76610,1503,-36271",
+          "yaw": "0",
+          "pitch": "0",
+          "D": "105",
+          "world": "97",
+          "fogSolid": "2",
+          "mesh": "2",
+          "sprites": "1",
+          "sky": "2"
+        }
+      }
+    },
+    "13": {
+      "rows": 320,
+      "visible_streams_equal": 320,
+      "strict_streams_equal": 320,
+      "world": {
+        "poses": 80,
+        "before_draws": 929,
+        "after_draws": 929,
+        "before_max": 50,
+        "after_max": 50,
+        "improved_poses": 0,
+        "regressed_poses": 0,
+        "max_reduction": 0,
+        "baseline_peak_after": {
+          "sample": "camp",
+          "pos": "-110001,-2254,-115102",
+          "yaw": "0",
+          "pitch": "0",
+          "D": "50",
+          "world": "48",
+          "fogSolid": "0",
+          "mesh": "0",
+          "sprites": "0",
+          "sky": "2"
+        }
+      },
+      "objects": {
+        "poses": 80,
+        "before_draws": 1049,
+        "after_draws": 1049,
+        "before_max": 75,
+        "after_max": 75,
+        "improved_poses": 0,
+        "regressed_poses": 0,
+        "max_reduction": 0,
+        "baseline_peak_after": {
+          "sample": "camp",
+          "pos": "-110001,-2254,-115102",
+          "yaw": "0",
+          "pitch": "0",
+          "D": "75",
+          "world": "54",
+          "fogSolid": "0",
+          "mesh": "13",
+          "sprites": "6",
+          "sky": "2"
+        }
+      }
+    }
+  },
+  "level41_strict_rows_unchanged": 256,
+  "level41_suite_sky_streams_unchanged": 86,
+  "classes_byte_identical": 146,
+  "changed_classes": [
+    "code/Rendering/M3GPolygonBatch$State.class",
+    "code/Rendering/M3GPolygonBatch.class",
+    "code/Rendering/M3GSceneRenderer.class"
+  ],
+  "assets_byte_identical": 442,
+  "engine": {
+    "bytes": 477604,
+    "sha256": "af4461067cd430df34ea2eba585f9aa59a67d7578068e1eb968cd350c63c22b9"
+  },
+  "game": {
+    "bytes": 10075349,
+    "sha256": "3aa534751a3b3cfa952be849dfc4328c8e0ba9f43cc6f9a5e6193d80f2845b76"
+  }
+}

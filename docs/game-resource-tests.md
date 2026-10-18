@@ -146,3 +146,9 @@ flag. Preverified classfile bytes не меняются; ресурсы не п�
 [Методика, результаты и ограничения](m3g-level12-draw-diagnostic.md).
 Флаг `QUANTUM_LEVEL12_FOG_OFF=1` — только контрольный тест в child JVM,
 не изменение конфигов или тумана опубликованной игры.
+
+
+Продолжение: [объединение непрозрачных поверхностей за плотным Fog](m3g-saturated-fog-batching.md).
+`QUANTUM_FOG_SOLID_REFERENCE=1` отключает только его во временных исходниках.
+`stream` остаётся строгим physical witness; `visibleStream` дополнительно
+канонизирует доказанно постоянный opaque LINEAR Fog. Не путать с Fog OFF.

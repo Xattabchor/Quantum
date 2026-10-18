@@ -9,7 +9,7 @@ final class M3GPolygonBatch {
         PolygonMode polygon;
         int blend,function,blendColor,imageFilter=Texture2D.FILTER_NEAREST,fogColor,fogMode=Fog.LINEAR;
         float threshold,near,far,density;
-        boolean fogged;
+        boolean fogged,opaque;
     }
 
     private static final int MAX_VERTICES=192; // 64 triangles / 32 quads
@@ -30,9 +30,10 @@ final class M3GPolygonBatch {
     private PolygonMode polygon;
     private int blend,function,blendColor,levelFilter,imageFilter,fogColor,fogMode;
     private float threshold,near,far,scale,density;
-    private boolean fogged;
+    private boolean fogged,opaque,solid;
     private int appliedFogMode=Fog.LINEAR;
     private float appliedDensity=-1;
+    private float guardedFar=-1,guardLimit;
     private int firstCount,size;
     private int[] firstOrder;
     private TriangleStripArray firstIndices;
@@ -67,20 +68,52 @@ final class M3GPolygonBatch {
                 && rebase(scale,positions,count)) {
             positions=rebasedXYZ;scale=this.scale;
         }
+        // Only fold when an ORIGINAL packet boundary would otherwise occur.
+        // An isolated far polygon keeps its original texture/Fog state, so it
+        // can still batch with a following near polygon of the same material.
+        if(firstCount!=0 && (different || this.scale!=scale) && fogged && this.fogged
+                && (size==0?firstOrder.length:size)+order.length<=MAX_VERTICES
+                && source.opaque && opaque && fogMode==Fog.LINEAR && this.fogMode==Fog.LINEAR
+                && blend==CompositingMode.REPLACE && this.blend==blend
+                && function==Texture2D.FUNC_MODULATE && (solid || this.function==function)
+                && threshold==0 && this.threshold==0 && polygon==poly && fogColor==color
+                && blendColor==source.blendColor && near>=0 && far>near && this.far>this.near
+                && saturated(positions,colors,count,scale,far)
+                && (solid || saturated(size==0?firstXYZ:xyz,size==0?firstRGBA:rgba,
+                    size==0?firstCount:size,this.scale,this.far))) {
+            // Every covered pixel is opaque Fog color, regardless of texture
+            // or depth. Preserve ordered XYZ ratios/UV/RGBA, using native Fog
+            // at full saturation and a common positive homogeneous scale.
+            texture=null;this.function=0;imageFilter=Texture2D.FILTER_NEAREST;
+            this.near=0;this.far=0.5f;this.scale=1;solid=true;
+            tex=null;function=0;filter=Texture2D.FILTER_NEAREST;near=0;far=0.5f;scale=1;
+            different=false;
+        }
         if(firstCount!=0 && (different || (fogged && this.scale!=scale)
                 || (size==0?firstOrder.length:size)+order.length>MAX_VERTICES)) flush(g);
         if(firstCount==0) {
             texture=tex;polygon=poly;this.blend=blend;this.function=function;blendColor=source.blendColor;
             levelFilter=level;imageFilter=filter;this.threshold=threshold;
             this.fogged=fogged;fogColor=color;this.near=near;this.far=far;this.scale=scale;this.fogMode=fogMode;this.density=density;
-            firstCount=count;firstOrder=order;firstIndices=indices;
+            firstCount=count;firstOrder=order;firstIndices=indices;opaque=source.opaque;solid=false;
             System.arraycopy(positions,0,firstXYZ,0,count*3);
             System.arraycopy(coords,0,firstUV,0,count*2);
             System.arraycopy(colors,0,firstRGBA,0,count*4);
             return;
         }
+        opaque &= source.opaque;
         if(size==0) append(firstXYZ,firstUV,firstRGBA,firstOrder);
         append(positions,coords,colors,order);
+    }
+
+    private boolean saturated(short[] positions,byte[] colors,int count,float scale,float far) {
+        if(!(scale>0) || !(scale<1.0e30f) || !(far<Float.MAX_VALUE)) return false;
+        if(guardedFar!=far) {guardedFar=far;guardLimit=far*1.001f+0.01f;}
+        int closest=positions[2];
+        for(int i=1;i<count;i++) closest=Math.max(closest,positions[i*3+2]);
+        if(closest>=0 || -closest*scale <= guardLimit) return false;
+        for(int i=0;i<count;i++) if((colors[i*4+3]&255)!=255) return false;
+        return true;
     }
 
     private boolean rebase(float incoming,short[] source,int count) {

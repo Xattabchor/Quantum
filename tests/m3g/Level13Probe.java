@@ -40,6 +40,7 @@ public final class Level13Probe {
     private static final Map<RawImage,String> names=new IdentityHashMap<RawImage,String>();
     private static final Map<Texture2D,String> nativeNames=new IdentityHashMap<Texture2D,String>();
     private static final Map<Texture2D,String> nativeSources=new IdentityHashMap<Texture2D,String>();
+    private static final Map<Texture2D,Boolean> opacity=new IdentityHashMap<Texture2D,Boolean>();
     private static final List<Sprite> sprites=new ArrayList<Sprite>();
     private static final List<RoomObject> objects=new ArrayList<RoomObject>();
     private static void check(boolean b,String why){M3GTest.check(b,why);}
@@ -166,7 +167,7 @@ public final class Level13Probe {
         check(room!=-1,"camera feet outside map "+label);
         Field q=DirectX7.class.getDeclaredField("buffer");q.setAccessible(true);
         for(RoomObject o:objects)o.visible=part.equals("objects");
-        nativeNames.clear();nativeSources.clear();active=true;
+        nativeNames.clear();nativeSources.clear();opacity.clear();active=true;
         for(int frame=0;frame<4;frame++) {
             Graphics3D.history.clear();g.beginFrameStats();resetReasons();counting=true;
             int reads=Image.getRGBCalls,copies=Graphics.drawRGBCalls;
@@ -179,27 +180,27 @@ public final class Level13Probe {
             g.renderGameFrameImage(null,false,false,house,room,LEVEL==12?rain(g):null);counting=false;
             check(g.isM3GActive(),"Stlkr native backend failed: "+g.getRendererError());
             check(DirectX7.standartDrawmode==3 && DirectX7.fDist==levelConfig.getInt("FOGD",1) && DirectX7.drDist==levelConfig.getInt("DIST",1),"sample lost level globals");
-            int world=0,mesh=0,sprite=0,background=0,weatherDraws=0,triangles=0;
+            int world=0,mesh=0,sprite=0,background=0,weatherDraws=0,fogSolid=0,triangles=0;
             for(Graphics3D.Draw d:Graphics3D.history) {
-                String kind=d.source==null?(LEVEL==12 && d.cull==javax.microedition.m3g.PolygonMode.CULL_BACK?"mesh":
+                String kind=d.source==null && d.fog?"fogSolid":d.source==null?(LEVEL==12 && d.cull==javax.microedition.m3g.PolygonMode.CULL_BACK?"mesh":
                     LEVEL==12 && d.colorComponents==3?"weather":"sky"):nativeNames.get(d.source);check(kind!=null,"missing native texture attribution");
                 if(kind.equals("world") || (LEVEL==13 && kind.equals("mesh"))) {
                     check(d.fog!=FOG_OFF,"world/mesh lost configured native Fog");
                     if(!FOG_OFF)check(d.fogMode==javax.microedition.m3g.Fog.LINEAR,"mode3 not LINEAR");
                 }
                 if(kind.equals("world"))world++;else if(kind.equals("mesh"))mesh++;
-                else if(kind.equals("sprite"))sprite++;else if(kind.equals("weather"))weatherDraws++;else background++;
+                else if(kind.equals("fogSolid"))fogSolid++;else if(kind.equals("sprite"))sprite++;else if(kind.equals("weather"))weatherDraws++;else background++;
                 if(d.cull==javax.microedition.m3g.PolygonMode.CULL_BACK)triangles+=d.indices.length/3;
             }
-            check(world+mesh+sprite+background+weatherDraws==g.getM3GDrawCalls(),"draw attribution mismatch");
+            check(world+mesh+sprite+background+weatherDraws+fogSolid==g.getM3GDrawCalls(),"draw attribution mismatch");
             if(frame==3)check(g.getM3GTextureUploads()==0,"warm snapshot reuploaded textures");
             if(frame==0 || frame==3)System.out.println(TAG+" part="+part+" fog="+(FOG_OFF?"off":"on")+" sample="+label+" phase="+(frame==0?"cold":"warm")
                 +" room="+room+" pos="+cam.m03+","+cam.m13+","+cam.m23+" yaw="+yaw+" pitch="+pitch+" projected="+projected+" queued="+queued
                 +" D="+g.getM3GDrawCalls()+" sky="+background+" world="+world+" mesh="+mesh+" sprites="+sprite+" triangles="+triangles
-                +(LEVEL==12?" weather="+weatherDraws:"")+" B="+g.getM3GCpuBarriers()+" T="+g.getM3GTextureUploads()+" readbacks="+(Image.getRGBCalls-reads)+" copies="+(Graphics.drawRGBCalls-copies)
+                +(LEVEL==12?" weather="+weatherDraws:"")+" fogSolid="+fogSolid+" B="+g.getM3GCpuBarriers()+" T="+g.getM3GTextureUploads()+" readbacks="+(Image.getRGBCalls-reads)+" copies="+(Graphics.drawRGBCalls-copies)
                 +" textureSplits="+WorldBottleneckProbe.textureSplits+" stateSplits="+WorldBottleneckProbe.stateSplits+" scaleSplits="+WorldBottleneckProbe.scaleSplits+" capacitySplits="+WorldBottleneckProbe.capacitySplits+(LEVEL==12?" scaleOnlySplits="+WorldBottleneckProbe.scaleOnlySplits:"")
                 +" fogShared="+WorldBottleneckProbe.fogShared+" fogLegacy="+WorldBottleneckProbe.fogLegacy+" clipAttempts="+WorldBottleneckProbe.clipAttempts+" clipRecovered="+WorldBottleneckProbe.clipRecovered+" clipTriangles="+WorldBottleneckProbe.clipTriangles
-                +" stream="+stream()+" rejects="+WorldBottleneckProbe.rejects+" packRejects="+WorldBottleneckProbe.packRejects);
+                +" stream="+stream(false)+" visibleStream="+stream(true)+" rejects="+WorldBottleneckProbe.rejects+" packRejects="+WorldBottleneckProbe.packRejects);
         }
         active=counting=WorldBottleneckProbe.active=false;g.destroy();Graphics3D.history.clear();nativeNames.clear();nativeSources.clear();
     }
@@ -209,7 +210,28 @@ public final class Level13Probe {
     // Packet-boundary-independent witness of every submitted triangle. For Fog,
     // hash physical XYZ bits; otherwise hash screen XY and relative W (the
     // per-polygon homogeneous scale cancels). Source labels include cache kind.
-    private static String stream() throws Exception {
+    // Independent result witness: a LINEAR fully opaque triangle beyond far
+    // has constant Fog RGB. Canonicalize ONLY those, hashing exact XY/W/UV/RGBA
+    // and color. All other triangles keep the strict physical depth witness.
+    private static boolean constantFog(Graphics3D.Draw d,int a,int b,int c) {
+        if(!d.fog || d.fogMode!=javax.microedition.m3g.Fog.LINEAR || d.lit
+            || d.threshold!=0 || d.blend!=javax.microedition.m3g.CompositingMode.REPLACE
+            || (d.source!=null && d.function!=Texture2D.FUNC_MODULATE))return false;
+        if(d.source!=null) {
+            Boolean value=opacity.get(d.source);
+            if(value==null) {
+                boolean all=true;byte[] pixels=d.source.image.pixels;
+                for(int i=3;i<pixels.length;i+=4)if((pixels[i]&255)!=255){all=false;break;}
+                value=Boolean.valueOf(all);opacity.put(d.source,value);
+            }
+            if(!value.booleanValue())return false;
+        }
+        for(int v:new int[]{a,b,c})
+            if(-d.positions[v*3+2]*(double)d.scale<=Math.max(d.far,0.01)+0.005
+                || (d.colors[v*d.colorComponents+d.colorComponents-1]&255)!=255)return false;
+        return true;
+    }
+    private static String stream(boolean visible) throws Exception {
         MessageDigest hash=MessageDigest.getInstance("SHA-256");
         for(Graphics3D.Draw d:Graphics3D.history) {
             String state=(d.source==null?"untextured":nativeSources.get(d.source))+":"+d.blend+":"+d.function+":"+d.blendColor
@@ -220,16 +242,18 @@ public final class Level13Probe {
                 for(int i=2;i<length;i++) {
                     int a=d.indices[offset+i-2],b=d.indices[offset+i-1],c=d.indices[offset+i];
                     if((i&1)!=0){int t=a;a=b;b=t;}
-                    hash.update(material);for(float v:d.projection)hashInt(hash,Float.floatToIntBits(v));
+                    boolean constant=visible && constantFog(d,a,b,c);
+                    hash.update(constant?("constantFog:"+d.fogColor+":"+d.cull+":"+d.winding+":"+d.perspective+":"+d.colorComponents).getBytes("UTF-8"):material);
+                    for(float v:d.projection)hashInt(hash,Float.floatToIntBits(v));
                     for(int v:new int[]{a,b,c}) {
-                        if(d.fog)for(int k=0;k<3;k++)hashInt(hash,Float.floatToIntBits(d.positions[v*3+k]*d.scale));
+                        if(d.fog && !constant)for(int k=0;k<3;k++)hashInt(hash,Float.floatToIntBits(d.positions[v*3+k]*d.scale));
                         else {
                             double z=-d.positions[v*3+2];
                             for(double value:new double[]{d.positions[v*3]/z,d.positions[v*3+1]/z,z/-d.positions[a*3+2]}) {
                                 long bits=Double.doubleToLongBits(value);hashInt(hash,(int)(bits>>>32));hashInt(hash,(int)bits);
                             }
                         }
-                        if(d.textured)for(int k=0;k<2;k++)hashInt(hash,Float.floatToIntBits(d.coords[v*2+k]*d.uvScale));
+                        if(d.textured || constant)for(int k=0;k<2;k++)hashInt(hash,Float.floatToIntBits(d.coords[v*2+k]*d.uvScale));
                         for(int k=0;k<d.colorComponents;k++)hash.update(d.colors[v*d.colorComponents+k]);
                     }
                 }
