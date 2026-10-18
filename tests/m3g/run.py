@@ -231,25 +231,25 @@ public class Fog {public static final int EXPONENTIAL=80,LINEAR=81;public int co
  public void setLinear(float n,float f){if(f<=n)throw new IllegalArgumentException("fog range");near=n;far=f;}
 }''',
 "javax/microedition/m3g/VertexArray.java": '''package javax.microedition.m3g;
-public class VertexArray {public static int created,sets;public short[] shorts;public byte[] bytes;int components;
- public VertexArray(int count,int components,int size){this.components=components;created++;}
+public class VertexArray {public static int created,sets;public int capacity;public short[] shorts;public byte[] bytes;int components;
+ public VertexArray(int count,int components,int size){this.components=components;this.capacity=count;created++;}
  public void set(int start,int count,short[] p){sets++;shorts=new short[count*components];System.arraycopy(p,0,shorts,0,shorts.length);}
  public void set(int start,int count,byte[] p){sets++;bytes=new byte[count*components];System.arraycopy(p,0,bytes,0,bytes.length);}
 }''',
 "javax/microedition/m3g/VertexBuffer.java": '''package javax.microedition.m3g;
-public class VertexBuffer {public VertexArray colors,coords,positions,normals;public float scale,uvScale;
+public class VertexBuffer {public static int positionBindings;public VertexArray colors,coords,positions,normals;public float scale,uvScale;
  public void setColors(VertexArray a){colors=a;}
  public void setNormals(VertexArray a){if(a!=null && Boolean.getBoolean("normals.fail"))throw new IllegalStateException("normals");normals=a;}
  public static int defaultColorCalls;
  public void setDefaultColor(int c){defaultColorCalls++;colors=new VertexArray(4,4,1);colors.bytes=new byte[16];
   for(int i=0;i<4;i++) {colors.bytes[i*4]=(byte)(c>>16);colors.bytes[i*4+1]=(byte)(c>>8);colors.bytes[i*4+2]=(byte)c;colors.bytes[i*4+3]=(byte)(c>>>24);}}
  public void setTexCoords(int n,VertexArray a,float s,float[] b){coords=a;uvScale=s;}
- public void setPositions(VertexArray a,float s,float[] b){positions=a;scale=s;}
+ public void setPositions(VertexArray a,float s,float[] b){positionBindings++;positions=a;scale=s;}
 }''',
 "javax/microedition/m3g/TriangleStripArray.java": '''package javax.microedition.m3g;
 public class TriangleStripArray {public static int created;public int[] indices,lengths;
  public TriangleStripArray(int start,int[] lengths){if(Boolean.getBoolean("weather.indices.fail"))throw new OutOfMemoryError("weather indices");created++;this.lengths=lengths;int count=0;for(int n:lengths) count+=n;indices=new int[count];for(int n=0;n<count;n++) indices[n]=start+n;}
- public TriangleStripArray(int[] indices,int[] lengths){created++;this.indices=indices;this.lengths=lengths;}
+ public TriangleStripArray(int[] indices,int[] lengths){if(Boolean.getBoolean("canvas.indices.fail"))throw new OutOfMemoryError("Canvas indices");created++;this.indices=indices;this.lengths=lengths;}
 }''',
 "javax/microedition/m3g/Image2D.java": '''package javax.microedition.m3g;
 public class Image2D {public static final int RGBA=100,LUMINANCE=97; public byte[] pixels,encoded;public int width,height,format;
@@ -273,7 +273,7 @@ public class Graphics3D {
  public static int calls,uploads,binds,releases,failAt,before,clears;
  public static VertexBuffer lastVertices; public static TriangleStripArray lastIndices;public static Appearance lastAppearance;
  public static Graphics target; public static Camera camera;
- public static class Draw {public boolean depthTest,depthWrite;public int viewportWidth,viewportHeight;
+ public static class Draw {public int positionCapacity;public boolean depthTest,depthWrite;public int viewportWidth,viewportHeight;
   public Texture2D source;public int blend,function,blendColor,fogColor,fogMode,textureAlpha,filter,colorComponents,cull,winding,sample;public boolean textured,perspective;public float near,far,density,threshold;public boolean fog;
   public byte[] colors;public int[] indices,lengths; public short[] positions,coords,normals;public boolean lit,tracking;public int lights,diffuse,ambient,emissive,specular;public float ambientIntensity,directionalIntensity,omniIntensity,omniQuadratic;public float[] omniPosition;public float[] lightMatrix;public float scale,uvScale;public float[] projection;
  }
@@ -313,6 +313,7 @@ public class Graphics3D {
   draw.cull=a.polygon==null?PolygonMode.CULL_BACK:a.polygon.cull;draw.winding=a.polygon==null?PolygonMode.WINDING_CCW:a.polygon.winding;
   draw.colors=c.clone();draw.indices=i.indices.clone();draw.lengths=i.lengths;draw.textureAlpha=p[3]&255;
   draw.positions=v.positions.shorts.clone();draw.coords=v.coords==null || v.coords.shorts==null?null:v.coords.shorts.clone();draw.scale=v.scale;draw.uvScale=v.uvScale;
+  draw.positionCapacity=v.positions.capacity;
   draw.depthTest=a.comp.depthTest;draw.depthWrite=a.comp.depthWrite;draw.viewportWidth=viewportWidth;draw.viewportHeight=viewportHeight;
   draw.lights=lights.size();draw.lit=a.material!=null;
   draw.normals=v.normals==null?null:v.normals.shorts.clone();
@@ -571,6 +572,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                         "-Dlevel13.fogOff=" + ("true" if os.environ.get("QUANTUM_LEVEL12_FOG_OFF" if LEVEL12_PROBE else "QUANTUM_LEVEL13_FOG_OFF") else "false"),
                         "-cp", classpath, "code.Rendering.Level13Probe", str(resource_jar)], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.CanvasImagesTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.Arm9CanvasTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.WeaponCanvasTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.RequiredM3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativeFallbackAuditTest"], check=True)

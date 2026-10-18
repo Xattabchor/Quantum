@@ -3,6 +3,8 @@
 **Текущий этап: [4a — native Canvas foreground](m3g-canvas-foreground.md).**
 Оружие, реальные muzzle images, scope/crosshair, reload и timed overlay идут M3G;
 остальные HUD/text/icons, меню и sampler Benchmark ещё не перенесены.
+[Оптимизация ARM9/OMAP 1710](m3g-arm9-canvas.md) сокращает работу foreground,
+не меняя качества или игрового поведения.
 [Этап 3](m3g-required-path.md) требует native Scene без CPU replay/backup и
 Software-переключателя, с явной диагностикой. Samplers пока физически в JAR.
 [Этап 2 — depth bands](m3g-depth-bands.md) также в коде.

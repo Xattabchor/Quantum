@@ -1,0 +1,194 @@
+{
+  "date": "2026-10-18",
+  "base_commit": "8ec625e",
+  "target": "ARM9 / OMAP 1710 CPU, GC and Java-M3G boundary overhead; portable Java ME, not native ARM code",
+  "build": {
+    "classes": 154,
+    "code_methods": 1966,
+    "stackmap_attributes": 1066,
+    "class_versions": [
+      [
+        47,
+        0
+      ]
+    ],
+    "jar_sha256": "95337f8953acc79514219e70d9dc4f95189c638e3463b6acee5f131abcfb5282",
+    "resource_files": 442,
+    "source_files": 144,
+    "preverifier": "ProGuard -microedition (CLDC StackMap)",
+    "tools_sha256": {
+      "ecj.jar": "5d53b25fd09b8d83157634af682b4c64bce9def70f6533f81d9115526057ae69",
+      "proguard.jar": "bd9b6c58daf01e5088b86fc8aa99ae9af53d3821c622e5e01d68db97ee82f2eb",
+      "cldc11.jar": "1c3ec9a7057bd3b4daf7a6474cf508676b51066b4e56cbebbe7b326a90efe87a",
+      "midp21.jar": "0a0bc48207dd8bedea027968c3c9bdcf5dadd37be42e356d0802c81a8fa2c43f",
+      "jsr135.jar": "34fb379affaa83b7941307c51071eb363ce15ddf451510866cdb54f009defca5",
+      "jsr184.jar": "161a49bb715dd732f75ff1a39fbf524cae307e7b4596feb2c6830315da75165b",
+      "jsr75_file.jar": "b66a74c215f48d3f319757d1a5f1d7773016defe17344631682be4051c7802f3"
+    },
+    "resource_archive_sha256": "b955cf2797e297ea62733ef2741e14435606bfa45ac14785b21d2c8345fa956c",
+    "frame_profile": false,
+    "runtime_tested": false
+  },
+  "class_comparison_to_treefix": {
+    "unchanged_classes": 151,
+    "changed_classes": [
+      "code/Rendering/M3GCanvasImages$Tile.class",
+      "code/Rendering/M3GCanvasImages.class"
+    ],
+    "added_classes": [
+      "code/Rendering/M3GCanvasImages$Packet.class"
+    ],
+    "removed_classes": []
+  },
+  "work_contracts": {
+    "mixed_foreground": {
+      "quads": 14,
+      "draws_before": 14,
+      "draws_after": 5,
+      "vertex_array_set_before": 42,
+      "vertex_array_set_after": 10,
+      "warm_position_scale_bindings_before": 14,
+      "warm_position_scale_bindings_after": 0
+    },
+    "reload": {
+      "draws_before": 5,
+      "draws_after": 1
+    },
+    "same_image_33_quads": {
+      "draws_before": 33,
+      "draws_after": 3
+    },
+    "max_quads_per_packet": 16,
+    "exact_vertex_capacity": true,
+    "packet_sizes_cached_lazily": 16,
+    "white_color_array_cached": true,
+    "no_vector_reference_in_foreground_bytecode": true,
+    "pot_uv_divisions_per_tile_moved_to_cache_miss": 4,
+    "source_int_scratch_max_bytes": 65536,
+    "all_16_packet_vertex_and_index_logical_payload_bytes": 14144,
+    "cache_tiles": 64,
+    "cache_pot_pixel_budget": 262144,
+    "warm_fitting_source_reads_uploads_barriers": [
+      0,
+      0,
+      0
+    ],
+    "counts_are_not_timing_or_total_heap": true
+  },
+  "tests": {
+    "negative_control": "previous code fails D14 -> D5 contract",
+    "normal_native_legacy_required_missing_api_suite": "PASS",
+    "active_frame_profile_suite": "PASS",
+    "ordered_pixel_reference": "PASS including colored rects, overlapping alpha, A-B-A order, mirrors, clips, NPOT and 64px hardware tiles",
+    "packet_counts": "PASS 1,2,3,5,8,15,16,17,31,32,33,255,256 and back to 1",
+    "exact_buffer_capacity": "PASS",
+    "precision_and_white_colored_state": "PASS",
+    "lru_order_recent_middle_oldest_eviction_slots": "PASS",
+    "source_scratch_reuse_growth": "PASS",
+    "prebind_and_partial_render_faults": "PASS explicit required-M3G failure with cleanup",
+    "real_tree_crossing_frames": 1182,
+    "weapon_scope_layout_cases": 1280,
+    "reload_layout_cases": 36,
+    "textview": "PASS",
+    "framebuffer": "PASS",
+    "python_tests_passed": 14
+  },
+  "fixtures": [
+    {
+      "name": "arm9-worlds",
+      "rows": 2384,
+      "exact_rows_equal_to_treefix": 2384,
+      "rows_sha256": "f355d4ea5b33ed7d97fea7f9bc917835f67a04c815f82d99dd7ee11b6a09a2ad",
+      "audit": [
+        {
+          "tag": "world-level1",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level2",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level3",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level4",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level5",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level6",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level7",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level8",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level9",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level10",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level11",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level12",
+          "cpu_dispatches": 0
+        },
+        {
+          "tag": "world-level13",
+          "cpu_dispatches": 0
+        }
+      ]
+    },
+    {
+      "name": "arm9-level12",
+      "rows": 320,
+      "exact_rows_equal_to_treefix": 320,
+      "rows_sha256": "06368f7f4257b91fa4d7d998c860694e1be20995b305c33ad245d81fa89da836",
+      "audit": [
+        {
+          "tag": "objects-level12",
+          "cpu_dispatches": 0
+        }
+      ]
+    },
+    {
+      "name": "arm9-level13",
+      "rows": 320,
+      "exact_rows_equal_to_treefix": 320,
+      "rows_sha256": "b257adffb7a7896040f4b030f0e6e32541fc8d9e4e8dcd4d57309e3762ceec2d",
+      "audit": [
+        {
+          "tag": "objects-level13",
+          "cpu_dispatches": 0
+        }
+      ]
+    }
+  ],
+  "resource_files_identical_to_treefix": 442,
+  "gameplay_configs_or_quality_changed": false,
+  "device_tested": false,
+  "fps_measured": false,
+  "kvm_m3g_timing_measured": false,
+  "level41_rerun": false,
+  "remaining": [
+    "HUD/text/icons/menus are not fully migrated",
+    "legacy samplers and benchmark still present",
+    "real OMAP driver performance/memory/LCDUI+M3G ordering need testing",
+    "native M3G may itself be CPU-implemented on the phone"
+  ]
+}

@@ -14,6 +14,10 @@ I wrote it when I was just learning Java and OOP, so the code quality is really 
 
 ## M3G / JSR-184
 
+[Облегчённый Canvas-проход для ARM9 / OMAP 1710](docs/m3g-arm9-canvas.md):
+соседние quad packets, меньше Java↔M3G вызовов, bounded LRU без Vector и reusable
+source scratch. Без снижения качества; это не замер FPS телефона.
+
 [Исправление остановки при проходе сквозь спрайтовые деревья](docs/m3g-sprite-crossing-fix.md):
 безопасный native fog-depth и устойчивый перенос текста диагностики.
 

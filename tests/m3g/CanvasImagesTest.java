@@ -45,30 +45,37 @@ public final class CanvasImagesTest {
         for(int n=first;n<Graphics3D.history.size();n++) {
             Graphics3D.Draw d=Graphics3D.history.elementAt(n);
             check(!d.fog && !d.lit && !d.depthTest && !d.depthWrite && d.viewportWidth==width && d.viewportHeight==height && d.cull==PolygonMode.CULL_NONE,"foreground world state leaked");
-            float eye=-d.positions[2]*d.scale;
-            int l=Math.round((d.projection[0]*d.positions[0]*d.scale/eye-d.projection[2]+1)*width/2);
-            int t=Math.round((1-d.projection[5]*d.positions[1]*d.scale/eye+d.projection[6])*height/2);
-            int r=Math.round((d.projection[0]*d.positions[3]*d.scale/eye-d.projection[2]+1)*width/2);
-            int b=Math.round((1-d.projection[5]*d.positions[7]*d.scale/eye+d.projection[6])*height/2);
-            check(l>=0 && t>=0 && r<=width && b<=height,"native foreground escaped clip: "+l+","+t+","+r+","+b+" eye="+eye+" projection="+Arrays.toString(d.projection));
-            for(int y=t;y<b;y++)for(int x=l;x<r;x++) {
-                int c=0xff000000|((d.colors[0]&255)<<16)|((d.colors[1]&255)<<8)|(d.colors[2]&255);
-                if(d.textured) {
-                    check(d.function==Texture2D.FUNC_MODULATE && d.blend==CompositingMode.ALPHA
-                            && d.filter==Texture2D.FILTER_NEAREST,"foreground material changed");
-                    Image2D image=d.source.image;
-                    float u=(d.coords[0]+(x+0.5f-l)/(r-l)*(d.coords[2]-d.coords[0]))*d.uvScale;
-                    float v=(d.coords[1]+(y+0.5f-t)/(b-t)*(d.coords[7]-d.coords[1]))*d.uvScale;
-                    int sx=Math.min(image.width-1,Math.max(0,(int)(u*image.width)));
-                    int sy=Math.min(image.height-1,Math.max(0,(int)(v*image.height)));
-                    int p=(sy*image.width+sx)*4;byte[] bytes=image.pixels;
-                    c=((bytes[p+3]&255)<<24)|((bytes[p]&255)<<16)|((bytes[p+1]&255)<<8)|(bytes[p+2]&255);
-                } else check(d.blend==CompositingMode.REPLACE,"solid rect is not opaque");
-                out[y*width+x]=blend(c,out[y*width+x]);
+            check(d.indices.length%6==0,"foreground packet is not whole quads");
+            for(int packet=0;packet<d.indices.length;packet+=6) {
+                int base=d.indices[packet],p0=base*3,u0=base*2,c0=base*4;
+                int[] order={0,1,3,1,2,3};
+                for(int k=0;k<6;k++)check(d.indices[packet+k]==base+order[k],"foreground painter/index order changed");
+                float eye=-d.positions[p0+2]*d.scale;
+                int l=Math.round((d.projection[0]*d.positions[p0+0]*d.scale/eye-d.projection[2]+1)*width/2);
+                int t=Math.round((1-d.projection[5]*d.positions[p0+1]*d.scale/eye+d.projection[6])*height/2);
+                int r=Math.round((d.projection[0]*d.positions[p0+3]*d.scale/eye-d.projection[2]+1)*width/2);
+                int b=Math.round((1-d.projection[5]*d.positions[p0+7]*d.scale/eye+d.projection[6])*height/2);
+                check(l>=0 && t>=0 && r<=width && b<=height,"native foreground escaped clip: "+l+","+t+","+r+","+b+" eye="+eye+" projection="+Arrays.toString(d.projection));
+                for(int y=t;y<b;y++)for(int x=l;x<r;x++) {
+                    int c=0xff000000|((d.colors[c0+0]&255)<<16)|((d.colors[c0+1]&255)<<8)|(d.colors[c0+2]&255);
+                    if(d.textured) {
+                        check(d.function==Texture2D.FUNC_MODULATE && d.blend==CompositingMode.ALPHA
+                                && d.filter==Texture2D.FILTER_NEAREST,"foreground material changed");
+                        Image2D image=d.source.image;
+                        float u=(d.coords[u0+0]+(x+0.5f-l)/(r-l)*(d.coords[u0+2]-d.coords[u0+0]))*d.uvScale;
+                        float v=(d.coords[u0+1]+(y+0.5f-t)/(b-t)*(d.coords[u0+7]-d.coords[u0+1]))*d.uvScale;
+                        int sx=Math.min(image.width-1,Math.max(0,(int)(u*image.width)));
+                        int sy=Math.min(image.height-1,Math.max(0,(int)(v*image.height)));
+                        int p=(sy*image.width+sx)*4;byte[] bytes=image.pixels;
+                        c=((bytes[p+3]&255)<<24)|((bytes[p]&255)<<16)|((bytes[p+1]&255)<<8)|(bytes[p+2]&255);
+                    } else check(d.blend==CompositingMode.REPLACE,"solid rect is not opaque");
+                    out[y*width+x]=blend(c,out[y*width+x]);
+                }
             }
         }
         return out;
     }
+    static int cacheEntries(Object[] cache) {int n=0;for(Object tile:cache)if(tile!=null)n++;return n;}
     static DirectX7 required() {DirectX7 g=M3GTest.renderer();g.requireM3G();return g;}
     public static void main(String[] args) throws Exception {
         Image source=image(271,233);int[] original=source.pixels.clone();
@@ -137,10 +144,10 @@ public final class CanvasImagesTest {
         Field renderer=DirectX7.class.getDeclaredField("sceneRenderer");renderer.setAccessible(true);
         Object adapter=renderer.get(g);Field helper=adapter.getClass().getDeclaredField("canvasImages");helper.setAccessible(true);
         Object cache=helper.get(adapter);Field tiles=cache.getClass().getDeclaredField("cache");tiles.setAccessible(true);
-        check(((java.util.Vector)tiles.get(cache)).size()==64,"foreground cache unbounded");
+        check(cacheEntries((Object[])tiles.get(cache))==64,"foreground cache unbounded");
         q.reset(64,64);for(int i=0;i<18;i++)q.drawImage(image(128,128),0,0,20);g.renderCanvasImages(canvas,q);
         Field pixels=cache.getClass().getDeclaredField("cachedPixels");pixels.setAccessible(true);
-        check(pixels.getInt(cache)==262144 && ((java.util.Vector)tiles.get(cache)).size()==16,"foreground pixel budget not enforced");
+        check(pixels.getInt(cache)==262144 && cacheEntries((Object[])tiles.get(cache))==16,"foreground pixel budget not enforced");
         g.releaseRenderer();int uploads=Graphics3D.uploads;
         q.reset(64,64);q.drawImage(source,0,0,20);g.renderCanvasImages(canvas,q);
         check(Graphics3D.uploads>uploads,"native cache release did not invalidate foreground");g.destroy();
