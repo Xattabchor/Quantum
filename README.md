@@ -14,6 +14,9 @@ I wrote it when I was just learning Java and OOP, so the code quality is really 
 
 ## M3G / JSR-184
 
+[Исправление остановки при проходе сквозь спрайтовые деревья](docs/m3g-sprite-crossing-fix.md):
+безопасный native fog-depth и устойчивый перенос текста диагностики.
+
 **M3G-only перенос: этап 4a — native Canvas foreground.**
 Оружие, обычная вспышка выстрела, scope/crosshair, полоса перезарядки и timed
 overlay перенесены в отдельный M3G-проход после вывода сцены. NPOT-изображения

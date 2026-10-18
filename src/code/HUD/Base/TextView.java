@@ -35,11 +35,14 @@ public class TextView {
             if (ch == '*') { //символ переноса строки
                 wordEnd = i;
                 i++; //пропускаем символ переноса
-            } else  if (wordWidth + font.charWidth(ch) > w) { //следующий символ не умещается
+            } else  if ((long)wordWidth + font.charWidth(ch) > w) { //следующий символ не умещается
                 if (lastSpace != -1) { //обрезаем по последнему пробелу
                     i = lastSpace+1; //+1 - пропускаем последний пробел
                     wordEnd = lastSpace;
                 } else {
+                    // A glyph wider than the whole box must still consume input.
+                    // Otherwise diagnostic text on narrow screens loops forever.
+                    if(i == wordStart) i++;
                     wordEnd = i;
                 }
             }
@@ -50,6 +53,9 @@ public class TextView {
 
                 wordWidth = 0;
                 wordStart = i;
+                // A previous line's space must never rewind the next line or
+                // produce substring(start > end) for a long exception/class name.
+                lastSpace = -1;
             } else {
                 wordWidth += font.charWidth(ch);
                 i++;

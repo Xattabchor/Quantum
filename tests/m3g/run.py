@@ -546,6 +546,8 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     if resource_jar:
         subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
                         "code.Rendering.GameResourcesTest", str(resource_jar)], check=True)
+        subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
+                        "code.Rendering.SpriteCrossingTest", "real-trees"], check=True)
     if os.environ.get("QUANTUM_WORLD_PROBE"):
         if not resource_jar:
             raise ValueError("QUANTUM_WORLD_PROBE requires QUANTUM_RESOURCE_JAR")
@@ -575,6 +577,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModeOptimizationAuditTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteCrossingTest"], check=True)
     if not os.environ.get("QUANTUM_SPRITE_BATCH_REFERENCE"):
         subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteBatchTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MulSpriteTest"], check=True)

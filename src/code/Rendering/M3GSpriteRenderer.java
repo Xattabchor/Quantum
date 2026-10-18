@@ -79,7 +79,11 @@ final class M3GSpriteRenderer {
         float eye=1.0f,far=0;
         if(fogged) {
             if(DirectX7.fDist<0 || TexturingPers.move<=0) return false;
-            eye=1.0f-(float)sprite.pos.rz/TexturingPers.move;
+            // Legacy billboards can remain visible after their origin passes the
+            // camera (large trees/cutoff). Their positive rz has ZERO fog, not
+            // negative eye depth. Fog.LINEAR starts at 1: clamp there to retain
+            // the image/UVs without crossing the generic Camera's near plane.
+            eye=1.0f-(float)Math.min(0,sprite.pos.rz)/TexturingPers.move;
             far=owner.fogFar(TexturingPers.move);
             if(!(eye>0) || !(far>1)) return false;
         }
