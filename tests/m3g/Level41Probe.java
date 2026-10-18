@@ -95,6 +95,7 @@ public final class Level41Probe {
         WorldBottleneckProbe.fogShared=WorldBottleneckProbe.fogLegacy=0;
         WorldBottleneckProbe.rejects.clear();WorldBottleneckProbe.packRejects.clear();
         projected=0;
+        WorldBottleneckProbe.clipAttempts=WorldBottleneckProbe.clipRecovered=WorldBottleneckProbe.clipTriangles=WorldBottleneckProbe.clipDiscards=0;
     }
     private static void sample(House house,Skybox sky,int[] position,int yaw,int pitch,String part,ScreenLines rain) throws Exception {
         DirectX7 g=new DirectX7(240,320);g.setRenderer(DirectX7.M3G);
@@ -131,12 +132,14 @@ public final class Level41Probe {
                 if(part.equals("sky")) check(worldD==0 && solidD==0,"world/solid leaked into sky-only sample");
                 if(part.equals("sky")) check(g.getM3GCpuBarriers()==0 && Image.getRGBCalls==reads && Graphics.drawRGBCalls==uploads,"opaque level41 sky retained framebuffer roundtrip");
                 check(solidD==(part.equals("world+solid")?1:0),"solid background attribution mismatch");
+                check(g.getM3GCpuBarriers()==0 && Image.getRGBCalls==reads && Graphics.drawRGBCalls==uploads,"level41 native clipping retained a CPU roundtrip");
                 check(g.getM3GTextureUploads()==0,"level41 seven-image warm cache unexpectedly reuploaded");
                 check(WorldBottleneckProbe.scaleSplits==0,"mode 9 split on Fog scale");
                 System.out.println("L41 part="+part+" pos="+position[0]+","+position[1]+","+position[2]+" yaw="+yaw+" pitch="+pitch
                     +" projected="+projected+" queued="+queued+" D="+g.getM3GDrawCalls()+" sky="+skyD+" world="+worldD+" rain="+rainD+" solid="+solidD
                     +" B="+g.getM3GCpuBarriers()+" T="+g.getM3GTextureUploads()+" readbacks="+(Image.getRGBCalls-reads)+" uploads="+(Graphics.drawRGBCalls-uploads)
                     +" textureSplits="+WorldBottleneckProbe.textureSplits+" stateSplits="+WorldBottleneckProbe.stateSplits+" capacitySplits="+WorldBottleneckProbe.capacitySplits
+                    +" clipAttempts="+WorldBottleneckProbe.clipAttempts+" clipRecovered="+WorldBottleneckProbe.clipRecovered+" clipTriangles="+WorldBottleneckProbe.clipTriangles+" clipDiscards="+WorldBottleneckProbe.clipDiscards
                     +" rejects="+WorldBottleneckProbe.rejects+" packRejects="+WorldBottleneckProbe.packRejects);
             }
         }

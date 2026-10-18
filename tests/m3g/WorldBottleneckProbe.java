@@ -20,6 +20,14 @@ import javax.microedition.lcdui.Image;
 public final class WorldBottleneckProbe {
     static boolean active;
     static int textureSplits,stateSplits,scaleSplits,capacitySplits,fogShared,fogLegacy;
+    static int clipAttempts,clipRecovered,clipTriangles,clipDiscards;
+    public static boolean clipResult(WorldClipGeometry geometry,boolean success) {
+        if(active) {
+            clipAttempts++;
+            if(success) {clipRecovered++;clipTriangles+=geometry.triangles;if(geometry.triangles==0) clipDiscards++;}
+        }
+        return success;
+    }
     public static float fogResult(boolean shared,float scale) {
         if(active) {if(shared) fogShared++;else fogLegacy++;}
         return scale;

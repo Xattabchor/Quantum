@@ -833,6 +833,7 @@ if(m21!=0) rz+= (y * m21 >> fp);
 if(m22!=0) rz+= (z * m22 >> fp);
 
 //int rz2=MathUtils.pLength(sx*100/centreX,sy*100/centreY,0);
+if(rendererMode==M3G) ver.recordView(sx,-sy,rz);
 if(rz<0) {
 sx = sx *distX /(-rz/*+rz2*/ + distX) ;
 sy = sy *distY /(-rz/*+rz2*/ + distY) ;
@@ -910,6 +911,7 @@ if(m20!=0) rz+= (x * m20 >> fp);
 if(m21!=0) rz+= (y * m21 >> fp);
 if(m22!=0) rz+= (z * m22 >> fp);
 
+if(rendererMode==M3G) ver.recordView(sx,-sy,rz);
 if(rz<0) {
 sx = sx *distX /(-rz + distX) ;
 sy = sy *distY /(-rz + distY) ;

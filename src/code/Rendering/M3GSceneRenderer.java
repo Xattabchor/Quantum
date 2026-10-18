@@ -19,6 +19,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final PolygonMode affineFogPolygon = new PolygonMode();
     private PolygonMode activePolygon;
     private M3GPolygonBatch batch;
+    private WorldClipGeometry worldClip;
     private final M3GMaterialMath materialMath=new M3GMaterialMath();
     private final M3GPolygonBatch.State batchState=new M3GPolygonBatch.State();
     private CachedTexture lastTexture;
@@ -254,7 +255,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     public void dispose() {
         if(batch!=null) batch.discard();
-        batch=null;
+        batch=null;worldClip=null;
         try {
             if(bound) graphics.releaseTarget();
         } finally {
@@ -370,7 +371,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 ? ProjectedGeometry.packFog(vertices,count,g.centreX,g.centreY,distance,positions,work)
                 : ProjectedGeometry.pack(vertices,count,g.centreX,g.centreY,
                         distance,mode!=8 && perspective,positions,work);
-        if(scale == 0) return false;
+        boolean clipped=scale==0;
+        if(clipped && mode==8) return false;
         buffersScale=scale;
         RawImage raw = selectImage(texture, object, count, fastPath);
         if(mode == 8) {
@@ -412,6 +414,12 @@ public final class M3GSceneRenderer implements SceneRenderer {
             coords[i * 2] = (short)u;
             coords[i * 2 + 1] = (short)v;
         }
+        if(clipped) {
+            setColors(g,object,count,mode);
+            if(worldClip==null) worldClip=new WorldClipGeometry();
+            if(!worldClip.prepare(g,vertices,count,coords,colors,distance,perspective,nativeFog,alternate,hardwarePerspective)) return false;
+            if(worldClip.triangles==0) return true; // Completely clipped, no upload/barrier.
+        }
         // Standard native fog is a single pass for HQ/LQ and affine UVs alike.
         batchable=true;
         int kind = mode == 2 ? ADD_TEXTURE : mode == 1 || (mode == 4 && raw.alphaMixing) ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
@@ -435,7 +443,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
         // Modes 9/13 keep only baked vertex colors, with no distance Fog.
         // Native Fog remains a separate stage for modes 3/6 only.
-        setColors(g, object, count, mode);
+        if(!clipped) setColors(g, object, count, mode);
         if(!batchable) colorArrays[slot].set(0, count, colors);
         if(nativeFog) {
             // Packed eye distance = 1 - rz/move, not raw engine depth.
@@ -443,7 +451,14 @@ public final class M3GSceneRenderer implements SceneRenderer {
             batchState.fogColor=mode==3?DirectX7.fogc&0xffffff:0;
             setFog(fog);
         }
-        render(g, slot, indices[slot]);
+        if(clipped) {
+            for(int i=0;i<worldClip.triangles;i++) {
+                System.arraycopy(worldClip.xyz,i*9,positions,0,9);
+                System.arraycopy(worldClip.uv,i*6,coords,0,6);
+                System.arraycopy(worldClip.rgba,i*12,colors,0,12);
+                buffersScale=worldClip.scales[i];render(g,0,indices[0]);
+            }
+        } else render(g, slot, indices[slot]);
         setFog(null);
         return true;
     }

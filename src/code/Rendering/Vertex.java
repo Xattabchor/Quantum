@@ -12,6 +12,24 @@ public class Vertex {
     public int sx;
     public int sy;
     public int rz;
+
+    // Selected-M3G near clipping needs view space BEFORE project overwrites X/Y.
+    // The depth sentinel and endpoint check reject stale/manually edited data.
+    private int viewX,viewY,viewDepth=Integer.MAX_VALUE;
+    public void recordView(int x,int y,int z) {viewX=x;viewY=y;viewDepth=z;}
+    public int getViewX() {return viewX;}
+    public int getViewY() {return viewY;}
+    public boolean hasView(DirectX7 g) {
+        if(viewDepth==Integer.MAX_VALUE || viewDepth!=rz) return false;
+        long x=viewX,y=-(long)viewY;
+        if(rz<0) {
+            long dx=(long)g.distX-rz,dy=(long)g.distY-rz;
+            if(dx<=0 || dy<=0) return false;
+            x=x*g.distX/dx;y=y*g.distY/dy;
+        }
+        return x+g.centreX==sx && y+g.centreY==sy;
+    }
+
     private static Main main;
 
     public Vertex() {
@@ -136,6 +154,7 @@ int fpss=Matrix.fp-2;
 
    // из Graphics3D: public void project(Vertex vertex)
    public final void project(DirectX7 g3d) {
+      if(g3d.getRenderer()==DirectX7.M3G) recordView(sx,sy,rz);
       if(this.rz <= 0) {
          this.sx =  (this.sx * g3d.distX / (-this.rz + g3d.distX) + g3d.centreX);
          this.sy =  (-this.sy * g3d.distY / (-this.rz + g3d.distY) + g3d.centreY);

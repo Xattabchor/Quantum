@@ -334,7 +334,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     sources += sorted(TEST.glob("*.java"))
     # Compile the current adapter against the doubles, not copies of its logic.
     sources += [ROOT / "src/code/Rendering" / name for name in
-                ("M3GSceneRenderer.java", "M3GFrameEffects.java", "M3GMaterialMath.java", "M3GPolygonBatch.java", "ProjectedGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "SkyCoverage.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
+                ("Vertex.java", "M3GSceneRenderer.java", "M3GFrameEffects.java", "M3GMaterialMath.java", "M3GPolygonBatch.java", "ProjectedGeometry.java", "WorldClipGeometry.java", "M3GSkyRenderer.java", "SkyGeometry.java", "SkyCoverage.java", "M3GScreenLines.java", "ScreenLineGeometry.java", "M3GSpriteRenderer.java", "M3GPanoramaRenderer.java")]
     # Validate on-device frame-profile copies against the same API contracts.
     # Requires a prior build_cldc.py --profile-frame; not a timing benchmark.
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
@@ -375,9 +375,12 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                 before = content[:start]
                 lines = content[start:end].splitlines(keepends=True)
                 for i, line in enumerate(lines):
-                    reason = "geometry-pack" if "if(scale == 0)" in line else "native-line-%d" % (len(before.splitlines()) + i + 1)
+                    reason = "geometry-clip" if "worldClip.prepare" in line else "geometry-pack" if "if(scale == 0)" in line else "native-line-%d" % (len(before.splitlines()) + i + 1)
                     lines[i] = line.replace("return false;", 'return WorldBottleneckProbe.reject("%s");' % reason)
                 content = before + "".join(lines) + content[end:]
+                marker = "worldClip.prepare(g,vertices,count,coords,colors,distance,perspective,nativeFog,alternate,hardwarePerspective)"
+                assert content.count(marker) == 1
+                content = content.replace(marker, "WorldBottleneckProbe.clipResult(worldClip," + marker + ")")
             elif source.name == "ProjectedGeometry.java":
                 lines = source.read_text().splitlines(keepends=True)
                 for i, line in enumerate(lines):
@@ -455,6 +458,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameTransactionTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ImagePresentationTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyBackgroundTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.WorldClipTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativePrepTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativeLightingTest"], check=True)
@@ -481,7 +485,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.BakedNoFogTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MuzzleGlowTest"], check=True)
     if os.environ.get("QUANTUM_FRAME_PROFILE"):
-        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest"):
+        for test in ("FrameTransactionTest", "ImagePresentationTest", "CombinedPassTest", "Mode5BlendTest", "WorldClipTest"):
             subprocess.run([JAVA, "-cp", classpath, "code.Rendering.FrameProfileSuiteRunner",
                             "code.Rendering." + test], check=True)
     # Remove the optional API for a real class-loading fallback test.
