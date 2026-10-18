@@ -22,6 +22,13 @@ STLKR_PROBE = LEVEL12_PROBE or LEVEL13_PROBE or STLKR_ALL_PROBE
 if sum((LEVEL41_PROBE, LEVEL12_PROBE, LEVEL13_PROBE, STLKR_ALL_PROBE)) > 1:
     raise ValueError("Run level41, level12, level13 and all-Stlkr probes separately")
 WORLD_REASONS = bool(os.environ.get("QUANTUM_WORLD_PROBE")) or LEVEL41_PROBE or STLKR_PROBE
+REQUIRE_NATIVE = bool(os.environ.get("QUANTUM_REQUIRE_NATIVE"))
+NATIVE_AUDIT = bool(os.environ.get("QUANTUM_NATIVE_COMPAT_AUDIT")) or REQUIRE_NATIVE
+if NATIVE_AUDIT and not STLKR_PROBE:
+    raise ValueError("Native compatibility audit requires a Stlkr level probe")
+NATIVE_OPTIONS = (["-Dquantum.nativeAudit=true"] if NATIVE_AUDIT else []) + (
+    ["-Dquantum.requireNative=true"] if REQUIRE_NATIVE else [])
+
 
 # Mesh skies use a transactional native submission, not forced CPU rasterization.
 house = (ROOT / "src/code/Gameplay/Map/House.java").read_text()
@@ -418,6 +425,13 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                 assert content.count(marker) == 1
                 probe = "Level13Probe" if STLKR_PROBE else "Level41Probe"
                 content = content.replace(marker, marker + "\nif(code.Rendering."+probe+".counting) code.Rendering."+probe+".projected+=ms.getVertices().length;")
+                if NATIVE_AUDIT:
+                    marker = "public void drawSoftwareObject(RenderObject object,Texture texture,boolean fast) {"
+                    assert content.count(marker) == 1
+                    content = content.replace(marker, marker + "\nNativeFallbackAudit.record(this,object,texture,fast);")
+                    marker = "public void drawRenderObject(RenderObject object, Texture texture, boolean fast) {"
+                    assert content.count(marker) == 1
+                    content = content.replace(marker, marker + "\nNativeFallbackAudit.attempt();")
             elif (LEVEL41_PROBE or STLKR_ALL_PROBE) and source.name == "LightMapper.java":
                 content = source.read_text()
                 marker = "new Object().getClass().getResourceAsStream(lightdataFile)"
@@ -512,15 +526,16 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     if STLKR_ALL_PROBE:
         if not resource_jar:
             raise ValueError("All-Stlkr probe requires QUANTUM_RESOURCE_JAR")
-        subprocess.run([JAVA, "-Djava.awt.headless=true", "-cp", classpath,
+        subprocess.run([JAVA] + NATIVE_OPTIONS + ["-Djava.awt.headless=true", "-cp", classpath,
                         "code.Rendering.StlkrLevelsProbe", str(resource_jar)], check=True)
     if LEVEL12_PROBE or LEVEL13_PROBE:
         if not resource_jar:
             raise ValueError("Stlkr level probe requires QUANTUM_RESOURCE_JAR")
-        subprocess.run([JAVA, "-Djava.awt.headless=true",
+        subprocess.run([JAVA] + NATIVE_OPTIONS + ["-Djava.awt.headless=true",
                         "-Dlevel.probe=" + ("12" if LEVEL12_PROBE else "13"),
                         "-Dlevel13.fogOff=" + ("true" if os.environ.get("QUANTUM_LEVEL12_FOG_OFF" if LEVEL12_PROBE else "QUANTUM_LEVEL13_FOG_OFF") else "false"),
                         "-cp", classpath, "code.Rendering.Level13Probe", str(resource_jar)], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativeFallbackAuditTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ModeOptimizationAuditTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.M3GTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SpriteTest"], check=True)

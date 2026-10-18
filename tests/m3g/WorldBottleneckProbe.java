@@ -44,6 +44,7 @@ public final class WorldBottleneckProbe {
         if(texture) textureSplits++;if(state) stateSplits++;if(scale) scaleSplits++;if(capacity) capacitySplits++;
     }
     public static boolean reject(String reason) {
+        NativeFallbackAudit.rejected(reason);
         if(active) {Integer n=rejects.get(reason);rejects.put(reason,n==null?1:n+1);}
         return false;
     }

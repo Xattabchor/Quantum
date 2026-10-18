@@ -1,0 +1,166 @@
+{
+  "status": "migration stage 1: compatibility contract and CPU fallback audit; NOT a M3G-only release",
+  "engine_baseline_commit": "b0ee49b",
+  "published_engine_classes_unchanged": 149,
+  "phone_tested": false,
+  "fps_measured": false,
+  "world_poses": 2384,
+  "world_render_passes": 9536,
+  "object_probe_poses_per_level": 80,
+  "object_probe_render_passes_per_level": 640,
+  "measurement": "counts are CPU dispatch calls across all four cold/warm passes; not unique polygons, not frame or GPU timings; direct LCDUI HUD/effects and pixel writes outside drawSoftwareObject are out of scope",
+  "world_cpu_dispatches": 448,
+  "audit": [
+    {
+      "probe": "all",
+      "summaries": {
+        "world-level1": {
+          "cpu_dispatches": 68,
+          "kinds": 1,
+          "items": [
+            {
+              "count": 68,
+              "key": "code.Rendering.Meshes.Polygon4V:mode=3:path=object:reason=geometry-clip"
+            }
+          ]
+        },
+        "world-level2": {
+          "cpu_dispatches": 0,
+          "kinds": 0,
+          "items": []
+        },
+        "world-level3": {
+          "cpu_dispatches": 20,
+          "kinds": 1,
+          "items": [
+            {
+              "count": 20,
+              "key": "code.Rendering.Meshes.Polygon4V:mode=0:path=object:reason=geometry-clip"
+            }
+          ]
+        },
+        "world-level4": {
+          "cpu_dispatches": 0,
+          "kinds": 0,
+          "items": []
+        },
+        "world-level5": {
+          "cpu_dispatches": 68,
+          "kinds": 1,
+          "items": [
+            {
+              "count": 68,
+              "key": "code.Rendering.Meshes.Polygon4V:mode=3:path=object:reason=geometry-clip"
+            }
+          ]
+        },
+        "world-level6": {
+          "cpu_dispatches": 68,
+          "kinds": 1,
+          "items": [
+            {
+              "count": 68,
+              "key": "code.Rendering.Meshes.Polygon4V:mode=3:path=object:reason=geometry-clip"
+            }
+          ]
+        },
+        "world-level7": {
+          "cpu_dispatches": 0,
+          "kinds": 0,
+          "items": []
+        },
+        "world-level8": {
+          "cpu_dispatches": 68,
+          "kinds": 1,
+          "items": [
+            {
+              "count": 68,
+              "key": "code.Rendering.Meshes.Polygon4V:mode=3:path=object:reason=geometry-clip"
+            }
+          ]
+        },
+        "world-level9": {
+          "cpu_dispatches": 4,
+          "kinds": 1,
+          "items": [
+            {
+              "count": 4,
+              "key": "code.Rendering.Meshes.Polygon4V:mode=6:path=object:reason=geometry-clip"
+            }
+          ]
+        },
+        "world-level10": {
+          "cpu_dispatches": 16,
+          "kinds": 1,
+          "items": [
+            {
+              "count": 16,
+              "key": "code.Rendering.Meshes.Polygon4V:mode=3:path=object:reason=geometry-clip"
+            }
+          ]
+        },
+        "world-level11": {
+          "cpu_dispatches": 68,
+          "kinds": 1,
+          "items": [
+            {
+              "count": 68,
+              "key": "code.Rendering.Meshes.Polygon4V:mode=3:path=object:reason=geometry-clip"
+            }
+          ]
+        },
+        "world-level12": {
+          "cpu_dispatches": 0,
+          "kinds": 0,
+          "items": []
+        },
+        "world-level13": {
+          "cpu_dispatches": 68,
+          "kinds": 1,
+          "items": [
+            {
+              "count": 68,
+              "key": "code.Rendering.Meshes.Polygon4V:mode=3:path=object:reason=geometry-clip"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "probe": "level12",
+      "summaries": {
+        "objects-level12": {
+          "cpu_dispatches": 0,
+          "kinds": 0,
+          "items": []
+        }
+      }
+    },
+    {
+      "probe": "level13",
+      "summaries": {
+        "objects-level13": {
+          "cpu_dispatches": 48,
+          "kinds": 1,
+          "items": [
+            {
+              "count": 48,
+              "key": "code.Rendering.Meshes.Polygon4V:mode=3:path=object:reason=geometry-clip"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "strict_gate": {
+    "all_worlds": "expected failure on world-level1: 68 CPU dispatches, geometry-clip",
+    "level12_with_objects": "passed in this fixture only; not proof of all possible poses or all app rendering",
+    "negative_control": "passed: intentional CPU dispatch raises AssertionError",
+    "positive_control": "passed: zero CPU dispatches accepted",
+    "disabled_control": "passed: no audit records when disabled"
+  },
+  "tests": {
+    "python_resource_and_frame_profile_tests": 14,
+    "native_materials_and_fallback_suite": "passed with all-worlds, level12 and level13 probes"
+  }
+}

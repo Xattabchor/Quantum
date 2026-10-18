@@ -264,6 +264,7 @@ public final class Level13Probe {
         for(byte b:digest){int n=b&255;if(n<16)hex.append('0');hex.append(Integer.toHexString(n));}return hex.toString();
     }
     public static void main(String[] args) throws Exception {
+        NativeFallbackAudit.begin("objects-level"+LEVEL);
         String file=text("/level"+LEVEL+".txt");Method cut=LevelLoader.class.getDeclaredMethod("cutLevelFile",String.class);cut.setAccessible(true);
         GameIni level=new GameIni(((String[])cut.invoke(null,file))[0],false);Main.settings=new GameIni(text("/setting.txt"),true);
         check(LEVEL==12 || LEVEL==13,"unsupported Stlkr level");
@@ -300,6 +301,6 @@ public final class Level13Probe {
         for(int i=0;i<feet.length;i++)for(int pitch:new int[]{0,45})for(int yaw=0;yaw<360;yaw+=45)
             for(String part:FOG_OFF?new String[]{"objects"}:new String[]{"world","objects"})sample(house,sky,labels[i],feet[i],yaw,pitch,part);
         for(RawImage raw:names.keySet())check(Arrays.equals(hashes.get(raw),raw.img),"original pixels mutated");
-        house.destroy();System.out.println("PASS level"+LEVEL+" actual world+panorama / fixed idle objects / configured weather snapshot / 80 poses x cold+warm / optional Fog OFF is diagnostic only / source pixels unchanged (not FPS/gameplay)");
+        NativeFallbackAudit.end();house.destroy();System.out.println("PASS level"+LEVEL+" actual world+panorama / fixed idle objects / configured weather snapshot / 80 poses x cold+warm / optional Fog OFF is diagnostic only / source pixels unchanged (not FPS/gameplay)");
     }
 }

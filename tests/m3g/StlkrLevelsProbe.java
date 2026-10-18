@@ -94,6 +94,7 @@ public final class StlkrLevelsProbe {
         Method cut=LevelLoader.class.getDeclaredMethod("cutLevelFile",String.class);cut.setAccessible(true);
         int samples=0;
         for(int number=1;number<=13;number++) {
+            NativeFallbackAudit.begin("world-level"+number);
             GameIni level=new GameIni(((String[])cut.invoke(null,Level13Probe.text("/level"+number+".txt")))[0],false);
             configure(level);MultyTexture textures=new MultyTexture(level.get("WORLD_TEXTURE"),true);
             Mesh[] meshes=Level13Probe.decode(level.get("WORLD_MODEL"),level.getFloat("WORLD_SCALE",1),textures);
@@ -123,7 +124,7 @@ public final class StlkrLevelsProbe {
             for(int i=0;i<points.size();i++)for(int pitch:new int[]{0,45})for(int yaw=0;yaw<360;yaw+=45) {
                 sample(number,level,house,sky,labels.get(i),points.get(i),rooms.get(i),yaw,pitch);samples++;
             }
-            house.destroy();
+            NativeFallbackAudit.end();house.destroy();
         }
         System.out.println("PASS all 13 Stlkr worlds / "+samples+" warm poses / native skies + fixed weather / static9 no Fog / no AI or FPS measurement");
     }
