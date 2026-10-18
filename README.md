@@ -14,9 +14,11 @@ I wrote it when I was just learning Java and OOP, so the code quality is really 
 
 ## M3G / JSR-184
 
-**M3G-only перенос: этап 1 — контракт совместимости и аудит fallback.**
-Софтрендер пока не вырезан; опубликованная сборка остаётся двухрендерной.
-[Актуальные требования к режимам, найденные CPU-переходы и план переноса](docs/m3g-only-migration.md).
+**M3G-only перенос: этап 2 — native near/far depth bands.**
+В контрольных наборах Stlkr geometry CPU dispatches 448 → 0; strict gate проходит.
+Софтрендер ещё не вырезан, HUD/оружие не перенесены целиком; downloads прежние.
+[Изменения, проверки и ограничения этапа 2](docs/m3g-depth-bands.md) ·
+[Контракт режимов и план переноса](docs/m3g-only-migration.md).
 Точка возврата до переноса: `b0ee49b`.
 
 Добавлен экспериментальный второй рендер: **Settings → Renderer → M3G**.

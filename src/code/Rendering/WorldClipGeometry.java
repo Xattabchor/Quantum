@@ -6,8 +6,10 @@ package code.Rendering;
  * whole-polygon CPU fallback. Existing successful packets never enter here.
  */
 public final class WorldClipGeometry {
-    private static final int STRIDE=11,MAX_TRIANGLES=16;
+    private static final int STRIDE=11,MAX_TRIANGLES=64,MAX_WEIGHT=4096;
     private final float[] first=new float[STRIDE*10],second=new float[STRIDE*10];
+    private final float[] clipped=new float[STRIDE*10];
+    private boolean depthSplit;
     private float[] polygon;
     private int size;
     private boolean affineAttributes;
@@ -21,7 +23,11 @@ public final class WorldClipGeometry {
 
     public boolean prepare(DirectX7 g,Vertex[] source,int count,short[] coords,byte[] colors,
             int distance,boolean perspective,boolean fog,boolean alternate,boolean correction) {
-        triangles=0;affineAttributes=!perspective || !correction;
+        return prepare(g,source,count,coords,colors,distance,perspective,fog,alternate,correction,true);
+    }
+    public boolean prepare(DirectX7 g,Vertex[] source,int count,short[] coords,byte[] colors,
+            int distance,boolean perspective,boolean fog,boolean alternate,boolean correction,boolean allowDepthSplit) {
+        triangles=0;depthSplit=allowDepthSplit;affineAttributes=!perspective || !correction;
         if(distance<=0 || g.distX<=0 || g.distY<=0) return false;
         for(int i=0;i<count;i++) if(!source[i].hasView(g)) return false;
         if(count==3) return triangle(g,source,coords,colors,0,1,2,distance,perspective,fog);
@@ -59,6 +65,50 @@ public final class WorldClipGeometry {
         plane(-1,0,g.width-g.centreX,0,false);
         plane(0,-1,g.centreY,0,false);
         plane(0,1,g.height-g.centreY,0,false);
+        int start=triangles;
+        if(emitFan(g,distance,perspective,fog)) return true;
+        triangles=start;
+        if(!depthSplit) return false;
+        // A clipped near-to-far triangle can exceed the short XYZ lattice even
+        // though its screen bounds fit. Partition only failed polygons into
+        // canonical power-of-two W bands; keep the integer endpoint convention and
+        // <=1/128 weight error guard instead of loosening the native packer.
+        int count=size;float max=1;
+        for(int i=0;i<count;i++) max=Math.max(max,polygon[i*STRIDE+2]);
+        if(!(max>1) || max>MAX_WEIGHT) return false;
+        System.arraycopy(polygon,0,clipped,0,count*STRIDE);
+        for(float low=1;low<max;low*=2) {
+            depthBand(count,low,low*2);
+            if(!emitFan(g,distance,perspective,fog)) {triangles=start;return false;}
+        }
+        return true;
+    }
+    // Intersect each ORIGINAL clipped edge with both band planes. Sequential
+    // low/high clipping would interpolate one boundary from an already rounded
+    // intermediate edge and could disagree with the neighboring band's endpoint.
+    private void depthBand(int count,float low,float high) {
+        polygon=first;size=0;
+        for(int i=0;i<count;i++) {
+            int a=((i+count-1)%count)*STRIDE,b=i*STRIDE;
+            float wa=clipped[a+2],wb=clipped[b+2];
+            float near=wa<wb?low:high,far=wa<wb?high:low;
+            if((wa<near && wb>near) || (wa>near && wb<near)) depthPoint(a,b,near);
+            if((wa<far && wb>far) || (wa>far && wb<far)) depthPoint(a,b,far);
+            if(wb>=low && wb<=high) {System.arraycopy(clipped,b,first,size*STRIDE,STRIDE);size++;}
+        }
+    }
+    private void depthPoint(int a,int b,float weight) {
+        int low=clipped[a+2]<clipped[b+2]?a:b,high=low==a?b:a,p=size*STRIDE;
+        float t=(weight-clipped[low+2])/(clipped[high+2]-clipped[low+2]);
+        for(int k=0;k<STRIDE;k++) first[p+k]=clipped[low+k]+(clipped[high+k]-clipped[low+k])*t;
+        first[p+2]=weight;
+        if(affineAttributes) {
+            float screenT=t*clipped[high+2]/weight;
+            for(int k=3;k<9;k++) first[p+k]=clipped[low+k]+(clipped[high+k]-clipped[low+k])*screenT;
+        }
+        size++;
+    }
+    private boolean emitFan(DirectX7 g,int distance,boolean perspective,boolean fog) {
         for(int i=1;i+1<size;i++) {
             if(triangles==MAX_TRIANGLES) return false;
             int p0=0,p1=i*STRIDE,p2=(i+1)*STRIDE;

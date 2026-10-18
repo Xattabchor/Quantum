@@ -1,0 +1,259 @@
+{
+  "baseline_commit": "f566f7e",
+  "status": "migration stage 2; NOT a complete M3G-only release",
+  "phone_tested": false,
+  "fps_measured": false,
+  "world_cpu_dispatches_before": 448,
+  "world_cpu_dispatches_after": 0,
+  "world_poses": 2384,
+  "world_render_passes": 9536,
+  "only_enabled_modes": [
+    0,
+    3,
+    6,
+    9,
+    13
+  ],
+  "limits": {
+    "max_prepared_triangles": 64,
+    "max_weight_on_subdivision_retry": 4096,
+    "weight_error_bound": "unchanged 1/128",
+    "extra_payload_bytes_per_lazy_clipper": 2648
+  },
+  "classes_changed": [
+    "code/Rendering/M3GSceneRenderer.class",
+    "code/Rendering/WorldClipGeometry.class"
+  ],
+  "classes_unchanged": 147,
+  "world_metrics": {
+    "1": {
+      "poses": 256,
+      "native_draws": [
+        2361,
+        2419
+      ],
+      "native_triangles": [
+        7937,
+        8089
+      ],
+      "cpu_barriers": [
+        139,
+        128
+      ]
+    },
+    "2": {
+      "poses": 32,
+      "native_draws": [
+        154,
+        154
+      ],
+      "native_triangles": [
+        1693,
+        1693
+      ],
+      "cpu_barriers": [
+        0,
+        0
+      ]
+    },
+    "3": {
+      "poses": 32,
+      "native_draws": [
+        39,
+        40
+      ],
+      "native_triangles": [
+        1303,
+        1344
+      ],
+      "cpu_barriers": [
+        31,
+        32
+      ]
+    },
+    "4": {
+      "poses": 32,
+      "native_draws": [
+        34,
+        34
+      ],
+      "native_triangles": [
+        793,
+        793
+      ],
+      "cpu_barriers": [
+        32,
+        32
+      ]
+    },
+    "5": {
+      "poses": 256,
+      "native_draws": [
+        2728,
+        2786
+      ],
+      "native_triangles": [
+        8538,
+        8690
+      ],
+      "cpu_barriers": [
+        142,
+        128
+      ]
+    },
+    "6": {
+      "poses": 256,
+      "native_draws": [
+        2216,
+        2274
+      ],
+      "native_triangles": [
+        8538,
+        8690
+      ],
+      "cpu_barriers": [
+        14,
+        0
+      ]
+    },
+    "7": {
+      "poses": 160,
+      "native_draws": [
+        3063,
+        3063
+      ],
+      "native_triangles": [
+        9389,
+        9389
+      ],
+      "cpu_barriers": [
+        80,
+        80
+      ]
+    },
+    "8": {
+      "poses": 256,
+      "native_draws": [
+        2361,
+        2419
+      ],
+      "native_triangles": [
+        7937,
+        8089
+      ],
+      "cpu_barriers": [
+        139,
+        128
+      ]
+    },
+    "9": {
+      "poses": 368,
+      "native_draws": [
+        2176,
+        2179
+      ],
+      "native_triangles": [
+        9389,
+        9397
+      ],
+      "cpu_barriers": [
+        356,
+        356
+      ]
+    },
+    "10": {
+      "poses": 64,
+      "native_draws": [
+        717,
+        734
+      ],
+      "native_triangles": [
+        2683,
+        2729
+      ],
+      "cpu_barriers": [
+        35,
+        32
+      ]
+    },
+    "11": {
+      "poses": 256,
+      "native_draws": [
+        2361,
+        2419
+      ],
+      "native_triangles": [
+        7937,
+        8089
+      ],
+      "cpu_barriers": [
+        139,
+        128
+      ]
+    },
+    "12": {
+      "poses": 160,
+      "native_draws": [
+        3063,
+        3063
+      ],
+      "native_triangles": [
+        9389,
+        9389
+      ],
+      "cpu_barriers": [
+        80,
+        80
+      ]
+    },
+    "13": {
+      "poses": 256,
+      "native_draws": [
+        2361,
+        2419
+      ],
+      "native_triangles": [
+        7937,
+        8089
+      ],
+      "cpu_barriers": [
+        139,
+        128
+      ]
+    }
+  },
+  "object_probes": {
+    "12": {
+      "rows": 320,
+      "unchanged_native_stream_rows": 320,
+      "unchanged_visible_native_stream_rows": 320,
+      "cpu_dispatches_before": 0,
+      "cpu_dispatches_after": 0
+    },
+    "13": {
+      "rows": 320,
+      "unchanged_native_stream_rows": 296,
+      "unchanged_visible_native_stream_rows": 296,
+      "cpu_dispatches_before": 48,
+      "cpu_dispatches_after": 0
+    }
+  },
+  "tests": {
+    "native_strict_all_worlds": "passed",
+    "native_strict_level12": "passed",
+    "native_strict_level13": "passed",
+    "level41_and_model_sky": "passed",
+    "actual_quad_both_diagonals_fog_affine_bounds_coverage_reuse": "passed",
+    "original_whole_quad_failure_atomicity": "passed",
+    "cldc_preverification": "passed",
+    "resource_and_frame_profile_python_tests": 14
+  },
+  "notes": [
+    "Counts include all four cold/warm passes, not unique polygons.",
+    "Native D/triangles can increase because previously CPU-rasterized faces now appear in native submissions.",
+    "No claim of pixel-identical CPU/native rasterization; new boundary vertices use existing integer screen rounding.",
+    "Coverage regression permits 1.5-pixel boundary-rounding tolerance and is not a GPU screenshot comparison.",
+    "Hardware/API limits, unsupported materials and app LCDUI rendering remain out of scope.",
+    "Published downloads are unchanged at this stage."
+  ]
+}

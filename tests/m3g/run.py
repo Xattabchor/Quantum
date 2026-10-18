@@ -402,7 +402,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
                     marker = "textures.addElement(cached);cachedPixels += size;"
                     assert content.count(marker) == 1
                     content = content.replace(marker, marker + "\n        Level13Probe.upload(cached.texture,image,kind);")
-                marker = "worldClip.prepare(g,vertices,count,coords,colors,distance,perspective,nativeFog,alternate,hardwarePerspective)"
+                marker = "worldClip.prepare(g,vertices,count,coords,colors,distance,perspective,nativeFog,alternate,hardwarePerspective,mode==0 || mode==3 || mode==6 || mode==9 || mode==13)"
                 assert content.count(marker) == 1
                 content = content.replace(marker, "WorldBottleneckProbe.clipResult(worldClip," + marker + ")")
             elif source.name == "ProjectedGeometry.java":
@@ -554,6 +554,7 @@ with tempfile.TemporaryDirectory(prefix="quantum-m3g-") as temp:
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.ImagePresentationTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.SkyBackgroundTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.WorldClipTest"], check=True)
+    subprocess.run([JAVA, "-cp", classpath, "code.Rendering.WorldDepthBandsTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.Arm9PreparationTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.MaterialModesTest"], check=True)
     subprocess.run([JAVA, "-cp", classpath, "code.Rendering.NativePrepTest"], check=True)
