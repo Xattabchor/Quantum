@@ -1,0 +1,113 @@
+{
+  "baseline_commit": "8c33787bb94e19dec2e43395b04d715921c865f1",
+  "seeded_fov_cases": 250000,
+  "perpendicular_fov_cases": 19117,
+  "selector_cases": 16000,
+  "paired_npc_updates": 7200,
+  "action_coverage": {
+    "visibility_rays": 170,
+    "portal_route_lookups": 495,
+    "blocked_visibility": 20,
+    "death_scripts": 10
+  },
+  "profiles": [
+    {
+      "scenario": "neutral96",
+      "before": {
+        "scans": 192,
+        "reads": 36864,
+        "distances": 18240,
+        "vectors": 0,
+        "vectorSetLength": 0,
+        "sqrts": 0,
+        "rays": 0,
+        "routes": 0
+      },
+      "after": {
+        "scans": 96,
+        "reads": 9216,
+        "distances": 0,
+        "vectors": 0,
+        "vectorSetLength": 0,
+        "sqrts": 0,
+        "rays": 0,
+        "routes": 0
+      }
+    },
+    {
+      "scenario": "mixed96",
+      "before": {
+        "scans": 192,
+        "reads": 36864,
+        "distances": 18240,
+        "vectors": 0,
+        "vectorSetLength": 0,
+        "sqrts": 0,
+        "rays": 0,
+        "routes": 0
+      },
+      "after": {
+        "scans": 96,
+        "reads": 9216,
+        "distances": 2280,
+        "vectors": 0,
+        "vectorSetLength": 0,
+        "sqrts": 0,
+        "rays": 0,
+        "routes": 0
+      }
+    },
+    {
+      "scenario": "mixed96_fov",
+      "before": {
+        "scans": 192,
+        "reads": 36864,
+        "distances": 32744,
+        "vectors": 29008,
+        "vectorSetLength": 29008,
+        "sqrts": 29008,
+        "rays": 0,
+        "routes": 0
+      },
+      "after": {
+        "scans": 96,
+        "reads": 9216,
+        "distances": 2280,
+        "vectors": 0,
+        "vectorSetLength": 0,
+        "sqrts": 264,
+        "rays": 0,
+        "routes": 0
+      }
+    }
+  ],
+  "classfiles_unchanged": 147,
+  "classfiles_changed": [
+    "code/AI/Bot.class",
+    "code/AI/NPC.class"
+  ],
+  "assets_byte_identical": 442,
+  "engine": {
+    "bytes": 476884,
+    "sha256": "d7d4527655a4b6807d0685f905cc5ab68c3d5601e883c80a02d413c32dbbe092"
+  },
+  "game": {
+    "bytes": 10074630,
+    "sha256": "89746039134f288eb7c3767f56a8780a8d37f4eb21efc8964ad57201c87834f2"
+  },
+  "full_physics_integration_tested": false,
+  "phone_runtime_tested": false,
+  "fps_measured": false,
+  "render_witnesses_unchanged": {
+    "level13": 320,
+    "level41": 256,
+    "level41_sky": 32,
+    "all_sky_streams_in_level41_run": 86
+  },
+  "m3g_pass_counts": {
+    "m3g": 172,
+    "profile": 235,
+    "level13": 183,
+    "level41": 179
+  }
+}

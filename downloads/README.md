@@ -2,6 +2,20 @@
 
 CLDC 1.1 / MIDP 2.0. Preverified with ProGuard 6.2.2 -microedition.
 
+**18.10.2026 — оптимизация CPU-нагрузки ИИ NPC:** один проход для врага и
+следования, ранняя фильтрация фракций, без временных FOV-векторов и с точной
+пограничной математикой. В тесте 96 NPC: чтения списка **36 864 → 9 216**;
+при FOV on sqrt **29 008 → 264**. Реакция, атаки, raycast и частота update
+не замедлялись. Это счётчики операций, **не FPS телефона**.
+[Проверки и ограничения](../docs/ai-selection-optimization.md).
+Текущий движок: **476884 байт**, SHA-256
+`d7d4527655a4b6807d0685f905cc5ab68c3d5601e883c80a02d413c32dbbe092`.
+Полная Stlkr: **[Quantum_Stlkr_FogBatch_ARM9.jar](Quantum_Stlkr_FogBatch_ARM9.jar)**
+/ [JAD](Quantum_Stlkr_FogBatch_ARM9.jad), **10074630 байт**, SHA-256
+`89746039134f288eb7c3767f56a8780a8d37f4eb21efc8964ad57201c87834f2`.
+Имя сохранено; включает Fog/Sprite batching и ИИ, все 442 ресурса неизменны.
+CLDC preverification пройдена; `runtime_tested=false`.
+
 **18.10.2026 — batching спрайтов NPC:** совместимые соседние спрайты
 одного скина/кадра собираются по 32, без сортировки и изменения native Fog.
 Тест 70 совместимых billboards: **70 → 3 sprite draws**, warm B:0/T:0;
@@ -9,10 +23,10 @@ CLDC 1.1 / MIDP 2.0. Preverified with ProGuard 6.2.2 -microedition.
 Stlkr level13 D не уменьшился** (тяжёлый кадр остаётся 75): совместимых
 смежных текстур там не было. Для разных скинов нужен отдельный atlas design.
 [Результаты, ограничения и проверки](../docs/m3g-npc-sprite-batching.md).
-Текущий движок: **476014 байт**, SHA-256
+Движок этапа Sprite batching: **476014 байт**, SHA-256
 `4b5b222c8b56409533b8cf31561b1eb1de128c04000ee62fd46bbbb530c4775d`.
 Полная сборка с ресурсами: **[Quantum_Stlkr_FogBatch_ARM9.jar](Quantum_Stlkr_FogBatch_ARM9.jar)**
-/ [JAD](Quantum_Stlkr_FogBatch_ARM9.jad); имя сохранено, включает обе оптимизации.
+/ [JAD](Quantum_Stlkr_FogBatch_ARM9.jad); имя сохранено; актуальная сборка описана выше.
 Это API submission tests, не замер FPS на телефоне.
 
 **18.10.2026 — точное объединение native Fog-пакетов:** в тяжёлом кадре

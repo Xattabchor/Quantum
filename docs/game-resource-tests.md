@@ -129,3 +129,12 @@ flag. Preverified classfile bytes не меняются; ресурсы не п�
 `SpriteBatchTest` и `QUANTUM_SPRITE_BATCH_REFERENCE=1` (test-only reference).
 В текущих 80 позах level13 все draw counts и 320 ordered streams остались
 прежними; синтетические 70 совместимых billboards дают 3 sprite draws.
+
+
+## Регрессии CPU-оптимизации ИИ
+
+`python tests/ai/run.py` после CLDC-сборки сравнивает настоящие NPC updates
+с исходным action/поиском, включая visibility raycast, маршруты, награды и
+очередь скриптов. Физический шаг в AI fixture отключён. Native probes level13
+и level41 по-прежнему проверяют упорядоченные потоки/counters, не FPS.
+[Методика и ограничения](ai-selection-optimization.md).

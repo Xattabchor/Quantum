@@ -146,60 +146,74 @@ public abstract class Bot extends GameObject {
     protected GameObject findBot(Vector objs, GameObject ignore, int[] fractions) {
         long dis = Long.MAX_VALUE;
         GameObject bot = null;
-        if (objs.isEmpty()) return null;
-        
+        Matrix observer = character.getTransform();
+        long look = 0;
+        boolean lookReady = false;
         for(int i = 0; i < objs.size(); ++i) {
-            if(objs.elementAt(i) instanceof GameObject) {
-                GameObject obj = (GameObject) objs.elementAt(i);
-
-                if(!obj.isDead() && (obj instanceof Bot || obj instanceof Player) && obj != ignore) {
-                    long dis2 = getCharacter().distance(obj.getCharacter());
-                    if(dis2 >= dis) continue;
-
-                    if(visiblityCheck && !isTargetInFOV(this, obj)) continue;
-
-                    if(obj instanceof Bot) {
-                        if(contains(fractions, ((Bot) obj).fraction)) {
-                            dis = dis2;
-                            bot = obj;
-                        }
-                    } else {
-                        if(contains(fractions, 0)) {
-                            dis = dis2;
-                            bot = obj;
-                        }
-                    }
-
-                }
+            Object value = objs.elementAt(i);
+            if(!(value instanceof GameObject)) continue;
+            GameObject obj = (GameObject)value;
+            if(obj == ignore || obj.isDead() || !(obj instanceof Bot || obj instanceof Player)) continue;
+            int fraction = obj instanceof Bot ? ((Bot)obj).fraction : 0;
+            // Reject unrelated factions before distance/FOV work.
+            if(!contains(fractions, fraction)) continue;
+            long dis2 = character.distance(obj.getCharacter());
+            if(dis2 >= dis) continue;
+            if(visiblityCheck && dis2 >= 6250000L) {
+                if(!lookReady) {look = fovDirection(observer.m02, observer.m22);lookReady = true;}
+                if(!isTargetInFOV(observer, obj.getCharacter().getTransform(), dis2, look)) continue;
             }
+            dis = dis2;
+            bot = obj;
         }
-        
         return bot;
     }
-    
-    public static boolean isTargetInFOV(GameObject observer, GameObject observable) {
-        Vector3D lookDir = new Vector3D(
-                observer.getCharacter().transform.m02, 
-                0, 
-                observer.getCharacter().transform.m22
-                );
-        lookDir.setLength(4096);
 
-        Vector3D observableDir = new Vector3D(
-                observable.getCharacter().transform.m03 - observer.getCharacter().transform.m03, 
-                0,
-                observable.getCharacter().transform.m23 - observer.getCharacter().transform.m23
-                );
-        observableDir.setLength(4096);
-
-        boolean result = lookDir.dot(observableDir) > 0;
-
-        result |= observer.character.distance(observable.character) < 2500*2500;
-        
-        return result;
+    // Bit-for-bit Vector3D(x,0,z).setLength(4096), including legacy int
+    // overflow, halving and truncation at the FOV boundary. No heap objects.
+    protected static long fovDirection(int x, int z) {
+        if(x*x + z*z != 4096*4096) {
+            while(Math.abs(x) + Math.abs(z) > 30000) {x /= 2;z /= 2;}
+            double length = Math.sqrt(x*x + z*z);
+            x = (int)(x / length * 4096);
+            z = (int)(z / length * 4096);
+        }
+        return ((long)x << 32) | (z & 0xffffffffL);
     }
 
-    
+    protected static boolean isTargetInFOV(Matrix observer, Matrix observable, long distance, long look) {
+        if(distance < 6250000L) return true;
+        int lx = (int)(look >> 32), lz = (int)look;
+        if(lx == 0 && lz == 0) return false;
+        int x = observable.m03 - observer.m03, z = observable.m23 - observer.m23;
+        // The original setter skips normalization on this EXACT int equality.
+        if(x*x + z*z == 4096*4096) return lx*x + lz*z > 0;
+        while(Math.abs(x) + Math.abs(z) > 30000) {x /= 2;z /= 2;}
+        if(lx >= -4096 && lx <= 4096 && lz >= -4096 && lz <= 4096
+                && x >= -30000 && x <= 30000 && z >= -30000 && z <= 30000) {
+            // Each normalized target component truncates by <1. Certify the
+            // sign only when the dot exceeds that error bound (plus margin).
+            // L1 >= L2 avoids sqrt/division here; bounds prevent int overflow.
+            long dot = (long)(lx*x + lz*z) << 12;
+            int error = (Math.abs(lx) + Math.abs(lz) + 2) * (Math.abs(x) + Math.abs(z));
+            if(dot > error) return true;
+            if(dot < -error) return false;
+        }
+        // Near perpendicular/zero/corrupt vectors retain exact legacy math.
+        double length = Math.sqrt(x*x + z*z);
+        x = (int)(x / length * 4096);
+        z = (int)(z / length * 4096);
+        return lx*x + lz*z > 0;
+    }
+
+    public static boolean isTargetInFOV(GameObject observer, GameObject observable) {
+        long distance = observer.character.distance(observable.character);
+        if(distance < 6250000L) return true;
+        Matrix matrix = observer.character.getTransform();
+        return isTargetInFOV(matrix, observable.character.getTransform(), distance,
+                fovDirection(matrix.m02, matrix.m22));
+    }
+
     protected final void lookAt(int x, int z) {
         Matrix pos = this.getCharacter().getTransform();
 

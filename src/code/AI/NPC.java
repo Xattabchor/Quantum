@@ -236,6 +236,33 @@ public final class NPC extends Bot {
         if(currentSprite != null) currentSprite.animationBegin = System.currentTimeMillis();
     }
 
+    // Enemy and follower used to scan the same House list independently.
+    // Keep independent minima/first-tie winners in one allocation-free pass.
+    private void findTargets(Vector objs) {
+        enemy = follower = null;
+        long enemyDistance = Long.MAX_VALUE, followerDistance = Long.MAX_VALUE;
+        Matrix observer = character.getTransform();
+        long look = 0;
+        boolean lookReady = false;
+        for(int i = 0; i < objs.size(); i++) {
+            Object value = objs.elementAt(i);
+            if(!(value instanceof GameObject)) continue;
+            GameObject obj = (GameObject)value;
+            if(obj == this || obj.isDead() || !(obj instanceof Bot || obj instanceof Player)) continue;
+            int fraction = obj instanceof Bot ? ((Bot)obj).fraction : 0;
+            boolean attack = contains(toAttack, fraction), follow = contains(toFollow, fraction);
+            if(!attack && !follow) continue;
+            long distance = character.distance(obj.getCharacter());
+            if((!attack || distance >= enemyDistance) && (!follow || distance >= followerDistance)) continue;
+            if(visiblityCheck && distance >= 6250000L) {
+                if(!lookReady) {look = fovDirection(observer.m02, observer.m22);lookReady = true;}
+                if(!isTargetInFOV(observer, obj.getCharacter().getTransform(), distance, look)) continue;
+            }
+            if(attack && distance < enemyDistance) {enemyDistance = distance;enemy = obj;}
+            if(follow && distance < followerDistance) {followerDistance = distance;follower = obj;}
+        }
+    }
+
     protected final void action(Scene scene) {
         if (System.currentTimeMillis() - lastDamage < damageSleepTime) return;
         
@@ -260,7 +287,7 @@ public final class NPC extends Bot {
             
 			//Find new enemy
             GameObject oldEnemy = enemy;
-            enemy = findBot(objs, this, toAttack);
+            findTargets(objs);
             
 			//Or select a closer enemy from unicalEnemies list
             unicalEnemy_search:
@@ -288,8 +315,6 @@ public final class NPC extends Bot {
                 if(character.distance(enemy.getCharacter()) >= maxEnemyDistance * maxEnemyDistance) 
                     enemy = null;
             }
-            
-            follower = findBot(objs, this, toFollow);
 
             GameObject target = enemy != null ? enemy : follower;
             

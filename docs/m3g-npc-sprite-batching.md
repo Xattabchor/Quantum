@@ -97,6 +97,10 @@ Assets: `python scripts/game_resources.py --archive 'Stlkr by ebk.jar (1).zip'
 
 ## Сборки
 
+Ниже размеры этапа `8c33787`; текущие файлы в downloads уже включают
+последующую [CPU-оптимизацию ИИ](ai-selection-optimization.md).
+Актуальные размеры/SHA-256 — в [downloads/README.md](../downloads/README.md).
+
 - `downloads/Quantum.jar`: **476014 байт**, движок без ресурсов.
   SHA-256 `4b5b222c8b56409533b8cf31561b1eb1de128c04000ee62fd46bbbb530c4775d`.
 - `downloads/Quantum_Stlkr_FogBatch_ARM9.jar`: **10073760 байт**, полная
