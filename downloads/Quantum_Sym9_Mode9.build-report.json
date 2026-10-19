@@ -1,0 +1,100 @@
+{
+  "classes": 154,
+  "code_methods": 1974,
+  "stackmap_attributes": 1072,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "jar_sha256": "993f38939ba43d03f7e98bab498fbcbc4214b277dcaaeebc05923b2f6bad198b",
+  "resource_files": 198,
+  "source_files": 144,
+  "preverifier": "ProGuard -microedition (CLDC StackMap)",
+  "tools_sha256": {
+    "ecj.jar": "5d53b25fd09b8d83157634af682b4c64bce9def70f6533f81d9115526057ae69",
+    "proguard.jar": "bd9b6c58daf01e5088b86fc8aa99ae9af53d3821c622e5e01d68db97ee82f2eb",
+    "cldc11.jar": "1c3ec9a7057bd3b4daf7a6474cf508676b51066b4e56cbebbe7b326a90efe87a",
+    "midp21.jar": "0a0bc48207dd8bedea027968c3c9bdcf5dadd37be42e356d0802c81a8fa2c43f",
+    "jsr135.jar": "34fb379affaa83b7941307c51071eb363ce15ddf451510866cdb54f009defca5",
+    "jsr184.jar": "161a49bb715dd732f75ff1a39fbf524cae307e7b4596feb2c6830315da75165b",
+    "jsr75_file.jar": "b66a74c215f48d3f319757d1a5f1d7773016defe17344631682be4051c7802f3"
+  },
+  "resource_archive_sha256": "4d831f098a636c311e310bb9fa206b14ae234df6de30d9dc0072db878695f7c3",
+  "frame_profile": false,
+  "runtime_tested": false,
+  "resource_overlay_sha256": {
+    "level1.txt": "9bbdb42943fa8a49109790f8210f38dbdbdfdecdbe0bafc25c718cf4c4588159",
+    "skies/g.png": "4ffc0764f7438ced70ff56d7130f60b4ea290b775b9940bad8e536517d29bdeb",
+    "skies/n.png": "d542df36f7af14133f2c010ab204aa2a31ff7ef0c3bef7b72a1fe310a5b93686",
+    "skies/sus.png": "4ffc0764f7438ced70ff56d7130f60b4ea290b775b9940bad8e536517d29bdeb"
+  },
+  "artifact": "Quantum_Sym9_Mode9.jar",
+  "source_state": "existing uncommitted optimized engine; engine class bytes identical to published 782ddc5 JAR",
+  "changes_from_previous_release": {
+    "previous_commit": "782ddc5d08d4ac672b8bed6e50ee1ef1b478e798",
+    "previous_artifact": "Quantum_Sym9_Textures256.jar",
+    "resource": "level1.txt",
+    "change": "DMODE=3 -> DMODE=9",
+    "changed_payload_bytes": 1,
+    "other_payload_bytes": "identical"
+  },
+  "verification": {
+    "archive_sha256": "4d831f098a636c311e310bb9fa206b14ae234df6de30d9dc0072db878695f7c3",
+    "resource_files": 198,
+    "levels": [
+      1,
+      2
+    ],
+    "level_mode_overrides": {
+      "level1.txt": {
+        "from": 3,
+        "to": 9
+      }
+    },
+    "mode9_world_fog": "absent on both maps",
+    "native_max_texture_dimension": 256,
+    "texture_replacements": {
+      "skies/g.png": {
+        "source": "g.png",
+        "sha256": "4ffc0764f7438ced70ff56d7130f60b4ea290b775b9940bad8e536517d29bdeb",
+        "size": [
+          256,
+          256
+        ]
+      },
+      "skies/n.png": {
+        "source": "n.png",
+        "sha256": "d542df36f7af14133f2c010ab204aa2a31ff7ef0c3bef7b72a1fe310a5b93686",
+        "size": [
+          256,
+          256
+        ]
+      },
+      "skies/sus.png": {
+        "source": "g.png",
+        "sha256": "4ffc0764f7438ced70ff56d7130f60b4ea290b775b9940bad8e536517d29bdeb",
+        "size": [
+          256,
+          256
+        ]
+      }
+    },
+    "warm_poses": 160,
+    "unchanged_native_draw_streams": 160,
+    "warm_uploads_shared_cache": 0,
+    "warm_uploads_separate_sky": 0,
+    "alternating_texture_hits": 2000,
+    "reference_vector_reads": 17000,
+    "optimized_vector_reads": 0,
+    "cpu_rasterizer_dispatches": 0,
+    "startup_discovery": "pass: levels 1,2",
+    "level1_lightmap_snapshot": "initial static vertex values; asynchronous bake excluded only in headless test copy",
+    "api_doubles": true,
+    "handset_tested": false,
+    "fps_measured": false,
+    "negative_mode3_config": "PASS: reverting to 3 fails regression"
+  },
+  "documentation": "docs/sym9-optimization.md"
+}
