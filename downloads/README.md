@@ -1,5 +1,20 @@
 # Quantum — M3G preverified preview
 
+## M3G Perspective — ON/OFF на настоящей карте
+
+[JAR](Quantum_StaticRoom_Perspective.jar) · [JAD](Quantum_StaticRoom_Perspective.jad) ·
+[Отчёт](Quantum_StaticRoom_Perspective.build-report.json) ·
+[Методика и ограничения](../docs/static-room-perspective.md).
+
+Запуск **PERS ON**, **0** переключает ON↔OFF, **1** всегда ON, **3** всегда OFF,
+**5** исходная камера. Снять ON→OFF→ON в неподвижной позе, после прогрева
+и обновления числовых окон (примерно8секунд на режим).
+Меняется только `PolygonMode.setPerspectiveCorrectionEnable`, камера/GRID/буферы/
+индексы/свет/alpha/река/far60000 прежние. OFF — **подсказка M3G**, не гарантированное
+принудительное affine: драйвер может её игнорировать. Выигрыш Software P0 здесь
+не обещается; нужны FPS/N/R и вид текстур на E65. Основная игра и старые JAR сохранены.
+Телефонный ON/OFF ещё не измерен.
+
 ## Software PolyFill — полигонаж/fillrate старого CPU Quantum
 
 [JAR](Quantum_SoftwarePolyFill_Test.jar) · [JAD](Quantum_SoftwarePolyFill_Test.jad) ·

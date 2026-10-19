@@ -1,0 +1,68 @@
+{
+  "classes": 190,
+  "code_methods": 2209,
+  "stackmap_attributes": 1216,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Tex3.jar",
+  "base_commit": "b9b477f3de65e2a2ecc2e0f88ad10a09244f22fa",
+  "base_sha256": "8617f348e04f4b10c03b0049e60f2e92c41532d6939546ad96f6e44d11aa6880",
+  "jar_bytes": 811874,
+  "jar_sha256": "652626cddcc8b991a4c9ba76ac810cd1d163f7041f393ff7e31fd8f44f3dcb57",
+  "all_182_baseline_classes_and_all_map_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/StaticRoomPerspectiveMesh$Masked.class",
+    "code/Rendering/StaticRoomPerspectiveMesh$NativeImage.class",
+    "code/Rendering/StaticRoomPerspectiveMesh$Part.class",
+    "code/Rendering/StaticRoomPerspectiveMesh$Pending.class",
+    "code/Rendering/StaticRoomPerspectiveMesh.class",
+    "code/Rendering/StaticRoomPerspectivePreview$Viewer.class",
+    "code/Rendering/StaticRoomPerspectivePreview.class",
+    "code/Rendering/StaticRoomPerspectiveStats.class"
+  ],
+  "source_sha256": {
+    "experiments/static-room-perspective/src/code/Rendering/StaticRoomPerspectiveMesh.java": "3a579f0cd84b3332e8de890e6fc313c1d329b1ad29123f905f806a3652442f21",
+    "experiments/static-room-perspective/src/code/Rendering/StaticRoomPerspectivePreview.java": "5b57375009757f322375e268d7a17cca23958de1a03ad4f0fef7a7723b9a4e08",
+    "experiments/static-room-perspective/src/code/Rendering/StaticRoomPerspectiveStats.java": "7dc69df1e386993c56370d3fc79603bacc10a753b5c50e7f74584ca325699cff"
+  },
+  "builder_sha256": "f846edac039e60e4abca85dcb32291e548990edb805f33486dfcfebfacc41d42",
+  "renderer_parent_source_sha256": "1ba6b1e7e9497d4f9b5ff67fc0a97af901fccd781723fbd02aad51edac852474",
+  "diagnostic": {
+    "default": "PERS ON",
+    "modes": [
+      "ON",
+      "OFF"
+    ],
+    "key0": "toggle hint, freeze movement, preserve pose",
+    "key1": "ON",
+    "key3": "OFF",
+    "key5": "spawn/yaw0",
+    "selection": "unchanged legacy GRID4x4 in both modes; original large VBs/call groups and exact strip order",
+    "changed_state": "PolygonMode.setPerspectiveCorrectionEnable only; OFF may be ignored by implementation",
+    "cold_only": true,
+    "mask_cache_entries": 2,
+    "near": 128,
+    "far": 60000,
+    "fov": 74,
+    "viewport": "same full Canvas/Image target",
+    "alpha": "original thresholds ON",
+    "river": "all4 cached frames/speed6/mode7/order unchanged",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "fractional_fps": true,
+    "native_stages": "J prepare, B bind, K camera/state/clear, R render loop, E release; API wall time, NOT GPU timestamps",
+    "counters": "T/DC/VB/S/V/CUT and N/C/I",
+    "VB_is_not_driver_processing_counter": true,
+    "no_software_fallback": true,
+    "failure": "explicit error, no silent whole-room fallback",
+    "map_assets_changed": false
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Controlled perspective-correction hint ON/OFF on actual map, not a speedup claim. Same geometry/state except hint; device may ignore it."
+}

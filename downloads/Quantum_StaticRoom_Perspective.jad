@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum Static Room Perspective
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: Perspective A-B,,code.Rendering.StaticRoomPerspectivePreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_StaticRoom_Perspective.jar
+MIDlet-Jar-Size: 811874
