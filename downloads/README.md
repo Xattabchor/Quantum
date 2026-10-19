@@ -1,5 +1,20 @@
 # Quantum — M3G preverified preview
 
+## Portal Map BVH — порталы + BVH внутри комнат, map-selo.png
+
+[JAR](Quantum_PortalMap_Bvh.jar) · [JAD](Quantum_PortalMap_Bvh.jad) ·
+[Отчёт](Quantum_PortalMap_Bvh.build-report.json) · [Методика](../docs/portal-map-bvh.md).
+
+Atlas **maps/kordos/map-selo.png из sym9**, не map-selo1; одинаковый в ON/OFF.
+Запуск **BVH ON F40000**, порталы всегда ON, BSP нет. **0** BVH toggle,
+**1** ON, **3** OFF, **\*** far40k→30k→20k→40k, **5** исходная камера.
+В исходном desktop ракурсе1384→498tri при том же1call; это не результат FPS E65.
+Холодные вершины/atlas, один call на комнату,2-entry cache выбранных индексов;
+новая маска при движении может строить индексы, стационарно — нет (HUD U).
+Фото **ON→OFF→ON с одинаковым far и камерой**, около8сек на режим, FPS/N/R/T/DC/VB.
+Geometry-only, без неба/погоды/gameplay. Старые сборки/основная игра не изменены.
+
+
 ## Portal Map Far — 40000 / 30000 / 20000
 
 [JAR](Quantum_PortalMap_Far.jar) · [JAD](Quantum_PortalMap_Far.jad) ·

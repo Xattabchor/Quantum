@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum Portal Map BVH
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: Portals-BVH ON-OFF,,code.Rendering.PortalMapBvhPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_PortalMap_Bvh.jar
+MIDlet-Jar-Size: 1260678

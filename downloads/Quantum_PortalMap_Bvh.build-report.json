@@ -1,0 +1,260 @@
+{
+  "classes": 201,
+  "code_methods": 2288,
+  "stackmap_attributes": 1268,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "user_map": {
+    "archive_sha256": "16beaa29fe143cc4010b66e21d90c729a0f83c5f2f3f282b04c17c96577b1ddf",
+    "archive_bytes": 272211,
+    "rooms": 15,
+    "portals": 18,
+    "links": [
+      [
+        4,
+        13
+      ],
+      [
+        5,
+        13
+      ],
+      [
+        2,
+        8
+      ],
+      [
+        6,
+        10
+      ],
+      [
+        10,
+        12
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        12,
+        13
+      ],
+      [
+        1,
+        10
+      ],
+      [
+        6,
+        7
+      ],
+      [
+        4,
+        6
+      ],
+      [
+        6,
+        9
+      ],
+      [
+        6,
+        11
+      ],
+      [
+        5,
+        7
+      ],
+      [
+        8,
+        11
+      ],
+      [
+        3,
+        14
+      ],
+      [
+        8,
+        9
+      ]
+    ],
+    "triangles_by_room": [
+      48,
+      47,
+      110,
+      720,
+      29,
+      442,
+      1384,
+      12,
+      68,
+      40,
+      93,
+      565,
+      56,
+      113,
+      34
+    ],
+    "corners_by_room": [
+      98,
+      97,
+      220,
+      1506,
+      61,
+      938,
+      2990,
+      24,
+      140,
+      84,
+      189,
+      1185,
+      114,
+      239,
+      70
+    ],
+    "source_room_vertices": [
+      36,
+      33,
+      75,
+      395,
+      24,
+      334,
+      789,
+      12,
+      48,
+      30,
+      65,
+      326,
+      40,
+      76,
+      34
+    ],
+    "world_triangles": 3761,
+    "portal_mesh_triangles": 36,
+    "lightmap_rgb_faces": 2085,
+    "lightmap_gray_faces": 30,
+    "lightmap_bytes": 25956,
+    "image_dimensions": {
+      "portal-map/maps/kordon.png": [
+        256,
+        256
+      ],
+      "portal-map/skies/n.png": [
+        512,
+        512
+      ]
+    },
+    "config": {
+      "DMODE": 13,
+      "DIST": 40000,
+      "WORLD_SCALE": 6,
+      "START": [
+        -76338,
+        -2536,
+        -102034
+      ]
+    },
+    "assets_sha256": {
+      "portal-map/level1.txt": "1d5b848d6406f95f5d3f79f32d061dae7d043b2b599ba8c1574dd7cc283c3cae",
+      "portal-map/lightmap/kordon.vla": "61468d9a8958a601cee41bc375225c964571f27cafea931a865288f4a3be70e0",
+      "portal-map/maps/kordon.3d": "0b9aa25fcdb5a74b4c21dba39164a8209d9ceb95bb00caced37ba477c72e1ae9",
+      "portal-map/maps/kordon.png": "ab0d25c3bd635784a6bb996e1f66cad820e51cd900702d163033a22bfa836248",
+      "portal-map/skies/n.png": "1223f6bf427ae1be7909b22f1800257e4570643f37bdf42533ebb1f46f0b2fda",
+      "portal-map/skies/skybox5.3d": "cf2a66609a1f5d19e742ac9d4faac8680caf4dfce04a11bb010ac2cba5b7d973"
+    }
+  },
+  "source_archive": "fixtures/portal-map/lightmap.zip",
+  "auditor_sha256": "6aadf57cfdbce9596c5b7c050747beda9ea2d0033696636ba7478a8e2d21ccde",
+  "base_jar": "Quantum_PortalMap_Test.jar",
+  "base_commit": "6fe1257924b52fa252461c4ef36bb78cb57edc2f",
+  "base_sha256": "116abb3817186dec6c753e4031f4a8d66f03690f6c73db939989592062064be4",
+  "jar_bytes": 1260678,
+  "jar_sha256": "3ceb3dc29c86518f2880908c8732fb6080f67ac18705f3cb4fcb8fe77a21ebc4",
+  "all_190_parent_classes_and_all_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/PortalMapBvh.class",
+    "code/Rendering/PortalMapBvhData.class",
+    "code/Rendering/PortalMapBvhFrustum.class",
+    "code/Rendering/PortalMapBvhMesh$Masked.class",
+    "code/Rendering/PortalMapBvhMesh$NativeImage.class",
+    "code/Rendering/PortalMapBvhMesh$Part.class",
+    "code/Rendering/PortalMapBvhMesh.class",
+    "code/Rendering/PortalMapBvhPreview$Viewer.class",
+    "code/Rendering/PortalMapBvhPreview.class",
+    "code/Rendering/PortalMapBvhStats.class",
+    "code/Rendering/PortalMapBvhVisibility.class"
+  ],
+  "source_sha256": {
+    "experiments/portal-map-bvh/src/code/Rendering/PortalMapBvh.java": "758cd4bfef5e4d94fe075c3e8b8a4e87c70d3cd605033d5742a05ea1cf5c73cb",
+    "experiments/portal-map-bvh/src/code/Rendering/PortalMapBvhData.java": "823c3df66ef96a86bce208507baafa1f98945024a57ad71a887aa04a522e6877",
+    "experiments/portal-map-bvh/src/code/Rendering/PortalMapBvhFrustum.java": "e5a3ff6af17a96000696c45b7131b16a370088bb035467abd89d962dd20e7dca",
+    "experiments/portal-map-bvh/src/code/Rendering/PortalMapBvhMesh.java": "b070fa69371ef15c1d2b349b1e731ce47cdb12406242859fdecd30a720046712",
+    "experiments/portal-map-bvh/src/code/Rendering/PortalMapBvhPreview.java": "563786a7fd51b9f8eb04e5deb8d84b3f58353f8e1feba91899de1823a0e06d41",
+    "experiments/portal-map-bvh/src/code/Rendering/PortalMapBvhStats.java": "740c021068f15651455579dd1fcde694d9d5d1701a9c18a163a8be37336f227a",
+    "experiments/portal-map-bvh/src/code/Rendering/PortalMapBvhVisibility.java": "b92167146b0d4e45c5999da4e124588d340f905cc2ea0f6c4ae2ada88e9a51df"
+  },
+  "builder_sha256": "80ebe6769a289df2fb5d2f90f2f0bdd552758205162f7584b4a63c74ea9ea070",
+  "renderer_parent_source_sha256": "e99536da4e55d81094a592d44b7c523f03263b8685c172a6ef401746fb06bd79",
+  "texture": {
+    "archive": "sym 9.zip.zip",
+    "archive_sha256": "4d831f098a636c311e310bb9fa206b14ae234df6de30d9dc0072db878695f7c3",
+    "source": "maps/kordos/map-selo.png",
+    "entry": "portal-map-bvh/map-selo.png",
+    "sha256": "b90d9db6fd0653585cec73677114935553ce33ab76450c6a6918bfb926d44efb",
+    "bytes": 144265,
+    "width": 256,
+    "height": 256,
+    "replacement": "explicit map-selo.png, NOT map-selo1.png; same atlas in BVH ON/OFF; UVs not remapped"
+  },
+  "diagnostic": {
+    "default": "BVH ON",
+    "portals": "always ON",
+    "key0": "toggle BVH, freeze motion and reset stats",
+    "key1": "BVH ON",
+    "key3": "BVH OFF",
+    "star": "cycle far 40000/30000/20000; preserve pose, freeze movement, reset stats",
+    "key5": "home",
+    "near": 128,
+    "far": 40000,
+    "far_presets": [
+      40000,
+      30000,
+      20000
+    ],
+    "fov": 74,
+    "DMODE": 13,
+    "world_scale": 6,
+    "alpha": "ON",
+    "depth": "ON",
+    "perspective": "ON",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "leaf_faces": 8,
+    "index_cache_entries_per_room": 2,
+    "vertex_texture_uploads": "cold only",
+    "selected_indices": "immutable; built BEFORE bind only on a new partial visibility mask; two-entry room cache; no stationary rebuild",
+    "batching": "at most one call per selected nonempty room, original face order; no per-leaf draw calls",
+    "selection": "original portal room windows + per-room median BVH/AABB vs native camera clip planes and room window",
+    "cache": "exact native camera16 + viewport/focals/far/near/room mask/seed + BVH state",
+    "fallback": "index allocation OOM drops caches and uses full original selected-room indices; explicit BVH FALLBACK HUD",
+    "BVH": true,
+    "BSP": false,
+    "original_map_assets_changed": false,
+    "effects": "geometry only: no sky/weather/gameplay in either mode",
+    "counters": "T submitted triangles, DC API calls, VB resident room buffer capacity; not post-native-clipping counters",
+    "timings": "J/B/K/R/E API wall time, NOT GPU timestamps"
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Portal map + per-room BVH ON/OFF, sym9 map-selo.png atlas. No handset speed claim."
+}
