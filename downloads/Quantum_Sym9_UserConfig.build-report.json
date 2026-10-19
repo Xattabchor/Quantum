@@ -1,0 +1,106 @@
+{
+  "classes": 154,
+  "code_methods": 1974,
+  "stackmap_attributes": 1072,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "jar_sha256": "3a8ee92df8933e71aab341037b46271916ef44ff85c2c8ddec42030e318f17aa",
+  "resource_files": 198,
+  "source_files": 144,
+  "preverifier": "ProGuard -microedition (CLDC StackMap)",
+  "tools_sha256": {
+    "ecj.jar": "5d53b25fd09b8d83157634af682b4c64bce9def70f6533f81d9115526057ae69",
+    "proguard.jar": "bd9b6c58daf01e5088b86fc8aa99ae9af53d3821c622e5e01d68db97ee82f2eb",
+    "cldc11.jar": "1c3ec9a7057bd3b4daf7a6474cf508676b51066b4e56cbebbe7b326a90efe87a",
+    "midp21.jar": "0a0bc48207dd8bedea027968c3c9bdcf5dadd37be42e356d0802c81a8fa2c43f",
+    "jsr135.jar": "34fb379affaa83b7941307c51071eb363ce15ddf451510866cdb54f009defca5",
+    "jsr184.jar": "161a49bb715dd732f75ff1a39fbf524cae307e7b4596feb2c6830315da75165b",
+    "jsr75_file.jar": "b66a74c215f48d3f319757d1a5f1d7773016defe17344631682be4051c7802f3"
+  },
+  "resource_archive_sha256": "4d831f098a636c311e310bb9fa206b14ae234df6de30d9dc0072db878695f7c3",
+  "frame_profile": false,
+  "runtime_tested": false,
+  "resource_overlay_sha256": {
+    "level1.txt": "b7efb71ee505fa989a1e206159bc645247ebd6fe39fd6c4cfbd0faf165c061cb",
+    "skies/g.png": "4ffc0764f7438ced70ff56d7130f60b4ea290b775b9940bad8e536517d29bdeb",
+    "skies/n.png": "d542df36f7af14133f2c010ab204aa2a31ff7ef0c3bef7b72a1fe310a5b93686",
+    "skies/sus.png": "4ffc0764f7438ced70ff56d7130f60b4ea290b775b9940bad8e536517d29bdeb"
+  },
+  "artifact": "Quantum_Sym9_UserConfig.jar",
+  "source_state": "same engine class bytes as published 39fa3f0 JAR; only user-provided level1.txt replaced",
+  "previous_release_commit": "39fa3f062c5856044ccfd83953c65e9e2a2cc172",
+  "user_level1_sha256": "b7efb71ee505fa989a1e206159bc645247ebd6fe39fd6c4cfbd0faf165c061cb",
+  "user_level1_bytes": 3561,
+  "changed_payload_files": [
+    "level1.txt"
+  ],
+  "verification": {
+    "archive_sha256": "4d831f098a636c311e310bb9fa206b14ae234df6de30d9dc0072db878695f7c3",
+    "resource_files": 198,
+    "levels": [
+      1,
+      2
+    ],
+    "level_config_replacements": {
+      "level1.txt": {
+        "source": "user attachment level1.txt",
+        "sha256": "b7efb71ee505fa989a1e206159bc645247ebd6fe39fd6c4cfbd0faf165c061cb",
+        "bytes": 3561,
+        "mode": 9,
+        "lightmap": "lightmap/kordod.vla",
+        "lightmap_sha256": "c855bc70cb796fb7f0078f167459fefa065b3cab3e8b17e8fb354bcb7615ec5a",
+        "sky": "skies/g.png"
+      }
+    },
+    "mode9_world_fog": "absent on both maps",
+    "native_max_texture_dimension": 256,
+    "texture_replacements": {
+      "skies/g.png": {
+        "source": "g.png",
+        "sha256": "4ffc0764f7438ced70ff56d7130f60b4ea290b775b9940bad8e536517d29bdeb",
+        "size": [
+          256,
+          256
+        ]
+      },
+      "skies/n.png": {
+        "source": "n.png",
+        "sha256": "d542df36f7af14133f2c010ab204aa2a31ff7ef0c3bef7b72a1fe310a5b93686",
+        "size": [
+          256,
+          256
+        ]
+      },
+      "skies/sus.png": {
+        "source": "g.png",
+        "sha256": "4ffc0764f7438ced70ff56d7130f60b4ea290b775b9940bad8e536517d29bdeb",
+        "size": [
+          256,
+          256
+        ]
+      }
+    },
+    "warm_poses": 160,
+    "unchanged_native_draw_streams": 160,
+    "warm_uploads_shared_cache": 0,
+    "warm_uploads_separate_sky": 0,
+    "alternating_texture_hits": 2000,
+    "reference_vector_reads": 17000,
+    "optimized_vector_reads": 0,
+    "cpu_rasterizer_dispatches": 0,
+    "startup_discovery": "pass: levels 1,2",
+    "lightmap_verification": "actual HouseCreator + LightMapper, every baked vertex value matched to file; no snapshot bake suppression",
+    "api_doubles": true,
+    "handset_tested": false,
+    "fps_measured": false
+  },
+  "lightmap_values_verified": {
+    "level1": 10032,
+    "level2": 24979
+  },
+  "documentation": "docs/sym9-optimization.md"
+}
