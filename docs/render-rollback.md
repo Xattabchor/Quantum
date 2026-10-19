@@ -53,3 +53,13 @@ stable/v1/v2. Пользователь сообщил для Cull 8–9 FPS и �
 видимых поверхностей; модель/метод не уточнены, Lite/Present этим не измерены.
 [Новый Presentation A/B](static-room-presentation.md) — отдельные имя и файлы,
 обе стороны используют тот же culled renderer, переключается только target.
+
+
+## Presentation baseline перед native strip-layout экспериментом
+
+Present `0ec8560d908d9ff2bce14a589f98a462bd9767ab`:
+[JAR](https://github.com/Xattabchor/Quantum/raw/0ec8560d908d9ff2bce14a589f98a462bd9767ab/downloads/Quantum_StaticRoom_Present.jar).
+Его JAR/JAD/report добавлены в checkpoint verifier как шестая контрольная точка.
+Пользовательские N112/C0/F112–113/I140 в A/B сохранены отдельно от независимых
+измерений (устройство не уточнено). [Strips](static-room-strips.md) имеет свои
+имя и артефакты, не заменяет Present или принятый Cull/Lite.

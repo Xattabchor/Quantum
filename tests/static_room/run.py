@@ -22,12 +22,14 @@ g=g.replace('!b.colorClear || b.depthClear','!b.colorClear || !b.depthClear || !
 g=g.replace('target==null || a.comp.depth','target==null || (a.comp.depthTest && !boundDepth)')
 g=g.replace('draw.positionCapacity=v.positions.capacity;','draw.positionCapacity=v.positions.capacity;draw.bias=v.bias==null?null:v.bias.clone();draw.vertexBuffer=v;')
 stubs['javax/microedition/m3g/Graphics3D.java']=g
+stubs['javax/microedition/m3g/TriangleStripArray.java']=stubs['javax/microedition/m3g/TriangleStripArray.java'].replace('public static int created;', 'public static int created,failAt;').replace('created++;', 'created++;if(created==failAt)throw new OutOfMemoryError("index allocation");')
 stubs['javax/microedition/lcdui/Displayable.java']='package javax.microedition.lcdui; public class Displayable {}'
 stubs['javax/microedition/lcdui/Canvas.java']='package javax.microedition.lcdui; public abstract class Canvas extends Displayable {public static final int KEY_NUM0=48,KEY_NUM2=50,KEY_NUM4=52,KEY_NUM6=54,KEY_NUM7=55,KEY_NUM8=56,KEY_NUM9=57,KEY_POUND=35; public static int screenWidth=240,screenHeight=340;public int getWidth(){return screenWidth;}public int getHeight(){return screenHeight;}public void setFullScreenMode(boolean b){}public void repaint(){}public void serviceRepaints(){}protected abstract void paint(Graphics g);}'
 stubs['javax/microedition/lcdui/Display.java']='package javax.microedition.lcdui;import javax.microedition.midlet.MIDlet;public class Display{public static Display getDisplay(MIDlet m){return new Display();}public void setCurrent(Displayable d){}}'
 stubs['javax/microedition/midlet/MIDlet.java']='package javax.microedition.midlet;public abstract class MIDlet{protected abstract void startApp();protected abstract void pauseApp();protected abstract void destroyApp(boolean u);public void notifyDestroyed(){}}'
 parser=argparse.ArgumentParser()
 parser.add_argument('--jar',type=Path,default=ROOT/'downloads/Quantum_Sym9_DrawCalls.jar')
+parser.add_argument('--strips',action='store_true',help='Also validate joined vs original native strips')
 parser.add_argument('--present',action='store_true',help='Also validate direct Canvas vs image target viewer')
 parser.add_argument('--packaged',action='store_true',help='Test the actual packaged StaticRoom classes, not a recompiled experiment')
 args=parser.parse_args()
@@ -69,6 +71,9 @@ with tempfile.TemporaryDirectory(prefix='static-room-')as temp:
     if args.present:
         if not args.packaged:sources+=list((ROOT/'experiments/static-room-present/src').rglob('*.java'))
         sources+=list((ROOT/'tests/static_room_present').glob('*.java'))
+    if args.strips:
+        if not args.packaged:sources+=list((ROOT/'experiments/static-room-strips/src').rglob('*.java'))
+        sources+=list((ROOT/'tests/static_room_strips').glob('*.java'))
     classes=temp/'classes';classes.mkdir()
     compiler=[java,'-jar',ecj,'-8','-proc:none','-nowarn']if ecj else ['javac','-source','8','-target','8']
     subprocess.run(compiler+['-cp',os.pathsep.join(map(str,[base,api])),'-d',str(classes)]+list(map(str,sources)),check=True)
@@ -77,3 +82,6 @@ with tempfile.TemporaryDirectory(prefix='static-room-')as temp:
     if args.present:
         subprocess.run([java,'-Djava.awt.headless=true','-Dm3g.maxTexture=256','-cp',os.pathsep.join(map(str,[classes,base,api])),
                         'code.Rendering.StaticRoomPresentTest'],check=True)
+    if args.strips:
+        subprocess.run([java,'-Djava.awt.headless=true','-Dm3g.maxTexture=256','-cp',os.pathsep.join(map(str,[classes,base,api])),
+                        'code.Rendering.StaticRoomStripsTest'],check=True)

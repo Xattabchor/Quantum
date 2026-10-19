@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum Static Room Strips
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: Strips A-B,,code.Rendering.StaticRoomStripsPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_StaticRoom_Strips.jar
+MIDlet-Jar-Size: 762967

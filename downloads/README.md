@@ -1,5 +1,19 @@
 # Quantum — M3G preverified preview
 
+## Static Room Strips — проверка тысяч полос внутри M3G calls
+
+[JAR](Quantum_StaticRoom_Strips.jar) · [JAD](Quantum_StaticRoom_Strips.jad) ·
+[Отчёт](Quantum_StaticRoom_Strips.build-report.json) ·
+[Показания и ограничения](../docs/static-room-strips.md).
+
+**0 = A joined / B original strips**, одинаковые culling и Image target.
+Full-room strips 2641→3 при тех же 10032 вершинах/4750 исходных треугольниках.
+Это не число GPU drawcalls: связывающие нулевые треугольники увеличивают indices
+10032→15840 и могут как помочь драйверу, так и замедлить. 864 exact ordered
+pose/river comparisons PASS; прежние артефакты сохранены. Новый J/B/D/R HUD
+разделяет Java prep, bind+clear, render calls и release. Нужен тест устройства,
+не обещание FPS и не полноценная игра.
+
 ## Static Room Present — прямой вывод и диагностика FPS
 
 [JAR](Quantum_StaticRoom_Present.jar) · [JAD](Quantum_StaticRoom_Present.jad) ·

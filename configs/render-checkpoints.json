@@ -123,5 +123,49 @@
     "visible_surfaces_disappearing_reported": false,
     "device_model": null,
     "source": "User report on Cull before Lite; no independent device/method/pose verification and no Present measurement."
+  },
+  "presentation_user_observation": {
+    "source": "User report; device, timer granularity and pose not independently verified",
+    "A_direct": {
+      "fps": 7,
+      "D": 2,
+      "N_ms": 112,
+      "C_ms": 0,
+      "P_ms": 0,
+      "F_ms": 113,
+      "I_ms": 140,
+      "T": 3421
+    },
+    "B_image": {
+      "fps": null,
+      "N_ms": 112,
+      "C_ms": 0,
+      "P_ms": 0,
+      "F_ms": 112,
+      "I_ms": 140,
+      "T": 3421
+    },
+    "interpretation": "No discernible target-path benefit at timer resolution; nativeRoom.render includes Java prep, so split profiling is still needed."
+  },
+  "native_room_present": {
+    "name": "Quantum_StaticRoom_Present",
+    "commit": "0ec8560d908d9ff2bce14a589f98a462bd9767ab",
+    "files": [
+      {
+        "path": "downloads/Quantum_StaticRoom_Present.jar",
+        "bytes": 742337,
+        "sha256": "02842aa06a86a49ff0cd5f5506acd0ce0ddd213888eb38449c99715a44b1767f"
+      },
+      {
+        "path": "downloads/Quantum_StaticRoom_Present.jad",
+        "bytes": 308,
+        "sha256": "763974eb580989537848910b6db60f60b386e61451898c55f11e62f155c444e9"
+      },
+      {
+        "path": "downloads/Quantum_StaticRoom_Present.build-report.json",
+        "bytes": 1948,
+        "sha256": "c1fca2a63ace252da4b2dfaf1c6fa128a4d4e934c22ddc1ac4779252db558556"
+      }
+    ]
   }
 }

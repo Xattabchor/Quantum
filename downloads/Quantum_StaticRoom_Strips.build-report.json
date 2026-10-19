@@ -1,0 +1,57 @@
+{
+  "classes": 172,
+  "code_methods": 2085,
+  "stackmap_attributes": 1139,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Present.jar",
+  "base_commit": "0ec8560d908d9ff2bce14a589f98a462bd9767ab",
+  "base_sha256": "02842aa06a86a49ff0cd5f5506acd0ce0ddd213888eb38449c99715a44b1767f",
+  "jar_bytes": 762967,
+  "jar_sha256": "1ab0983a1aa135119eef7e7f095f67aaaaf25a3c0a3f00588b4287eb4b0f5e75",
+  "all_baseline_class_bytes_and_10_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/StaticRoomStripsMesh$Masked.class",
+    "code/Rendering/StaticRoomStripsMesh$NativeImage.class",
+    "code/Rendering/StaticRoomStripsMesh$Part.class",
+    "code/Rendering/StaticRoomStripsMesh$Pending.class",
+    "code/Rendering/StaticRoomStripsMesh.class",
+    "code/Rendering/StaticRoomStripsPreview$Viewer.class",
+    "code/Rendering/StaticRoomStripsPreview.class"
+  ],
+  "source_sha256": {
+    "experiments/static-room-strips/src/code/Rendering/StaticRoomStripsMesh.java": "54e4694d68761bbf1d854769b21217d798c381aa8a025c82906e697a078633f0",
+    "experiments/static-room-strips/src/code/Rendering/StaticRoomStripsPreview.java": "841fc936ec3114d944b2c36ff60b0fc5ee9c16d918afbf11755950609c5da5d3"
+  },
+  "benchmark": {
+    "A": "joined strips",
+    "B": "original strips",
+    "target": "offscreen Image in both",
+    "culling_enabled_in_both": true,
+    "vertex_buffers_camera_textures_distance_identical": true,
+    "native_render_calls_maximum": 3,
+    "full_room_original_strips": 2641,
+    "full_room_joined_strips": 3,
+    "uploaded_vertices_in_both": 10032,
+    "added_connectors": "Repeated-index degenerate triangles, parity-correct; no visible face sorting",
+    "tradeoff": "More indices and zero-area triangles; hardware/driver benefit unknown",
+    "profiling": "Coarse API wall-clock milliseconds, not GPU timestamps",
+    "stages": {
+      "N": "complete mesh render including Java preparation and native API",
+      "J": "Java texture/camera/culling/index preparation before bind",
+      "B": "bindTarget, viewport, camera, resetLights, clear",
+      "D": "all render calls and their loop/counters",
+      "R": "releaseTarget",
+      "F": "paint including HUD, excluding string publication/Graphics restore",
+      "I": "paint-start interval including scheduling/presentation waits"
+    }
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Separate native strip-layout A/B probe, not a full game or a measured handset speedup."
+}
