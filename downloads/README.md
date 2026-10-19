@@ -1,5 +1,20 @@
 # Quantum — M3G preverified preview
 
+## PolyFill — отдельный тест полигонажа и fillrate
+
+[JAR](Quantum_PolyFill_Test.jar) · [JAD](Quantum_PolyFill_Test.jad) ·
+[Отчёт](Quantum_PolyFill_Test.build-report.json) ·
+[Управление, метрики и ограничения](../docs/poly-fill.md).
+
+**5 = полный автопрогон**, около минуты, затем таблица. **1 = POLY**, **3 = FILL**,
+**2/8 = нагрузка**, **7 = результаты**, **# = выход**. POLY: 128…28800 треугольников
+при постоянной площади; FILL: 1…32 fullscreen-слоя, depth test/write OFF.
+Один native render call, opaque checker64², alpha threshold0.5 всегда ON.
+FPS, Ktri/s и nominal Mpix/s относятся к целому тестовому пути, **не к паспортной
+производительности GPU**. N/C/I отдельно; измерений на телефоне пока нет.
+Все182 класса Tex3 и все его assets побайтно сохранены; карта и река не менялись.
+Отдельное имя MIDlet, исходный Tex3 и остальные rollback JAR остаются на месте.
+
 ## Static Room Tex3 — один atlas-слот, река прежняя
 
 [JAR](Quantum_StaticRoom_Tex3.jar) · [JAD](Quantum_StaticRoom_Tex3.jad) ·

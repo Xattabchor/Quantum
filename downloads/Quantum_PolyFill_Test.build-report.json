@@ -1,0 +1,85 @@
+{
+  "classes": 187,
+  "code_methods": 2195,
+  "stackmap_attributes": 1211,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Tex3.jar",
+  "base_commit": "b9b477f3de65e2a2ecc2e0f88ad10a09244f22fa",
+  "base_sha256": "8617f348e04f4b10c03b0049e60f2e92c41532d6939546ad96f6e44d11aa6880",
+  "jar_bytes": 802780,
+  "jar_sha256": "70615622bfad802c81de43fa061b3f7cf3e6706863c2ff632c8c6bec783727f4",
+  "all_182_baseline_classes_and_all_map_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/PolyFillMesh.class",
+    "code/Rendering/PolyFillPreview$Viewer.class",
+    "code/Rendering/PolyFillPreview.class",
+    "code/Rendering/PolyFillWindow$Result.class",
+    "code/Rendering/PolyFillWindow.class"
+  ],
+  "source_sha256": {
+    "experiments/poly-fill/src/code/Rendering/PolyFillMesh.java": "60c9be8be5ea9fe9a4544563a187513c3f046a70b513308041011c45e1391f9c",
+    "experiments/poly-fill/src/code/Rendering/PolyFillPreview.java": "c60ffa0f8de3a22a953a23855d2ddce194a8f1025be4bdd1c12d7d6e087e0ab4",
+    "experiments/poly-fill/src/code/Rendering/PolyFillWindow.java": "82fb854e551ae88e614c713b4cee289e2d525b0f78ad6f71bd8356c78c51b4e0"
+  },
+  "builder_sha256": "9cf51044a1603cb5b12e32f21b3ac530aebfdad177342b5334738cd55727d2e1",
+  "benchmark": {
+    "geometry_grids": [
+      8,
+      16,
+      24,
+      32,
+      48,
+      64,
+      96,
+      120
+    ],
+    "geometry_triangles": [
+      128,
+      512,
+      1152,
+      2048,
+      4608,
+      8192,
+      18432,
+      28800
+    ],
+    "fill_layers": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32
+    ],
+    "render_calls_per_frame": 1,
+    "texture": "engine Texture/RawImage -> opaque procedural64x64 RGBA checker",
+    "filtering": "NEAREST / BASE_LEVEL, no mipmaps",
+    "texture_function": "MODULATE",
+    "blending": "REPLACE",
+    "alpha_threshold": 0.5,
+    "alpha_disable_control_absent": true,
+    "geometry_depth_test_write": true,
+    "fill_depth_test_write": false,
+    "culling": "BACK / CW",
+    "projection": "orthographic, fully covered viewport",
+    "viewport": "canvas width x (canvas height - 90), HUD excluded",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "auto_profiles": 14,
+    "metrics": "fractional FPS, N/native+clear+release ms, C/copy ms, I/frame interval; end-to-end Ktri/s or nominal Mpix/s",
+    "timings": "whole steady window including presentation/HUD/scheduling; no GPU timestamps",
+    "builds_and_pause_excluded": true,
+    "hot_geometry_texture_uploads": false,
+    "failure_policy": "manual lower workload; auto marks OOM/ERR and skips; no software raster fallback",
+    "results": "in-memory table and stdout; cleared on viewport resize; not persisted after exit"
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Synthetic native-path polygon and textured opaque overdraw benchmark, NOT a pure GPU specification or game FPS prediction."
+}

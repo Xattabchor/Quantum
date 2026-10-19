@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum PolyFill Benchmark
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: PolyFill,,code.Rendering.PolyFillPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_PolyFill_Test.jar
+MIDlet-Jar-Size: 802780
