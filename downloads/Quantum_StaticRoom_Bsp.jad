@@ -1,8 +1,0 @@
-MIDlet-Name: Quantum Static Room BSP
-MIDlet-Version: 1.0.0
-MIDlet-Vendor: Quantum Experiments
-MIDlet-1: GRID Z - BSP noZ,,code.Rendering.StaticRoomBspPreview
-MicroEdition-Configuration: CLDC-1.1
-MicroEdition-Profile: MIDP-2.0
-MIDlet-Jar-URL: Quantum_StaticRoom_Bsp.jar
-MIDlet-Jar-Size: 1092937
