@@ -1,0 +1,10 @@
+{
+  "package": "meshoptimizer",
+  "version": "1.3.0",
+  "url": "https://registry.npmjs.org/meshoptimizer/-/meshoptimizer-1.3.0.tgz",
+  "upstream_js_sha256": "c3098ee4cb4fc242b84f064c88898e76e44bf58b0e1f693507f323c08cdbb5ed",
+  "local_js_sha256": "a59b32b782d92200a1a5b02d4d34378ded21aec3fcd2f321b0b8e60a41c5e132",
+  "modification": "Only final ES export replaced by CommonJS export guard; classic browser global retained, WASM and implementation unchanged.",
+  "license": "MIT",
+  "scope": "Offline tool only; never in the game JAR."
+}

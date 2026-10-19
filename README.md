@@ -5,6 +5,19 @@ Uses zone/portal-based culling. The development branch now requires M3G for game
 Supports some kind of scripting (should be replaced with lua!), has its own lightmapper.  
 I wrote it when I was just learning Java and OOP, so the code quality is really low, but maybe this engine can be useful to someone.  
 
+## Офлайн-оптимизатор Quantum .3d
+
+[Один HTML-файл](downloads/Quantum_Model_Optimizer.html) ·
+[Архив с CLI](downloads/Quantum_Model_Optimizer.zip) ·
+[Инструкция, ограничения и проверки](tools/model-optimizer/README.md).
+
+Отдельный инструмент для ПК: уменьшение геометрии статических `.3d`,
+согласованный экспорт baked `.vla` (DMODE9 / RGB13), сравнение треугольников
+и native-углов, каркас до/после. Никаких изменений JAR, исходных моделей,
+текстур, коллизий или конфигов. Упрощение с потерями; FPS не измеряется.
+Сильное сокращение текущей деревни требует экспериментального разрешения
+менять UV-швы — такой вариант нельзя считать визуально проверенным.
+
 ## Опубликованная версия b0ee49b: Software / M3G
 
 Для Software восстановлен исходный вывод через MIDP `Graphics.drawRGB`,

@@ -1,0 +1,116 @@
+{
+  "inputModelSha256": "00cf889f495aa5b8fe6bc058c022ef16f49a8761c2d30b7d084fa43eec088ad9",
+  "inputLightmapSha256": "c855bc70cb796fb7f0078f167459fefa065b3cab3e8b17e8fb354bcb7615ec5a",
+  "before": {
+    "vertices": 2729,
+    "polygons": 2641,
+    "triangles": 4750,
+    "expandedCorners": 10032
+  },
+  "cases": [
+    {
+      "mode": "safe",
+      "error": 5,
+      "triangles": 4742,
+      "expandedCorners": 10024,
+      "modelBytes": 56488,
+      "lightmapBytes": 10024,
+      "outputSha256": "9ec0df3f5891dda469f6d31e4a3dd78d6f51fab7ab7b71aa97ce7a1fa095fb3c",
+      "outputLightmapSha256": "0daa9bebf024b85c38419942f6d0c5b7aa4e0a258ca0c07a6ff4bc7045ca3b66",
+      "componentsPreserved": 58,
+      "protectedMaterial4Unchanged": true,
+      "allOutputCornerSamplesFromSource": true,
+      "fpsMeasured": false
+    },
+    {
+      "mode": "balanced",
+      "error": 100,
+      "triangles": 4692,
+      "expandedCorners": 9954,
+      "modelBytes": 56058,
+      "lightmapBytes": 9954,
+      "outputSha256": "82bbd925bf33f97dd612d2c04d3cf37c4d48abcba6a0af87aa4dc511143d2dc7",
+      "outputLightmapSha256": "228549c3b0d7e78a74786b34afe95a2744130c16024be8f186927cc6c8d45fe3",
+      "componentsPreserved": 58,
+      "protectedMaterial4Unchanged": true,
+      "allOutputCornerSamplesFromSource": true,
+      "fpsMeasured": false
+    },
+    {
+      "mode": "experimental",
+      "error": 100,
+      "triangles": 4130,
+      "expandedCorners": 9278,
+      "modelBytes": 51710,
+      "lightmapBytes": 9278,
+      "outputSha256": "782dbe8c352006e84bc3d16465ad3be2b23d5821aa75f9749130ea3da7eb9a04",
+      "outputLightmapSha256": "062ced9203701c3fee5dbd7d95b83fd89ba9cdf70d16c55268483c7ab6238814",
+      "componentsPreserved": 58,
+      "protectedMaterial4Unchanged": true,
+      "allOutputCornerSamplesFromSource": true,
+      "fpsMeasured": false
+    },
+    {
+      "mode": "experimental",
+      "error": 1000,
+      "triangles": 2534,
+      "expandedCorners": 6692,
+      "modelBytes": 36590,
+      "lightmapBytes": 6692,
+      "outputSha256": "7ad4e181f75548506ef6f0c0a85f586d401880fb28c962675508adaf5e7f8381",
+      "outputLightmapSha256": "ac7e31a570db327681e791c013ab270d83bd8a79c25cbba465a75a00436175f6",
+      "componentsPreserved": 58,
+      "protectedMaterial4Unchanged": true,
+      "allOutputCornerSamplesFromSource": true,
+      "fpsMeasured": false
+    }
+  ],
+  "tool": "Quantum Model Optimizer 1.0",
+  "validatedDate": "2026-10-19",
+  "node": "22.22.3",
+  "backend": "meshoptimizer 1.3.0",
+  "nodeTestsPassed": 17,
+  "independentVillageVariantsPassed": 4,
+  "browser": {
+    "engine": "Chromium",
+    "playwrightCore": "1.64.1",
+    "chromiumPackage": "153.0.0",
+    "fileDocumentsTested": [
+      "tools/model-optimizer/index.html",
+      "downloads/Quantum_Model_Optimizer.html"
+    ],
+    "checks": [
+      "local file upload",
+      "WASM simplification",
+      "3d download and reparse",
+      "remapped vla download and reparse",
+      "JSON report download",
+      "SHA256",
+      "stale-result invalidation",
+      "clear lightmap",
+      "truncated model rejection",
+      "desktop 1280px",
+      "mobile 390px without horizontal overflow",
+      "no uncaught page errors"
+    ],
+    "networkRequests": 0
+  },
+  "handsetTested": false,
+  "fpsMeasured": false,
+  "gameResourcesModified": false,
+  "historicalRenderCheckpointsVerified": 7,
+  "artifactSha256": {
+    "downloads/Quantum_Model_Optimizer.html": "5c7e1a33f73e5be52fe34401026d7fe5beb1cb0f57499d22314a000fe913e8cf",
+    "downloads/Quantum_Model_Optimizer.zip": "61dc8ed804eaa65090a36440fd28487edfa8794e01e086af15a2142b88c0c546"
+  },
+  "sourceSha256": {
+    "tools/model-optimizer/README.md": "184de1db8c87e20f4c66428651db41580f47a1fe58eda9592d1b99e0c94908c3",
+    "tools/model-optimizer/app.js": "f2bfdac9388e8e15a5d6d11885cc647042c0c7b61dbaf54cacd9242f8fe184f3",
+    "tools/model-optimizer/cli.cjs": "bd0834d5b93553e2072326d97f1f20683ac9fdb756d4e95e0dac1fc51bde2e9c",
+    "tools/model-optimizer/index.html": "84cf0b07191423a2e52c84eabe8a37abe863b6297d6e1a44be1f2ec60aa585aa",
+    "tools/model-optimizer/optimizer.js": "fc4029b9f8fd73a01bcae18d4e639868a4c327dad44e81041d9e6dde30829248",
+    "tools/model-optimizer/vendor/LICENSE.meshoptimizer.txt": "f03037ca7bad1e3eb7f4a63fa6084a8baabd5ba30d3c239a9a7f35705d873e26",
+    "tools/model-optimizer/vendor/PROVENANCE.json": "d56994d8a40217b65ebcf378fb5d63282e2a058fe8a49d81c184270e2c809028",
+    "tools/model-optimizer/vendor/meshopt_simplifier.js": "a59b32b782d92200a1a5b02d4d34378ded21aec3fcd2f321b0b8e60a41c5e132"
+  }
+}

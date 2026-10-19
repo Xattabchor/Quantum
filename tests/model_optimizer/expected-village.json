@@ -1,0 +1,47 @@
+{
+  "jarSha256": "053252da302fa8e9c8661617e6b4985b20887c57af942fb8e10939a8f0079316",
+  "modelEntry": "maps/kordos/kordos.3d",
+  "lightmapEntry": "lightmap/kordod.vla",
+  "modelSha256": "00cf889f495aa5b8fe6bc058c022ef16f49a8761c2d30b7d084fa43eec088ad9",
+  "lightmapSha256": "c855bc70cb796fb7f0078f167459fefa065b3cab3e8b17e8fb354bcb7615ec5a",
+  "before": {
+    "vertices": 2729,
+    "polygons": 2641,
+    "triangles": 4750,
+    "expandedCorners": 10032
+  },
+  "cases": [
+    {
+      "mode": "safe",
+      "error": 5,
+      "triangles": 4742,
+      "expandedCorners": 10024,
+      "modelBytes": 56488,
+      "lightmapBytes": 10024
+    },
+    {
+      "mode": "balanced",
+      "error": 100,
+      "triangles": 4692,
+      "expandedCorners": 9954,
+      "modelBytes": 56058,
+      "lightmapBytes": 9954
+    },
+    {
+      "mode": "experimental",
+      "error": 100,
+      "triangles": 4130,
+      "expandedCorners": 9278,
+      "modelBytes": 51710,
+      "lightmapBytes": 9278
+    },
+    {
+      "mode": "experimental",
+      "error": 1000,
+      "triangles": 2534,
+      "expandedCorners": 6692,
+      "modelBytes": 36590,
+      "lightmapBytes": 6692
+    }
+  ]
+}

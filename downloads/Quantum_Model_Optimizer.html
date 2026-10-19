@@ -1,0 +1,1835 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quantum · Оптимизатор моделей</title>
+<style>
+:root{color-scheme:dark;--bg:#10151b;--panel:#192129;--line:#303d49;--text:#e9eef2;--muted:#a7b5c1;--accent:#b8f275}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,sans-serif}main{max-width:1120px;margin:0 auto;padding:40px 24px 60px}header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}.eyebrow{color:var(--accent);letter-spacing:.16em;font-size:12px;font-weight:700}h1{font-size:clamp(28px,4vw,44px);letter-spacing:-.04em;line-height:1.12;margin:14px 0}h2{font-size:18px;margin:0 0 18px}p{margin:10px 0}.muted,small{color:var(--muted)}.pill{float:right;color:var(--accent);border:1px solid #455c38;border-radius:30px;padding:4px 12px;font-size:12px}.layout{display:grid;grid-template-columns:1fr 1fr;gap:22px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}.field{margin:18px 0}.field>label{display:block;margin-bottom:7px;font-size:14px}input:not([type=checkbox]),select{width:100%;background:#111920;color:var(--text);border:1px solid #455360;border-radius:8px;padding:10px;font:inherit}input[type=file]{font-size:13px}input[type=file]::file-selector-button{border:0;background:#30404d;color:var(--text);padding:7px;border-radius:5px;margin-right:10px}input[type=checkbox]{accent-color:var(--accent);width:17px;height:17px;vertical-align:middle;margin-right:8px}label.check{display:block;margin:14px 0;font-size:13px}.row{display:grid;grid-template-columns:1fr 1fr;gap:15px}button{font:inherit;cursor:pointer;border:1px solid #495966;border-radius:8px;padding:11px 16px;background:#25333e;color:var(--text)}button.primary{background:var(--accent);border-color:var(--accent);color:#172316;font-weight:750;width:100%;margin-top:12px}button:disabled{opacity:.42;cursor:not-allowed}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #97cbea;outline-offset:3px}.note{font-size:13px;padding:12px 14px;border-left:3px solid #e6b968;background:#29271f;margin:14px 0;color:#f0d9b4}.note.risk{border-color:#f39787;color:#ffc2b7;background:#302322}#status{margin:22px 0;white-space:pre-wrap;font-size:14px}#status.error{color:#ffb5a5}#status.success{color:var(--accent)}table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}th,td{text-align:right;padding:13px 8px;border-bottom:1px solid var(--line)}th:first-child,td:first-child{text-align:left}th{color:var(--muted);font-weight:500;font-size:12px}td:first-child{font-size:13px}#reduction{font-size:34px;font-weight:750;color:var(--accent);margin:16px 0 0}#summary{font-size:13px;min-height:40px}.downloads{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}.downloads button{flex:1;white-space:nowrap;font-size:13px}details{margin-top:20px;color:var(--muted);font-size:13px}summary{cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#111920;padding:14px;border-radius:8px;max-height:360px;overflow:auto;font-size:11px}.wide{margin-top:22px}.preview{display:grid;grid-template-columns:1fr 1fr;gap:14px}canvas{width:100%;height:240px;background:#111920;border-radius:8px;cursor:grab;touch-action:none}.preview label{font-size:12px;color:var(--muted)}footer{font-size:12px;color:var(--muted);margin-top:26px}footer strong{color:var(--text)}[hidden]{display:none!important}@media(max-width:760px){main{padding:24px 15px}.layout,.preview{grid-template-columns:1fr}.panel{padding:20px}.pill{float:none;display:inline-block;margin-top:12px}.row{gap:10px}canvas{height:210px}}
+</style>
+<!--
+SINGLE-FILE OFFLINE SOURCE BUNDLE. No external dependencies at runtime.
+
+Quantum tool source: GPL-3.0. All browser source is inline and readable.
+
+Vendored source provenance:
+{
+  "package": "meshoptimizer",
+  "version": "1.3.0",
+  "url": "https://registry.npmjs.org/meshoptimizer/-/meshoptimizer-1.3.0.tgz",
+  "upstream_js_sha256": "c3098ee4cb4fc242b84f064c88898e76e44bf58b0e1f693507f323c08cdbb5ed",
+  "local_js_sha256": "a59b32b782d92200a1a5b02d4d34378ded21aec3fcd2f321b0b8e60a41c5e132",
+  "modification": "Only final ES export replaced by CommonJS export guard; classic browser global retained, WASM and implementation unchanged.",
+  "license": "MIT",
+  "scope": "Offline tool only; never in the game JAR."
+}
+
+
+MESHOPTIMIZER LICENSE:
+MIT License
+
+Copyright (c) 2016-2026 Arseny Kapoulkine
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+QUANTUM LICENSE:
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+
+ Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+                            Preamble
+
+  The GNU General Public License is a free, copyleft license for
+software and other kinds of works.
+
+  The licenses for most software and other practical works are designed
+to take away your freedom to share and change the works.  By contrast,
+the GNU General Public License is intended to guarantee your freedom to
+share and change all versions of a program--to make sure it remains free
+software for all its users.  We, the Free Software Foundation, use the
+GNU General Public License for most of our software; it applies also to
+any other work released this way by its authors.  You can apply it to
+your programs, too.
+
+  When we speak of free software, we are referring to freedom, not
+price.  Our General Public Licenses are designed to make sure that you
+have the freedom to distribute copies of free software (and charge for
+them if you wish), that you receive source code or can get it if you
+want it, that you can change the software or use pieces of it in new
+free programs, and that you know you can do these things.
+
+  To protect your rights, we need to prevent others from denying you
+these rights or asking you to surrender the rights.  Therefore, you have
+certain responsibilities if you distribute copies of the software, or if
+you modify it: responsibilities to respect the freedom of others.
+
+  For example, if you distribute copies of such a program, whether
+gratis or for a fee, you must pass on to the recipients the same
+freedoms that you received.  You must make sure that they, too, receive
+or can get the source code.  And you must show them these terms so they
+know their rights.
+
+  Developers that use the GNU GPL protect your rights with two steps:
+(1) assert copyright on the software, and (2) offer you this License
+giving you legal permission to copy, distribute and/or modify it.
+
+  For the developers' and authors' protection, the GPL clearly explains
+that there is no warranty for this free software.  For both users' and
+authors' sake, the GPL requires that modified versions be marked as
+changed, so that their problems will not be attributed erroneously to
+authors of previous versions.
+
+  Some devices are designed to deny users access to install or run
+modified versions of the software inside them, although the manufacturer
+can do so.  This is fundamentally incompatible with the aim of
+protecting users' freedom to change the software.  The systematic
+pattern of such abuse occurs in the area of products for individuals to
+use, which is precisely where it is most unacceptable.  Therefore, we
+have designed this version of the GPL to prohibit the practice for those
+products.  If such problems arise substantially in other domains, we
+stand ready to extend this provision to those domains in future versions
+of the GPL, as needed to protect the freedom of users.
+
+  Finally, every program is threatened constantly by software patents.
+States should not allow patents to restrict development and use of
+software on general-purpose computers, but in those that do, we wish to
+avoid the special danger that patents applied to a free program could
+make it effectively proprietary.  To prevent this, the GPL assures that
+patents cannot be used to render the program non-free.
+
+  The precise terms and conditions for copying, distribution and
+modification follow.
+
+                       TERMS AND CONDITIONS
+
+  0. Definitions.
+
+  "This License" refers to version 3 of the GNU General Public License.
+
+  "Copyright" also means copyright-like laws that apply to other kinds of
+works, such as semiconductor masks.
+
+  "The Program" refers to any copyrightable work licensed under this
+License.  Each licensee is addressed as "you".  "Licensees" and
+"recipients" may be individuals or organizations.
+
+  To "modify" a work means to copy from or adapt all or part of the work
+in a fashion requiring copyright permission, other than the making of an
+exact copy.  The resulting work is called a "modified version" of the
+earlier work or a work "based on" the earlier work.
+
+  A "covered work" means either the unmodified Program or a work based
+on the Program.
+
+  To "propagate" a work means to do anything with it that, without
+permission, would make you directly or secondarily liable for
+infringement under applicable copyright law, except executing it on a
+computer or modifying a private copy.  Propagation includes copying,
+distribution (with or without modification), making available to the
+public, and in some countries other activities as well.
+
+  To "convey" a work means any kind of propagation that enables other
+parties to make or receive copies.  Mere interaction with a user through
+a computer network, with no transfer of a copy, is not conveying.
+
+  An interactive user interface displays "Appropriate Legal Notices"
+to the extent that it includes a convenient and prominently visible
+feature that (1) displays an appropriate copyright notice, and (2)
+tells the user that there is no warranty for the work (except to the
+extent that warranties are provided), that licensees may convey the
+work under this License, and how to view a copy of this License.  If
+the interface presents a list of user commands or options, such as a
+menu, a prominent item in the list meets this criterion.
+
+  1. Source Code.
+
+  The "source code" for a work means the preferred form of the work
+for making modifications to it.  "Object code" means any non-source
+form of a work.
+
+  A "Standard Interface" means an interface that either is an official
+standard defined by a recognized standards body, or, in the case of
+interfaces specified for a particular programming language, one that
+is widely used among developers working in that language.
+
+  The "System Libraries" of an executable work include anything, other
+than the work as a whole, that (a) is included in the normal form of
+packaging a Major Component, but which is not part of that Major
+Component, and (b) serves only to enable use of the work with that
+Major Component, or to implement a Standard Interface for which an
+implementation is available to the public in source code form.  A
+"Major Component", in this context, means a major essential component
+(kernel, window system, and so on) of the specific operating system
+(if any) on which the executable work runs, or a compiler used to
+produce the work, or an object code interpreter used to run it.
+
+  The "Corresponding Source" for a work in object code form means all
+the source code needed to generate, install, and (for an executable
+work) run the object code and to modify the work, including scripts to
+control those activities.  However, it does not include the work's
+System Libraries, or general-purpose tools or generally available free
+programs which are used unmodified in performing those activities but
+which are not part of the work.  For example, Corresponding Source
+includes interface definition files associated with source files for
+the work, and the source code for shared libraries and dynamically
+linked subprograms that the work is specifically designed to require,
+such as by intimate data communication or control flow between those
+subprograms and other parts of the work.
+
+  The Corresponding Source need not include anything that users
+can regenerate automatically from other parts of the Corresponding
+Source.
+
+  The Corresponding Source for a work in source code form is that
+same work.
+
+  2. Basic Permissions.
+
+  All rights granted under this License are granted for the term of
+copyright on the Program, and are irrevocable provided the stated
+conditions are met.  This License explicitly affirms your unlimited
+permission to run the unmodified Program.  The output from running a
+covered work is covered by this License only if the output, given its
+content, constitutes a covered work.  This License acknowledges your
+rights of fair use or other equivalent, as provided by copyright law.
+
+  You may make, run and propagate covered works that you do not
+convey, without conditions so long as your license otherwise remains
+in force.  You may convey covered works to others for the sole purpose
+of having them make modifications exclusively for you, or provide you
+with facilities for running those works, provided that you comply with
+the terms of this License in conveying all material for which you do
+not control copyright.  Those thus making or running the covered works
+for you must do so exclusively on your behalf, under your direction
+and control, on terms that prohibit them from making any copies of
+your copyrighted material outside their relationship with you.
+
+  Conveying under any other circumstances is permitted solely under
+the conditions stated below.  Sublicensing is not allowed; section 10
+makes it unnecessary.
+
+  3. Protecting Users' Legal Rights From Anti-Circumvention Law.
+
+  No covered work shall be deemed part of an effective technological
+measure under any applicable law fulfilling obligations under article
+11 of the WIPO copyright treaty adopted on 20 December 1996, or
+similar laws prohibiting or restricting circumvention of such
+measures.
+
+  When you convey a covered work, you waive any legal power to forbid
+circumvention of technological measures to the extent such circumvention
+is effected by exercising rights under this License with respect to
+the covered work, and you disclaim any intention to limit operation or
+modification of the work as a means of enforcing, against the work's
+users, your or third parties' legal rights to forbid circumvention of
+technological measures.
+
+  4. Conveying Verbatim Copies.
+
+  You may convey verbatim copies of the Program's source code as you
+receive it, in any medium, provided that you conspicuously and
+appropriately publish on each copy an appropriate copyright notice;
+keep intact all notices stating that this License and any
+non-permissive terms added in accord with section 7 apply to the code;
+keep intact all notices of the absence of any warranty; and give all
+recipients a copy of this License along with the Program.
+
+  You may charge any price or no price for each copy that you convey,
+and you may offer support or warranty protection for a fee.
+
+  5. Conveying Modified Source Versions.
+
+  You may convey a work based on the Program, or the modifications to
+produce it from the Program, in the form of source code under the
+terms of section 4, provided that you also meet all of these conditions:
+
+    a) The work must carry prominent notices stating that you modified
+    it, and giving a relevant date.
+
+    b) The work must carry prominent notices stating that it is
+    released under this License and any conditions added under section
+    7.  This requirement modifies the requirement in section 4 to
+    "keep intact all notices".
+
+    c) You must license the entire work, as a whole, under this
+    License to anyone who comes into possession of a copy.  This
+    License will therefore apply, along with any applicable section 7
+    additional terms, to the whole of the work, and all its parts,
+    regardless of how they are packaged.  This License gives no
+    permission to license the work in any other way, but it does not
+    invalidate such permission if you have separately received it.
+
+    d) If the work has interactive user interfaces, each must display
+    Appropriate Legal Notices; however, if the Program has interactive
+    interfaces that do not display Appropriate Legal Notices, your
+    work need not make them do so.
+
+  A compilation of a covered work with other separate and independent
+works, which are not by their nature extensions of the covered work,
+and which are not combined with it such as to form a larger program,
+in or on a volume of a storage or distribution medium, is called an
+"aggregate" if the compilation and its resulting copyright are not
+used to limit the access or legal rights of the compilation's users
+beyond what the individual works permit.  Inclusion of a covered work
+in an aggregate does not cause this License to apply to the other
+parts of the aggregate.
+
+  6. Conveying Non-Source Forms.
+
+  You may convey a covered work in object code form under the terms
+of sections 4 and 5, provided that you also convey the
+machine-readable Corresponding Source under the terms of this License,
+in one of these ways:
+
+    a) Convey the object code in, or embodied in, a physical product
+    (including a physical distribution medium), accompanied by the
+    Corresponding Source fixed on a durable physical medium
+    customarily used for software interchange.
+
+    b) Convey the object code in, or embodied in, a physical product
+    (including a physical distribution medium), accompanied by a
+    written offer, valid for at least three years and valid for as
+    long as you offer spare parts or customer support for that product
+    model, to give anyone who possesses the object code either (1) a
+    copy of the Corresponding Source for all the software in the
+    product that is covered by this License, on a durable physical
+    medium customarily used for software interchange, for a price no
+    more than your reasonable cost of physically performing this
+    conveying of source, or (2) access to copy the
+    Corresponding Source from a network server at no charge.
+
+    c) Convey individual copies of the object code with a copy of the
+    written offer to provide the Corresponding Source.  This
+    alternative is allowed only occasionally and noncommercially, and
+    only if you received the object code with such an offer, in accord
+    with subsection 6b.
+
+    d) Convey the object code by offering access from a designated
+    place (gratis or for a charge), and offer equivalent access to the
+    Corresponding Source in the same way through the same place at no
+    further charge.  You need not require recipients to copy the
+    Corresponding Source along with the object code.  If the place to
+    copy the object code is a network server, the Corresponding Source
+    may be on a different server (operated by you or a third party)
+    that supports equivalent copying facilities, provided you maintain
+    clear directions next to the object code saying where to find the
+    Corresponding Source.  Regardless of what server hosts the
+    Corresponding Source, you remain obligated to ensure that it is
+    available for as long as needed to satisfy these requirements.
+
+    e) Convey the object code using peer-to-peer transmission, provided
+    you inform other peers where the object code and Corresponding
+    Source of the work are being offered to the general public at no
+    charge under subsection 6d.
+
+  A separable portion of the object code, whose source code is excluded
+from the Corresponding Source as a System Library, need not be
+included in conveying the object code work.
+
+  A "User Product" is either (1) a "consumer product", which means any
+tangible personal property which is normally used for personal, family,
+or household purposes, or (2) anything designed or sold for incorporation
+into a dwelling.  In determining whether a product is a consumer product,
+doubtful cases shall be resolved in favor of coverage.  For a particular
+product received by a particular user, "normally used" refers to a
+typical or common use of that class of product, regardless of the status
+of the particular user or of the way in which the particular user
+actually uses, or expects or is expected to use, the product.  A product
+is a consumer product regardless of whether the product has substantial
+commercial, industrial or non-consumer uses, unless such uses represent
+the only significant mode of use of the product.
+
+  "Installation Information" for a User Product means any methods,
+procedures, authorization keys, or other information required to install
+and execute modified versions of a covered work in that User Product from
+a modified version of its Corresponding Source.  The information must
+suffice to ensure that the continued functioning of the modified object
+code is in no case prevented or interfered with solely because
+modification has been made.
+
+  If you convey an object code work under this section in, or with, or
+specifically for use in, a User Product, and the conveying occurs as
+part of a transaction in which the right of possession and use of the
+User Product is transferred to the recipient in perpetuity or for a
+fixed term (regardless of how the transaction is characterized), the
+Corresponding Source conveyed under this section must be accompanied
+by the Installation Information.  But this requirement does not apply
+if neither you nor any third party retains the ability to install
+modified object code on the User Product (for example, the work has
+been installed in ROM).
+
+  The requirement to provide Installation Information does not include a
+requirement to continue to provide support service, warranty, or updates
+for a work that has been modified or installed by the recipient, or for
+the User Product in which it has been modified or installed.  Access to a
+network may be denied when the modification itself materially and
+adversely affects the operation of the network or violates the rules and
+protocols for communication across the network.
+
+  Corresponding Source conveyed, and Installation Information provided,
+in accord with this section must be in a format that is publicly
+documented (and with an implementation available to the public in
+source code form), and must require no special password or key for
+unpacking, reading or copying.
+
+  7. Additional Terms.
+
+  "Additional permissions" are terms that supplement the terms of this
+License by making exceptions from one or more of its conditions.
+Additional permissions that are applicable to the entire Program shall
+be treated as though they were included in this License, to the extent
+that they are valid under applicable law.  If additional permissions
+apply only to part of the Program, that part may be used separately
+under those permissions, but the entire Program remains governed by
+this License without regard to the additional permissions.
+
+  When you convey a copy of a covered work, you may at your option
+remove any additional permissions from that copy, or from any part of
+it.  (Additional permissions may be written to require their own
+removal in certain cases when you modify the work.)  You may place
+additional permissions on material, added by you to a covered work,
+for which you have or can give appropriate copyright permission.
+
+  Notwithstanding any other provision of this License, for material you
+add to a covered work, you may (if authorized by the copyright holders of
+that material) supplement the terms of this License with terms:
+
+    a) Disclaiming warranty or limiting liability differently from the
+    terms of sections 15 and 16 of this License; or
+
+    b) Requiring preservation of specified reasonable legal notices or
+    author attributions in that material or in the Appropriate Legal
+    Notices displayed by works containing it; or
+
+    c) Prohibiting misrepresentation of the origin of that material, or
+    requiring that modified versions of such material be marked in
+    reasonable ways as different from the original version; or
+
+    d) Limiting the use for publicity purposes of names of licensors or
+    authors of the material; or
+
+    e) Declining to grant rights under trademark law for use of some
+    trade names, trademarks, or service marks; or
+
+    f) Requiring indemnification of licensors and authors of that
+    material by anyone who conveys the material (or modified versions of
+    it) with contractual assumptions of liability to the recipient, for
+    any liability that these contractual assumptions directly impose on
+    those licensors and authors.
+
+  All other non-permissive additional terms are considered "further
+restrictions" within the meaning of section 10.  If the Program as you
+received it, or any part of it, contains a notice stating that it is
+governed by this License along with a term that is a further
+restriction, you may remove that term.  If a license document contains
+a further restriction but permits relicensing or conveying under this
+License, you may add to a covered work material governed by the terms
+of that license document, provided that the further restriction does
+not survive such relicensing or conveying.
+
+  If you add terms to a covered work in accord with this section, you
+must place, in the relevant source files, a statement of the
+additional terms that apply to those files, or a notice indicating
+where to find the applicable terms.
+
+  Additional terms, permissive or non-permissive, may be stated in the
+form of a separately written license, or stated as exceptions;
+the above requirements apply either way.
+
+  8. Termination.
+
+  You may not propagate or modify a covered work except as expressly
+provided under this License.  Any attempt otherwise to propagate or
+modify it is void, and will automatically terminate your rights under
+this License (including any patent licenses granted under the third
+paragraph of section 11).
+
+  However, if you cease all violation of this License, then your
+license from a particular copyright holder is reinstated (a)
+provisionally, unless and until the copyright holder explicitly and
+finally terminates your license, and (b) permanently, if the copyright
+holder fails to notify you of the violation by some reasonable means
+prior to 60 days after the cessation.
+
+  Moreover, your license from a particular copyright holder is
+reinstated permanently if the copyright holder notifies you of the
+violation by some reasonable means, this is the first time you have
+received notice of violation of this License (for any work) from that
+copyright holder, and you cure the violation prior to 30 days after
+your receipt of the notice.
+
+  Termination of your rights under this section does not terminate the
+licenses of parties who have received copies or rights from you under
+this License.  If your rights have been terminated and not permanently
+reinstated, you do not qualify to receive new licenses for the same
+material under section 10.
+
+  9. Acceptance Not Required for Having Copies.
+
+  You are not required to accept this License in order to receive or
+run a copy of the Program.  Ancillary propagation of a covered work
+occurring solely as a consequence of using peer-to-peer transmission
+to receive a copy likewise does not require acceptance.  However,
+nothing other than this License grants you permission to propagate or
+modify any covered work.  These actions infringe copyright if you do
+not accept this License.  Therefore, by modifying or propagating a
+covered work, you indicate your acceptance of this License to do so.
+
+  10. Automatic Licensing of Downstream Recipients.
+
+  Each time you convey a covered work, the recipient automatically
+receives a license from the original licensors, to run, modify and
+propagate that work, subject to this License.  You are not responsible
+for enforcing compliance by third parties with this License.
+
+  An "entity transaction" is a transaction transferring control of an
+organization, or substantially all assets of one, or subdividing an
+organization, or merging organizations.  If propagation of a covered
+work results from an entity transaction, each party to that
+transaction who receives a copy of the work also receives whatever
+licenses to the work the party's predecessor in interest had or could
+give under the previous paragraph, plus a right to possession of the
+Corresponding Source of the work from the predecessor in interest, if
+the predecessor has it or can get it with reasonable efforts.
+
+  You may not impose any further restrictions on the exercise of the
+rights granted or affirmed under this License.  For example, you may
+not impose a license fee, royalty, or other charge for exercise of
+rights granted under this License, and you may not initiate litigation
+(including a cross-claim or counterclaim in a lawsuit) alleging that
+any patent claim is infringed by making, using, selling, offering for
+sale, or importing the Program or any portion of it.
+
+  11. Patents.
+
+  A "contributor" is a copyright holder who authorizes use under this
+License of the Program or a work on which the Program is based.  The
+work thus licensed is called the contributor's "contributor version".
+
+  A contributor's "essential patent claims" are all patent claims
+owned or controlled by the contributor, whether already acquired or
+hereafter acquired, that would be infringed by some manner, permitted
+by this License, of making, using, or selling its contributor version,
+but do not include claims that would be infringed only as a
+consequence of further modification of the contributor version.  For
+purposes of this definition, "control" includes the right to grant
+patent sublicenses in a manner consistent with the requirements of
+this License.
+
+  Each contributor grants you a non-exclusive, worldwide, royalty-free
+patent license under the contributor's essential patent claims, to
+make, use, sell, offer for sale, import and otherwise run, modify and
+propagate the contents of its contributor version.
+
+  In the following three paragraphs, a "patent license" is any express
+agreement or commitment, however denominated, not to enforce a patent
+(such as an express permission to practice a patent or covenant not to
+sue for patent infringement).  To "grant" such a patent license to a
+party means to make such an agreement or commitment not to enforce a
+patent against the party.
+
+  If you convey a covered work, knowingly relying on a patent license,
+and the Corresponding Source of the work is not available for anyone
+to copy, free of charge and under the terms of this License, through a
+publicly available network server or other readily accessible means,
+then you must either (1) cause the Corresponding Source to be so
+available, or (2) arrange to deprive yourself of the benefit of the
+patent license for this particular work, or (3) arrange, in a manner
+consistent with the requirements of this License, to extend the patent
+license to downstream recipients.  "Knowingly relying" means you have
+actual knowledge that, but for the patent license, your conveying the
+covered work in a country, or your recipient's use of the covered work
+in a country, would infringe one or more identifiable patents in that
+country that you have reason to believe are valid.
+
+  If, pursuant to or in connection with a single transaction or
+arrangement, you convey, or propagate by procuring conveyance of, a
+covered work, and grant a patent license to some of the parties
+receiving the covered work authorizing them to use, propagate, modify
+or convey a specific copy of the covered work, then the patent license
+you grant is automatically extended to all recipients of the covered
+work and works based on it.
+
+  A patent license is "discriminatory" if it does not include within
+the scope of its coverage, prohibits the exercise of, or is
+conditioned on the non-exercise of one or more of the rights that are
+specifically granted under this License.  You may not convey a covered
+work if you are a party to an arrangement with a third party that is
+in the business of distributing software, under which you make payment
+to the third party based on the extent of your activity of conveying
+the work, and under which the third party grants, to any of the
+parties who would receive the covered work from you, a discriminatory
+patent license (a) in connection with copies of the covered work
+conveyed by you (or copies made from those copies), or (b) primarily
+for and in connection with specific products or compilations that
+contain the covered work, unless you entered into that arrangement,
+or that patent license was granted, prior to 28 March 2007.
+
+  Nothing in this License shall be construed as excluding or limiting
+any implied license or other defenses to infringement that may
+otherwise be available to you under applicable patent law.
+
+  12. No Surrender of Others' Freedom.
+
+  If conditions are imposed on you (whether by court order, agreement or
+otherwise) that contradict the conditions of this License, they do not
+excuse you from the conditions of this License.  If you cannot convey a
+covered work so as to satisfy simultaneously your obligations under this
+License and any other pertinent obligations, then as a consequence you may
+not convey it at all.  For example, if you agree to terms that obligate you
+to collect a royalty for further conveying from those to whom you convey
+the Program, the only way you could satisfy both those terms and this
+License would be to refrain entirely from conveying the Program.
+
+  13. Use with the GNU Affero General Public License.
+
+  Notwithstanding any other provision of this License, you have
+permission to link or combine any covered work with a work licensed
+under version 3 of the GNU Affero General Public License into a single
+combined work, and to convey the resulting work.  The terms of this
+License will continue to apply to the part which is the covered work,
+but the special requirements of the GNU Affero General Public License,
+section 13, concerning interaction through a network will apply to the
+combination as such.
+
+  14. Revised Versions of this License.
+
+  The Free Software Foundation may publish revised and/or new versions of
+the GNU General Public License from time to time.  Such new versions will
+be similar in spirit to the present version, but may differ in detail to
+address new problems or concerns.
+
+  Each version is given a distinguishing version number.  If the
+Program specifies that a certain numbered version of the GNU General
+Public License "or any later version" applies to it, you have the
+option of following the terms and conditions either of that numbered
+version or of any later version published by the Free Software
+Foundation.  If the Program does not specify a version number of the
+GNU General Public License, you may choose any version ever published
+by the Free Software Foundation.
+
+  If the Program specifies that a proxy can decide which future
+versions of the GNU General Public License can be used, that proxy's
+public statement of acceptance of a version permanently authorizes you
+to choose that version for the Program.
+
+  Later license versions may give you additional or different
+permissions.  However, no additional obligations are imposed on any
+author or copyright holder as a result of your choosing to follow a
+later version.
+
+  15. Disclaimer of Warranty.
+
+  THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
+APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
+HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY
+OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM
+IS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF
+ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
+
+  16. Limitation of Liability.
+
+  IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
+WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MODIFIES AND/OR CONVEYS
+THE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES, INCLUDING ANY
+GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE
+USE OR INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS OF
+DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD
+PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER PROGRAMS),
+EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGES.
+
+  17. Interpretation of Sections 15 and 16.
+
+  If the disclaimer of warranty and limitation of liability provided
+above cannot be given local legal effect according to their terms,
+reviewing courts shall apply local law that most closely approximates
+an absolute waiver of all civil liability in connection with the
+Program, unless a warranty or assumption of liability accompanies a
+copy of the Program in return for a fee.
+
+                     END OF TERMS AND CONDITIONS
+
+            How to Apply These Terms to Your New Programs
+
+  If you develop a new program, and you want it to be of the greatest
+possible use to the public, the best way to achieve this is to make it
+free software which everyone can redistribute and change under these terms.
+
+  To do so, attach the following notices to the program.  It is safest
+to attach them to the start of each source file to most effectively
+state the exclusion of warranty; and each file should have at least
+the "copyright" line and a pointer to where the full notice is found.
+
+    <one line to give the program's name and a brief idea of what it does.>
+    Copyright (C) <year>  <name of author>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+Also add information on how to contact you by electronic and paper mail.
+
+  If the program does terminal interaction, make it output a short
+notice like this when it starts in an interactive mode:
+
+    <program>  Copyright (C) <year>  <name of author>
+    This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+    This is free software, and you are welcome to redistribute it
+    under certain conditions; type `show c' for details.
+
+The hypothetical commands `show w' and `show c' should show the appropriate
+parts of the General Public License.  Of course, your program's commands
+might be different; for a GUI interface, you would use an "about box".
+
+  You should also get your employer (if you work as a programmer) or school,
+if any, to sign a "copyright disclaimer" for the program, if necessary.
+For more information on this, and how to apply and follow the GNU GPL, see
+<https://www.gnu.org/licenses/>.
+
+  The GNU General Public License does not permit incorporating your program
+into proprietary programs.  If your program is a subroutine library, you
+may consider it more useful to permit linking proprietary applications with
+the library.  If this is what you want to do, use the GNU Lesser General
+Public License instead of this License.  But first, please read
+<https://www.gnu.org/licenses/why-not-lgpl.html>.
+
+-->
+</head>
+<body><main>
+<header><div class="eyebrow">QUANTUM / MODEL TOOLS</div><span class="pill">Офлайн · файлы остаются у вас</span><h1>Меньше геометрии.<br>Не меньше контроля.</h1><p class="muted">Оптимизатор собственного формата Quantum <strong>.3d</strong> — не Autodesk .3ds.<br>Сопоставляет треугольники, UV и запечённый свет. Исходники не перезаписывает.</p></header>
+<div class="layout">
+<section class="panel"><h2>01 / Модель и настройки</h2><form id="form">
+<div class="field"><label for="modelFile">Модель .3d</label><input id="modelFile" type="file" accept=".3d" required></div>
+<div class="field"><label for="mapFile">Lightmap .vla — если используется запечённый свет</label><input id="mapFile" type="file" accept=".vla"><button id="clearMap" type="button" style="margin-top:8px;padding:5px 10px;font-size:12px">Убрать lightmap</button></div>
+<div class="field"><label for="format">Формат lightmap</label><select id="format"><option value="gray9">DMODE 9 · оттенки серого</option><option value="color13">DMODE 13 · RGB + colored-флаги</option></select></div>
+<label class="check"><input type="checkbox" id="noMap">У модели нет baked-lightmap / я запеку свет заново. Старую .vla с изменённой моделью использовать нельзя.</label>
+<div class="row"><div class="field"><label for="ratio">Оставить треугольников</label><select id="ratio"><option value=".9">90%</option><option value=".75" selected>75%</option><option value=".5">50%</option><option value=".25">25%</option><option value="1">100% · без изменений</option></select></div><div class="field"><label for="error">Допуск ошибки*</label><input id="error" type="number" min="0" max="65535" step="any" value="5" required></div></div>
+<div class="field"><label for="mode">Режим упрощения</label><select id="mode"><option value="safe">Бережный · защита UV / света</option><option value="balanced">Умеренный · вдоль UV-швов</option><option value="experimental">Экспериментальный · швы могут измениться</option></select></div>
+<label class="check" id="seamAckRow" hidden><input type="checkbox" id="seamAck">Разрешаю изменение UV-швов и световых переходов. Возможны растяжение текстур и видимые дефекты.</label>
+<div class="field"><label for="protect">Не упрощать материалы (индексы через запятую)</label><input id="protect" value="4" placeholder="Например: 4,7"><small>4 — река в текущем sym9. Укажите все свои прозрачные, водные и анимированные материалы. Это не номера DMODE.</small></div>
+<label class="check"><input type="checkbox" id="staticAck" required>Это статическая визуальная модель, не кадр анимации. Я не буду автоматически заменять ею коллизии и порталы.</label>
+<div class="note">* Приближённая ошибка meshoptimizer в исходных, немасштабированных координатах; не строгая граница смещения или ошибки в пикселях. Процент — цель, а не гарантия.</div>
+<button id="run" class="primary" type="submit">Создать оптимизированную копию</button>
+</form></section>
+<section class="panel"><h2>02 / Реальный результат</h2><p class="muted">Выберите модель. Сначала появятся исходные значения; после упрощения — сравнение.</p>
+<table aria-label="Сравнение геометрии"><thead><tr><th>Геометрия</th><th>До</th><th>После</th></tr></thead><tbody><tr><td>Треугольники</td><td id="beforeTriangles">—</td><td id="afterTriangles">—</td></tr><tr><td>Углы вершин*</td><td id="beforeCorners">—</td><td id="afterCorners">—</td></tr><tr><td>Полигоны (3 / 4 угла)</td><td id="beforePolygons">—</td><td id="afterPolygons">—</td></tr><tr><td>Вершины в файле</td><td id="beforeVertices">—</td><td id="afterVertices">—</td></tr></tbody></table>
+<p id="reduction">—</p><p id="summary" class="muted">Сокращение треугольников</p>
+<div id="status" role="status" aria-live="polite">Ожидание файла .3d</div>
+<div class="downloads"><button id="downloadModel" disabled>Скачать .3d</button><button id="downloadMap" disabled>Скачать .vla</button><button id="downloadReport" disabled>Отчёт .json</button></div>
+<div class="note">* Текущий native-кэш использует углы полигонов. Если меньше треугольников, но больше этих углов, утилита оставляет исходный меш. FPS на телефоне не измеряется и не обещается.</div>
+<details><summary>Подробный отчёт и предупреждения</summary><pre id="report">После обработки здесь появятся настройки, ограничения и счётчики.</pre></details>
+</section></div>
+<section class="panel wide"><h2>03 / Схема геометрии</h2><p class="muted">Перетащите для вращения; колесо — масштаб. Обе схемы синхронизированы. Это каркас без текстур, света, отсечения и проверки коллизий — не замена осмотру в игре.</p><div class="preview"><div><label>ИСХОДНАЯ МОДЕЛЬ</label><canvas id="beforeCanvas" aria-label="Каркас исходной модели"></canvas></div><div><label>ОПТИМИЗИРОВАННАЯ КОПИЯ</label><canvas id="afterCanvas" aria-label="Каркас результата"></canvas></div></div></section>
+<footer><strong>Отдельная утилита, не патч игры.</strong> JAR, текстуры, конфиг и исходная модель не изменяются. После изменения топологии нужны новая подходящая .vla и визуальная проверка. Проблемы глубины/Z-buffer этим не диагностируются.<br>Упрощение: meshoptimizer 1.3.0, Arseny Kapoulkine, MIT. Код Quantum: GPL-3.0. Без установки npm и без внешних ресурсов.</footer>
+</main>
+<script>
+// This file is part of meshoptimizer library and is distributed under the terms of MIT License.
+// Copyright (C) 2016-2026, by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)
+var MeshoptSimplifier = (function () {
+	// Built with clang version 22.1.0-wasi-sdk
+	// Built from meshoptimizer 1.3
+	var wasm =
+		'b9H79Tebbbe;veC9Geueu9Geub9Gbb9Gsuuuuuuuuuuuu99uueu9Gvuuuuub9Gruuuuuuub9Gouuuuuue999Gvuuuuueu9Gzuuuuuuuuuuu99uuuub9Gquuuuuuu99uueu9GPuuuuuuuuuuu99uueu9Gquuuuuuuu99ueu9Gruuuuuu99eu9Gwuuuuuu99ueu9Giuuue999GDuuuuuuuuueu9Gkuuuuuuuu99uub9Gluuuueu9Gluuuub9Giuuueui3EdilvorlwDiqkrxmPszdHObAAbeAlve9Weiiviebeoweuecj:Gdkr:Sdmo9TW9T9VV95dbH9F9F939H79T9F9J9H229F9Jt9VV7bbz9TW79O9V9Wt9F79P9T9W29P9M95bw8E9TW79O9V9Wt9F79P9T9W29P9M959x9Pt9OcttV9P9I91tW7bD8A9TW79O9V9Wt9F79P9T9W29P9M959x9Pt9O9v9W9K9HtWbqQ9TW79O9V9Wt9F79P9T9W29P9M959t29V9W9W95bkX9TW79O9V9Wt9F79P9T9W29P9M959qV919UWbmQ9TW79O9V9Wt9F79P9T9W29P9M959q9V9P9Ut7bPX9TW79O9V9Wt9F79P9T9W29P9M959t9J9H2WbsP9TW79O9V9Wt9FVW9TW79Obza9TW79O9V9Wt9F9V9Wt9P9T9P96W9wWVtW94SWt9J9O9sW9T9H9WbA59TW79O9V9Wt9F9NW9UWV9HtW9q9V79Pt9P9V9U9sW9T9H9WbCl79IV9RbXDwebcekdKYq:p:1dElbzOk:Q:tekYue99iuQ99eui99Due99xue9:w998Jjjjjbcj;sb9Rgs8Kjjjjbcbhzasc:Cefcbc;Kbz:xjjjb8AdnabaeSmbabaeadcdtz:wjjjb8AkdnamcdGTmbalcrfci4cbyd;y:L:cjbHjjjjbbhHasc:Cefasyd;8egecdtfaHBdbasaecefBd;8ecbhlcbhednadTmbabheadhOinaHaeydbci4fcb86bbaeclfheaOcufgOmbkcbhlabheadhOinaHaeydbgAci4fgCaCRbbgCceaAcrGgAtV86bbaCcu7aA4ceGalfhlaeclfheaOcufgOmbkcualcdtalcFFFFi0Ehekaecbyd;y:L:cjbHjjjjbbhzasc:Cefasyd;8egecdtfazBdbasaecefBd;8ealcd4alfhOcehHinaHgecethHaeaO6mbkcbhXcuaecdtgOaecFFFFi0Ecbyd;y:L:cjbHjjjjbbhHasc:Cefasyd;8egAcdtfaHBdbasaAcefBd;8eaHcFeaOz:xjjjbhQdnadTmbaecufhLcbhKindndnaQabaKcdtfgYydbgAc:v;t;h;Ev2aLGgOcdtfgCydbgHcuSmbceheinazaHcdtfydbaASmdaOaefhHaecefheaQaHaLGgOcdtfgCydbgHcu9hmbkkazaXcdtfaABdbaCaXBdbaXhHaXcefhXkaYaHBdbaKcefgKad9hmbkkaQcbyd;C:L:cjbH:bjjjbbasasyd;8ecufBd;8ekcbh8AcualcefgecdtaecFFFFi0Ecbyd;y:L:cjbHjjjjbbhKasc:Cefasyd;8egecdtfaKBdbasaKBdNeasaecefBd;8ecuadcitadcFFFFe0Ecbyd;y:L:cjbHjjjjbbhEasc:Cefasyd;8egecdtfaEBdbasaEBd:yeasaecefBd;8eascNefabadalcbz:cjjjbcualcdtgealcFFFFi0Eg3cbyd;y:L:cjbHjjjjbbhHasc:Cefasyd;8egOcdtfaHBdbasaOcefBd;8ea3cbyd;y:L:cjbHjjjjbbhXasc:Cefasyd;8egOcdtfaXBdbasaOcefBd;8eaHaXaialavazasc:Cefz:djjjbalcbyd;y:L:cjbHjjjjbbh5asc:Cefasyd;8egOcdtfa5BdbasaOcefBd;8ea3cbyd;y:L:cjbHjjjjbbhOasc:Cefasyd;8egAcdtfaOBdbasaAcefBd;8ea3cbyd;y:L:cjbHjjjjbbhAasc:Cefasyd;8egCcdtfaABdbasaCcefBd;8eaOcFeaez:xjjjbh8EaAcFeaez:xjjjbh8FdnalTmbindnaKa8AgAcefg8AcdtfydbgCaKaAcdtgefydbgOSmbaCaO9RhYaEaOcitfhaa8Faefhha8EaefhLcbhCindndnaaaCcitfydbgQaA9hmbaLaABdbahaABdbxekdnaKaQcdtggfgeclfydbgOaeydbgeSmbaOae9RhOaEaecitfheinaeydbaASmdaecwfheaOcufgOmbkka8FagfgeaAaQaeydbcuSEBdbaLaQaAaLydbcuSEBdbkaCcefgCaY9hmbkka8Aal9hmbkaHhOaXhAa8EhQa8FhCcbheindndnaeaOydbgL9hmbdnaeaAydbgL9hmbaQydbhLdnaCydbgYcu9hmbaLcu9hmba5aefcb86bbxikdnaYcuSmbaLcuSmbaeaYSmbaHaYcdtfydbaHaLcdtfydb9hmba5aefcd86bbxika5aefhadnaeaYSmbaeaLSmbaace86bbxikaacv86bbxdkdnaeaXaLcdtgYfydb9hmbdnaCydbgacuSmbaeaaSmbaQydbggcuSmbaeagSmba8FaYfydbghcuSmbahaLSmba8EaYfydbgYcuSmbaYaLSmbaHaacdtfydbgLaHaYcdtfydb9hmbaLaHagcdtfydbgYSmbaYaHahcdtfydb9hmba5aefcd86bbxika5aefcv86bbxdka5aefcv86bbxeka5aefa5aLfRbb86bbkaOclfhOaAclfhAaQclfhQaCclfhCalaecefge9hmbkdnamcaGTmbcbh8Jindndna5a8Jfg8KRbbg8Lc9:fPlbeebekdndndnaHa8Jcdtfydbgea8J9hmbcbhYcbh8MaqTmednazTmbcbh8Ma8JheinaqazaecdtgefydbfRbbce4a8MVceGh8MaXaefydbgea8J9hmbxikkcbh8Ma8JheinaqaefRbbce4a8MVceGh8MaXaecdtfydbgea8J9hmbxdkka5aefRbbhexeka8JheindnaKaecdtg8AfgeclfydbgOaeydbgeSmbaOae9RhgaEaecitfhhaHa8AfhacbhLinahaLcitfydbgQhednindnaKaecdtgCfgeclfydbgOaeydbgeSmbaOae9RhOaEaecitfheaaydbhAdninaHaeydbcdtfydbaASmeaecwfheaOcufgOTmdxbkkcbhexdkaXaCfydbgeaQ9hmbkcehekaYaeVhYaLcefgLag9hmbkkaXa8Afydbgea8J9hmbka8LclciaYceGEa8MEheka8Kae86bbka8Jcefg8Jal9hmbkkdnaqTmbdndnazTmbazheaHhOalhAindnaqaeydbfRbbceGTmba5aOydbfcv86bbkaeclfheaOclfhOaAcufgAmbxdkkaqheaHhOalhAindnaeRbbceGTmba5aOydbfcv86bbkaecefheaOclfhOaAcufgAmbkkaHhealhAa5hOindna5aeydbfRbbcv9hmbaOcv86bbkaeclfheaOcefhOaAcufgAmbkkamceGTmba5healhOindndnaeRbbcufPlbeebekaecv86bbkaecefheaOcufgOmbkkcbh8Ncualcx2alc;v:Q;v:Qe0Ecbyd;y:L:cjbHjjjjbbh8Kasc:Cefasyd;8egecdtfa8KBdbasaecefBd;8eascbBd:qeas9cb83i1ea8Kaialavazasc1efz:ejjjbhydndnaDmbcbh8PcbhaxekcbhaawhecbhOindnaeIdbJbbbb9ETmbasaacdtfaOBdbaacefhakaeclfheaDaOcefgO9hmbkcuaaal2gecdtaecFFFFi0Ecbyd;y:L:cjbHjjjjbbh8Pasc:Cefasyd;8egecdtfa8PBdbasaecefBd;8ealTmbdnaambcbhaxekarcd4hgdnazTmbaacdthhcbhLa8PhYinaoazaLcdtfydbag2cdtfhQasheaYhOaahAinaOaQaeydbcdtgCfIdbawaCfIdbNUdbaeclfheaOclfhOaAcufgAmbkaYahfhYaLcefgLal9hmbxdkkaacdthhcbhLa8PhYinaoaLag2cdtfhQasheaYhOaahAinaOaQaeydbcdtgCfIdbawaCfIdbNUdbaeclfheaOclfhOaAcufgAmbkaYahfhYaLcefgLal9hmbkkcualc8S2gOalc;D;O;f8U0EgCcbyd;y:L:cjbHjjjjbbheasc:Cefasyd;8egAcdtfaeBdbasaAcefBd;8eaecbaOz:xjjjbhIcbh8RcbhgdnaaTmbcbh8NaCcbyd;y:L:cjbHjjjjbbhgasc:Cefasyd;8egecdtfagBdbasaecefBd;8eagcbaOz:xjjjb8Acuaaal2gecltgOaecFFFFb0Ecbyd;y:L:cjbHjjjjbbh8Rasc:Cefasyd;8egecdtfa8RBdbasaecefBd;8ea8RcbaOz:xjjjb8AamcjjjjdGTmbcualcltgealcFFFFb0Ecbyd;y:L:cjbHjjjjbbh8Nasc:Cefasyd;8egOcdtfa8NBdbasaOcefBd;8ea8Ncbaez:xjjjb8AkdnadTmbcbhQabhOina8KaOclfydbgLcx2fgeIdba8KaOydbgYcx2fgAIdbg8S:tgRa8KaOcwfydbghcx2fgCIdlaAIdlg8U:tg8VNaeIdla8U:tg8WaCIdba8S:tg8XN:tg8Ya8YNa8WaCIdwaAIdwg8Z:tg80NaeIdwa8Z:tg8Wa8VN:tg81a81Na8Wa8XNaRa80N:tg80a80NMMg8V:rhBa8Yh8Xa80h8Wa81hRdna8VJbbbb9EgATmba8YaB:vh8Xa80aB:vh8Wa81aB:vhRkaIaHaYcdtfydbgCc8S2fgeaRaB:rg8VaRNNg83aeIdbMUdbaea8Wa8Va8WNgUNg85aeIdlMUdlaea8Xa8Va8XNg86Ng87aeIdwMUdwaeaRaUNgUaeIdxMUdxaea86aRNg88aeIdzMUdzaea8Wa86Ng89aeIdCMUdCaeaRa8Va8Xa8ZNaRa8SNa8Ua8WNMM:mg8:Ng86NgRaeIdKMUdKaea8Wa86Ng8WaeId3MUd3aea8Xa86Ng8XaeIdaMUdaaea86a8:Ng86aeId8KMUd8Kaea8VaeIdyMUdyaIaHaLcdtfydbgLc8S2fgea83aeIdbMUdbaea85aeIdlMUdlaea87aeIdwMUdwaeaUaeIdxMUdxaea88aeIdzMUdzaea89aeIdCMUdCaeaRaeIdKMUdKaea8WaeId3MUd3aea8XaeIdaMUdaaea86aeId8KMUd8Kaea8VaeIdyMUdyaIaHahcdtfydbgYc8S2fgea83aeIdbMUdbaea85aeIdlMUdlaea87aeIdwMUdwaeaUaeIdxMUdxaea88aeIdzMUdzaea89aeIdCMUdCaeaRaeIdKMUdKaea8WaeId3MUd3aea8XaeIdaMUdaaea86aeId8KMUd8Kaea8VaeIdyMUdydna8NTmbdnaATmba8YaB:vh8Ya80aB:vh80a81aB:vh81ka8NaCcltfgeaBJbbbZNgRa80Ng8VaeIdlMUdlaeaRa8YNg8WaeIdwMUdwaeaRa81Ng8XaeIdbMUdbaeaRa8S:ma81Na8Ua80N:ta8Za8YN:tNgRaeIdxMUdxa8NaLcltfgea8VaeIdlMUdlaea8WaeIdwMUdwaea8XaeIdbMUdbaeaRaeIdxMUdxa8NaYcltfgea8VaeIdlMUdlaea8WaeIdwMUdwaea8XaeIdbMUdbaeaRaeIdxMUdxkaOcxfhOaQcifgQad6mbkkdnalTmbJq;x8J88J;n;m;m89J:v:;;w8ZamczGEamc;abGEh80cbhOaHhCazhQaIhea8KhAindnaOaCydb9hmbaOhLdnazTmbaQydbhLka80hRdnaqTmbJbbjZa80aqaLfRbbclGEhRkaecxfgLaLIdbJbbbbMUdbaeczfgLaLIdbJbbbbMUdbaecCfgLaLIdbJbbbbMUdbaeaRaecyfgLIdbg8YNgRaeIdbMUdbaeclfgYaRaYIdbMUdbaecwfgYaRaYIdbMUdbaecKfgYaYIdbaAIdbg8WaRN:tUdbaAcwfIdbh8Vaec3fgYaYIdbaRaAclfIdbg8XN:tUdbaecafgYaYIdbaRa8VN:tUdbaec8KfgYIdbh81aLa8YaRMUdbaYa81aRa8Va8VNa8Wa8WNa8Xa8XNMMNMUdbkaCclfhCaQclfhQaec8SfheaAcxfhAalaOcefgO9hmbkkdnadTmbcbh8AabhLinaba8AcdtfhYcbheindna5aLaefydbgCfRbbgOTmba5aYaec:G:G:cjbfydbcdtfydbgQfRbbcFeGgATmbdnaOclSghmbaOci6mbaAclSmbaAcd0mekdnaOcd0mba8EaCcdtfydbaQ9hmekdnaAcd0mba8FaQcdtfydbaC9hmekdndnahmbaAcl9hmekaOciSmeaAciSmekJbbbZJbbbZJbbacaAcdSEaOcdSEhUdna8KaYaec:K:G:cjbfydbcdtfydbcx2fgOIdwa8KaCcx2fgAIdwg86:tg8Sa8KaQcx2fghIdwa86:tg8Xa8XNahIdbaAIdbg8U:tg80a80NahIdlaAIdlg8Z:tg8Va8VNMMg81Na8Xa8Sa8XNaOIdba8U:tg83a80Na8VaOIdla8Z:tg85NMMg8WN:tg8Ya8YNa83a81Na80a8WN:tgRaRNa85a81Na8Va8WN:tg8Wa8WNMMgBJbbbb9ETmba8YaB:rgB:vh8Ya8WaB:vh8WaRaB:vhRkaUa81:rNgBa8Ya86NaRa8UNa8Za8WNMM:mg81Ng87a81Nh88a80a85Na8Va83N:tg81a81Na8Va8SNa8Xa85N:tg8Va8VNa8Xa83Na80a8SN:tg8Xa8XNMMg83:rh80a8Ya87Nh85a8Wa87Nh89aRa87Nh87a8WaBa8YNg8SNh8:a8SaRNhZaRaBa8WNgnNhca8Ya8SNh8Ya8WanNh8WaRaBaRNNh8Sdna83Jbbbb9ETmba81a80:vh81a8Xa80:vh8Xa8Va80:vh8VkaIaHaCcdtfydbc8S2fgOaOIdba8Sa8VaUa80:rNgRa8VNNMg80MUdbaOa8Wa8XaRa8XNg8SNMg83aOIdlMUdlaOa8Ya81aRa81Ng8WNMg8YaOIdwMUdwaOaca8Va8SNMg8SaOIdxMUdxaOaZa8Wa8VNMgUaOIdzMUdzaOa8:a8Xa8WNMg8WaOIdCMUdCaOa87a8VaRa81a86Na8Va8UNa8Za8XNMMg86:mNgRNMg8VaOIdKMUdKaOa89a8XaRNMg8XaOId3MUd3aOa85a81aRNMg81aOIdaMUdaaOa88a86aRN:tgRaOId8KMUd8KaOaBaOIdyMUdyaIaHaQcdtfydbc8S2fgOa80aOIdbMUdbaOa83aOIdlMUdlaOa8YaOIdwMUdwaOa8SaOIdxMUdxaOaUaOIdzMUdzaOa8WaOIdCMUdCaOa8VaOIdKMUdKaOa8XaOId3MUd3aOa81aOIdaMUdaaOaRaOId8KMUd8KaOaBaOIdyMUdykaeclfgecx9hmbkaLcxfhLa8Acifg8Aad6mbkkdnamcjeGTmbalTmbcbh9cindnaKa9cgecdtgOfydbghaKaecefg9ccdtfydbg8M9pmba8Kaecx2fhDaIaHaOfydbgCc8S2fh8AindnaHaEahcitfgeydbgLcdtfydbg8JaC0mbaeydlh8LcuhAaLheindnaKaecdtgYfgeclfydbgOaeydbgeSmbaOae9RhOaEaecitfheindnaHaeydbcdtfydbaC9hmbaAcu9hhQaLhAaQmbaeclfydbhAkaecwfheaOcufgOmbkkaXaYfydbgeaL9hmbkaAaLSmbaAcuSmba8KaLcx2fgeIdbaDIdbg81:tgRa8Ka8Lcx2fgOIdlaDIdlg80:tg8XNaeIdla80:tg8VaOIdba81:tg8YN:tg86a8KaAcx2fgAIdba81:tg8Za8VNaAIdla80:tg83aRN:tg8SNa8VaOIdwaDIdwgB:tg8UNaeIdwaB:tg8Wa8XN:tg85a83a8WNaAIdwaB:tg87a8VN:tgUNa8Wa8YNaRa8UN:tg88a87aRNa8Za8WN:tg89NMMa86a86Na85a85Na88a88NMM:rJ:A:z9z:;Na8Sa8SNaUaUNa89a89NMM:rN9Gmbdna8Ua8Wa8WNaRaRNa8Va8VNMMg8SNa8Wa8Ua8WNa8YaRNa8Va8XNMMg86N:tg8Ua8UNa8Ya8SNaRa86N:tg8Ya8YNa8Xa8SNa8Va86N:tg86a86NMMg8XJbbbb9ETmba8Ua8X:rg8X:vh8Ua86a8X:vh86a8Ya8X:vh8Yka8S:rg8Xa8UaBNa8Ya81Na80a86NMM:mgUNg85aUNhUa8Ua85Nh88a86a85Nh89a8Ya85Nh8:a86a8Xa8UNg85NhZa85a8YNhna8Ya8Xa86NgcNhJa8Ua85Nh8Ua86acNh86a8Ya8Xa8YNNh85dna87a8SNa8Wa87a8WNa8ZaRNa8Va83NMMg8YN:tg8Wa8WNa8Za8SNaRa8YN:tgRaRNa83a8SNa8Va8YN:tg8Va8VNMMg8YJbbbb9ETmba8Wa8Y:rg8Y:vh8Wa8Va8Y:vh8VaRa8Y:vhRka8Aa8AIdba85aRa8XaRNNMg8SMUdba8Aa86a8Va8Xa8VNg8ZNMg86a8AIdlMUdla8Aa8Ua8Wa8Xa8WNg8YNMg8Ua8AIdwMUdwa8AaJaRa8ZNMg8Za8AIdxMUdxa8Aana8YaRNMg83a8AIdzMUdza8AaZa8Va8YNMg85a8AIdCMUdCa8Aa8:aRa8Xa8WaBNaRa81Na80a8VNMMg81:mNg8YNMgRa8AIdKMUdKa8Aa89a8Va8YNMg8Va8AId3MUd3a8Aa88a8Wa8YNMg8Wa8AIdaMUdaa8AaUa81a8YN:tg8Ya8AId8KMUd8Ka8Aa8Xa8XMg8Xa8AIdyMUdyaIa8Jc8S2fgea8SaeIdbMUdbaea86aeIdlMUdlaea8UaeIdwMUdwaea8ZaeIdxMUdxaea83aeIdzMUdzaea85aeIdCMUdCaeaRaeIdKMUdKaea8VaeId3MUd3aea8WaeIdaMUdaaea8YaeId8KMUd8Kaea8XaeIdyMUdykahcefgha8M9hmbkka9cal9hmbkkdnadTmbaaTmbcbhYinJbbbbh80a8KabaYcdtfgeclfydbgLcx2fgOIdwa8Kaeydbghcx2fgAIdwg8Z:tg8Va8VNaOIdbaAIdbg83:tg8Wa8WNaOIdlaAIdlg85:tg8Xa8XNMMg8Sa8Kaecwfydbg8Acx2fgeIdwa8Z:tg8YNa8Va8YNa8WaeIdba83:tg81Na8XaeIdla85:tgBNMMgRa8VN:tJbbbbJbbjZa8Sa8Ya8YNa81a81NaBaBNMMg8UNaRaRN:tg86:va86Jbbbb9BEg86Nh88a8Ua8VNaRa8YN:ta86Nh89a8SaBNaRa8XN:ta86Nh8:a8Ua8XNaRaBN:ta86NhZa8Sa81NaRa8WN:ta86Nhna8Ua8WNaRa81N:ta86Nhca8WaBNa8Xa81N:tgRaRNa8Xa8YNa8VaBN:tgRaRNa8Va81Na8Wa8YN:tgRaRNMM:rJbbbZNhRa8Pahaa2g8JcdtfhOa8Pa8Aaa2g8McdtfhAa8PaLaa2gDcdtfhCa8Z:mhJa85:mh9ea83:mhTascjdfheaahQJbbbbhBJbbbbh86Jbbbbh8SJbbbbh8UJbbbbh8ZJbbbbh83Jbbbbh85Jbbbbh87JbbbbhUinaecwfaRa89aCIdbaOIdbg8Y:tg8XNa88aAIdba8Y:tg81NMg8VNUdbaeclfaRaZa8XNa8:a81NMg8WNUdbaeaRaca8XNana81NMg8XNUdbaecxfaRaJa8VNa9ea8WNa8YaTa8XNMMMg8YNUdbaRa8Va8WNNa8ZMh8ZaRa8Va8XNNa8UMh8UaRa8Wa8XNNa8SMh8SaRa8Ya8YNNaUMhUaRa8Va8YNNa87Mh87aRa8Wa8YNNa85Mh85aRa8Xa8YNNa83Mh83aRa8Va8VNNa86Mh86aRa8Wa8WNNaBMhBaRa8Xa8XNNa80Mh80aOclfhOaCclfhCaAclfhAaeczfheaQcufgQmbkagahc8S2fgea80aeIdbMUdbaeaBaeIdlMUdlaea86aeIdwMUdwaea8SaeIdxMUdxaea8UaeIdzMUdzaea8ZaeIdCMUdCaea83aeIdKMUdKaea85aeId3MUd3aea87aeIdaMUdaaeaUaeId8KMUd8KaeaRaeIdyMUdyagaLc8S2fgea80aeIdbMUdbaeaBaeIdlMUdlaea86aeIdwMUdwaea8SaeIdxMUdxaea8UaeIdzMUdzaea8ZaeIdCMUdCaea83aeIdKMUdKaea85aeId3MUd3aea87aeIdaMUdaaeaUaeId8KMUd8KaeaRaeIdyMUdyaga8Ac8S2fgea80aeIdbMUdbaeaBaeIdlMUdlaea86aeIdwMUdwaea8SaeIdxMUdxaea8UaeIdzMUdzaea8ZaeIdCMUdCaea83aeIdKMUdKaea85aeId3MUd3aea87aeIdaMUdaaeaUaeId8KMUd8KaeaRaeIdyMUdya8Ra8JcltfhLcbhOaahCinaLaOfgeascjdfaOfgAIdbaeIdbMUdbaeclfgQaAclfIdbaQIdbMUdbaecwfgQaAcwfIdbaQIdbMUdbaecxfgeaAcxfIdbaeIdbMUdbaOczfhOaCcufgCmbka8RaDcltfhLcbhOaahCinaLaOfgeascjdfaOfgAIdbaeIdbMUdbaeclfgQaAclfIdbaQIdbMUdbaecwfgQaAcwfIdbaQIdbMUdbaecxfgeaAcxfIdbaeIdbMUdbaOczfhOaCcufgCmbka8Ra8McltfhLcbhOaahCinaLaOfgeascjdfaOfgAIdbaeIdbMUdbaeclfgQaAclfIdbaQIdbMUdbaecwfgQaAcwfIdbaQIdbMUdbaecxfgeaAcxfIdbaeIdbMUdbaOczfhOaCcufgCmbkaYcifgYad6mbkkcbhAdndnamcwGgSmbJbbbbh86cbh9hcbh9icbh6xekcbh9ha3cbyd;y:L:cjbHjjjjbbh6asc:Cefasyd;8egecdtfa6BdbasaecefBd;8ecua6alabadaHz:fjjjbgCcltaCcjjjjiGEcbyd;y:L:cjbHjjjjbbh9iasc:Cefasyd;8egecdtfa9iBdbasaecefBd;8ea9iaCa6a8Kalz:gjjjbJFFuuh86aCTmba9iheaChOinaeIdbgRa86a86aR9EEh86aeclfheaOcufgOmbkaCh9hkdnalTmbaKclfheaKydbhCa5hOalhQcbhAincbaeydbgLaC9RaORbbcpeGEaAfhAaOcefhOaeclfheaLhCaQcufgQmbkaAce4hAkcuadaA9Rcifg9kcx2a9kc;v:Q;v:Qe0Ecbyd;y:L:cjbHjjjjbbh0asc:Cefasyd;8egecdtfa0BdbasaecefBd;8ecua9kcdta9kcFFFFi0Ecbyd;y:L:cjbHjjjjbbh9masc:Cefasyd;8egecdtfa9mBdbasaecefBd;8ea3cbyd;y:L:cjbHjjjjbbh9nasc:Cefasyd;8egecdtfa9nBdbasaecefBd;8ealcbyd;y:L:cjbHjjjjbbh9oasc:Cefasyd;8egecdtfa9oBdbasaecefBd;8eaxaxNayJbbjZamclGEg9pa9pN:vh87JbbbbhUdnadak9nmbdna9kci6mbamcjdGh9qaaclth9ra0cwfh9sJbbbbh85JbbbbhUinascNefabadalaHz:cjjjbabh8Acbh3cbh9tinaba9tcdtfh8McbheindnaHa8AaefydbgAcdtghfydbgCaHa8Maec:W:G:cjbfydbcdtfydbgOcdtg8JfydbgQSmba5aOfRbbgYco2a5aAfRbbgLfRb;a:G:cjbg8LaLco2aYfgDRb;a:G:cjbg9cVcFeGTmbdnaQaC9nmbaDRb;W:G:cjbcFeGmekdnaLcufcFeGce0mbaYTmba8EahfydbaO9hmekdnaLTmbaYcufcFeGce0mba8Fa8JfydbaA9hmeka0a3cx2fgCaOaAa9ccFeGgQEBdlaCaAaOaQEBdbaCaQa8LGcb9hBdwa3cefh3kaeclfgecx9hmbkdna9tcifg9tad9pmba8Acxfh8Aa3cifa9k9nmekka3TmdcbhDinaIaHa0aDcx2fghydbgLcdtgCfydbg8Jc8S2fgeIdwa8KahydlgYcx2fgOIdwg8WNaeIdzaOIdbg8XNaeIdaMgRaRMMa8WNaeIdlaOIdlg8YNaeIdCa8WNaeId3MgRaRMMa8YNaeIdba8XNaeIdxa8YNaeIdKMgRaRMMa8XNaeId8KMMM:lhRJbbbbJbbjZaeIdyg8V:va8VJbbbb9BEh8Vdndnahydwg8MmbJFFuuhBxekJbbbbJbbjZaIaHaYcdtfydbc8S2fgeIdyg81:va81Jbbbb9BEaeIdwa8KaLcx2fgOIdwg81NaeIdzaOIdbg80NaeIdaMgBaBMMa81NaeIdlaOIdlgBNaeIdCa81NaeId3Mg81a81MMaBNaeIdba80NaeIdxaBNaeIdKMg81a81MMa80NaeId8KMMM:lNhBka8VaRNh80dnaaTmbagaLc8S2fgAIdwa8WNaAIdza8XNaAIdaMgRaRMMa8WNaAIdla8YNaAIdCa8WNaAId3MgRaRMMa8YNaAIdba8XNaAIdxa8YNaAIdKMgRaRMMa8XNaAId8KMMMhRa8PaYaa2gQcdtfhOa8RaLaa2g8AcltfheaAIdyh81aahAinaOIdbg8Va8Va81NaecxfIdba8WaecwfIdbNa8XaeIdbNa8YaeclfIdbNMMMg8Va8VM:tNaRMhRaOclfhOaeczfheaAcufgAmbkaR:lgRa81aRa819DEaRa9qEh8Sdndna8MmbJbbbbhRxekagaYc8S2fgAIdwa8KaLcx2fgeIdwg8WNaAIdzaeIdbg8XNaAIdaMgRaRMMa8WNaAIdlaeIdlg8YNaAIdCa8WNaAId3MgRaRMMa8YNaAIdba8XNaAIdxa8YNaAIdKMgRaRMMa8XNaAId8KMMMhRa8Pa8AcdtfhOa8RaQcltfheaAIdyh81aahAinaOIdbg8Va8Va81NaecxfIdba8WaecwfIdbNa8XaeIdbNa8YaeclfIdbNMMMg8Va8VM:tNaRMhRaOclfhOaeczfheaAcufgAmbkaR:lgRa81aRa819DEaRa9qEhRka80a8SMh80aBaRMhBdndndna5aLfRbbc9:fPibeedkdna8Fa8Ea8EaCfydbaYSEaXaCfydbgQcdtfydbgCcu9hmbaXaYcdtfydbhCkagaQc8S2fgAIdwa8KaCcx2fgeIdwg8WNaAIdzaeIdbg8XNaAIdaMgRaRMMa8WNaAIdlaeIdlg8YNaAIdCa8WNaAId3MgRaRMMa8YNaAIdba8XNaAIdxa8YNaAIdKMgRaRMMa8XNaAId8KMMMhRa8PaCaa2g8AcdtfhOa8RaQaa2g8JcltfheaAIdyh81aahAinaOIdbg8Va8Va81NaecxfIdba8WaecwfIdbNa8XaeIdbNa8YaeclfIdbNMMMg8Va8VM:tNaRMhRaOclfhOaeczfheaAcufgAmbkaR:lgRa81aRa819DEaRa9qEh8Sdndna8MmbJbbbbhRxekagaCc8S2fgAIdwa8KaQcx2fgeIdwg8WNaAIdzaeIdbg8XNaAIdaMgRaRMMa8WNaAIdlaeIdlg8YNaAIdCa8WNaAId3MgRaRMMa8YNaAIdba8XNaAIdxa8YNaAIdKMgRaRMMa8XNaAId8KMMMhRa8Pa8JcdtfhOa8Ra8AcltfheaAIdyh81aahAinaOIdbg8Va8Va81NaecxfIdba8WaecwfIdbNa8XaeIdbNa8YaeclfIdbNMMMg8Va8VM:tNaRMhRaOclfhOaeczfheaAcufgAmbkaR:lgRa81aRa819DEaRa9qEhRka80a8SMh80aBaRMhBxdkaXaCfydbgCaLSmbaHaYcdtfydbh8Aindndna8EaCcdtgQfydbgecuSmbaHaecdtfydba8ASmekdna8FaQfydbgecuSmbaHaecdtfydba8ASmekaYhekagaCc8S2fgAIdwa8Kaecx2fgOIdwg8WNaAIdzaOIdbg8XNaAIdaMgRaRMMa8WNaAIdlaOIdlg8YNaAIdCa8WNaAId3MgRaRMMa8YNaAIdba8XNaAIdxa8YNaAIdKMgRaRMMa8XNaAId8KMMMhRa8Paeaa2cdtfhOa8RaCaa2cltfheaAIdyh81aahAinaOIdbg8Va8Va81NaecxfIdba8WaecwfIdbNa8XaeIdbNa8YaeclfIdbNMMMg8Va8VM:tNaRMhRaOclfhOaeczfheaAcufgAmbka80aR:lgRa81aRa819DEaRa9qEMh80aXaQfydbgCaL9hmbkkdna5aYfRbbgeciSmbaecl9hmeka8MTmbaXaYcdtfydbgCaYSmbindndna8EaCcdtgQfydbgecuSmbaHaecdtfydba8JSmekdna8FaQfydbgecuSmbaHaecdtfydba8JSmekaLhekagaCc8S2fgAIdwa8Kaecx2fgOIdwg8WNaAIdzaOIdbg8XNaAIdaMgRaRMMa8WNaAIdlaOIdlg8YNaAIdCa8WNaAId3MgRaRMMa8YNaAIdba8XNaAIdxa8YNaAIdKMgRaRMMa8XNaAId8KMMMhRa8Paeaa2cdtfhOa8RaCaa2cltfheaAIdyh81aahAinaOIdbg8Va8Va81NaecxfIdba8WaecwfIdbNa8XaeIdbNa8YaeclfIdbNMMMg8Va8VM:tNaRMhRaOclfhOaeczfheaAcufgAmbkaBaR:lgRa81aRa819DEaRa9qEMhBaXaQfydbgCaY9hmbkkahaBa80aBa809DgeEUdwahaLaYaea8Mcb9hGgeEBdlahaYaLaeEBdbaDcefgDa39hmbkascjdfcbcj;qbz:xjjjb8Aa9shea3hOinascjdfaeydbcA4cF8FGgAcFAaAcFA6EcdtfgAaAydbcefBdbaecxfheaOcufgOmbkcbhecbhOinascjdfaefgAydbhCaAaOBdbaCaOfhOaeclfgecj;qb9hmbkcbhea9shOinascjdfaOydbcA4cF8FGgAcFAaAcFA6EcdtfgAaAydbgAcefBdba9maAcdtfaeBdbaOcxfhOa3aecefge9hmbkadak9RgAci9Uh9udnalTmbcbhea9nhOinaOaeBdbaOclfhOalaecefge9hmbkkcbh9va9ocbalz:xjjjbh9caAcO9Uh9wa9uce4h9tcbh8Lcbh8Mdnina0a9ma8Mcdtfydbcx2fg8JIdwgRa879Emea8La9u9pmeJFFuuh8Vdna9ta39pmba0a9ma9tcdtfydbcx2fIdwJbb;aZNh8VkdnaRa8V9ETmbaRaU9ETmba8La9w0mdkdna9caHa8JydlgDcdtg9xfg8AydbgAfg9yRbba9caHa8Jydbghcdtg9zfydbgefg9ARbbVmba5ahfRbbh9BdndnaKaecdtfgOclfydbgCaOydbgOSmbaCaO9RhCa8KaAcx2fhLa8Kaecx2fhYaEaOcitfheindna9naeydbcdtfydbgOaASmba9naeclfydbcdtfydbgQaASmbaOaQSmba8KaQcx2fgQIdba8KaOcx2fgOIdbg8W:tgRaYIdlaOIdlg8X:tg80NaQIdla8X:tg8VaYIdba8W:tgBN:tg8YaRaLIdla8X:tg8SNa8VaLIdba8W:tg8UN:tg8XNa8VaYIdwaOIdwg81:tg8ZNaQIdwa81:tg8Wa80N:tg80a8VaLIdwa81:tg83Na8Wa8SN:tg8VNa8WaBNaRa8ZN:tg81a8Wa8UNaRa83N:tgRNMMa8Ya8YNa80a80Na81a81NMMa8Xa8XNa8Va8VNaRaRNMMN:rJbbj8:N9FmikaecwfheaCcufgCmbkkdndna9Bc99fcFeGce0mba9na9zfaDBdbaXa9zfydbgeahSmeina8AydbhAdndna8EaecdtgOfydbgecuSmbaHaecdtfydbaASmekdna8FaOfydbgecuSmbaHaecdtfydbaASmekaDheka9naOfaeBdbaXaOfydbgeah9hmbxdkkdndna9BcFeGcdSmbaDhexekdna8Fa8Ea8Ea9zfydbaDSEaXa9zfydbghcdtfydbgecu9hmbaXa9xfydbheka9na9zfaDBdbka9nahcdtfaeBdbka9Ace86bba9yce86bba8JIdwgRaUaUaR9DEhUa9vcefh9vcecda9BcFeGceSEa8Lfh8Lxeka9tcefh9tka8Mcefg8Ma39hmbkka9vTmddnalTmbcbhLcbhhindna9nahcdtgefydbgAahSmbaHaAcdtfydbh8AdnahaHaefydb9hg8JmbaIa8Ac8S2fgeaIahc8S2fgOIdbaeIdbMUdbaeaOIdlaeIdlMUdlaeaOIdwaeIdwMUdwaeaOIdxaeIdxMUdxaeaOIdzaeIdzMUdzaeaOIdCaeIdCMUdCaeaOIdKaeIdKMUdKaeaOId3aeId3MUd3aeaOIdaaeIdaMUdaaeaOId8KaeId8KMUd8KaeaOIdyaeIdyMUdya8NTmba8Na8Acltfgea8NahcltfgOIdbaeIdbMUdbaeaOIdlaeIdlMUdlaeaOIdwaeIdwMUdwaeaOIdxaeIdxMUdxkaaTmbagaAc8S2fgeagahc8S2g8MfgOIdbaeIdbMUdbaeaOIdlaeIdlMUdlaeaOIdwaeIdwMUdwaeaOIdxaeIdxMUdxaeaOIdzaeIdzMUdzaeaOIdCaeIdCMUdCaeaOIdKaeIdKMUdKaeaOId3aeId3MUd3aeaOIdaaeIdaMUdaaeaOId8KaeId8KMUd8KaeaOIdyaeIdyMUdya9raA2hYa8RhOaahCinaOaYfgeaOaLfgAIdbaeIdbMUdbaeclfgQaAclfIdbaQIdbMUdbaecwfgQaAcwfIdbaQIdbMUdbaecxfgeaAcxfIdbaeIdbMUdbaOczfhOaCcufgCmbka8JmbJbbbbJbbjZaIa8MfgeIdygR:vaRJbbbb9BEaeIdwa8Ka8Acx2fgOIdwgRNaeIdzaOIdbg8VNaeIdaMg8Wa8WMMaRNaeIdlaOIdlg8WNaeIdCaRNaeId3MgRaRMMa8WNaeIdba8VNaeIdxa8WNaeIdKMgRaRMMa8VNaeId8KMMM:lNgRa85a85aR9DEh85kaLa9rfhLahcefghal9hmbkcbhOa8EheindnaeydbgAcuSmbdnaOa9naAcdtgCfydbgA9hmbcuhAa8EaCfydbgCcuSmba9naCcdtfydbhAkaeaABdbkaeclfhealaOcefgO9hmbkcbhOa8FheindnaeydbgAcuSmbdnaOa9naAcdtgCfydbgA9hmbcuhAa8FaCfydbgCcuSmba9naCcdtfydbhAkaeaABdbkaeclfhealaOcefgO9hmbkka85aUaaEh85cbhOabhecbhAindnaHa9naeydbcdtfydbgLcdtfydbgCaHa9naeclfydbcdtfydbgYcdtfydbgQSmbaCaHa9naecwfydbcdtfydbg8AcdtfydbghSmbaQahSmbabaOcdtfgCaLBdbaCcwfa8ABdbaCclfaYBdbaOcifhOkaecxfheaAcifgAad6mbkdndnaSmbaOhdxekdnaOak0mbaOhdxekdna86a859FmbaOhdxekJFFuuh86cbhdabhecbhAindna9ia6aeydbgCcdtfydbcdtfIdbgRa859ETmbaeclf8Pdbh9CabadcdtfgQaCBdbaQclfa9C83dbaRa86a86aR9EEh86adcifhdkaecxfheaAcifgAaO6mbkkadak0mbxdkkascNefabadalaHz:cjjjbkdndnadak0mbadhYxekdnaSmbadhYxekdna86a879FmbadhYxekcehQina86Jbb;aZNgRa87aRa879DEh8WJbbbbhRdna9hTmba9ihea9hhOinaeIdbg8VaRa8Va8W9FEaRa8VaR9EEhRaeclfheaOcufgOmbkkJFFuuh86cbhYabhecbhOindna9ia6aeydbgAcdtfydbcdtfIdbg8Va8W9ETmbaeclf8Pdbh9CabaYcdtfgCaABdbaCclfa9C83dba8Va86a86a8V9EEh86aYcifhYkaecxfheaOcifgOad6mbkdnaQaYad9hVceGmbadhYxdkaRaUaUaR9DEhUaYak9nmecbhQaYhda86a879FmbkkdnamcjjjjdGTmba9ocbalz:xjjjbh8AdnaYTmbabheaYhOina8AaeydbgAfce86bba8AaHaAcdtfydbfce86bbaeclfheaOcufgOmbkkascNefabaYalaHz:cjjjbdndnalTmbcbhCindna8AaCfRbbTmbdna5aCfRbbPlbeebekdnaHaCcdtgLfydbgeaCSmba8KaCcx2fgOa8Kaecx2fgeydwBdwaOae8Pdb83dbxekaIaCc8S2fgQIdygnanJL:3;rUNgRMh87aQIdwgxaRMh8SaQIdlg9DaRMh8UaQIdbg9EaRMh81aQIdag9FaRa8KaCcx2fg8JIdwg88N:th8ZaQId3g9GaRa8JIdlg89N:th83aQIdKg9Ha8JIdbg8:aRN:th80JbbbbhZaQIdCg9IJbbbbMh85aQIdzg9JJbbbbMhBaQIdxg9KJbbbbMh86dndnaaTmbaChAinJbbbba87agaAc8S2fgOIdygR:vaRJbbbb9BEhRa8RaAaa2cltfheaOIdaa87Na8ZMh8ZaOId3a87Na83Mh83aOIdKa87Na80Mh80aOIdCa87Na85Mh85aOIdza87NaBMhBaOIdxa87Na86Mh86aOIdwa87Na8SMh8SaOIdla87Na8UMh8UaOIdba87Na81Mh81aahOina8ZaecwfIdbg8VaecxfIdbg8YNaRN:th8Za83aeclfIdbg8Wa8YNaRN:th83a85a8Wa8VNaRN:th85a81aeIdbg8Xa8XNaRN:th81a80a8Xa8YNaRN:th80aBa8Xa8VNaRN:thBa86a8Xa8WNaRN:th86a8Sa8Va8VNaRN:th8Sa8Ua8Wa8WNaRN:th8UaeczfheaOcufgOmbkaXaAcdtfydbgAaC9hmbka8NTmba8NaCcltfgeIdxhTaeIdwhcaeIdlhJaeIdbhRxekJbbbbhTJbbbbhcJbbbbhJJbbbbhRkaBa81:vg8Wa80Na8Z:ta85aBa86a81:vg8VN:tg8Za8Ua86a8VN:tg8Y:vg8Xa8Va80Na83:tg8UN:th83acaRa8WN:taJaRa8VN:tg86a8XN:tg85a8SaBa8WN:ta8Za8XN:tgB:vg8S:mh8Za86a8Y:vgc:mhJdnJbbbbaRaRa81:vg9eN:ta86acN:ta85a8SN:tg86:la87J:983:g81NgR9ETmba8Za83NaJa8UNa9ea80NaT:tMMa86:vhZka81:laR9ETmba8Y:laR9ETmbaB:laR9ETmba9e:maZNa8W:ma8ZaZNa83aB:vMgBNa8V:maJaZNa8X:maBNa8Ua8Y:vMMg85Na80:ma81:vMMMh87aKaLfgeclfydbgOaeydbge9RhhaEaecitfhLJbbbbhRdnaOaeSg8MmbJbbbbhRaLheahhAina8Kaeclfydbcx2fgOIdwa88:tg8Va8VNaOIdba8::tg8Va8VNaOIdla89:tg8Va8VNMMg8Va8Kaeydbcx2fgOIdwa88:tg8Wa8WNaOIdba8::tg8Wa8WNaOIdla89:tg8Wa8WNMMg8WaRaRa8W9DEgRaRa8V9DEhRaecwfheaAcufgAmbkaR:rgRaRNhRkaBa88:tg8Va8VNa87a8::tg8Va8VNa85a89:tg8Va8VNMMaR9EmbaQId8KhZdna8Mmbina8KaLclfydbcx2fgeIdba8KaLydbcx2fgOIdbg8W:tgRa89aOIdlg8X:tg80NaeIdla8X:tg8Va8:a8W:tg86N:tg8YaRa85a8X:tg8SNa8Va87a8W:tg8UN:tg8XNa8Va88aOIdwg81:tg8ZNaeIdwa81:tg8Wa80N:tg80a8VaBa81:tg83Na8Wa8SN:tg8VNa8Wa86NaRa8ZN:tg81a8Wa8UNaRa83N:tgRNMMa8Ya8YNa80a80Na81a81NMMa8Xa8XNa8Va8VNaRaRNMMN:rJbbj8:N9FmdaLcwfhLahcufghmbkkJbbbbJbbjZan:vanJbbbb9BEgRaxaBNa9Ja87Na9FMg8Va8VMMaBNa9Da85Na9IaBNa9GMg8Va8VMMa85Na9Ea87Na9Ka85Na9HMg8Va8VMMa87NaZMMM:lNaRaxa88Na9Ja8:Na9FMg8Va8VMMa88Na9Da89Na9Ia88Na9GMg8Va8VMMa89Na9Ea8:Na9Ka89Na9HMg8Va8VMMa8:NaZMMM:lNJbb;aZNJ:983:g81M9Emba8JaBUdwa8Ja85Udla8Ja87UdbkaCcefgCal9hmbkdnaambcbhaxdkcbhQindna8AaQfRbbTmbaHaQcdtgefydbaQ9hmba5aQfhhaXaefh8Ja8KaQcx2fhAa8PaQaa2cdtfh8McbhEincuhCdnahRbbc99fcFeGce0mbaQhCa8JydbgeaQSmba8PaEcdtgOfhLa8MaOfIdbhRaQhCinaChOcuhCdnaLaeaa2cdtfIdbaR9CmbaOcuSmbaOhCagaec8S2fIdyagaOc8S2fIdy9ETmbaehCkaXaecdtfydbgeaQ9hmbkka8PaEcdtfhLa8RaEcltfhKaQheinaLaeaa2cdtfJbbbbJbbjZagaeaCaCcuSEgOc8S2fIdygR:vaRJbbbb9BEaKaOaa2cltfgOIdwaAIdwNaOIdbaAIdbNaOIdlaAIdlNMMaOIdxMNUdbaXaecdtfydbgeaQ9hmbkaEcefgEaa9hmbkkaQcefgQal9hmbxdkkaambcbhakaiavaoarawaaala8Ka8Pazasayasc1efa5a8Aaqz:hjjjbkdnamcjjjjlGTmbazmbaYTmbabhecbhLina5aeydbgAfRbbc3thQaecwfgXydbhHcjjjj94hCdna8EaAcdtgEfydbaeclfgKydbgOSmbcjjjj94cba8FaOcdtfydbaASEhCkaeaQaCVaAVBdba5aOfRbbc3thacjjjj94hCcjjjj94hQdna8EaOcdtfydbaHSmbcjjjj94cba8FaHcdtfydbaOSEhQkaKaaaQVaOVBdba5aHfRbbc3thOdna8EaHcdtfydbaASmbcjjjj94cba8FaEfydbaHSEhCkaXaOaCVaHVBdbaecxfheaLcifgLaY6mbkkdnazTmbaYTmbaYheinabazabydbcdtfydbBdbabclfhbaecufgembkkdnaPTmbaPa9paU:rNUdbkdnasyd;8egHTmbaHcdtasc:Ceffc98fheinaeydbcbyd;C:L:cjbH:bjjjbbaec98fheaHcufgHmbkkascj;sbf8KjjjjbaYk;Yieouabydlhvabydbclfcbaicdtz:xjjjbhoadci9UhrdnadTmbdnalTmbaehwadhDinaoalawydbcdtfydbcdtfgqaqydbcefBdbawclfhwaDcufgDmbxdkkaehwadhDinaoawydbcdtfgqaqydbcefBdbawclfhwaDcufgDmbkkdnaiTmbcbhDaohwinawydbhqawaDBdbawclfhwaqaDfhDaicufgimbkkdnadci6mbinaecwfydbhwaeclfydbhDaeydbhidnalTmbalawcdtfydbhwalaDcdtfydbhDalaicdtfydbhikavaoaicdtfgqydbcitfaDBdbavaqydbcitfawBdlaqaqydbcefBdbavaoaDcdtfgqydbcitfawBdbavaqydbcitfaiBdlaqaqydbcefBdbavaoawcdtfgwydbcitfaiBdbavawydbcitfaDBdlawawydbcefBdbaecxfhearcufgrmbkkabydbcbBdbk:todDue99aicd4aifhrcehwinawgDcethwaDar6mbkcuaDcdtgraDcFFFFi0Ecbyd;y:L:cjbHjjjjbbhwaoaoyd9GgqcefBd9GaoaqcdtfawBdbawcFearz:xjjjbhkdnaiTmbalcd4hlaDcufhxcbhminamhDdnavTmbavamcdtfydbhDkcbadaDal2cdtfgDydlgwawcjjjj94SEgwcH4aw7c:F:b:DD2cbaDydbgwawcjjjj94SEgwcH4aw7c;D;O:B8J27cbaDydwgDaDcjjjj94SEgDcH4aD7c:3F;N8N27axGhwamcdthPdndndnavTmbakawcdtfgrydbgDcuSmeadavaPfydbal2cdtfgsIdbhzcehqinaqhrdnadavaDcdtfydbal2cdtfgqIdbaz9CmbaqIdlasIdl9CmbaqIdwasIdw9BmlkarcefhqakawarfaxGgwcdtfgrydbgDcu9hmbxdkkakawcdtfgrydbgDcuSmbadamal2cdtfgsIdbhzcehqinaqhrdnadaDal2cdtfgqIdbaz9CmbaqIdlasIdl9CmbaqIdwasIdw9BmikarcefhqakawarfaxGgwcdtfgrydbgDcu9hmbkkaramBdbamhDkabaPfaDBdbamcefgmai9hmbkkakcbyd;C:L:cjbH:bjjjbbaoaoyd9GcufBd9GdnaeTmbaiTmbcbhDaehwinawaDBdbawclfhwaiaDcefgD9hmbkcbhDaehwindnaDabydbgrSmbawaearcdtfgrydbBdbaraDBdbkabclfhbawclfhwaiaDcefgD9hmbkkk;:odvuv998Jjjjjbca9Rgocbyd1:G:cjbBdKaocb8Pdj:G:cjb83izaocbydN:G:cjbBdwaocb8Pd:m:G:cjb83ibdnadTmbaicd4hrdnabmbdnalTmbcbhwinaealawcdtfydbar2cdtfhDcbhiinaoczfaifgqaDaifIdbgkaqIdbgxaxak9EEUdbaoaifgqakaqIdbgxaxak9DEUdbaiclfgicx9hmbkawcefgwad9hmbxikkarcdthwcbhDincbhiinaoczfaifgqaeaifIdbgkaqIdbgxaxak9EEUdbaoaifgqakaqIdbgxaxak9DEUdbaiclfgicx9hmbkaeawfheaDcefgDad9hmbxdkkdnalTmbcbhwinabawcx2fgiaealawcdtfydbar2cdtfgDIdbUdbaiaDIdlUdlaiaDIdwUdwcbhiinaoczfaifgqaDaifIdbgkaqIdbgxaxak9EEUdbaoaifgqakaqIdbgxaxak9DEUdbaiclfgicx9hmbkawcefgwad9hmbxdkkarcdthlcbhwaehDinabawcx2fgiaeawar2cdtfgqIdbUdbaiaqIdlUdlaiaqIdwUdwcbhiinaoczfaifgqaDaifIdbgkaqIdbgxaxak9EEUdbaoaifgqakaqIdbgxaxak9DEUdbaiclfgicx9hmbkaDalfhDawcefgwad9hmbkkJbbbbaoIdbaoIdzgx:tgkakJbbbb9DEgkaoIdlaoIdCgm:tgPaPak9DEgkaoIdwaoIdKgP:tgsasak9DEhsdnabTmbadTmbJbbbbJbbjZas:vasJbbbb9BEhkinabakabIdbax:tNUdbabclfgoakaoIdbam:tNUdbabcwfgoakaoIdbaP:tNUdbabcxfhbadcufgdmbkkdnavTmbavaPUdwavamUdlavaxUdbkask:WlewudnaeTmbcbhvabhoinaoavBdbaoclfhoaeavcefgv9hmbkkdnaiTmbcbhrinadarcdtfhwcbhDinalawaDcdtgvyd:G:G:cjbcdtfydbcdtfydbhodnalawavfydbcdtfydbgqabaqcdtfgkydbgvSmbinakabavgqcdtfgxydbgvBdbaxhkaqav9hmbkkdnaoabaocdtfgkydbgvSmbinakabavgocdtfgxydbgvBdbaxhkaoav9hmbkkdnaqaoSmbabaqaoaqao0Ecdtfaqaoaqao6EBdbkaDcefgDci9hmbkarcifgrai6mbkkdnaembcbskcbhxindnalaxcdtgvfydbax9hmbaxhodnaxabavfgDydbgvSmbaDhqinaqabavgocdtfgkydbgvBdbakhqaoav9hmbkkaDaoBdbkaxcefgxae9hmbkcbhkabhvcbhoindndnaoalydbgq9hmbdnaoavydbgq9hmbavakBdbakcefhkxdkavabaqcdtfydbBdbxekavabaqcdtfydbBdbkalclfhlavclfhvaeaocefgo9hmbkakk;jiilud99euabcbaecltz:xjjjbhvdnalTmbadhoaihralhwinarcwfIdbhDarclfIdbhqavaoydbcltfgkarIdbakIdbMUdbakaqakIdlMUdlakaDakIdwMUdwakakIdxJbbjZMUdxaoclfhoarcxfhrawcufgwmbkkdnaeTmbavhkaehrinakcxfgoIdbhDaocbBdbakakIdbJbbbbJbbjZaD:vaDJbbbb9BEgDNUdbakclfgoaDaoIdbNUdbakcwfgoaDaoIdbNUdbakczfhkarcufgrmbkkdnalTmbinavadydbcltfgkaicwfIdbakIdw:tgDaDNaiIdbakIdb:tgDaDNaiclfIdbakIdl:tgDaDNMMgDakIdxgqaqaD9DEUdxadclfhdaicxfhialcufglmbkkdnaeTmbavcxfhkinabakIdbUdbakczfhkabclfhbaecufgembkkk:moerudnaoTmbaecd4hzdnavTmbaicd4hHavcdthOcbhAindnaPaAfRbbTmbaAhednaDTmbaDaAcdtfydbhekdnasTmbasaefRbbceGmekdnamaAfRbbcvSmbabaeaz2cdtfgiaraAcx2fgCIdbakNaxIdbMUdbaiaCIdlakNaxIdlMUdlaiaCIdwakNaxIdwMUdwkadaeaH2cdtfhXaqheawhiavhCinaXaeydbcdtgQfaiIdbalaQfIdb:vUdbaeclfheaiclfhiaCcufgCmbkkawaOfhwaAcefgAao9hmbxdkkdnasmbcbheaDhiindnaPaefRbbTmbaehCdnaDTmbaiydbhCkamaefRbbcvSmbabaCaz2cdtfgCarIdbakNaxIdbMUdbaCarclfIdbakNaxIdlMUdlaCarcwfIdbakNaxIdwMUdwkaiclfhiarcxfhraoaecefge9hmbxdkkdnaDTmbindnaPRbbTmbasaDydbgefRbbceGmbamRbbcvSmbabaeaz2cdtfgearIdbakNaxIdbMUdbaearclfIdbakNaxIdlMUdlaearcwfIdbakNaxIdwMUdwkaPcefhPaDclfhDamcefhmarcxfhraocufgombxdkkazcdthicbheindnaPaefRbbTmbasaefRbbceGmbamaefRbbcvSmbabarIdbakNaxIdbMUdbabclfarclfIdbakNaxIdlMUdbabcwfarcwfIdbakNaxIdwMUdbkarcxfhrabaifhbaoaecefge9hmbkkk8MbabaeadaialavcbcbcbcbcbaoarawaDz:bjjjbk8MbabaeadaialavaoarawaDaqakaxamaPz:bjjjbkRbababaeadaialavaoarawaDaqakaxcjjjjdVamz:bjjjbk:vgoque99due99duq998Jjjjjbc;Wb9Rgq8Kjjjjbcbhkaqcxfcbc;Kbz:xjjjb8Aaqcualcx2alc;v:Q;v:Qe0Ecbyd;y:L:cjbHjjjjbbgxBdxaqceBd2axaialavcbcbz:ejjjb8AaqcualcdtalcFFFFi0Egmcbyd;y:L:cjbHjjjjbbgiBdzaqcdBd2dndnJFF959eJbbjZawJbbjZawJbbjZ9DE:vawJ9VO:d869DEgw:lJbbb9p9DTmbaw:OhPxekcjjjj94hPkadci9Uhsarco9UhzdndnaombaPcd9imekdnalTmbaPcuf:YhwdnaoTmbcbhvaihHaxhOindndnaoavfRbbceGTmbavcjjjjlVhAxekdndnaOclfIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhAxekcjjjj94hAkaAcqthAdndnaOcwfIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhXxekcjjjj94hXkaAaXVhAdndnaOIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhXxekcjjjj94hXkaAaXcCtVhAkaHaABdbaHclfhHaOcxfhOalavcefgv9hmbxdkkaxhvaihOalhHindndnavIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhAxekcjjjj94hAkaAcCthAdndnavclfIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhXxekcjjjj94hXkaXcqtaAVhAdndnavcwfIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhXxekcjjjj94hXkaOaAaXVBdbavcxfhvaOclfhOaHcufgHmbkkadTmbcbhkaehvcbhOinakaiavclfydbcdtfydbgHaiavcwfydbcdtfydbgA9haiavydbcdtfydbgXaH9haXaA9hGGfhkavcxfhvaOcifgOad6mbkkarci9UhQdndnaz:Z:rJbbbZMgw:lJbbb9p9DTmbaw:Ohvxekcjjjj94hvkaQ:ZhLcbhKc:bwhzdninakaQ9pmeazaP9Rcd9imeavazcufgOavaO9iEaPcefavaP9kEhYdnalTmbaYcuf:YhwdnaoTmbcbhOaihHaxhvindndnaoaOfRbbceGTmbaOcjjjjlVhAxekdndnavclfIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhAxekcjjjj94hAkaAcqthAdndnavcwfIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhXxekcjjjj94hXkaAaXVhAdndnavIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhXxekcjjjj94hXkaAaXcCtVhAkaHaABdbaHclfhHavcxfhvalaOcefgO9hmbxdkkaxhvaihOalhHindndnavIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhAxekcjjjj94hAkaAcCthAdndnavclfIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhXxekcjjjj94hXkaXcqtaAVhAdndnavcwfIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhXxekcjjjj94hXkaOaAaXVBdbavcxfhvaOclfhOaHcufgHmbkkcbhOdnadTmbaehvcbhHinaOaiavclfydbcdtfydbgAaiavcwfydbcdtfydbgX9haiavydbcdtfydbgraA9haraX9hGGfhOavcxfhvaHcifgHad6mbkkdnas:ZgCaL:taY:Ygwaz:Y:tg8ANak:ZgEaO:Zg3:tNaEaL:tawaP:Y:tg5Na3aC:tNMg8EJbbbb9BmbaCaE:ta5a8Aa3aL:tNNNa8E:vawMhwkdndnaOaQ0mbaOhkaYhPxekaOhsaYhzkdndnaKcl0mbdnawJbbbZMgw:lJbbb9p9DTmbaw:Ohvxdkcjjjj94hvxekaPazfcd9ThvkaKcefgKcs9hmbkkdndndnakmbJbbjZhwcbhOcdhvaDmexdkalcd4alfhHcehOinaOgvcethOavaH6mbkaqcuavcdtavcFFFFi0Ecbyd;y:L:cjbHjjjjbbgYBdCaqciBd2aqamcbyd;y:L:cjbHjjjjbbgzBdKaqclBd2dnalTmbaPcuf:YhwdnaoTmbcbhOaihAaxhHindndnaoaOfRbbceGTmbaOcjjjjlVhXxekdndnaHclfIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhXxekcjjjj94hXkaXcqthXdndnaHcwfIdbawNJbbbZMgC:lJbbb9p9DTmbaC:Ohrxekcjjjj94hrkaXarVhXdndnaHIdbawNJbbbZMgC:lJbbb9p9DTmbaC:Ohrxekcjjjj94hrkaXarcCtVhXkaAaXBdbaAclfhAaHcxfhHalaOcefgO9hmbxdkkaxhOaihHalhAindndnaOIdbawNJbbbZMgC:lJbbb9p9DTmbaC:OhXxekcjjjj94hXkaXcCthXdndnaOclfIdbawNJbbbZMgC:lJbbb9p9DTmbaC:Ohrxekcjjjj94hrkarcqtaXVhXdndnaOcwfIdbawNJbbbZMgC:lJbbb9p9DTmbaC:Ohrxekcjjjj94hrkaHaXarVBdbaOcxfhOaHclfhHaAcufgAmbkkaqcuaYavazaialz:mjjjbgXc8S2gvaXc;D;O;f8U0Ecbyd;y:L:cjbHjjjjbbgiBd3aqcvBd2aicbavz:xjjjbhOdnadTmbcbhraehiinaxaiclfydbgocx2fgvIdbaxaiydbgPcx2fgHIdbg3:tgCaxaicwfydbgYcx2fgAIdlaHIdlg8A:tgwNavIdla8A:tgEaAIdba3:tg8EN:tgLaLNaEaAIdwaHIdwg5:tg8FNavIdwa5:tgEawN:tgwawNaEa8ENaCa8FN:tgCaCNMMg8E:rhEJbbnnJbbjZazaPcdtfydbgvazaocdtfydbgASavazaYcdtfydbgoSGgHEh8Fdna8EJbbbb9ETmbaLaE:vhLaCaE:vhCawaE:vhwkaOavc8S2fgvavIdbawa8FaE:rNgEawNNg8FMUdbavaCaEaCNgaNghavIdlMUdlavaLaEaLNg8ENggavIdwMUdwavawaaNgaavIdxMUdxava8EawNg8JavIdzMUdzavaCa8ENg8EavIdCMUdCavawaEaLa5Nawa3Na8AaCNMM:mg8ANg3NgwavIdKMUdKavaCa3NgCavId3MUd3avaLa3NgLavIdaMUdaava3a8ANg3avId8KMUd8KavaEavIdyMUdydnaHmbaOaAc8S2fgva8FavIdbMUdbavahavIdlMUdlavagavIdwMUdwavaaavIdxMUdxava8JavIdzMUdzava8EavIdCMUdCavawavIdKMUdKavaCavId3MUd3avaLavIdaMUdaava3avId8KMUd8KavaEavIdyMUdyaOaoc8S2fgva8FavIdbMUdbavahavIdlMUdlavagavIdwMUdwavaaavIdxMUdxava8JavIdzMUdzava8EavIdCMUdCavawavIdKMUdKavaCavId3MUd3avaLavIdaMUdaava3avId8KMUd8KavaEavIdyMUdykaicxfhiarcifgrad6mbkkcbhAaqcuaXcdtgvaXcFFFFi0Egicbyd;y:L:cjbHjjjjbbgHBdaaqcoBd2aqaicbyd;y:L:cjbHjjjjbbgiBd8KaqcrBd2aHcFeavz:xjjjbhPdnalTmbazhHinJbbbbJbbjZaOaHydbgrc8S2fgvIdygw:vawJbbbb9BEavIdwaxcwfIdbgwNavIdzaxIdbgCNavIdaMgLaLMMawNavIdlaxclfIdbgLNavIdCawNavId3MgwawMMaLNavIdbaCNavIdxaLNavIdKMgwawMMaCNavId8KMMM:lNhwdndnaParcdtgvfgrydbcuSmbaiavfIdbaw9ETmekaraABdbaiavfawUdbkaHclfhHaxcxfhxalaAcefgA9hmbkkdndnaXmbJbbbbhwxekJbbbbhwinaiIdbgCawawaC9DEhwaiclfhiaXcufgXmbkaw:rhwkakcd4akfhOcehiinaigvcethiavaO6mbkcbhOaqcuavcdtgiavcFFFFi0Ecbyd;y:L:cjbHjjjjbbgHBdyaHcFeaiz:xjjjbhXdnadTmbavcufhrcbhkcbhxindnazaeaxcdtfgvydbcdtfydbgiazavclfydbcdtfydbgOSmbaiazavcwfydbcdtfydbgvSmbaOavSmbaPavcdtfydbhAdndnaPaOcdtfydbgvaPaicdtfydbgi9pmbavaA9pmbaAhlaihoavhAxekdnaAai9pmbaAav9pmbaihlavhoxekavhlaAhoaihAkabakcx2fgvaABdbavcwfaoBdbavclfalBdbdnaXaoc:3F;N8N2alc:F:b:DD27aAc;D;O:B8J27arGgOcdtfgvydbgicuSmbcehHinaHhvdnabaicx2fgiydbaA9hmbaiydlal9hmbaiydwaoSmikavcefhHaXaOavfarGgOcdtfgvydbgicu9hmbkkavakBdbakcefhkkaxcifgxad6mbkakci2hOkcwhvaDTmekaDawUdbkavcdthvaqcxfc98fhiinaiavfydbcbyd;C:L:cjbH:bjjjbbavc98fgvmbkaqc;Wbf8KjjjjbaOk:0iewuabcFeaecdtz:xjjjbhbdnalmbcbskaecufhvdndnaiTmbcbhocbhrindndndnabaiarcdtgwfydbgDcm4aD7c:v;t;h;Ev2gecs4ae7avGgqcdtfgkydbgxcuSmbceheinaiaxcdtgxfydbaDSmdaqaefhxaecefheabaxavGgqcdtfgkydbgxcu9hmbkkakarBdbaoheaocefhoxekadaxfydbhekadawfaeBdbarcefgral9hmbxdkkcbhocbhDindnabaDcm4aD7c:v;t;h;Ev2gecs4ae7avGgqcdtfgkydbgxcuSmbaxaDSmbceheinabaqaefavGgqcdtfgkydbgxcuSmeaecefheaxaD9hmbkkdndnaxcu9hmbakaDBdbaoheaocefhoxekadaxcdtfydbhekadaDcdtfaeBdbaDcefgDal9hmbkkaok:3ldrue9:8Jjjjjbc;Wb9Rgr8Kjjjjbcbhwarcxfcbc;Kbz:xjjjb8AdnabaeSmbabaeadcdtz:wjjjb8AkarcualcdtalcFFFFi0EgDcbyd;y:L:cjbHjjjjbbgqBdxarceBd2aqcbaialavcbarcxfz:djjjbcualcx2alc;v:Q;v:Qe0Ecbyd;y:L:cjbHjjjjbbhkarcxfaryd2gxcdtfakBdbaraxcefgmBd2akaialavcbcbz:ejjjb8AarcxfamcdtfaDcbyd;y:L:cjbHjjjjbbgiBdbaraxcdfgvBd2arcxfavcdtfcuaialaeadaqz:fjjjbgecltaecjjjjiGEcbyd;y:L:cjbHjjjjbbgqBdbaqaeaiakalz:gjjjbaxcifhkdnadTmbaoaoNhocbhwabhlcbheindnaqaialydbgvcdtfydbcdtfIdbao9ETmbalclf8PdbhPabawcdtfgDavBdbaDclfaP83dbawcifhwkalcxfhlaecifgead6mbkkdnakTmbaxcdtarcxffcwfhlinalydbcbyd;C:L:cjbH:bjjjbbalc98fhlakcufgkmbkkarc;Wbf8Kjjjjbawk;lOoDud99oue99vuv998Jjjjjbc;Wb9Rgw8KjjjjbdndnarmbcbhDxekawcxfcbc;Kbz:xjjjb8Aawcuadcx2adc;v:Q;v:Qe0Ecbyd;y:L:cjbHjjjjbbgqBdxawceBd2aqaeadaicbcbz:ejjjb8AawcuadcdtadcFFFFi0Egkcbyd;y:L:cjbHjjjjbbgxBdzawcdBd2adcd4adfhecehiinaigmcethiamae6mbkcbhPawcuamcdtgsamcFFFFi0Ecbyd;y:L:cjbHjjjjbbgzBdCawciBd2dndnar:ZgH:rJbbbZMgO:lJbbb9p9DTmbaO:Ohixekcjjjj94hikamcufhAc:bwhCcbhXadhQcbhLinaiaCcufgeaiae9iEaPcefaiaP9kEhDdndnadTmbaDcuf:YhOaqhiaxheadhKindndnaiIdbaONJbbbZMgY:lJbbb9p9DTmbaY:Oh8Axekcjjjj94h8Aka8AcCth8AdndnaiclfIdbaONJbbbZMgY:lJbbb9p9DTmbaY:OhExekcjjjj94hEkaEcqta8AVh8AdndnaicwfIdbaONJbbbZMgY:lJbbb9p9DTmbaY:OhExekcjjjj94hEkaea8AaEVBdbaicxfhiaeclfheaKcufgKmbkazcFeasz:xjjjbh3cbh5cbh8Eindna3axa8Ecdtfydbg8Acm4a8A7c:v;t;h;Ev2gics4ai7aAGgKcdtfgEydbgecuSmbaea8ASmbcehiina3aKaifaAGgKcdtfgEydbgecuSmeaicefhiaea8A9hmbkkaEa8ABdba5aecuSfh5a8Ecefg8Ead9hmbxdkkazcFeasz:xjjjb8Acbh5kdnaQ:ZgYaH:taD:YgOaC:Y:tg8FNaX:Zgaa5:Zgh:tNaaaH:taOaP:Y:tggNahaY:tNMg8JJbbbb9BmbaYaa:taga8FahaH:tNNNa8J:vaOMhOkaPaDa5ar0geEhPaXa5aeEhXdna5arSmbaDaCaeEgCaP9Rcd9imbdndnaLcl0mbdnaOJbbbZMgO:lJbbb9p9DTmbaO:Ohixdkcjjjj94hixekaPaCfcd9Thika5aQaeEhQaLcefgLcs9hmekkdndnaXmbcihicbhDxekawakcbyd;y:L:cjbHjjjjbbg8ABdKawclBd2aPcuf:YhYdnadTmbaqhiaxheadhKindndnaiIdbaYNJbbbZMgO:lJbbb9p9DTmbaO:OhExekcjjjj94hEkaEcCthEdndnaiclfIdbaYNJbbbZMgO:lJbbb9p9DTmbaO:Oh3xekcjjjj94h3ka3cqtaEVhEdndnaicwfIdbaYNJbbbZMgO:lJbbb9p9DTmbaO:Oh3xekcjjjj94h3kaeaEa3VBdbaicxfhiaeclfheaKcufgKmbkkawcuazama8Aaxadz:mjjjbgDc32giaDc;j:KM;jb0Ecbyd;y:L:cjbHjjjjbbgeBd3awcvBd2aecbaiz:xjjjbh3avcd4hxdnadTmbdnalTmbaxcdth8Ea8AhEaqhealhKadhAina3aEydbc32fgiaeIdbaiIdbMUdbaiaeclfIdbaiIdlMUdlaiaecwfIdbaiIdwMUdwaiaKIdbaiIdxMUdxaiaKclfIdbaiIdzMUdzaiaKcwfIdbaiIdCMUdCaiaiIdKJbbjZMUdKaEclfhEaecxfheaKa8EfhKaAcufgAmbxdkka8AhKaqheadhEina3aKydbc32fgiaeIdbaiIdbMUdbaiaeclfIdbaiIdlMUdlaiaecwfIdbaiIdwMUdwaiaiIdxJbbbbMUdxaiaiIdzJbbbbMUdzaiaiIdCJbbbbMUdCaiaiIdKJbbjZMUdKaKclfhKaecxfheaEcufgEmbkkdnaDTmba3hiaDheinaiaiIdbJbbbbJbbjZaicKfIdbgO:vaOJbbbb9BEgONUdbaiclfgKaOaKIdbNUdbaicwfgKaOaKIdbNUdbaicxfgKaOaKIdbNUdbaiczfgKaOaKIdbNUdbaicCfgKaOaKIdbNUdbaic3fhiaecufgembkkcbhEawcuaDcdtgCaDcFFFFi0Egicbyd;y:L:cjbHjjjjbbgeBdaawcoBd2awaicbyd;y:L:cjbHjjjjbbg8EBd8KaecFeaCz:xjjjbh5dnadTmbaoJbbjZJbbjZaY:vaPceSENgOaONhYaxcdthxalheinaYaecN:H:cjbalEgKIdwa3a8AydbgAc32fgiIdC:tgOaONaKIdbaiIdx:tgOaONaKIdlaiIdz:tgOaONMMNaqcwfIdbaiIdw:tgOaONaqIdbaiIdb:tgOaONaqclfIdbaiIdl:tgOaONMMMhOdndna5aAcdtgifgKydbcuSmba8EaifIdbaO9ETmekaKaEBdba8EaifaOUdbka8Aclfh8AaqcxfhqaeaxfheadaEcefgE9hmbkkaba5aCz:wjjjb8Acrhikaicdthiawcxfc98fheinaeaifydbcbyd;C:L:cjbH:bjjjbbaic98fgimbkkawc;Wbf8KjjjjbaDk:Pdidui99ducbhi8Jjjjjbca9Rglcbyd1:G:cjbBdKalcb8Pdj:G:cjb83izalcbydN:G:cjbBdwalcb8Pd:m:G:cjb83ibdndnaembJbbjFhvJbbjFhoJbbjFhrxekadcd4cdthwincbhdinalczfadfgDabadfIdbgvaDIdbgoaoav9EEUdbaladfgDavaDIdbgoaoav9DEUdbadclfgdcx9hmbkabawfhbaicefgiae9hmbkalIdwalIdK:thralIdlalIdC:thoalIdbalIdz:thvkJbbbbavavJbbbb9DEgvaoaoav9DEgvararav9DEk:H8Modui99lud99Aus998Jjjjjbcji9RgD8KjjjjbcbhqaDcxfcbc;Kbz:xjjjb8AaDcbBdwaD9cb83ibaDcbyd;i:L:cjbBd1eaDcb8Pd;a:L:cjb83ijeaDcbyd;u:L:cjbBd94aDcb8Pd;m:L:cjb83i9WdndnavmbJbbjFhkJbbjFhxJbbjFhmxekaocd4cdthPalhsincbhzinaDcjefazfgHasazfIdbgkaHIdbgxaxak9EEUdbaDc;WbfazfgHakaHIdbgxaxak9DEUdbazclfgzcx9hmbkasaPfhsaqcefgqav9hmbkaDId94aDId1e:thmaDIdtaDId:ee:thxaDId9WaDIdje:thkkJbbbbhOdnar:YgAJq;x8J88MaA:vJbbbbakakJbbbb9DEgkaxaxak9DEgkamamak9DENgxJbbbb9Bmbarc9:f:Yax:vhOkaDcCfhCaDcxfcxfhXcbhzinaDazfaDcjefazfIdbgkaxaDc;WbfazfIdbak:t:tJbbb:;NMUdbazclfgzcx9hmbkcbhQaDarar2gLar2gzcbyd;y:L:cjbHjjjjbbgHBdxaDceBd2aHcbazz:xjjjbgKcbcbadaialaoaraOaDawz:rjjjbcdhYaDcuaLcdtaLcFFFFi0Eg8Acbyd;y:L:cjbHjjjjbbgEBdzaDcdBd2aDcjefcbarz:xjjjb8Acbh3dnaLTmbdnarcb9kmbaKhzaEhHaLhsincbh3aHcbcuazaDcjefarz:AjjjbEBdbazarfhzaHclfhHascufgsmbxdkkaKhPcbh3cbhvindndnaKavar2faDcjefarz:AjjjbTmbcbhHaPhzarhsinazaHazRbbgqfgHcbaqE86bbazcefhzascufgsmbkaEavcdtfa3BdbaHa3fh3xekaEavcdtfcuBdbkaParfhPavcefgvaL9hmbkkdnabTmbaDcua3cotgza3cFFF8F0Ecbyd;y:L:cjbHjjjjbbgQBdCcihYaDciBd2aQcbazz:xjjjb8AaXhCkdnawceGmbaCa8Acbyd;y:L:cjbHjjjjbbg5BdbaDaYcefgzBd2aDcxfazcdtfaLcbyd;y:L:cjbHjjjjbbgzBdbaDaYcdfgYBd2azcbaLz:xjjjbh8EarcufhXdnarci9imbarc9:fhCararcef2aKfcefh8Aceh8Fina8Far2hPa8AhvcehqindnaEaqaPfcdtfydbcuSmbavhzaChHinazazRbbgscuasE86bbazcefhzaHcufgHmbkkavarfhvaqcefgqaX9hmbka8AaLfh8Aa8Fcefg8FaX9hmbkkarce9imbcbh8Acbhqcbhvina8EaqfhscbhzindnasazfgHRbbmbaHce86bba5a8AcdtfaqazfBdba8Acefh8Akarazcefgz9hmbkaqarfhqavcefgvar9hmbka8ATmbaKcefhaaKc9:fhharc9:fhgarci9ih8Jina8Ea5a8Acufg8Acdtfydbgvfcb86bbavar2hPdna8JmbaEavcdtfydbcuSmbaKaPfhHaghqindnaHcefgzRbbgscFe9hmbaHRbbmbcbhskazas86bbazhHaqcufgqmbkaharavcef2fhzaXhsindnazRbbgHcFe9hmbazcefRbbmbcbhHkazaH86bbazcufhzascufgsce9kmbkkaaaPfh8Kavavar9Ug8Lar29Rh8FcbhCindnaCceScuaCEa8Ffgzce9imbazaX9ombcuaCciSaCcdSEa8LfgHce9imbaHaX9ombaEaHar2azfg8McdtfydbcuSmba8Jmbaaa8Mar2fhzcbhqa8KhsaghvinazazRbbgHcbaHaHcFeSEasRbbEgP86bbascefhsazcefhzaPaH7aqVhqavcufgvmbkaqcFeGTmba8Ea8MfgzRbbmbazce86bba5a8Acdtfa8MBdba8Acefh8AkaCcefgCcl9hmbka8AmbkkdnaQTmbaKaEaQadaialaoaraOaDawz:rjjjba3TmbJbbjZaO:vhkawcjjjjlGhPdnawcdGTmbJbbnnaOaON:vh8NakJbbbZNhyaQhzinazczfgsIdbg8PazcCfIdbgx:vhmazcxfgqIdbgIax:vhAazcwfgvIdbg8Rax:vh8SakazydbgHcFrG:ZNhRakaHcq4cFrG:ZNh8UakaHcC4cFrG:ZNh8VdnaxJ:p;c;188Ng8WazcKfIdbMg8X:laxJ:983:g81Ngx9ETmba8Wazc3fIdbMazc8KfIdbg8Ya8Ya8X:vg8YN:tg8Z:lax9ETmba8WazcafIdbMazcyfIdbg8Wa8Wa8X:vg80N:tazc8SfIdba8Wa8YN:tg8Wa8Wa8Z:vg8WN:tg81:lax9ETmba8PJ:p;c;188NazcUfIdb:ta80a8RJ:p;c;188Nazc8WfIdb:tg8PN:ta8WaIJ:p;c;188Nazc80fIdb:ta8Ya8PN:tgIN:ta81:vgxam:tg8Ra8RNa8Pa8X:va8YaIa8Z:va8WaxN:tg8XN:ta80axN:tg8Wa8S:tg8Ya8YNa8XaA:tg8Ya8YNMMa8N9DTmbaxaRaxaR9EEgxakaRMgmaxam9DEhma8Xa8Ua8Xa8U9EEgxaka8UMgAaxaA9DEhAa8Wa8Va8Wa8V9EEgxaka8VMg8Saxa8S9DEh8SkdnaPTmbayaRMhmaya8UMhAaya8VMh8SkasamUdbaqaAUdbava8SUdbazc;abfhza3cufg3mbxdkkdnaPTmbakJbbbZNhxaQhzinazczfaxakazydbgHcFrG:ZNMUdbazcxfaxakaHcq4cFrG:ZNMUdbazcwfaxakaHcC4cFrG:ZNMUdbazc;abfhza3cufg3mbxdkkaQcCfhzinazc98fgHaHIdbazIdbgk:vUdbazc94fgHaHIdbak:vUdbazctfgHaHIdbak:vUdbazc;abfhza3cufg3mbkkcbhsdndnarcd9imbarcufh3aEarcdtfhadnabmbaKcefg8Mararcefgz2fh8JaKazfhba8MaLfh8Ecbhscbh8Kina8Kar2h8La8Mheabh8Aa8Eh8Fa8Jh5cbhXindnaEaXa8LfgqcdtgzfgHclfydbaHydbGaaazfgzydbGazclfydbGcuSmbclcbaKaqar2fgzarfRbbEazRbbcb9hVczcbazaLfgzRbbEVc;abcbazarfRbbEVhPaehza8AhHa8Fhqa5hva3hQindnaPclcbaHRbbEazRbbcb9hVczcbaqRbbEVc;abcbavRbbEVgPcetVgCTmbaCcFeSmbasaCRb;W;p:cjbfhskazcefhzaHcefhHaqcefhqavcefhvaQcufgQmbkkaearfhea8Aarfh8Aa8Farfh8Fa5arfh5aXcefgXa39hmbka8MaLfh8MabaLfhba8EaLfh8Ea8JaLfh8Ja8Kcefg8Ka39hmbxdkkJbbjZaO:vgkakJk;x8J88NNh8RawcdGh8EaDIdwhkaDIdlhxaDIdbhmcbhscbhPinaPar2h8KcbhvindnaEava8KfgqcdtgzfgHclfydbaHydbGaaazfgzydbGazclfydbGcuSmbcbh8AclcbaKaqar2fgYarfRbbEaYRbbcb9hVczcbaYaLfg8JRbbEVc;abcba8JarfRbbEVh8Lindna8LclcbaYa8Ag8Mcefg8AfgzarfRbbEazRbbcb9hVczcba8Ja8AfgzRbbEVc;abcbazarfRbbEVg8LcetVgCTmbaCcFeSmbcbhqdndndnaCRb;W;n:cjbcufPdebdka8ETmeaCcC2gz8Ve;W:L:cjbcltaz8Ve;Y:L:cjbcsGVh8FaKa8Mfh5cxhzaDcjefhHinaHaQaEa8Faz4gqce4ceGavfaqcd4ceGaPfar2fgXcdtfydbcotfa5aqceGfaXar2fRbbcotfcnfBdbaHclfhHazc98fgzc989hmbkaDydjegzIdyaDyd:megHIdyMaDyd:eegqIdyaDyd1egXIdyMMg8XaqIdwaXIdwMJbbbZNgANazIdUaHIdUMaqIdUaXIdUMMg8WMg8Sa8SMazIdaaHIdaMaqIdaaXIdaMMg8YaqIdzaXIdzMJbbbZNg8SNMa8SNazId8SaHId8SMaqId8SaXId8SMMgRa8SNazId80aHId80MaqId80aXId80MMg8UMg8Sa8SMazId3aHId3MaqId3aXId3MMg8VaqIdxaXIdxMJbbbZNg8SNMa8SNazId8KaHId8KMaqId8KaXId8KMMg8Za8SNazId8WaHId8WMaqId8WaXId8WMMg80Mg8Sa8SMazIdKaHIdKMaqIdKaXIdKMMgyaANMaANazId88aHId88MaqId88aXId88MMg8PMMM:lgIa8RazIdCaHIdCMaqIdCaXIdCMMN9Ea8XazIdwaHIdwMJbbbZNgANa8WMg8Sa8SMa8YazIdzaHIdzMJbbbZNg8SNMa8SNaRa8SNa8UMg8Sa8SMa8VazIdxaHIdxMJbbbZNg8SNMa8SNa8Za8SNa80Mg8Sa8SMayaANMaANa8PMMM:laIJ;d;1UZN9DGhqxekaKa8Mfh8FcbhzcrhHindnaCaz4ceGTmba8FazceGfazce4ceGavfazcd4aPfar2fgqar2fRbbgXcFeSmbaQaEaqcdtfydbcotfaXcotfc9efRbbaH4ceGTmbcbhqxdkaHcufhHcehqazcefgzcw9hmbkkaCcC2aqcq2fgH8Ve;W:L:cjbgzTmbaHc;Y:L:cjbfhqaKa8MfhCabasc8K2fhHindnasae9pmbaHaQaEazcD4ceGavfazcq4ceGaPfar2fgXcdtfydbcotfaCazcw4ceGfaXar2fRbbcotfgXc9ifIdbamMUdbaHclfaXc9mfIdbaxMUdbaHcwfaXc9qfIdbakMUdbaHcxfamaQaEazcv4ceGavfazco4ceGaPfar2fgXcdtfydbcotfaCazcl4ceGfaXar2fRbbcotfgXc9ifIdbMUdbaHczfaxaXc9mfIdbMUdbaHcCfakaXc9qfIdbMUdbaHcKfamaQaEazce4ceGavfazcd4ceGaPfar2fgXcdtfydbcotfaCazceGfaXar2fRbbcotfgzc9ifIdbMUdbaHc3faxazc9mfIdbMUdbaHcafakazc9qfIdbMUdbkaHc8KfhHascefhsaq8Vebhzaqcdfhqazmbkka8Aa39hmbkkavcefgva39hmbkaPcefgPa39hmbkaDyd2gYTmekaYcdtaDcxffc98fhzinazydbcbyd;C:L:cjbH:bjjjbbazc98fhzaYcufgYmbkkaDcjif8Kjjjjbask;Kxmiue99due99euz99eui99eud99dud99oudnalTmbaocd4hkaqcdGhxarc99fhqarcethmawawMhPcbhsindndnawavaiascdtfgoclfydbak2cdtfgzIdwgHavaoydbak2cdtfgOIdwgA:tgCaCNazIdbgXaOIdbgQ:tgLaLNazIdlgKaOIdlgY:tg8Aa8ANMMgEavaocwfydbak2cdtfgoIdwg3aA:tg5a5NaoIdbg8EaQ:tg8Fa8FNaoIdlgaaY:tghahNMMggaEag9EEgEa3aH:tgHaHNa8EaX:tgHaHNaaaK:tgHaHNMMgHaEaH9EE:rNgHaHMgH:lJbbb9p9DTmbaH:Ohoxekcjjjj94hokdnaLahNa8Aa8FN:tgHaHNa8Aa5NaCahN:tgXaXNaCa8FNaLa5N:tgKaKNMMg3Jbbbb9BmbJbbjZhEdnaoceaoce9kEgoamaoam9iEg8Jcd9imbJbbjZa8J:Z:vhEkarcb9imbaAaDIdw:th8KaYaDIdl:th8LaQaDIdb:th8Ma8Jcba8Jcb9kEh8NdnadTmbaHJbbjZa3:rgA:vgQNg3aAa8Jcefa8Jcdf2:Y:vgANh8EaKaQNgKaANhyaXaQNgXaXaANNh8PcbhIina8Jcba8Jcb9kEcefh8RaEaI:ZNgQaCNa8KMhgaQa8ANa8LMh8SaQaLNa8MMhRcbhzindndnaPaEaz:ZNgQahNa8SMgYNgH:lJbbb9p9DTmbaH:OhOxekcjjjj94hOkaOce91goaqaoaq6Eh8UdndnaPaQa5NagMgHNga:lJbbb9p9DTmbaa:Oh8Vxekcjjjj94h8Vka8Ua8Vce91goaqaoaq6Eg8Wcefar2fcefgoar2h8XdndnaPaQa8FNaRMgQNga:lJbbb9p9DTmbaa:Oh8Yxekcjjjj94h8Ykadaeaocdtfydbcotfaba8Yce91goaqaoaq6Eg8Zfa8XfcefRbbcotfgocnfa8Ucqta8ZcCtVa8WVBdbaoc9efg8Ua8URbbcea8YceGaOcetcdGVa8VcdtclGVtV86bbaoc9ifgOaQaANaOIdbMUdbaoc9mfgOaYaANaOIdbMUdbaoc9qfgOaHaANaOIdbMUdbaoc9ufgOaAaOIdbMUdbdnaxTmbaoc9yfgOa8PaOIdbMUdbaoc9CfgOaKayNaOIdbMUdbaoc9GfgOa3a8ENaOIdbMUdbaoc9KfgOaXayNaOIdbMUdbaoc9OfgOaXa8ENaOIdbMUdbaoc2fgOaKa8ENaOIdbMUdbaoc9WfgOaXaAa3aHNaXaQNaKaYNMMgY:mNgQNaOIdbMUdbaoctfgOaKaQNaOIdbMUdbaoc94fgOa3aQNaOIdbMUdbaoc98fgoaoIdbaYaQN:tUdbka8Razcefgz9hmbka8Jcufh8JaIa8NShoaIcefhIaoTmbxdkkcbh8Vina8Jcba8Jcb9kEcefh8UaEa8V:ZNgAaCNa8KMhYaAa8ANa8LMhHaAaLNa8MMhXcbhoindndnaPaEao:ZNgAahNaHMNgQ:lJbbb9p9DTmbaQ:Ohzxekcjjjj94hzkazce91gzaqazaq6EhzdndnaPaAa5NaYMNgQ:lJbbb9p9DTmbaQ:OhOxekcjjjj94hOkazaOce91gOaqaOaq6Ecefar2fcefar2hzdndnaPaAa8FNaXMNgA:lJbbb9p9DTmbaA:OhOxekcjjjj94hOkabaOce91gOaqaOaq6Efazfcefce86bba8Uaocefgo9hmbka8Jcufh8Ja8Va8NShoa8Vcefh8VaoTmbkkascifgsal6mbkkk:Nvezu8Jjjjjbcjd9Rgb8Kjjjjbcbheabcbcjdz:xjjjbhdc:W:H:cjbhbinabRbbgicC2glabcqf8Veb87e;4:L:cjbalabcdfgv8Peb83e;W:L:cjbaiabcefRbb86b;W;n:cjbadaifce86bbalavabcxfceaetc:F:d;avGEgi8Peb83e;6:L:cjbalai8Vew87e:c:M:cjbabcQfhbaecefgecK9hmbkcbhoinc;Y:L:cjbhrcbhvindnadavfgwRbbce9hmbavcC2c;W:L:cjbfhDcbhbcehqavc;W;n:cjbfhkinabcitc:G:H:cjbfhlcbhbcbheinaeavab4ceGalabfRbbtVheabcefgbcw9hmbkdnadaecFeGgxfgmRbbmbaxcC2c;W:L:cjbfhPcbhbcehsindnaDabcq2gif8VebgbTmbaraifheaPaifhiinaialabcl4csGfRbbcltalabcw4csGfRbbcwtValabcsGfRbbV87ebaicdfhiae8VebhbaecdfheabmbkkcehbasceGhecbhsaembkamce86bbaxakRbb86b;W;n:cjbkcehbaqceGhlcbhqalmbkawcd86bbkarcCfhravcefgvcjd9hmbkaocefgoci9hmbkcbhic;W:L:cjbhvincuhlavhbinalcefhlab8Vebheabcdfhbaembkaial86b;W;p:cjbavcCfhvaicefgicjd9hmbkadcjdf8Kjjjjbk9DeeuabcFeaicdtz:xjjjbhlcbhbdnadTmbindnalaeydbcdtfgiydbcu9hmbaiabBdbabcefhbkaeclfheadcufgdmbkkabk;Bidqui998Jjjjjbc;Wb9Rgl8Kjjjjbalcxfcbc;Kbz:xjjjb8Aadcd4adfhvcehoinaogrcethoarav6mbkalcuarcdtgoarcFFFFi0Ecbyd;y:L:cjbHjjjjbbgvBdxavcFeaoz:xjjjbhwdnadTmbaicd4hDarcufhqcbhkindndnawcbaeakaD2cdtfgrydlgiaicjjjj94SEgocH4ao7c:F:b:DD2cbarydbgxaxcjjjj94SEgocH4ao7c;D;O:B8J27cbarydwgmamcjjjj94SEgrcH4ar7c:3F;N8N27aqGgvcdtfgrydbgocuSmbam::hPai::hsax::hzcehiinaihrdnaeaoaD2cdtfgiIdbaz9CmbaiIdlas9CmbaiIdwaP9BmikarcefhiawavarfaqGgvcdtfgrydbgocu9hmbkkarakBdbakhokabakcdtfaoBdbakcefgkad9hmbkkalydxcbyd;C:L:cjbH:bjjjbbalc;Wbf8Kjjjjbk9teiucbcbyd;G:L:cjbgeabcifc98GfgbBd;G:L:cjbdndnabZbcztgd9nmbcuhiabad9RcFFifcz4nbcuSmekaehikaik;LeeeudndnaeabVciGTmbabhixekdndnadcz9pmbabhixekabhiinaiaeydbBdbaiclfaeclfydbBdbaicwfaecwfydbBdbaicxfaecxfydbBdbaeczfheaiczfhiadc9Wfgdcs0mbkkadcl6mbinaiaeydbBdbaeclfheaiclfhiadc98fgdci0mbkkdnadTmbinaiaeRbb86bbaicefhiaecefheadcufgdmbkkabk;aeedudndnabciGTmbabhixekaecFeGc:b:c:ew2hldndnadcz9pmbabhixekabhiinaialBdbaicxfalBdbaicwfalBdbaiclfalBdbaiczfhiadc9Wfgdcs0mbkkadcl6mbinaialBdbaiclfhiadc98fgdci0mbkkdnadTmbinaiae86bbaicefhiadcufgdmbkkabk9teiucbcbyd;G:L:cjbgeabcrfc94GfgbBd;G:L:cjbdndnabZbcztgd9nmbcuhiabad9RcFFifcz4nbcuSmekaehikaikTeeucbabcbyd;G:L:cjbge9Rcifc98GaefgbBd;G:L:cjbdnabZbcztge9nmbabae9RcFFifcz4nb8Akk6eiucbhidnadTmbdninabRbbglaeRbbgv9hmeaecefheabcefhbadcufgdmbxdkkalav9Rhikaikk;0vdbcj:Gdk;yvFFuuFFuuFFuuFFuFFFuFFFuFbbbbbbbbebbbdbbbbbbbebbbebbbdbbbbbbbbbbbeeeeeebebbeebbebbebbbeeebbbbebbbbbbbbbbbbbbbbbbbeeeeeeebebbbeeebbeebbbbbebbbbbebebbbbbbbbbbbbbbbdiorbelvlbodveribbbbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbobbbbbbbbbbbbbbbbbbbbbrbaebbbbbbbbbbbbbbbbbbsd8We8YbbbbbbbhiaebbbbbbQe8Ke9cebbbbbbbbbbbbbbbbLb8KebbbbbbbbbbbbbbbbbbKbbbbbbbbbbbbbbbbbbbbbYeJbilbbbbbbbbbbbbbbbbEe80e8WlbbbbbbzlAbbbbbbb5eJdnibbbbbbai8Kbbbbbbb8Ee9ce8Ylcibbbb8Yebbbbbbbb8FdOlAdbbbbbb80e8Ylbbbbbb88eTi8KiJv8Jlbbbbbbbbbbbb89e9td8Kv9qibbbbndlvaibbbbZd8Li8KvbbbbbbJdTibbbbbb9Pe81b9GvoiBvbbbbbbbbbbbb9Re9JbvoWibbbbvibbbbbbbb9VeWi9Gvbbbbbb8WvBbbbbbbb9:b9ceBvbbbbbbbbbbbbbbbbubWibbbbbbbbbbbbbbbbbb;Wd9hvSrbbbbbbWl9NvbbbbbbFbbbbbbbbbbbbbbbbbbbbbFFuuFFuuFFuuFFuFFFuFFFuFbc;y:Ldkxebbbdbbb;W:Obb'; // embed! wasm
+
+	var wasmpack = new Uint8Array([
+		32, 0, 65, 2, 1, 106, 34, 33, 3, 128, 11, 4, 13, 64, 6, 253, 10, 7, 15, 116, 127, 5, 8, 12, 40, 16, 19, 54, 20, 9, 27, 255, 113, 17, 42, 67,
+		24, 23, 146, 148, 18, 14, 22, 45, 70, 69, 56, 114, 101, 21, 25, 63, 75, 136, 108, 28, 118, 29, 73, 115,
+	]);
+
+	if (typeof WebAssembly !== 'object') {
+		return {
+			supported: false,
+		};
+	}
+
+	var instance;
+
+	var ready = WebAssembly.instantiate(unpack(wasm), {}).then(function (result) {
+		instance = result.instance;
+		instance.exports.__wasm_call_ctors();
+	});
+
+	function unpack(data) {
+		var result = new Uint8Array(data.length);
+		for (var i = 0; i < data.length; ++i) {
+			var ch = data.charCodeAt(i);
+			result[i] = ch > 96 ? ch - 97 : ch > 64 ? ch - 39 : ch + 4;
+		}
+		var write = 0;
+		for (var i = 0; i < data.length; ++i) {
+			result[write++] = result[i] < 60 ? wasmpack[result[i]] : (result[i] - 60) * 64 + result[++i];
+		}
+		return result.buffer.slice(0, write);
+	}
+
+	function assert(cond) {
+		if (!cond) {
+			throw new Error('Assertion failed');
+		}
+	}
+
+	function bytes(view) {
+		return new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
+	}
+
+	function genremap(fun, positions, vertices, stride) {
+		var sbrk = instance.exports.sbrk;
+		var rp = sbrk(vertices * 4);
+		var sp = sbrk(vertices * stride * 4);
+		var heap = new Uint8Array(instance.exports.memory.buffer);
+		heap.set(bytes(positions), sp);
+		fun(rp, sp, vertices, stride * 4);
+		// heap may have grown
+		heap = new Uint8Array(instance.exports.memory.buffer);
+		var remap = new Uint32Array(vertices);
+		new Uint8Array(remap.buffer).set(heap.subarray(rp, rp + vertices * 4));
+		sbrk(rp - sbrk(0));
+		return remap;
+	}
+
+	function reorder(fun, indices, vertices) {
+		var sbrk = instance.exports.sbrk;
+		var ip = sbrk(indices.length * 4);
+		var rp = sbrk(vertices * 4);
+		var heap = new Uint8Array(instance.exports.memory.buffer);
+		var indices8 = bytes(indices);
+		heap.set(indices8, ip);
+		var unique = fun(rp, ip, indices.length, vertices);
+		// heap may have grown
+		heap = new Uint8Array(instance.exports.memory.buffer);
+		var remap = new Uint32Array(vertices);
+		new Uint8Array(remap.buffer).set(heap.subarray(rp, rp + vertices * 4));
+		sbrk(ip - sbrk(0));
+
+		for (var i = 0; i < indices.length; ++i) indices[i] = remap[indices[i]];
+
+		return [remap, unique];
+	}
+
+	function maxindex(source) {
+		var result = 0;
+		for (var i = 0; i < source.length; ++i) {
+			var index = source[i];
+			result = result < index ? index : result;
+		}
+		return result;
+	}
+
+	function simplify(fun, indices, index_count, vertex_positions, vertex_count, vertex_positions_stride, target_index_count, target_error, options) {
+		var sbrk = instance.exports.sbrk;
+		var te = sbrk(4);
+		var ti = sbrk(index_count * 4);
+		var sp = sbrk(vertex_count * vertex_positions_stride);
+		var si = sbrk(index_count * 4);
+		var heap = new Uint8Array(instance.exports.memory.buffer);
+		heap.set(bytes(vertex_positions), sp);
+		heap.set(bytes(indices), si);
+		var result = fun(ti, si, index_count, sp, vertex_count, vertex_positions_stride, target_index_count, target_error, options, te);
+		// heap may have grown
+		heap = new Uint8Array(instance.exports.memory.buffer);
+		var target = new Uint32Array(result);
+		bytes(target).set(heap.subarray(ti, ti + result * 4));
+		var error = new Float32Array(1);
+		bytes(error).set(heap.subarray(te, te + 4));
+		sbrk(te - sbrk(0));
+		return [target, error[0]];
+	}
+
+	function simplifyAttr(
+		fun,
+		indices,
+		index_count,
+		vertex_positions,
+		vertex_count,
+		vertex_positions_stride,
+		vertex_attributes,
+		vertex_attributes_stride,
+		attribute_weights,
+		vertex_lock,
+		target_index_count,
+		target_error,
+		options
+	) {
+		var sbrk = instance.exports.sbrk;
+		var te = sbrk(4);
+		var ti = sbrk(index_count * 4);
+		var sp = sbrk(vertex_count * vertex_positions_stride);
+		var sa = sbrk(vertex_count * vertex_attributes_stride);
+		var sw = sbrk(attribute_weights.length * 4);
+		var si = sbrk(index_count * 4);
+		var vl = vertex_lock ? sbrk(vertex_count) : 0;
+		var heap = new Uint8Array(instance.exports.memory.buffer);
+		heap.set(bytes(vertex_positions), sp);
+		heap.set(bytes(vertex_attributes), sa);
+		heap.set(bytes(attribute_weights), sw);
+		heap.set(bytes(indices), si);
+		if (vertex_lock) {
+			heap.set(bytes(vertex_lock), vl);
+		}
+		var result = fun(
+			ti,
+			si,
+			index_count,
+			sp,
+			vertex_count,
+			vertex_positions_stride,
+			sa,
+			vertex_attributes_stride,
+			sw,
+			attribute_weights.length,
+			vl,
+			target_index_count,
+			target_error,
+			options,
+			te
+		);
+		// heap may have grown
+		heap = new Uint8Array(instance.exports.memory.buffer);
+		var target = new Uint32Array(result);
+		bytes(target).set(heap.subarray(ti, ti + result * 4));
+		var error = new Float32Array(1);
+		bytes(error).set(heap.subarray(te, te + 4));
+		sbrk(te - sbrk(0));
+		return [target, error[0]];
+	}
+
+	function simplifyUpdate(
+		fun,
+		indices,
+		index_count,
+		vertex_positions,
+		vertex_count,
+		vertex_positions_stride,
+		vertex_attributes,
+		vertex_attributes_stride,
+		attribute_weights,
+		vertex_lock,
+		target_index_count,
+		target_error,
+		options
+	) {
+		var sbrk = instance.exports.sbrk;
+		var te = sbrk(4);
+		var sp = sbrk(vertex_count * vertex_positions_stride);
+		var sa = sbrk(vertex_count * vertex_attributes_stride);
+		var sw = sbrk(attribute_weights.length * 4);
+		var si = sbrk(index_count * 4);
+		var vl = vertex_lock ? sbrk(vertex_count) : 0;
+		var heap = new Uint8Array(instance.exports.memory.buffer);
+		heap.set(bytes(vertex_positions), sp);
+		heap.set(bytes(vertex_attributes), sa);
+		heap.set(bytes(attribute_weights), sw);
+		heap.set(bytes(indices), si);
+		if (vertex_lock) {
+			heap.set(bytes(vertex_lock), vl);
+		}
+		var result = fun(
+			si,
+			index_count,
+			sp,
+			vertex_count,
+			vertex_positions_stride,
+			sa,
+			vertex_attributes_stride,
+			sw,
+			attribute_weights.length,
+			vl,
+			target_index_count,
+			target_error,
+			options,
+			te
+		);
+		// heap may have grown
+		heap = new Uint8Array(instance.exports.memory.buffer);
+		bytes(indices).set(heap.subarray(si, si + result * 4));
+		bytes(vertex_positions).set(heap.subarray(sp, sp + vertex_count * vertex_positions_stride));
+		bytes(vertex_attributes).set(heap.subarray(sa, sa + vertex_count * vertex_attributes_stride));
+		var error = new Float32Array(1);
+		bytes(error).set(heap.subarray(te, te + 4));
+		sbrk(te - sbrk(0));
+		return [result, error[0]];
+	}
+
+	function simplifyScale(fun, vertex_positions, vertex_count, vertex_positions_stride) {
+		var sbrk = instance.exports.sbrk;
+		var sp = sbrk(vertex_count * vertex_positions_stride);
+		var heap = new Uint8Array(instance.exports.memory.buffer);
+		heap.set(bytes(vertex_positions), sp);
+		var result = fun(sp, vertex_count, vertex_positions_stride);
+		sbrk(sp - sbrk(0));
+		return result;
+	}
+
+	function simplifyPoints(
+		fun,
+		vertex_positions,
+		vertex_count,
+		vertex_positions_stride,
+		vertex_colors,
+		vertex_colors_stride,
+		color_weight,
+		target_vertex_count
+	) {
+		var sbrk = instance.exports.sbrk;
+		var ti = sbrk(target_vertex_count * 4);
+		var sp = sbrk(vertex_count * vertex_positions_stride);
+		var sc = vertex_colors ? sbrk(vertex_count * vertex_colors_stride) : 0;
+		var heap = new Uint8Array(instance.exports.memory.buffer);
+		heap.set(bytes(vertex_positions), sp);
+		if (vertex_colors) {
+			heap.set(bytes(vertex_colors), sc);
+		}
+		var result = fun(ti, sp, vertex_count, vertex_positions_stride, sc, vertex_colors_stride, color_weight, target_vertex_count);
+		// heap may have grown
+		heap = new Uint8Array(instance.exports.memory.buffer);
+		var target = new Uint32Array(result);
+		bytes(target).set(heap.subarray(ti, ti + result * 4));
+		sbrk(ti - sbrk(0));
+		return target;
+	}
+
+	function simplifySloppy(
+		fun,
+		indices,
+		index_count,
+		vertex_positions,
+		vertex_count,
+		vertex_positions_stride,
+		vertex_lock,
+		target_index_count,
+		target_error
+	) {
+		var sbrk = instance.exports.sbrk;
+		var te = sbrk(4);
+		var ti = sbrk(index_count * 4);
+		var sp = sbrk(vertex_count * vertex_positions_stride);
+		var si = sbrk(index_count * 4);
+		var vl = vertex_lock ? sbrk(vertex_count) : 0;
+		var heap = new Uint8Array(instance.exports.memory.buffer);
+		heap.set(bytes(vertex_positions), sp);
+		heap.set(bytes(indices), si);
+		if (vertex_lock) {
+			heap.set(bytes(vertex_lock), vl);
+		}
+		var result = fun(ti, si, index_count, sp, vertex_count, vertex_positions_stride, vl, target_index_count, target_error, te);
+		// heap may have grown
+		heap = new Uint8Array(instance.exports.memory.buffer);
+		var target = new Uint32Array(result);
+		bytes(target).set(heap.subarray(ti, ti + result * 4));
+		var error = new Float32Array(1);
+		bytes(error).set(heap.subarray(te, te + 4));
+		sbrk(te - sbrk(0));
+		return [target, error[0]];
+	}
+
+	function simplifyPrune(fun, indices, index_count, vertex_positions, vertex_count, vertex_positions_stride, target_error) {
+		var sbrk = instance.exports.sbrk;
+		var ti = sbrk(index_count * 4);
+		var sp = sbrk(vertex_count * vertex_positions_stride);
+		var si = sbrk(index_count * 4);
+		var heap = new Uint8Array(instance.exports.memory.buffer);
+		heap.set(bytes(vertex_positions), sp);
+		heap.set(bytes(indices), si);
+		var result = fun(ti, si, index_count, sp, vertex_count, vertex_positions_stride, target_error);
+		// heap may have grown
+		heap = new Uint8Array(instance.exports.memory.buffer);
+		var target = new Uint32Array(result);
+		bytes(target).set(heap.subarray(ti, ti + result * 4));
+		sbrk(ti - sbrk(0));
+		return target;
+	}
+
+	function remesh(fun, indices, vertex_positions, vertex_positions_stride, resolution, options) {
+		var sbrk = instance.exports.sbrk;
+		var sp = sbrk(vertex_positions.byteLength);
+		var si = sbrk(indices.byteLength);
+		var heap = new Uint8Array(instance.exports.memory.buffer);
+		heap.set(bytes(vertex_positions), sp);
+		heap.set(bytes(indices), si);
+		var vertex_count = vertex_positions.byteLength / vertex_positions_stride;
+		var capacity = fun(0, 0, si, indices.length, sp, vertex_count, vertex_positions_stride, resolution, options);
+		var tp = sbrk(capacity * 9 * 4);
+		var count = fun(tp, capacity, si, indices.length, sp, vertex_count, vertex_positions_stride, resolution, options);
+		assert(count <= capacity);
+		// heap may have grown
+		heap = new Uint8Array(instance.exports.memory.buffer);
+		var target = new Float32Array(count * 9);
+		bytes(target).set(heap.subarray(tp, tp + target.byteLength));
+		sbrk(sp - sbrk(0));
+		return target;
+	}
+
+	var simplifyOptions = {
+		LockBorder: 1,
+		Sparse: 2,
+		ErrorAbsolute: 4,
+		Prune: 8,
+		Regularize: 16,
+		Permissive: 32,
+		RegularizeLight: 64,
+		PreserveFolds: 128,
+		ErrorClamped: 256,
+		_InternalDebug: 1 << 30, // internal, don't use!
+	};
+
+	var remeshOptions = {
+		Shell: 1,
+		Solve: 2,
+		Thicken: 0, // currently a no-op but may be re-added in the future
+		_InternalDebug: 1 << 30, // internal, don't use!
+	};
+
+	return {
+		ready: ready,
+		supported: true,
+
+		compactMesh: function (indices) {
+			assert(
+				indices instanceof Uint32Array || indices instanceof Int32Array || indices instanceof Uint16Array || indices instanceof Int16Array
+			);
+			assert(indices.length % 3 == 0);
+
+			var indices32 = indices.BYTES_PER_ELEMENT == 4 ? indices : new Uint32Array(indices);
+			var result = reorder(instance.exports.meshopt_optimizeVertexFetchRemap, indices32, maxindex(indices) + 1);
+			if (indices !== indices32) {
+				// copy back indices if they were converted to Uint32Array
+				for (var i = 0; i < indices32.length; ++i) {
+					indices[i] = indices32[i];
+				}
+			}
+			return result;
+		},
+
+		generatePositionRemap: function (vertex_positions, vertex_positions_stride) {
+			assert(vertex_positions instanceof Float32Array);
+			assert(vertex_positions.length % vertex_positions_stride == 0);
+			assert(vertex_positions_stride >= 3);
+
+			return genremap(
+				instance.exports.meshopt_generatePositionRemap,
+				vertex_positions,
+				vertex_positions.length / vertex_positions_stride,
+				vertex_positions_stride
+			);
+		},
+
+		simplify: function (indices, vertex_positions, vertex_positions_stride, target_index_count, target_error, flags) {
+			assert(
+				indices instanceof Uint32Array || indices instanceof Int32Array || indices instanceof Uint16Array || indices instanceof Int16Array
+			);
+			assert(indices.length % 3 == 0);
+			assert(vertex_positions instanceof Float32Array);
+			assert(vertex_positions.length % vertex_positions_stride == 0);
+			assert(vertex_positions_stride >= 3);
+			assert(target_index_count >= 0 && target_index_count <= indices.length);
+			assert(target_index_count % 3 == 0);
+			assert(target_error >= 0);
+
+			var options = 0;
+			for (var i = 0; i < (flags ? flags.length : 0); ++i) {
+				assert(flags[i] in simplifyOptions);
+				options |= simplifyOptions[flags[i]];
+			}
+
+			var indices32 = indices.BYTES_PER_ELEMENT == 4 ? indices : new Uint32Array(indices);
+			var result = simplify(
+				instance.exports.meshopt_simplify,
+				indices32,
+				indices.length,
+				vertex_positions,
+				vertex_positions.length / vertex_positions_stride,
+				vertex_positions_stride * 4,
+				target_index_count,
+				target_error,
+				options
+			);
+			result[0] = indices instanceof Uint32Array ? result[0] : new indices.constructor(result[0]);
+
+			return result;
+		},
+
+		simplifyWithAttributes: function (
+			indices,
+			vertex_positions,
+			vertex_positions_stride,
+			vertex_attributes,
+			vertex_attributes_stride,
+			attribute_weights,
+			vertex_lock,
+			target_index_count,
+			target_error,
+			flags
+		) {
+			assert(
+				indices instanceof Uint32Array || indices instanceof Int32Array || indices instanceof Uint16Array || indices instanceof Int16Array
+			);
+			assert(indices.length % 3 == 0);
+			assert(vertex_positions instanceof Float32Array);
+			assert(vertex_positions.length % vertex_positions_stride == 0);
+			assert(vertex_positions_stride >= 3);
+			assert(vertex_attributes instanceof Float32Array);
+			assert(vertex_attributes.length == vertex_attributes_stride * (vertex_positions.length / vertex_positions_stride));
+			assert(vertex_attributes_stride >= 0);
+			assert(vertex_lock == null || vertex_lock instanceof Uint8Array);
+			assert(vertex_lock == null || vertex_lock.length == vertex_positions.length / vertex_positions_stride);
+			assert(target_index_count >= 0 && target_index_count <= indices.length);
+			assert(target_index_count % 3 == 0);
+			assert(target_error >= 0);
+			assert(Array.isArray(attribute_weights));
+			assert(vertex_attributes_stride >= attribute_weights.length);
+			assert(attribute_weights.length <= 32);
+			for (var i = 0; i < attribute_weights.length; ++i) {
+				assert(attribute_weights[i] >= 0);
+			}
+
+			var options = 0;
+			for (var i = 0; i < (flags ? flags.length : 0); ++i) {
+				assert(flags[i] in simplifyOptions);
+				options |= simplifyOptions[flags[i]];
+			}
+
+			var indices32 = indices.BYTES_PER_ELEMENT == 4 ? indices : new Uint32Array(indices);
+			var result = simplifyAttr(
+				instance.exports.meshopt_simplifyWithAttributes,
+				indices32,
+				indices.length,
+				vertex_positions,
+				vertex_positions.length / vertex_positions_stride,
+				vertex_positions_stride * 4,
+				vertex_attributes,
+				vertex_attributes_stride * 4,
+				new Float32Array(attribute_weights),
+				vertex_lock,
+				target_index_count,
+				target_error,
+				options
+			);
+			result[0] = indices instanceof Uint32Array ? result[0] : new indices.constructor(result[0]);
+
+			return result;
+		},
+
+		simplifyWithUpdate: function (
+			indices,
+			vertex_positions,
+			vertex_positions_stride,
+			vertex_attributes,
+			vertex_attributes_stride,
+			attribute_weights,
+			vertex_lock,
+			target_index_count,
+			target_error,
+			flags
+		) {
+			assert(
+				indices instanceof Uint32Array || indices instanceof Int32Array || indices instanceof Uint16Array || indices instanceof Int16Array
+			);
+			assert(indices.length % 3 == 0);
+			assert(vertex_positions instanceof Float32Array);
+			assert(vertex_positions.length % vertex_positions_stride == 0);
+			assert(vertex_positions_stride >= 3);
+			assert(vertex_attributes instanceof Float32Array);
+			assert(vertex_attributes.length == vertex_attributes_stride * (vertex_positions.length / vertex_positions_stride));
+			assert(vertex_attributes_stride >= 0);
+			assert(vertex_lock == null || vertex_lock instanceof Uint8Array);
+			assert(vertex_lock == null || vertex_lock.length == vertex_positions.length / vertex_positions_stride);
+			assert(target_index_count >= 0 && target_index_count <= indices.length);
+			assert(target_index_count % 3 == 0);
+			assert(target_error >= 0);
+			assert(Array.isArray(attribute_weights));
+			assert(vertex_attributes_stride >= attribute_weights.length);
+			assert(attribute_weights.length <= 32);
+			for (var i = 0; i < attribute_weights.length; ++i) {
+				assert(attribute_weights[i] >= 0);
+			}
+
+			var options = 0;
+			for (var i = 0; i < (flags ? flags.length : 0); ++i) {
+				assert(flags[i] in simplifyOptions);
+				options |= simplifyOptions[flags[i]];
+			}
+
+			var indices32 = indices.BYTES_PER_ELEMENT == 4 ? indices : new Uint32Array(indices);
+			var result = simplifyUpdate(
+				instance.exports.meshopt_simplifyWithUpdate,
+				indices32,
+				indices.length,
+				vertex_positions,
+				vertex_positions.length / vertex_positions_stride,
+				vertex_positions_stride * 4,
+				vertex_attributes,
+				vertex_attributes_stride * 4,
+				new Float32Array(attribute_weights),
+				vertex_lock,
+				target_index_count,
+				target_error,
+				options
+			);
+			if (indices !== indices32) {
+				// copy back indices if they were converted to Uint32Array
+				for (var i = 0; i < result[0]; ++i) {
+					indices[i] = indices32[i];
+				}
+			}
+			return result;
+		},
+
+		getScale: function (vertex_positions, vertex_positions_stride) {
+			assert(vertex_positions instanceof Float32Array);
+			assert(vertex_positions.length % vertex_positions_stride == 0);
+			assert(vertex_positions_stride >= 3);
+			return simplifyScale(
+				instance.exports.meshopt_simplifyScale,
+				vertex_positions,
+				vertex_positions.length / vertex_positions_stride,
+				vertex_positions_stride * 4
+			);
+		},
+
+		simplifyPoints: function (vertex_positions, vertex_positions_stride, target_vertex_count, vertex_colors, vertex_colors_stride, color_weight) {
+			assert(vertex_positions instanceof Float32Array);
+			assert(vertex_positions.length % vertex_positions_stride == 0);
+			assert(vertex_positions_stride >= 3);
+			assert(target_vertex_count >= 0 && target_vertex_count <= vertex_positions.length / vertex_positions_stride);
+			if (vertex_colors) {
+				assert(vertex_colors instanceof Float32Array);
+				assert(vertex_colors.length % vertex_colors_stride == 0);
+				assert(vertex_colors_stride >= 3);
+				assert(vertex_positions.length / vertex_positions_stride == vertex_colors.length / vertex_colors_stride);
+				return simplifyPoints(
+					instance.exports.meshopt_simplifyPoints,
+					vertex_positions,
+					vertex_positions.length / vertex_positions_stride,
+					vertex_positions_stride * 4,
+					vertex_colors,
+					vertex_colors_stride * 4,
+					color_weight || 0,
+					target_vertex_count
+				);
+			} else {
+				return simplifyPoints(
+					instance.exports.meshopt_simplifyPoints,
+					vertex_positions,
+					vertex_positions.length / vertex_positions_stride,
+					vertex_positions_stride * 4,
+					undefined,
+					0,
+					0,
+					target_vertex_count
+				);
+			}
+		},
+
+		simplifySloppy: function (indices, vertex_positions, vertex_positions_stride, vertex_lock, target_index_count, target_error) {
+			assert(
+				indices instanceof Uint32Array || indices instanceof Int32Array || indices instanceof Uint16Array || indices instanceof Int16Array
+			);
+			assert(indices.length % 3 == 0);
+			assert(vertex_positions instanceof Float32Array);
+			assert(vertex_positions.length % vertex_positions_stride == 0);
+			assert(vertex_positions_stride >= 3);
+			assert(vertex_lock == null || vertex_lock instanceof Uint8Array);
+			assert(vertex_lock == null || vertex_lock.length == vertex_positions.length / vertex_positions_stride);
+			assert(target_index_count >= 0 && target_index_count <= indices.length);
+			assert(target_index_count % 3 == 0);
+			assert(target_error >= 0);
+
+			var indices32 = indices.BYTES_PER_ELEMENT == 4 ? indices : new Uint32Array(indices);
+			var result = simplifySloppy(
+				instance.exports.meshopt_simplifySloppy,
+				indices32,
+				indices.length,
+				vertex_positions,
+				vertex_positions.length / vertex_positions_stride,
+				vertex_positions_stride * 4,
+				vertex_lock,
+				target_index_count,
+				target_error
+			);
+			result[0] = indices instanceof Uint32Array ? result[0] : new indices.constructor(result[0]);
+
+			return result;
+		},
+
+		simplifyPrune: function (indices, vertex_positions, vertex_positions_stride, target_error) {
+			assert(
+				indices instanceof Uint32Array || indices instanceof Int32Array || indices instanceof Uint16Array || indices instanceof Int16Array
+			);
+			assert(indices.length % 3 == 0);
+			assert(vertex_positions instanceof Float32Array);
+			assert(vertex_positions.length % vertex_positions_stride == 0);
+			assert(vertex_positions_stride >= 3);
+			assert(target_error >= 0);
+
+			var indices32 = indices.BYTES_PER_ELEMENT == 4 ? indices : new Uint32Array(indices);
+			var result = simplifyPrune(
+				instance.exports.meshopt_simplifyPrune,
+				indices32,
+				indices.length,
+				vertex_positions,
+				vertex_positions.length / vertex_positions_stride,
+				vertex_positions_stride * 4,
+				target_error
+			);
+			result = indices instanceof Uint32Array ? result : new indices.constructor(result);
+
+			return result;
+		},
+
+		remesh: function (indices, vertex_positions, vertex_positions_stride, resolution, flags) {
+			assert(
+				indices instanceof Uint32Array || indices instanceof Int32Array || indices instanceof Uint16Array || indices instanceof Int16Array
+			);
+			assert(indices.length % 3 == 0);
+			assert(vertex_positions instanceof Float32Array);
+			assert(vertex_positions.length % vertex_positions_stride == 0);
+			assert(vertex_positions_stride >= 3);
+			assert(resolution >= 4 && resolution <= 256);
+
+			var options = 0;
+			for (var i = 0; i < (flags ? flags.length : 0); ++i) {
+				assert(flags[i] in remeshOptions);
+				options |= remeshOptions[flags[i]];
+			}
+
+			var indices32 = indices.BYTES_PER_ELEMENT == 4 ? indices : new Uint32Array(indices);
+			return remesh(instance.exports.meshopt_remesh, indices32, vertex_positions, vertex_positions_stride * 4, resolution, options);
+		},
+	};
+})();
+
+if (typeof module === "object" && module.exports) module.exports = MeshoptSimplifier;
+
+</script>
+<script>
+/* Quantum .3d static LOD tools. GPL-3.0 (repository LICENSE).
+ * Native quad topology is ABD, DBC AFTER Room.loadMeshes reverses file corners.
+ * No textures, renderer code, game configuration or original files are modified.
+ */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.QuantumModelOptimizer = api;
+})(typeof globalThis === 'object' ? globalThis : this, function () {
+  'use strict';
+  const LIMIT = 64 * 1024 * 1024;
+  function fail(message) { throw new Error(message); }
+  function bytes(value) {
+    if (value instanceof Uint8Array) return value;
+    if (value instanceof ArrayBuffer) return new Uint8Array(value);
+    fail('Expected binary file bytes');
+  }
+  class Reader {
+    constructor(input) { this.data = bytes(input); if (this.data.length > LIMIT) fail('File exceeds 64 MiB'); this.view = new DataView(this.data.buffer, this.data.byteOffset, this.data.byteLength); this.offset = 0; }
+    take(n) { if (this.offset + n > this.data.length) fail('Truncated file at byte ' + this.offset); const p = this.offset; this.offset += n; return p; }
+    i32() { return this.view.getInt32(this.take(4), false); }
+    i16() { return this.view.getInt16(this.take(2), false); }
+    u8() { return this.view.getUint8(this.take(1)); }
+    count(label) { const n = this.i16(); if (n < 0) fail('Negative ' + label); return n; }
+    end() { if (this.offset !== this.data.length) fail('Unexpected trailing bytes: ' + (this.data.length - this.offset)); }
+  }
+  class Writer {
+    constructor() { this.parts = []; }
+    u8(n) { if (!Number.isInteger(n) || n < 0 || n > 255) fail('Byte out of range'); this.parts.push(n); }
+    i16(n) { if (!Number.isInteger(n) || n < -32768 || n > 32767) fail('Signed short out of range'); this.u8((n >>> 8) & 255); this.u8(n & 255); }
+    i32(n) { for (let shift = 24; shift >= 0; shift -= 8) this.u8((n >>> shift) & 255); }
+    finish() { return Uint8Array.from(this.parts); }
+  }
+  function canonicalFaces(mesh) { return mesh.faces.filter(f => f.corners.length === 3).concat(mesh.faces.filter(f => f.corners.length === 4)); }
+  function read3d(input) {
+    const r = new Reader(input), count = r.i32(), meshes = []; let triangleBudget = 0;
+    if (count < 0 || count > 256) fail('Unsupported mesh count (0..256)');
+    for (let m = 0; m < count; m++) {
+      const vertices = [], faces = [], nv = r.count('vertex count');
+      for (let i = 0; i < nv; i++) vertices.push([r.i16(), r.i16(), r.i16()]);
+      for (const size of [3, 4]) {
+        let material = 0; const nf = r.count('face count'); triangleBudget += nf * (size - 2);
+        if (triangleBudget > 500000) fail('Model exceeds 500000 triangle safety limit');
+        for (let f = 0; f < nf; f++) {
+          let first = r.i16();
+          if (first === -32768) { material = r.i16() & 255; first = r.i16(); }
+          const ids = [first]; for (let i = 1; i < size; i++) ids.push(r.i16());
+          for (const v of ids) if (v < 0 || v >= nv) fail('Vertex index outside mesh ' + m + ': ' + v);
+          const corners = ids.map(v => ({ v, uv: [r.u8(), r.u8()], light: null })).reverse();
+          faces.push({ material, corners });
+        }
+      }
+      meshes.push({ vertices, faces });
+    }
+    r.end(); return { meshes, originalBytes: bytes(input).slice(), lightmapFormat: null, originalLightmapBytes: null };
+  }
+  function validate(model) {
+    if (!model || !Array.isArray(model.meshes) || model.meshes.length > 256) fail('Invalid model');
+    for (const mesh of model.meshes) {
+      if (mesh.vertices.length > 32767) fail('Too many .3d vertices');
+      for (const p of mesh.vertices) if (p.length !== 3 || p.some(v => !Number.isInteger(v) || v < -32768 || v > 32767)) fail('Position outside int16');
+      const counts = [0, 0];
+      for (const f of mesh.faces) {
+        if (!Number.isInteger(f.material) || f.material < 0 || f.material > 255) fail('Material outside 0..255');
+        if (f.corners.length !== 3 && f.corners.length !== 4) fail('Expected triangle or quad');
+        counts[f.corners.length - 3]++;
+        for (const c of f.corners) {
+          if (!Number.isInteger(c.v) || c.v < 0 || c.v >= mesh.vertices.length) fail('Invalid corner vertex');
+          if (!c.uv || c.uv.length !== 2 || c.uv.some(v => !Number.isInteger(v) || v < 0 || v > 255)) fail('Invalid UV');
+        }
+      }
+      if (counts.some(n => n > 32767)) fail('Too many .3d faces in a section');
+    }
+  }
+  function write3d(model) {
+    validate(model); const w = new Writer(); w.i32(model.meshes.length);
+    for (const mesh of model.meshes) {
+      w.i16(mesh.vertices.length); for (const p of mesh.vertices) for (const v of p) w.i16(v);
+      for (const size of [3, 4]) {
+        const faces = mesh.faces.filter(f => f.corners.length === size); w.i16(faces.length); let material = 0;
+        for (const face of faces) {
+          if (face.material !== material) { w.i16(-32768); w.i16(face.material); material = face.material; }
+          const fileCorners = face.corners.slice().reverse();
+          for (const c of fileCorners) w.i16(c.v);
+          for (const c of fileCorners) for (const uv of c.uv) w.u8(uv);
+        }
+      }
+    }
+    return w.finish();
+  }
+  function attachLightmap(model, input, format) {
+    if (!['gray9', 'color13'].includes(format)) fail('Choose lightmap format gray9 or color13 explicitly');
+    const r = new Reader(input), assignments = [];
+    for (const mesh of model.meshes) for (const face of canonicalFaces(mesh)) {
+      const reds = face.corners.map(() => r.u8() ^ 128), colors = reds.map(v => [v, v, v]);
+      if (format === 'color13') {
+        const flag = r.u8(); if (flag > 1) fail('Invalid RGB lightmap colored flag');
+        if (flag) for (const color of colors) { color[1] = r.u8() ^ 128; color[2] = r.u8() ^ 128; }
+      }
+      assignments.push([face, colors]);
+    }
+    r.end(); // Do not partly attach a truncated/wrong-format map.
+    for (const [face, colors] of assignments) face.corners.forEach((c, i) => { c.light = colors[i]; });
+    model.lightmapFormat = format; model.originalLightmapBytes = bytes(input).slice(); return model;
+  }
+  function writeLightmap(model) {
+    if (!model.lightmapFormat) return null; const w = new Writer();
+    for (const mesh of model.meshes) for (const face of canonicalFaces(mesh)) {
+      const colors = face.corners.map(c => c.light);
+      if (colors.some(c => !c || c.length !== 3 || c.some(v => !Number.isInteger(v) || v < 0 || v > 255))) fail('Missing/invalid lightmap corner');
+      for (const c of colors) w.u8(c[0] ^ 128);
+      if (model.lightmapFormat === 'color13') {
+        const colored = colors.some(c => c[0] !== c[1] || c[0] !== c[2]); w.u8(colored ? 1 : 0);
+        if (colored) for (const c of colors) { w.u8(c[1] ^ 128); w.u8(c[2] ^ 128); }
+      } else if (colors.some(c => c[0] !== c[1] || c[0] !== c[2])) fail('RGB data cannot be saved as gray9');
+    }
+    return w.finish();
+  }
+  function triangles(face) {
+    const c = face.corners;
+    return c.length === 3 ? [[c[0], c[1], c[2]]] : [[c[0], c[1], c[3]], [c[3], c[1], c[2]]];
+  }
+  function bounds(vertices) {
+    if (!vertices.length) return null;
+    const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+    for (const p of vertices) for (let k = 0; k < 3; k++) { min[k] = Math.min(min[k], p[k]); max[k] = Math.max(max[k], p[k]); }
+    return { min, max };
+  }
+  function stats(model) {
+    let vertices = 0, polygons = 0, triangleCount = 0, corners = 0; const materials = {};
+    const meshes = model.meshes.map((mesh, index) => {
+      let t = 0, c = 0;
+      for (const f of mesh.faces) { t += f.corners.length - 2; c += f.corners.length; const s = materials[f.material] || (materials[f.material] = { polygons: 0, triangles: 0 }); s.polygons++; s.triangles += f.corners.length - 2; }
+      vertices += mesh.vertices.length; polygons += mesh.faces.length; triangleCount += t; corners += c;
+      return { index, vertices: mesh.vertices.length, polygons: mesh.faces.length, triangles: t, expandedCorners: c, bounds: bounds(mesh.vertices) };
+    });
+    return { meshes, vertices, polygons, triangles: triangleCount, expandedCorners: corners, materials, lightmapFormat: model.lightmapFormat };
+  }
+  function copyCorner(c) { return { v: c.v, uv: c.uv.slice(), light: c.light ? c.light.slice() : null }; }
+  function copyFace(f) { return { material: f.material, corners: f.corners.map(copyCorner) }; }
+  function parseMaterials(value) {
+    const list = Array.isArray(value) ? value : String(value == null ? '4' : value).split(/[ ,;]+/).filter(Boolean).map(Number);
+    if (list.some(n => !Number.isInteger(n) || n < 0 || n > 255)) fail('Protected material IDs must be 0..255');
+    return Array.from(new Set(list)).sort((a, b) => a - b);
+  }
+  function options(input) {
+    const o = Object.assign({ ratio: .75, maxError: 5, mode: 'safe', uvWeight: 1, lightWeight: 1, protectedMaterials: [4], staticModel: false, withoutLightmap: false, allowSeamChanges: false }, input);
+    for (const key of ['ratio', 'maxError', 'uvWeight', 'lightWeight']) if (!Number.isFinite(o[key])) fail('Non-finite ' + key);
+    if (o.ratio < .05 || o.ratio > 1) fail('Ratio must be between .05 and 1');
+    if (o.maxError < 0 || o.maxError > 65535) fail('Error must be 0..65535 source coordinate units');
+    if (o.uvWeight <= 0 || o.lightWeight <= 0 || o.uvWeight > 100 || o.lightWeight > 100) fail('Attribute weights must be >0 and <=100');
+    if (!['safe', 'balanced', 'experimental'].includes(o.mode)) fail('Mode must be safe, balanced or experimental');
+    if (o.mode === 'experimental' && !o.allowSeamChanges) fail('Experimental mode requires explicit allowSeamChanges: texture/light seams may change');
+    if (!o.staticModel) fail('Acknowledge static-model use; not for animation/morph frames or collision replacement');
+    o.protectedMaterials = parseMaterials(o.protectedMaterials); return o;
+  }
+  function positionKey(p) { return p.join(','); }
+  function planarQuadPair(a, b, records) {
+    const sub = (x, y) => x.map((v, i) => v - y[i]);
+    const cross = (x, y) => [x[1]*y[2]-x[2]*y[1], x[2]*y[0]-x[0]*y[2], x[0]*y[1]-x[1]*y[0]];
+    const dot = (x, y) => x.reduce((s, v, i) => s + v*y[i], 0);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+      const u = a[i], v = a[(i+1)%3], w = a[(i+2)%3];
+      if (b[j] !== w || b[(j+1)%3] !== v) continue;
+      const ids = [u, v, b[(j+2)%3], w]; if (new Set(ids).size !== 4) continue;
+      const p = ids.map(v => records[v].position), normal = cross(sub(p[1],p[0]),sub(p[3],p[0]));
+      if (!dot(normal,normal) || dot(normal,sub(p[2],p[0])) !== 0) continue;
+      if (p.some((v,k) => dot(cross(sub(p[(k+1)%4],v),sub(p[(k+2)%4],p[(k+1)%4])),normal) <= 0)) continue;
+      // Cyclic rotations only: exactly the same two oriented triangles, with
+      // the same attributes/diagonal. No triangle deletion or new surface.
+      return ids.map(v => copyCorner(records[v].corner));
+    }
+    return null;
+  }
+  function simplifyGroup(mesh, faces, material, config, simplifier, materialPositions, hasLightmap) {
+    const sourceTriangles = faces.flatMap(triangles), originalCount = sourceTriangles.length;
+    if (config.protectedMaterials.includes(material) || originalCount < 8 || config.ratio === 1) return { faces: faces.map(copyFace), detail: { material, before: originalCount, after: originalCount, reason: 'protected/small/ratio1' } };
+    const cornerMap = new Map(), records = [], indices = [], quadPairs = new Map(), uvAtPosition = new Map();
+    const add = c => {
+      const p = mesh.vertices[c.v], pk = positionKey(p), key = pk + '/' + c.uv.join(',') + '/' + (hasLightmap ? c.light.join(',') : '');
+      if (!uvAtPosition.has(pk)) uvAtPosition.set(pk, new Set()); uvAtPosition.get(pk).add(c.uv.join(','));
+      if (!cornerMap.has(key)) { cornerMap.set(key, records.length); records.push({ corner: c, position: p, pk }); }
+      return cornerMap.get(key);
+    };
+    for (const face of faces) {
+      const start = indices.length; for (const tri of triangles(face)) for (const c of tri) indices.push(add(c));
+      if (face.corners.length === 4) quadPairs.set(indices.slice(start, start + 6).join(','), face);
+    }
+    const positions = new Float32Array(records.length * 3), stride = hasLightmap ? 5 : 2;
+    const attributes = new Float32Array(records.length * stride), locks = new Uint8Array(records.length);
+    records.forEach((r, i) => {
+      positions.set(r.position, i * 3); attributes.set(r.corner.uv, i * stride);
+      if (hasLightmap) attributes.set(r.corner.light, i * stride + 2);
+      // Material boundaries stay fixed across independently simplified groups.
+      // In balanced mode, tag2 allows collapsing ALONG, not ACROSS, UV seams.
+      locks[i] = materialPositions.get(r.pk).size > 1 ? 1 : uvAtPosition.get(r.pk).size > 1 && config.mode !== 'experimental' ? 2 : 0;
+    });
+    // Anchor a source triangle per positional connected component. No Prune,
+    // Sloppy or blanket dropping of small/disconnected furniture components.
+    const parents = new Map();
+    function find(x) { if (!parents.has(x)) parents.set(x, x); let y = x; while (parents.get(y) !== y) y = parents.get(y); while (parents.get(x) !== x) { const n = parents.get(x); parents.set(x, y); x = n; } return y; }
+    for (let i = 0; i < indices.length; i += 3) {
+      const a = find(records[indices[i]].pk);
+      parents.set(find(records[indices[i + 1]].pk), a); parents.set(find(records[indices[i + 2]].pk), a);
+    }
+    const anchored = new Set(), anchorPositions = new Set();
+    for (let i = 0; i < indices.length; i += 3) {
+      const root = find(records[indices[i]].pk); if (anchored.has(root)) continue; anchored.add(root);
+      for (let j = 0; j < 3; j++) anchorPositions.add(records[indices[i + j]].pk);
+    }
+    records.forEach((r, i) => { if (anchorPositions.has(r.pk)) locks[i] = 1; });
+    const flags = ['LockBorder', 'ErrorAbsolute', 'Sparse', 'PreserveFolds']; if (config.mode !== 'safe') flags.push('Permissive');
+    const target = Math.max(1, Math.ceil(originalCount * config.ratio));
+    const weights = [config.uvWeight / 256, config.uvWeight / 256];
+    if (hasLightmap) weights.push(config.lightWeight / 255, config.lightWeight / 255, config.lightWeight / 255);
+    const [output, resultError] = simplifier.simplifyWithAttributes(Uint32Array.from(indices), positions, 3, attributes, stride, weights, locks, target * 3, config.maxError, flags);
+    if (output.length % 3 || output.length > indices.length || !Number.isFinite(resultError)) fail('Invalid simplifier result');
+    if (output.length === indices.length) return { faces: faces.map(copyFace), detail: { material, before: originalCount, after: originalCount, reason: 'seams/topology/error limit', estimatedError: resultError } };
+    const outFaces = []; let keptQuads = 0;
+    for (let i = 0; i < output.length;) {
+      for (let j = 0; j < Math.min(6, output.length - i); j++) if (output[i + j] >= records.length) fail('Simplifier index outside buffer');
+      const pair = i + 6 <= output.length ? quadPairs.get(Array.from(output.subarray(i, i + 6)).join(',')) : null;
+      const packed = !pair && i + 6 <= output.length ? planarQuadPair(Array.from(output.subarray(i,i+3)),Array.from(output.subarray(i+3,i+6)),records) : null;
+      if (pair || packed) { outFaces.push(pair ? copyFace(pair) : { material, corners: packed }); i += 6; keptQuads++; }
+      else { outFaces.push({ material, corners: Array.from(output.subarray(i, i + 3), v => copyCorner(records[v].corner)) }); i += 3; }
+    }
+    return { faces: outFaces, detail: { material, before: originalCount, after: output.length / 3, target, estimatedError: resultError, preservedQuadPairs: keptQuads, positionalComponentsAnchored: anchored.size } };
+  }
+  async function optimize(source, inputOptions, simplifier) {
+    validate(source); const config = options(inputOptions);
+    if (!source.lightmapFormat && !config.withoutLightmap) fail('Supply the original lightmap or explicitly choose withoutLightmap (old lightmap will not fit a changed model)');
+    if (!simplifier || !simplifier.supported) fail('MeshoptSimplifier / WebAssembly unavailable'); await simplifier.ready;
+    const before = stats(source), details = [], meshes = [];
+    for (const mesh of source.meshes) {
+      const groups = new Map(), materialPositions = new Map();
+      for (const face of mesh.faces) {
+        if (!groups.has(face.material)) groups.set(face.material, []); groups.get(face.material).push(face);
+        for (const c of face.corners) { const key = positionKey(mesh.vertices[c.v]); if (!materialPositions.has(key)) materialPositions.set(key, new Set()); materialPositions.get(key).add(face.material); }
+      }
+      const faces = [], groupsReport = [];
+      for (const [material, group] of groups) { const result = simplifyGroup(mesh, group, material, config, simplifier, materialPositions, !!source.lightmapFormat); faces.push(...result.faces); groupsReport.push(result.detail); }
+      const ordered = faces.filter(f => f.corners.length === 3).concat(faces.filter(f => f.corners.length === 4));
+      const used = Array.from(new Set(ordered.flatMap(f => f.corners.map(c => c.v)))).sort((a, b) => a - b), remap = new Map(used.map((v, i) => [v, i]));
+      const candidate = { vertices: used.map(v => mesh.vertices[v].slice()), faces: ordered.map(f => ({ material: f.material, corners: f.corners.map(c => Object.assign(copyCorner(c), { v: remap.get(c.v) })) })) };
+      const a = stats({ meshes: [mesh] }), b = stats({ meshes: [candidate] });
+      // Triangle-only output can EXPAND the cached renderer's per-face vertex
+      // streams. Reject such a LOD by default instead of advertising file size.
+      const accept = b.triangles < a.triangles && b.expandedCorners < a.expandedCorners;
+      meshes.push(accept ? candidate : { vertices: mesh.vertices.map(p => p.slice()), faces: mesh.faces.map(copyFace) });
+      details.push({ accepted: accept, candidate: { triangles: b.triangles, expandedCorners: b.expandedCorners }, reason: accept ? 'fewer triangles AND expanded corners' : 'no reduction or expanded native corner stream; original mesh retained', groups: groupsReport });
+    }
+    const model = { meshes, lightmapFormat: source.lightmapFormat }, after = stats(model), changed = after.triangles < before.triangles;
+    const modelBytes = changed ? write3d(model) : (source.originalBytes ? source.originalBytes.slice() : write3d(source));
+    const lightmapBytes = changed ? writeLightmap(model) : (source.originalLightmapBytes ? source.originalLightmapBytes.slice() : writeLightmap(source));
+    const reparsed = read3d(modelBytes); if (lightmapBytes) attachLightmap(reparsed, lightmapBytes, source.lightmapFormat);
+    validate(reparsed);
+    const targetTriangles = Math.ceil(before.triangles * config.ratio), warnings = [
+      'Lossy static visual LOD; inspect textures, lighting, silhouettes, doors/windows and collision separately.',
+      'No FPS gain measured. Native corner counts and triangle counts are not GPU timing.',
+      'Changing topology requires this matching lightmap; never use the old baked file with the changed model.',
+      'Material blending is NOT stored in .3d: explicitly protect all water/alpha/animated material IDs.',
+      'Meshopt error is an approximate combined position/attribute metric, not a certified Hausdorff or pixel bound.',
+      'No guarantee of collision/navigation/portal equivalence; no automatic installation into a game.'
+    ];
+    if (after.triangles > targetTriangles) warnings.push('Target not reached: protected seams, boundaries, components, error limit or runtime-corner guard stopped simplification.');
+    if (!changed) warnings.push('No safe runtime reduction found; exact original payloads returned.');
+    return { model: reparsed, modelBytes, lightmapBytes, report: {
+      tool: 'Quantum Model Optimizer 1.0', backend: 'meshoptimizer 1.3.0 (MIT), endpoint-only simplifyWithAttributes',
+      options: config, changed, targetTriangles, targetReached: after.triangles <= targetTriangles,
+      before, after, trianglesRemoved: before.triangles - after.triangles,
+      triangleReductionPercent: before.triangles ? +(100 * (1 - after.triangles / before.triangles)).toFixed(2) : 0,
+      modelBytes: modelBytes.length, lightmapBytes: lightmapBytes ? lightmapBytes.length : 0,
+      details, warnings, handsetTested: false, fpsMeasured: false, gameResourcesModified: false
+    } };
+  }
+  return { read3d, write3d, attachLightmap, writeLightmap, triangles, stats, validate, optimize, parseMaterials };
+});
+
+</script>
+<script>
+/* GPL-3.0. Local File API + in-memory WASM only. No network requests. */
+'use strict';
+(function () {
+  const core = QuantumModelOptimizer, $ = id => document.getElementById(id);
+  const numbers = new Intl.NumberFormat('ru-RU');
+  let source = null, result = null, busy = false;
+  const camera = { yaw: -.45, pitch: -.7, zoom: 1 }, view = { center: [0, 0, 0], extent: 1 };
+  function status(text, kind) { $('status').textContent = text; $('status').className = kind || ''; }
+  function setBusy(value) {
+    busy = value; for (const el of document.querySelectorAll('#form input,#form select,#form button')) el.disabled = value;
+    $('run').textContent = value ? 'Обработка локально…' : 'Создать оптимизированную копию';
+  }
+  function showStats(model, prefix) {
+    const s = model ? core.stats(model) : null;
+    for (const key of ['Triangles', 'Corners', 'Polygons', 'Vertices']) {
+      const property = { Triangles: 'triangles', Corners: 'expandedCorners', Polygons: 'polygons', Vertices: 'vertices' }[key];
+      $(prefix + key).textContent = s ? numbers.format(s[property]) : '—';
+    }
+  }
+  function clearResult() {
+    result = null; showStats(null, 'after'); $('reduction').textContent = '—'; $('summary').textContent = 'Сокращение треугольников';
+    for (const id of ['downloadModel', 'downloadMap', 'downloadReport']) $(id).disabled = true;
+    $('report').textContent = 'После обработки здесь появятся настройки, ограничения и счётчики.'; draw();
+  }
+  function frame(model) {
+    const boxes = core.stats(model).meshes.map(m => m.bounds).filter(Boolean);
+    if (!boxes.length) { view.center = [0, 0, 0]; view.extent = 1; return; }
+    const min = [0, 1, 2].map(k => Math.min(...boxes.map(b => b.min[k]))), max = [0, 1, 2].map(k => Math.max(...boxes.map(b => b.max[k])));
+    view.center = min.map((v, k) => (v + max[k]) / 2); view.extent = Math.max(1, ...max.map((v, k) => v - min[k])); camera.zoom = 1;
+  }
+  async function load() {
+    const modelFile = $('modelFile').files[0]; if (!modelFile) throw Error('Выберите файл .3d');
+    const model = core.read3d(await modelFile.arrayBuffer()), mapFile = $('mapFile').files[0];
+    if (mapFile) core.attachLightmap(model, await mapFile.arrayBuffer(), $('format').value);
+    return model;
+  }
+  async function inspect() {
+    if (busy) return; clearResult(); source = null; showStats(null, 'before'); draw();
+    if (!$('modelFile').files.length) { status('Ожидание файла .3d'); return; }
+    setBusy(true);
+    try { source = await load(); showStats(source, 'before'); frame(source); draw(); status('Формат модели проверен. ' + (source.lightmapFormat ? 'Lightmap прочитана.' : 'Lightmap не выбрана; если она используется, обязательно добавьте её.')); }
+    catch (error) { status(error.message, 'error'); }
+    finally { setBusy(false); }
+  }
+  async function sha(data) {
+    if (!data || !globalThis.crypto || !crypto.subtle) return null;
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest), v => v.toString(16).padStart(2, '0')).join('');
+  }
+  $('form').addEventListener('submit', async event => {
+    event.preventDefault(); if (busy) return; clearResult(); setBusy(true); status('Чтение модели и запуск WASM…');
+    try {
+      source = await load(); showStats(source, 'before'); frame(source); draw();
+      if ($('mapFile').files.length && $('noMap').checked) throw Error('Выберите lightmap ИЛИ режим без lightmap, не оба.');
+      await new Promise(resolve => setTimeout(resolve, 25));
+      const next = await core.optimize(source, {
+        ratio: Number($('ratio').value), maxError: Number($('error').value), mode: $('mode').value,
+        protectedMaterials: core.parseMaterials($('protect').value), staticModel: $('staticAck').checked,
+        withoutLightmap: $('noMap').checked, allowSeamChanges: $('seamAck').checked
+      }, MeshoptSimplifier);
+      Object.assign(next.report, {
+        inputSha256: await sha(source.originalBytes), outputSha256: await sha(next.modelBytes),
+        inputLightmapSha256: await sha(source.originalLightmapBytes), outputLightmapSha256: await sha(next.lightmapBytes)
+      });
+      result = next; showStats(next.model, 'after');
+      $('reduction').textContent = '−' + numbers.format(next.report.triangleReductionPercent) + '%';
+      $('summary').textContent = next.report.changed ? 'Треугольников меньше. ' + (next.report.targetReached ? 'Цель достигнута.' : 'До цели не дошли: сработали ограничения; точные причины — в отчёте.') : 'Сокращения без роста native-потока не найдено. Возвращаются исходные байты.';
+      $('report').textContent = JSON.stringify(next.report, null, 2);
+      $('downloadModel').disabled = false; $('downloadMap').disabled = !next.lightmapBytes; $('downloadReport').disabled = false;
+      status(next.report.changed ? 'Готово. Скачайте модель вместе с подходящей lightmap и сохраните оригиналы для отката.' : 'Готово без изменения геометрии. Можно попробовать другой допуск; экспериментальный режим может испортить швы.', 'success'); draw();
+    } catch (error) { result = null; status(error.message, 'error'); }
+    finally { setBusy(false); }
+  });
+  $('clearMap').onclick = () => { $('mapFile').value = ''; inspect(); };
+  for (const id of ['modelFile', 'mapFile', 'format']) $(id).addEventListener('change', inspect);
+  for (const id of ['ratio', 'error', 'mode', 'protect', 'noMap', 'seamAck', 'staticAck']) $(id).addEventListener('change', () => {
+    clearResult(); $('seamAckRow').hidden = $('mode').value !== 'experimental';
+    if ($('mode').value !== 'experimental') $('seamAck').checked = false;
+    status('Настройки изменены. Создайте новую копию.');
+  });
+  function save(data, name, type) {
+    const url = URL.createObjectURL(new Blob([data], { type })), a = document.createElement('a'); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+  const name = (original, extension) => original.replace(/\.[^.]*$/, '') + '_lod.' + extension;
+  $('downloadModel').onclick = () => { if (result) save(result.modelBytes, name($('modelFile').files[0].name, '3d'), 'application/octet-stream'); };
+  $('downloadMap').onclick = () => { if (result && result.lightmapBytes) save(result.lightmapBytes, name($('mapFile').files[0].name, 'vla'), 'application/octet-stream'); };
+  $('downloadReport').onclick = () => { if (result) save(JSON.stringify(result.report, null, 2), name($('modelFile').files[0].name, 'report.json'), 'application/json'); };
+  function render(canvas, model) {
+    const ratio = Math.min(window.devicePixelRatio || 1, 2), width = Math.max(1, canvas.clientWidth), height = Math.max(1, canvas.clientHeight);
+    canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
+    const ctx = canvas.getContext('2d'); if (!ctx) return; ctx.scale(ratio, ratio); ctx.clearRect(0, 0, width, height); if (!model) return;
+    const cy = Math.cos(camera.yaw), sy = Math.sin(camera.yaw), cp = Math.cos(camera.pitch), sp = Math.sin(camera.pitch), scale = Math.min(width, height) * .75 * camera.zoom / view.extent;
+    ctx.strokeStyle = '#9fcf79'; ctx.globalAlpha = .35; ctx.lineWidth = .6; ctx.beginPath();
+    for (const mesh of model.meshes) {
+      const projected = mesh.vertices.map(p => {
+        const x = p[0] - view.center[0], y = p[1] - view.center[1], z = p[2] - view.center[2];
+        const rx = x * cy + z * sy, rz = -x * sy + z * cy;
+        return [width / 2 + rx * scale, height / 2 - (y * cp - rz * sp) * scale];
+      });
+      for (const f of mesh.faces) for (const tri of core.triangles(f)) {
+        const a = projected[tri[0].v], b = projected[tri[1].v], c = projected[tri[2].v];
+        ctx.moveTo(...a); ctx.lineTo(...b); ctx.lineTo(...c); ctx.lineTo(...a);
+      }
+    }
+    ctx.stroke();
+  }
+  function draw() { render($('beforeCanvas'), source); render($('afterCanvas'), result ? result.model : null); }
+  for (const id of ['beforeCanvas', 'afterCanvas']) {
+    const canvas = $(id); let pointer = null;
+    canvas.addEventListener('pointerdown', e => { pointer = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+    canvas.addEventListener('pointermove', e => { if (!pointer) return; camera.yaw += (e.clientX - pointer[0]) * .008; camera.pitch = Math.max(-1.55, Math.min(1.55, camera.pitch + (e.clientY - pointer[1]) * .008)); pointer = [e.clientX, e.clientY]; draw(); });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(type, () => { pointer = null; });
+    canvas.addEventListener('wheel', e => { e.preventDefault(); camera.zoom = Math.max(.1, Math.min(20, camera.zoom * Math.exp(-e.deltaY * .001))); draw(); }, { passive: false });
+  }
+  window.addEventListener('resize', draw); draw();
+})();
+
+</script>
+</body></html>
