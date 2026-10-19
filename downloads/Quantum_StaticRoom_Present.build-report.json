@@ -1,0 +1,45 @@
+{
+  "classes": 165,
+  "code_methods": 2037,
+  "stackmap_attributes": 1111,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Cull_Lite.jar",
+  "base_commit": "cd61dc98c45133229b13e898ceb13f46077e0c39",
+  "base_sha256": "2f7cf94575b71bfd16f20648140ac49df04a82780ccb934e802aa1e9a38f4fdc",
+  "jar_bytes": 742337,
+  "jar_sha256": "02842aa06a86a49ff0cd5f5506acd0ce0ddd213888eb38449c99715a44b1767f",
+  "all_baseline_class_bytes_and_10_assets_unchanged": true,
+  "native_mesh_and_visibility_class_bytes_unchanged": true,
+  "added_classes": [
+    "code/Rendering/StaticRoomFrameStats.class",
+    "code/Rendering/StaticRoomPresentPreview$Viewer.class",
+    "code/Rendering/StaticRoomPresentPreview.class"
+  ],
+  "source_sha256": {
+    "experiments/static-room-present/src/code/Rendering/StaticRoomFrameStats.java": "8fa496388d9835f66f8aed0d57047523f8899a8fc9740a7dac5be3a6d6bec273",
+    "experiments/static-room-present/src/code/Rendering/StaticRoomPresentPreview.java": "0769ff03cbf716c7744449fe94943bc8032145efd5c5c39c44cc58e065be44c6"
+  },
+  "benchmark": {
+    "A": "direct Canvas",
+    "B": "offscreen Image then drawImage",
+    "culling_enabled_in_both": true,
+    "native_geometry_camera_textures_distance_identical": true,
+    "direct_path_offscreen_image": false,
+    "legacy_framebuffer_allocated": false,
+    "native_render_calls_maximum": 3,
+    "profiling": "API wall-clock milliseconds, not GPU timestamps",
+    "N": "nativeRoom.render including Java preparation, bind, draw, release",
+    "C": "LCDUI drawImage (B only)",
+    "P": "before nativeRoom.render",
+    "F": "paint including HUD, excluding once-per-window string publication and Graphics restore",
+    "I": "interval between paint starts, including scheduling/presentation waits"
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Separate presentation A/B probe; not a full game or a measured handset speedup."
+}

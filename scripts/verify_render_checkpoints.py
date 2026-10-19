@@ -6,7 +6,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def main():
     data=json.loads((ROOT/'configs/render-checkpoints.json').read_text())
-    for key in ('stable_game','native_room_v1','native_room_v2'):
+    for key in ('stable_game','native_room_v1','native_room_v2','native_room_cull','native_room_cull_lite'):
         checkpoint=data[key]
         for file in checkpoint['files']:
             path=ROOT/file['path']

@@ -72,5 +72,56 @@
     "image_correct": true,
     "device_model": null,
     "source": "user report, not an independently controlled handset measurement"
+  },
+  "native_room_cull": {
+    "name": "Quantum_StaticRoom_Cull",
+    "commit": "fcb51419fdfdf08a773cdc5f047f800bd96ca9e5",
+    "files": [
+      {
+        "path": "downloads/Quantum_StaticRoom_Cull.jar",
+        "bytes": 7883827,
+        "sha256": "bf3bf49f24bb672af7ed2fb5274c88bdc1ad82522a0604b87a226670537d45c6"
+      },
+      {
+        "path": "downloads/Quantum_StaticRoom_Cull.jad",
+        "bytes": 293,
+        "sha256": "e6354923221c212cdcdb54acca1bb9424fa39f5b80babbeef3a69621ad4b3c10"
+      },
+      {
+        "path": "downloads/Quantum_StaticRoom_Cull.build-report.json",
+        "bytes": 3077,
+        "sha256": "c9f286084e47a878a63fc1b830bae2268401b202d984a1479abe1a0179841c45"
+      }
+    ]
+  },
+  "native_room_cull_lite": {
+    "name": "Quantum_StaticRoom_Cull_Lite",
+    "commit": "cd61dc98c45133229b13e898ceb13f46077e0c39",
+    "files": [
+      {
+        "path": "downloads/Quantum_StaticRoom_Cull_Lite.jar",
+        "bytes": 734744,
+        "sha256": "2f7cf94575b71bfd16f20648140ac49df04a82780ccb934e802aa1e9a38f4fdc"
+      },
+      {
+        "path": "downloads/Quantum_StaticRoom_Cull_Lite.jad",
+        "bytes": 302,
+        "sha256": "f20e4c4377011961cdd8ea83ca49363cc2da0b32a5da47c1d01ab1ef11b9d724"
+      },
+      {
+        "path": "downloads/Quantum_StaticRoom_Cull_Lite.build-report.json",
+        "bytes": 7141,
+        "sha256": "340146897b093e0cd61548db04b11747adb80e03ecdcd05aa5585a6dc8cc67f5"
+      }
+    ]
+  },
+  "cull_user_observation": {
+    "fps_range": [
+      8,
+      9
+    ],
+    "visible_surfaces_disappearing_reported": false,
+    "device_model": null,
+    "source": "User report on Cull before Lite; no independent device/method/pose verification and no Present measurement."
   }
 }

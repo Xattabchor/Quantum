@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum Static Room Present
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: Present A-B,,code.Rendering.StaticRoomPresentPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_StaticRoom_Present.jar
+MIDlet-Jar-Size: 742337

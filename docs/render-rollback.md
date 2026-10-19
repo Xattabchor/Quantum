@@ -39,3 +39,17 @@ python scripts/verify_render_checkpoints.py
 ветке, после сохранения более новых изменений; не сбрасывать историю ветки.
 Будущие выпуски нового режима публиковать отдельными именами и не перезаписывать
 файлы из `configs/render-checkpoints.json`.
+
+
+## Принятый Cull и его Lite-упаковка перед Presentation A/B
+
+- Cull `fcb51419fdfdf08a773cdc5f047f800bd96ca9e5`:
+  [JAR](https://github.com/Xattabchor/Quantum/raw/fcb51419fdfdf08a773cdc5f047f800bd96ca9e5/downloads/Quantum_StaticRoom_Cull.jar).
+- Cull Lite `cd61dc98c45133229b13e898ceb13f46077e0c39`:
+  [JAR](https://github.com/Xattabchor/Quantum/raw/cd61dc98c45133229b13e898ceb13f46077e0c39/downloads/Quantum_StaticRoom_Cull_Lite.jar).
+
+Их JAR/JAD/reports добавлены в read-only checkpoint verifier вместе с прежними
+stable/v1/v2. Пользователь сообщил для Cull 8–9 FPS и отсутствие пропадания
+видимых поверхностей; модель/метод не уточнены, Lite/Present этим не измерены.
+[Новый Presentation A/B](static-room-presentation.md) — отдельные имя и файлы,
+обе стороны используют тот же culled renderer, переключается только target.

@@ -1,5 +1,20 @@
 # Quantum — M3G preverified preview
 
+## Static Room Present — прямой вывод и диагностика FPS
+
+[JAR](Quantum_StaticRoom_Present.jar) · [JAD](Quantum_StaticRoom_Present.jad) ·
+[Отчёт](Quantum_StaticRoom_Present.build-report.json) ·
+[Расшифровка времени кадра](../docs/static-room-presentation.md).
+
+Отдельный облегчённый тест: **0 = A direct Canvas / B Image + drawImage**.
+**Оба режима с отсечением**, это не прежнее cull/whole A/B. A не создаёт
+промежуточную полноэкранную Image и не копирует её через LCDUI. Новый viewer
+не выделяет ненужный DirectX7 CPU framebuffer; HUD-строки кэшируются на 1s.
+Те же ресурсы, дальность и native renderer; прежний Cull Lite не изменён.
+N/C/P/F/I — wall-clock миллисекунды, не GPU timestamps. На телефоне ещё не
+проверено: нужен FPS и строки времени A/B из одной позиции после прогрева.
+Если Canvas target не поддерживается, **0** выбирает native Image после ошибки.
+
 ## Static Room Cull Lite — облегчённый тест комнаты
 
 [JAR](Quantum_StaticRoom_Cull_Lite.jar) · [JAD](Quantum_StaticRoom_Cull_Lite.jad) ·
