@@ -1,5 +1,22 @@
 # Quantum — M3G preverified preview
 
+## Static Room Alpha — временно отключить alpha test
+
+[JAR](Quantum_StaticRoom_Alpha.jar) · [JAD](Quantum_StaticRoom_Alpha.jad) ·
+[Отчёт](Quantum_StaticRoom_Alpha.build-report.json) ·
+[Управление и ограничения](../docs/static-room-alpha.md).
+
+Отдельный A/B-тест деревни на базе неизменённого Depth: **по умолчанию A alpha
+OFF**, **0 = B alpha ON / обратно OFF**. Меняется только discard-порог,
+не blending, не RGBA-пиксели и не геометрия. Near128/far60000 фиксированы;
+**5 здесь ничего не меняет**, в отличие от прежнего Depth. Старые JAR сохранены.
+
+OFF может заполнить прозрачные вырезы прямоугольниками и изменить перекрытие
+дальних поверхностей. Любая разница FPS включает и изменение overdraw, а не
+только стоимость alpha test. 864 real pose/frame comparisons, 1320 cutout draw
+states, ON exactly Depth, OFF only threshold, cold Viewer / animation / native
+failure / OOM / preverify PASS. На телефоне скорость ещё не измерена.
+
 ## Quantum Model Optimizer — отдельная офлайн-утилита для ПК
 
 [Скачать один HTML](Quantum_Model_Optimizer.html) ·

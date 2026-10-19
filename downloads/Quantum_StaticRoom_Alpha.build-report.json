@@ -1,0 +1,53 @@
+{
+  "classes": 179,
+  "code_methods": 2129,
+  "stackmap_attributes": 1166,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Depth.jar",
+  "base_commit": "1cc9663e22a7aa3753b780570fb34f839b3208ea",
+  "base_sha256": "053252da302fa8e9c8661617e6b4985b20887c57af942fb8e10939a8f0079316",
+  "jar_bytes": 781258,
+  "jar_sha256": "1b7821743a4490f3f2c5984d713346985208de3298f3f903ed37c510f3a42fc7",
+  "all_baseline_class_bytes_and_10_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/StaticRoomAlphaMesh$Masked.class",
+    "code/Rendering/StaticRoomAlphaMesh$NativeImage.class",
+    "code/Rendering/StaticRoomAlphaMesh$Part.class",
+    "code/Rendering/StaticRoomAlphaMesh$Pending.class",
+    "code/Rendering/StaticRoomAlphaMesh.class",
+    "code/Rendering/StaticRoomAlphaPreview$Viewer.class",
+    "code/Rendering/StaticRoomAlphaPreview.class"
+  ],
+  "source_sha256": {
+    "experiments/static-room-alpha/src/code/Rendering/StaticRoomAlphaMesh.java": "728c8dbcc57c3f2a0821bda09ae555ca69bda3e17a321ae17a8ca0691ddbf8ee",
+    "experiments/static-room-alpha/src/code/Rendering/StaticRoomAlphaPreview.java": "c163c1ed0f36262da8ba9c63b93c5568d344e4441c6ddc57b1cfcaebcd20ceaf"
+  },
+  "diagnostic": {
+    "A": "alpha test OFF (threshold0)",
+    "B": "alpha test ON (original per-image threshold)",
+    "key0": "toggle alpha discard only; resets timing window",
+    "default_alpha_test": false,
+    "fixed_near": 128,
+    "fixed_far": 60000,
+    "near_far_keys_disabled": true,
+    "original_config_DIST_bytes_unchanged": true,
+    "target": "same offscreen Image",
+    "culling": true,
+    "strips": "original, not joined",
+    "native_render_calls_maximum": 3,
+    "uploaded_vertices": 10032,
+    "full_source_triangles": 4750,
+    "texture_RGBA_bytes_blending_depth_states_unchanged": true,
+    "caution": "Cutout rectangles can fill/write depth when discard is OFF; visible surfaces and overdraw change.",
+    "hypothesis": "Alpha discard may be costly; threshold0 does not prove a particular E65 driver fast path."
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Alpha discard A/B only. Any FPS change also includes changed cutout occlusion/overdraw, not isolated GPU instruction cost."
+}
