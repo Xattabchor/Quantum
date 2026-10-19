@@ -1,5 +1,21 @@
 # Quantum — M3G preverified preview
 
+## Новая карта с порталами — ON/OFF, без BSP
+
+[JAR](Quantum_PortalMap_Test.jar) · [JAD](Quantum_PortalMap_Test.jad) ·
+[Отчёт](Quantum_PortalMap_Test.build-report.json) ·
+[Методика и ограничения](../docs/portal-map.md).
+
+15 комнат/18 порталов из нового `lightmap.zip.txt`, оригинальный RGB-lightmap,
+**DMODE13/scale6/DIST40000**. Запуск **PORT ON**, **0** ON↔OFF, **1** ON,
+**3** OFF, **5** исходная камера. Фото ON→OFF→ON в одной неподвижной позе,
+дождаться числового FPS и следующего окна. HUD Rooms/T/DC/VB и J/B/K/R/E.
+В стартовом desktop ракурсе ON1комната/1384tri/1call, OFF15/3761/15 — не FPS E65.
+Все room vertex/index buffers cold; неподвижный selector тоже кэшируется (`C`).
+**Geometry-only**: без неба/дождя/игровой логики в обоих режимах; все6 исходных
+файлов и конфиг сохранены без изменений. Это не прогноз полного игрового FPS.
+Основная игра/старые сборки сохранены, BSP не возвращён. Телефонных замеров пока нет.
+
 ## BSP-тест снят
 
 По отзыву пользователя FPS упал примерно вдвое. BSP-код, подготовленные данные,

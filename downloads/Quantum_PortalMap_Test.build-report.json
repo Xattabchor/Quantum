@@ -1,0 +1,244 @@
+{
+  "classes": 190,
+  "code_methods": 2214,
+  "stackmap_attributes": 1222,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "user_map": {
+    "archive_sha256": "16beaa29fe143cc4010b66e21d90c729a0f83c5f2f3f282b04c17c96577b1ddf",
+    "archive_bytes": 272211,
+    "rooms": 15,
+    "portals": 18,
+    "links": [
+      [
+        4,
+        13
+      ],
+      [
+        5,
+        13
+      ],
+      [
+        2,
+        8
+      ],
+      [
+        6,
+        10
+      ],
+      [
+        10,
+        12
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        12,
+        13
+      ],
+      [
+        1,
+        10
+      ],
+      [
+        6,
+        7
+      ],
+      [
+        4,
+        6
+      ],
+      [
+        6,
+        9
+      ],
+      [
+        6,
+        11
+      ],
+      [
+        5,
+        7
+      ],
+      [
+        8,
+        11
+      ],
+      [
+        3,
+        14
+      ],
+      [
+        8,
+        9
+      ]
+    ],
+    "triangles_by_room": [
+      48,
+      47,
+      110,
+      720,
+      29,
+      442,
+      1384,
+      12,
+      68,
+      40,
+      93,
+      565,
+      56,
+      113,
+      34
+    ],
+    "corners_by_room": [
+      98,
+      97,
+      220,
+      1506,
+      61,
+      938,
+      2990,
+      24,
+      140,
+      84,
+      189,
+      1185,
+      114,
+      239,
+      70
+    ],
+    "source_room_vertices": [
+      36,
+      33,
+      75,
+      395,
+      24,
+      334,
+      789,
+      12,
+      48,
+      30,
+      65,
+      326,
+      40,
+      76,
+      34
+    ],
+    "world_triangles": 3761,
+    "portal_mesh_triangles": 36,
+    "lightmap_rgb_faces": 2085,
+    "lightmap_gray_faces": 30,
+    "lightmap_bytes": 25956,
+    "image_dimensions": {
+      "portal-map/maps/kordon.png": [
+        256,
+        256
+      ],
+      "portal-map/skies/n.png": [
+        512,
+        512
+      ]
+    },
+    "config": {
+      "DMODE": 13,
+      "DIST": 40000,
+      "WORLD_SCALE": 6,
+      "START": [
+        -76338,
+        -2536,
+        -102034
+      ]
+    },
+    "assets_sha256": {
+      "portal-map/level1.txt": "1d5b848d6406f95f5d3f79f32d061dae7d043b2b599ba8c1574dd7cc283c3cae",
+      "portal-map/lightmap/kordon.vla": "61468d9a8958a601cee41bc375225c964571f27cafea931a865288f4a3be70e0",
+      "portal-map/maps/kordon.3d": "0b9aa25fcdb5a74b4c21dba39164a8209d9ceb95bb00caced37ba477c72e1ae9",
+      "portal-map/maps/kordon.png": "ab0d25c3bd635784a6bb996e1f66cad820e51cd900702d163033a22bfa836248",
+      "portal-map/skies/n.png": "1223f6bf427ae1be7909b22f1800257e4570643f37bdf42533ebb1f46f0b2fda",
+      "portal-map/skies/skybox5.3d": "cf2a66609a1f5d19e742ac9d4faac8680caf4dfce04a11bb010ac2cba5b7d973"
+    }
+  },
+  "source_archive": "fixtures/portal-map/lightmap.zip",
+  "auditor_sha256": "6aadf57cfdbce9596c5b7c050747beda9ea2d0033696636ba7478a8e2d21ccde",
+  "base_jar": "Quantum_StaticRoom_Tex3.jar",
+  "base_commit": "b9b477f3de65e2a2ecc2e0f88ad10a09244f22fa",
+  "base_sha256": "8617f348e04f4b10c03b0049e60f2e92c41532d6939546ad96f6e44d11aa6880",
+  "jar_bytes": 1087164,
+  "jar_sha256": "116abb3817186dec6c753e4031f4a8d66f03690f6c73db939989592062064be4",
+  "all_182_baseline_classes_and_all_map_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/PortalMapData.class",
+    "code/Rendering/PortalMapMesh$NativeImage.class",
+    "code/Rendering/PortalMapMesh$Part.class",
+    "code/Rendering/PortalMapMesh.class",
+    "code/Rendering/PortalMapPreview$Viewer.class",
+    "code/Rendering/PortalMapPreview.class",
+    "code/Rendering/PortalMapStats.class",
+    "code/Rendering/PortalMapVisibility.class"
+  ],
+  "source_sha256": {
+    "experiments/portal-map/src/code/Rendering/PortalMapData.java": "62ffb09ff72ca97dad8158f8f1e733ac0d39c589d41568689d8f5c7d8eacf4d9",
+    "experiments/portal-map/src/code/Rendering/PortalMapMesh.java": "e99536da4e55d81094a592d44b7c523f03263b8685c172a6ef401746fb06bd79",
+    "experiments/portal-map/src/code/Rendering/PortalMapPreview.java": "5d89a66baed2c57d9e513a18f6057da426375496373950db0b5d5fd79742535c",
+    "experiments/portal-map/src/code/Rendering/PortalMapStats.java": "0847e592058f1dd5183e58428d13ed30292119d02e68d6a7a6abb1ab011d6b7b",
+    "experiments/portal-map/src/code/Rendering/PortalMapVisibility.java": "7a75ea05303fddd5694c0d1ffa8038d7dcbea48d00542c90cb716cd9ad8f145c"
+  },
+  "builder_sha256": "e32aecaf8b993e5db61da07ab4622be4a242e03a7e51ac1c653153d76e182f8f",
+  "renderer_parent_source_sha256": "3a579f0cd84b3332e8de890e6fc313c1d329b1ad29123f905f806a3652442f21",
+  "diagnostic": {
+    "default": "PORT ON",
+    "modes": [
+      "PORT ON",
+      "PORT OFF"
+    ],
+    "key0": "toggle, freeze movement and preserve pose",
+    "key1": "ON",
+    "key3": "OFF",
+    "key5": "spawn/yaw0",
+    "selection_cache": "one exact camera16/seed/FOV/viewport result for static map; C in HUD means cache hit",
+    "selection": "actual native-eye portal cone projection, guarded screen rectangles, monotonic room-window unions",
+    "link_rule": "HouseCreator any shared vertex within25 world units; all18 portals have exactly2 rooms",
+    "membership": "House.calcPart floor test at actual shifted native eye, cached at unchanged integer origin",
+    "outside": "explicit room -1 / ALL15 in both modes, never fake empty-scene FPS",
+    "near": 128,
+    "far": 40000,
+    "fov": 74,
+    "viewport": "same full Canvas/Image target",
+    "DMODE": 13,
+    "world_scale": 6,
+    "cold_only": true,
+    "hot_geometry_uploads": false,
+    "hot_index_builds": false,
+    "batching": "one prebuilt buffer/index per room, shared single atlas image; one bind/clear/release per frame",
+    "alpha": "original threshold ON",
+    "depth": "ON in both modes",
+    "perspective": "ON in both modes",
+    "effects": "world-only diagnostic in BOTH modes; sky/weather/gameplay not executed; all original files/config retained",
+    "sky_texture": "original512x512 bytes retained, not loaded by this geometry-only viewer",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "fractional_fps": true,
+    "native_stages": "J prepare/portal selection, B bind, K camera/state/clear, R render, E release; API wall time, NOT GPU timestamps",
+    "VB_is_not_driver_processing_counter": true,
+    "no_software_fallback": true,
+    "original_map_assets_changed": false
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Latest user 15-room map: portal ON/OFF at identical pose/materials/native per-room buffers. Not comparable to old map FPS; no device-speed claim."
+}
