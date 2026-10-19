@@ -41,6 +41,10 @@ with tempfile.TemporaryDirectory(prefix='static-room-')as temp:
         assert old in text
         path=temp/'anchors'/original.name;path.parent.mkdir(parents=True,exist_ok=True)
         path.write_text(text.replace(old,'code.Rendering.StaticRoomTest.class.getResourceAsStream(file)'));sources.append(path)
+    # Compile the immutable pre-merge source as an independent reference.
+    reference=subprocess.check_output(['git','show','ac57d8946257b44b349a85509b9b7b56def852c9:experiments/static-room/src/code/Rendering/StaticRoomMesh.java'],cwd=ROOT,text=True)
+    path=temp/'reference'/'StaticRoomMeshReference.java';path.parent.mkdir(parents=True,exist_ok=True)
+    path.write_text(reference.replace('StaticRoomMesh','StaticRoomMeshReference'));sources.append(path)
     sources+=list((ROOT/'experiments/static-room/src').rglob('*.java'))
     sources+=list((ROOT/'tests/static_room').glob('*.java'))
     classes=temp/'classes';classes.mkdir()

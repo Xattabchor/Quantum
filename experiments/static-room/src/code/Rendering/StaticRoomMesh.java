@@ -49,6 +49,7 @@ public final class StaticRoomMesh {
         try {
             // Keep every source face; depth testing, not painter sorting, resolves
             // opaque overlap here. Material bias/addsz is NOT equivalent: preview only.
+            Pending pending=null;
             for(int t=0;t<materials.length;t++) {
                 Texture material=materials[t];boolean used=false;
                 for(int i=0;i<polygons.length;i++)if(materialIndex(polygons[i])==t){used=true;break;}
@@ -58,14 +59,59 @@ public final class StaticRoomMesh {
                 Vector faces=new Vector();int count=0;
                 for(int i=0;i<polygons.length;i++)if(materialIndex(polygons[i])==t) {
                     int n=polygons[i] instanceof Polygon4V?4:3;
-                    if(count+n>MAX_VERTICES){build(faces,material,lightQuality,perspective);faces.removeAllElements();count=0;}
+                    if(count+n>MAX_VERTICES){pending=stage(pending,faces,count,material,lightQuality,perspective);faces=new Vector();count=0;}
                     faces.addElement(polygons[i]);count+=n;
                 }
-                if(count>0)build(faces,material,lightQuality,perspective);
+                if(count>0)pending=stage(pending,faces,count,material,lightQuality,perspective);
             }
+            if(pending!=null)build(pending.faces,pending.material,lightQuality,perspective);
         } catch(RuntimeException ex){dispose();throw ex;}
           catch(Error ex){dispose();throw ex;}
         background.setColor(0x203040);background.setColorClearEnable(true);background.setDepthClearEnable(true);
+    }
+
+    private static final class Pending {
+        Vector faces;Texture material;int vertices;
+    }
+    private static boolean compatible(Texture a,Texture b) {
+        // Merge adjacent static REPLACE runs only. Animation and MODULATE remain
+        // independent; never merge merely because two frames happen to match.
+        return a.animMIP==null && b.animMIP==null && a.drawmode!=7
+                && a.drawmode==b.drawmode && a.rImg==b.rImg
+                && a.perspectiveCorrection==b.perspectiveCorrection;
+    }
+    private Pending stage(Pending pending,Vector faces,int count,Texture material,int quality,boolean perspective) {
+        if(pending!=null && compatible(pending.material,material)
+                && pending.vertices+count<=MAX_VERTICES && combinedFits(pending.faces,faces)) {
+            // Concatenate in the PREVIOUS material submission order. Do not
+            // gather by texture globally or change equal-depth tie ordering.
+            for(int i=0;i<faces.size();i++)pending.faces.addElement(faces.elementAt(i));
+            pending.vertices+=count;return pending;
+        }
+        if(pending==null)pending=new Pending();
+        else build(pending.faces,pending.material,quality,perspective);
+        pending.faces=faces;pending.vertices=count;pending.material=material;return pending;
+    }
+    private static boolean combinedFits(Vector first,Vector second) {
+        // A merge must not turn two lossless packets into a lossy/rejected one.
+        int[] min={Integer.MAX_VALUE,Integer.MAX_VALUE,Integer.MAX_VALUE},max={Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE};
+        Vertex origin=vertex((RenderObject)first.elementAt(0),0);int step=0;
+        for(int part=0;part<2;part++) {
+            Vector faces=part==0?first:second;
+            for(int f=0;f<faces.size();f++) {
+                RenderObject p=(RenderObject)faces.elementAt(f);int count=p instanceof Polygon4V?4:3;
+                for(int v=0;v<count;v++) {
+                    Vertex point=vertex(p,v);int[] xyz={point.x,point.y,point.z},base={origin.x,origin.y,origin.z};
+                    for(int c=0;c<3;c++) {
+                        if(xyz[c]<-8000000 || xyz[c]>8000000)return false;
+                        min[c]=Math.min(min[c],xyz[c]);max[c]=Math.max(max[c],xyz[c]);step=gcd(step,Math.abs(xyz[c]-base[c]));
+                    }
+                }
+            }
+        }
+        if(step==0)step=1;
+        for(int c=0;c<3;c++)if((max[c]-min[c])/step>65535)return false;
+        return true;
     }
 
     private static int materialIndex(RenderObject p) {

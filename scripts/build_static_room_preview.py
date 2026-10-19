@@ -15,7 +15,8 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('--java',default=os.environ.get('JAVA','java'))
     p.add_argument('--ecj-jar',default=os.environ.get('ECJ_JAR','build/tools/ecj.jar'))
     p.add_argument('--api-dir',default='build/sdk/lib');p.add_argument('--proguard-jar',default='build/sdk/proguard/lib/proguard.jar')
-    p.add_argument('--output-dir',default='artifacts/static-room-preview');a=p.parse_args()
+    p.add_argument('--output-dir',default='artifacts/static-room-merged');a=p.parse_args()
+    subprocess.run([sys.executable,str(ROOT/'scripts/verify_render_checkpoints.py')],check=True)
     assert hashlib.sha256(BASE.read_bytes()).hexdigest()==BASE_SHA,'wrong baseline'
     work=ROOT/'build/static-room';classes=work/'classes';classes.mkdir(parents=True,exist_ok=True)
     for stale in classes.rglob('*.class'):stale.unlink()
@@ -30,10 +31,10 @@ def main():
     for jar in api:args+=['-libraryjars',str(jar)]
     subprocess.run([a.java,'-jar',a.proguard_jar]+args+['-microedition','-dontshrink','-dontoptimize','-dontobfuscate','-dontnote','-dontwarn'],check=True)
     out=ROOT/a.output_dir;out.mkdir(parents=True,exist_ok=True)
-    manifest='\r\n'.join(['Manifest-Version: 1.0','MIDlet-Name: Quantum Static Room Test','MIDlet-Version: 1.0.0',
+    manifest='\r\n'.join(['Manifest-Version: 1.0','MIDlet-Name: Quantum Static Room Merged','MIDlet-Version: 1.0.0',
         'MIDlet-Vendor: Quantum Experiments','MIDlet-1: Room A-B,,code.Rendering.StaticRoomPreview',
         'MicroEdition-Configuration: CLDC-1.1','MicroEdition-Profile: MIDP-2.0','',''])
-    jar=out/'Quantum_StaticRoom_Test.jar'
+    jar=out/'Quantum_StaticRoom_Merged.jar'
     with zipfile.ZipFile(BASE)as base,zipfile.ZipFile(verified)as patch,zipfile.ZipFile(jar,'w',zipfile.ZIP_DEFLATED)as result:
         added=[n for n in patch.namelist()if n.endswith('.class')]
         assert added and all(n.startswith('code/Rendering/StaticRoom')for n in added)
@@ -51,6 +52,6 @@ def main():
         handset_tested=False,fps_measured=False)
     (out/'build-report.json').write_text(json.dumps(report,indent=2)+'\n')
     jad=manifest.replace('Manifest-Version: 1.0\r\n','').rstrip()+'\r\nMIDlet-Jar-URL: '+jar.name+'\r\nMIDlet-Jar-Size: '+str(jar.stat().st_size)+'\r\n'
-    (out/'Quantum_StaticRoom_Test.jad').write_bytes(jad.encode('utf-8'))
+    (out/'Quantum_StaticRoom_Merged.jad').write_bytes(jad.encode('utf-8'))
     print(json.dumps(report,indent=2));print('Artifacts:',out)
 if __name__=='__main__':main()

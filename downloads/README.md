@@ -1,5 +1,19 @@
 # Quantum — M3G preverified preview
 
+## Static Room v2 — продолжаем новый режим, откат сохранён
+
+[JAR](Quantum_StaticRoom_Merged.jar) · [JAD](Quantum_StaticRoom_Merged.jad) ·
+[Отчёт](Quantum_StaticRoom_Merged.build-report.json) ·
+[Инструкция / откат](../docs/static-room-experiment.md).
+
+Первая комната: 3 вызова вместо 5, все 5 исходных материалов сохранены.
+Соседние совместимые статические пакеты объединяются без перестановки граней.
+96 ordered triangle/state/texture/camera witnesses против исходников v1 — PASS.
+Это всё ещё отдельный A/B viewer, не полноценная игра и не замер FPS телефона.
+Стабильный DrawCalls JAR и первый StaticRoom_Test ниже **не заменены**;
+контрольные SHA-256: `configs/render-checkpoints.json`.
+
+
 ## sym9 — эксперимент Static Room A/B (не игра)
 
 [JAR](Quantum_StaticRoom_Test.jar) · [JAD](Quantum_StaticRoom_Test.jad) ·

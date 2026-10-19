@@ -1,8 +1,33 @@
 # Static Room A/B — изолированный эксперимент, не игровая сборка
 
+## Контрольные точки и текущая версия
+
+- **Стабильная игра:** `Quantum_Sym9_DrawCalls.jar`, commit
+  `73d43ee42dd9d116ad2b3780deff900bbb12d8cd`.
+- **Новый режим v1 (5 draws):** `Quantum_StaticRoom_Test.jar`, исходники и артефакты
+  в commit `ac57d8946257b44b349a85509b9b7b56def852c9`.
+- **Продолжаем новый режим v2 (3 draws):** `Quantum_StaticRoom_Merged.jar`.
+  Новый artifact и MIDlet name не перезаписывают оба предыдущих JAR.
+
+Файлы контрольных точек, размеры и SHA-256 закреплены в
+`configs/render-checkpoints.json`. Проверка только читает файлы, ничего не
+восстанавливает и не сбрасывает: `python scripts/verify_render_checkpoints.py`.
+Сборщик запускает её перед новой сборкой. Для отката на телефоне достаточно
+старого JAR; для исходников v1 использовать указанный commit **на текущей ветке**,
+сначала сохранив новые изменения. `git reset --hard` и смена ветки не нужны.
+
+v2 объединяет только соседние статические REPLACE-пакеты с тем же RawImage,
+режимом и perspective flag. Faces конкатенируются в прежнем порядке материалов,
+а не сортируются по текстуре. Animation/MODULATE и разные состояния — барьеры.
+Если общий пакет превышает vertex budget или не представим без потерь в short,
+пакеты остаются раздельными. Все 5 исходных материалов и все 4750 треугольников
+сохранены. В 96 poses ordered XYZ/UV/RGBA/texture/depth/camera witnesses совпали
+с **исходниками v1 из immutable commit**, не с двумя сборками нового алгоритма.
+
+
 ## Запуск на телефоне
 
-`downloads/Quantum_StaticRoom_Test.jar` — отдельный MIDlet **Quantum Static Room Test**
+`downloads/Quantum_StaticRoom_Merged.jar` — отдельный MIDlet **Quantum Static Room Merged**
 с другим vendor/name. Он не запускает `Main`/`GameScreen`, не открывает сохранения
 и не пишет RMS. Основной `Quantum_Sym9_DrawCalls.jar` не изменён.
 
@@ -65,7 +90,7 @@ ABD/DBC сохраняет диагональ ABD/BCD. Mode9 используе�
 Скрипт **не пересобирает старый gameplay из исходников**: берёт точный опубликованный
 `downloads/Quantum_Sym9_DrawCalls.jar`, SHA-256
 `e07b8d98d2e8b74d2c6f3261b09f8684a0ec5e9da578662a693e680e56c2fcd1`.
-Добавляет только пять `StaticRoom*.class` и меняет manifest на тестовый MIDlet.
+Добавляет только шесть `StaticRoom*.class` и меняет manifest на тестовый MIDlet.
 Все исходные engine classes и ресурсы побайтно неизменны, включая полный level1.txt
 пользователя, 256×256 skies и оба lightmap. CLDC 1.1/MIDP 2.0/JSR184 API и ProGuard
 microedition preverify настоящие, тестовые заглушки в JAR не попадают.
@@ -81,7 +106,7 @@ python tests/static_room/run.py
 
 ## Выполненные проверки (не GPU rasterization/FPS)
 
-- Реальный kordos: 2641 face, 10032 uploaded vertices, 4750 triangles, 5 API draws.
+- Реальный kordos: 2641 face, 10032 uploaded vertices, 4750 triangles, 3 API draws.
 - 24 направления камеры × 4 river frames = 96 poses: все source XYZ, UV, baked
   значения и native texture bytes сверены; геометрия не теряется.
 - Все 10032 значения фактического `/lightmap/kordod.vla` проверены против файла;
@@ -91,6 +116,9 @@ python tests/static_room/run.py
 - Реальный Viewer.load с опубликованным config/WTEX/scale, затем A/B/A paint — PASS.
   Только desktop resource anchors в двух временных копиях зависимостей, без
   изменения исходников или классов публикуемого движка.
+- Сверка с v1: 5 → 3 calls, exact ordered triangle/state/texture/camera witnesses;
+  synthetic tests для adjacent order, mode/perspective/animation barriers и
+  fallback при несовместимых bounds/vertex budgets — PASS.
 - Analytic camera/aspect/focal-shift; RGB/gray/clamp/cutout; unsupported material,
   NPOT/lossy packing; constructor OOM; bind/viewport/clear/render/release failure
   и освобождение target; dispose — PASS.

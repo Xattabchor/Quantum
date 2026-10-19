@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "working_branch": "arena/b40c445d-quantum",
+  "stable_game": {
+    "name": "Quantum_Sym9_DrawCalls",
+    "commit": "73d43ee42dd9d116ad2b3780deff900bbb12d8cd",
+    "files": [
+      {
+        "path": "downloads/Quantum_Sym9_DrawCalls.jar",
+        "bytes": 7864103,
+        "sha256": "e07b8d98d2e8b74d2c6f3261b09f8684a0ec5e9da578662a693e680e56c2fcd1"
+      },
+      {
+        "path": "downloads/Quantum_Sym9_DrawCalls.jad",
+        "bytes": 240,
+        "sha256": "01052531f9945aa2ef35f997e6e24483196613213c5c12bd59c3c0a46d99ec6b"
+      },
+      {
+        "path": "downloads/Quantum_Sym9_DrawCalls.build-report.json",
+        "bytes": 5299,
+        "sha256": "78507ffd3111fb30cf76ea9dad9bba663caa053005ac999f57d467ecdf45a6ee"
+      }
+    ]
+  },
+  "native_room_v1": {
+    "name": "Quantum_StaticRoom_Test",
+    "commit": "ac57d8946257b44b349a85509b9b7b56def852c9",
+    "files": [
+      {
+        "path": "downloads/Quantum_StaticRoom_Test.jar",
+        "bytes": 7879026,
+        "sha256": "791c32ce697780e8b3cfbaac233f36ef2022ed92e02f80f1d904c4b7afa668e4"
+      },
+      {
+        "path": "downloads/Quantum_StaticRoom_Test.jad",
+        "bytes": 293,
+        "sha256": "7fbacc6a11f0d9b8f60b2a387f8f4009f0510f752c369504d9d5892893c92316"
+      },
+      {
+        "path": "downloads/Quantum_StaticRoom_Test.build-report.json",
+        "bytes": 1994,
+        "sha256": "11f1eb1a5d957170804acd488967324d069c117158160840acc13e1109fa1c9b"
+      }
+    ]
+  },
+  "native_source_commit": "ac57d8946257b44b349a85509b9b7b56def852c9",
+  "policy": "Keep these artifacts immutable. Continue native work in separate versioned artifacts; do not reset the shared branch."
+}

@@ -7,6 +7,7 @@ import code.Gameplay.Map.Room;
 import code.utils.Main;
 import java.io.*;
 import java.lang.reflect.*;
+import java.security.MessageDigest;
 import java.util.*;
 import java.util.zip.*;
 import javax.imageio.ImageIO;
@@ -24,6 +25,32 @@ public final class StaticRoomTest {
     static int[] uv(RenderObject p,int i){if(p instanceof Polygon4V){Polygon4V q=(Polygon4V)p;return i==0?new int[]{q.au,q.av}:i==1?new int[]{q.bu,q.bv}:i==2?new int[]{q.cu,q.cv}:new int[]{q.du,q.dv};}Polygon3V q=(Polygon3V)p;return i==0?new int[]{q.au,q.av}:i==1?new int[]{q.bu,q.bv}:new int[]{q.cu,q.cv};}
     static int light(RenderObject p,int i){if(p instanceof LightedPolygon3V){LightedPolygon3V q=(LightedPolygon3V)p;return i==0?q.la:i==1?q.lb:q.lc;}LightedPolygon4V q=(LightedPolygon4V)p;return i==0?q.la:i==1?q.lb:i==2?q.lc:q.ld;}
     static void render(StaticRoomMesh room,Matrix camera){room.render(Image.createImage(240,340).getGraphics(),camera,240,340,225,225,68500);}
+    static void integer(MessageDigest digest,int value) {
+        digest.update((byte)(value>>>24));digest.update((byte)(value>>>16));digest.update((byte)(value>>>8));digest.update((byte)value);
+    }
+    static String witness()throws Exception {
+        MessageDigest digest=MessageDigest.getInstance("SHA-256");
+        for(float v:Graphics3D.cameraTransform.matrix)integer(digest,Float.floatToIntBits(v));
+        for(Graphics3D.Draw d:Graphics3D.history) {
+            byte[] texture=MessageDigest.getInstance("SHA-256").digest(d.source.image.pixels);int offset=0;
+            for(int length:d.lengths) {
+                for(int i=2;i<length;i++) {
+                    digest.update(texture);
+                    for(int state:new int[]{d.blend,d.function,d.filter,d.cull,d.winding,d.perspective?1:0,d.depthTest?1:0,d.depthWrite?1:0,
+                            d.fog?1:0,d.lit?1:0,Float.floatToIntBits(d.threshold),d.source.image.width,d.source.image.height,d.viewportWidth,d.viewportHeight})integer(digest,state);
+                    for(float value:d.projection)integer(digest,Float.floatToIntBits(value));
+                    int a=d.indices[offset+i-2],b=d.indices[offset+i-1],c=d.indices[offset+i];if((i&1)!=0){int swap=a;a=b;b=swap;}
+                    for(int vertex:new int[]{a,b,c}) {
+                        for(int k=0;k<3;k++)integer(digest,Float.floatToIntBits(d.positions[vertex*3+k]*d.scale+d.bias[k]));
+                        for(int k=0;k<2;k++)integer(digest,Float.floatToIntBits(d.coords[vertex*2+k]*d.uvScale));
+                        for(int k=0;k<4;k++)digest.update(d.colors[vertex*4+k]);
+                    }
+                }
+                offset+=length;
+            }
+        }
+        return Arrays.toString(digest.digest());
+    }
     static void failures() {
         for(int mode:new int[]{1,2,3,4,5,6,8,10,11,12}) {
             int calls=Graphics3D.calls;boolean rejected=false;
@@ -77,6 +104,30 @@ public final class StaticRoomTest {
         }
         System.out.println("PASS baked mode9/mode13 RGB/gray/clamp; cutout; MODULATE water tests depth without writing");
     }
+    static void comparePackets(Texture[] textures,RenderObject[] faces,int oldCalls,int newCalls)throws Exception {
+        MultyTexture materials=new MultyTexture(textures.length);materials.textures=textures;
+        Mesh mesh=new Mesh(new Vertex[]{},faces,materials);Matrix camera=new Matrix();
+        StaticRoomMeshReference before=new StaticRoomMeshReference(mesh,2,true);StaticRoomMesh after=new StaticRoomMesh(mesh,2,true);
+        Graphics3D.history.clear();before.render(Image.createImage(240,340).getGraphics(),camera,240,340,225,225,68500);String expected=witness();
+        check(before.draws==oldCalls,"wrong checkpoint boundary count");Graphics3D.history.clear();render(after,camera);
+        check(after.draws==newCalls && witness().equals(expected),"merge barrier/capacity/order changed");before.dispose();after.dispose();
+    }
+    static Polygon3V materialFace(int material,int shift) {
+        Polygon3V p=face();p.tex=(byte)material;p.a.x+=shift;p.b.x+=shift;p.c.x+=shift;return p;
+    }
+    static void mergeBoundaries()throws Exception {
+        Texture a=texture(9),b=texture(9);b.rImg=a.rImg;
+        comparePackets(new Texture[]{a,b},new RenderObject[]{materialFace(1,1200),materialFace(0,0)},2,1);
+        Texture middle=texture(9);
+        comparePackets(new Texture[]{a,middle,b},new RenderObject[]{materialFace(0,0),materialFace(1,0),materialFace(2,0)},3,3);
+        b.drawmode=13;comparePackets(new Texture[]{a,b},new RenderObject[]{materialFace(0,0),materialFace(1,0)},2,2);b.drawmode=9;
+        b.perspectiveCorrection=false;comparePackets(new Texture[]{a,b},new RenderObject[]{materialFace(0,0),materialFace(1,0)},2,2);b.perspectiveCorrection=true;
+        b.animMIP=new Texture[]{b};comparePackets(new Texture[]{a,b},new RenderObject[]{materialFace(0,0),materialFace(1,0)},2,2);b.animMIP=null;
+        comparePackets(new Texture[]{a,b},new RenderObject[]{materialFace(0,0),materialFace(1,2000001)},2,2);
+        RenderObject[] large=new RenderObject[6000];Polygon3V first=materialFace(0,0),second=materialFace(1,0);
+        Arrays.fill(large,0,3000,first);Arrays.fill(large,3000,6000,second);comparePackets(new Texture[]{a,b},large,2,2);
+        System.out.println("PASS adjacent-only merge / previous material order / mode+perspective+animation barriers / lossless and vertex-budget split guards");
+    }
     static void realFixture(String path)throws Exception {
         try(ZipFile jar=new ZipFile(path)) {
             Main.fogQ=2;Main.pixelsQ=2;DirectX7.standartDrawmode=9;
@@ -103,18 +154,22 @@ public final class StaticRoomTest {
             try{StaticRoomPreview.loadLightmap(meshes,new ByteArrayInputStream(extra));throw new AssertionError("trailing lightmap accepted");}catch(IOException expected){}
             // Reload after the intentional truncated-file mutation.
             StaticRoomPreview.loadLightmap(meshes,jar.getInputStream(jar.getEntry("lightmap/kordod.vla")));
-            Mesh mesh=meshes[0];StaticRoomMesh cached=new StaticRoomMesh(mesh,2,true);Matrix camera=new Matrix();camera.setPosition(-77706,-1209,-103802);
+            Mesh mesh=meshes[0];StaticRoomMesh cached=new StaticRoomMesh(mesh,2,true);StaticRoomMeshReference reference=new StaticRoomMeshReference(mesh,2,true);Matrix camera=new Matrix();camera.setPosition(-77706,-1209,-103802);
             int arrays=VertexArray.created,sets=VertexArray.sets,indices=TriangleStripArray.created,uploads=Graphics3D.uploads,transforms=Transform.created;
             int expectedVertices=0,expectedTriangles=0;for(RenderObject p:mesh.getPolygons()){int n=p instanceof Polygon4V?4:3;expectedVertices+=n;expectedTriangles+=n-2;}
             for(int yaw=0;yaw<360;yaw+=15)for(int animation=0;animation<4;animation++) {
                 camera.setRotY(yaw);camera.setPosition(-77706,-1209,-103802);river.rImg=frames[animation];Graphics3D.history.clear();
+                reference.render(Image.createImage(240,340).getGraphics(),camera,240,340,225,225,68500);
+                check(reference.draws==5,"checkpoint reference lost original five draws");String expected=witness();Graphics3D.history.clear();
                 int binds=Graphics3D.binds,releases=Graphics3D.releases;render(cached,camera);
+                check(cached.draws==3 && expected.equals(witness()),"merged packets changed ordered world triangles/native state/camera/texture");
                 check(Graphics3D.binds==binds+1 && Graphics3D.releases==releases+1 && Graphics3D.target==null,"frame transaction");
                 check(VertexArray.created==arrays && VertexArray.sets==sets && TriangleStripArray.created==indices && Graphics3D.uploads==uploads && Transform.created==transforms,"warm geometry/index/texture allocation or upload");
                 check(Graphics3D.history.size()==cached.parts(),"part omitted");
-                for(int t=0;t<5;t++) {
-                    Graphics3D.Draw d=Graphics3D.history.elementAt(t);int offset=0,strip=0;
-                    for(RenderObject p:mesh.getPolygons())if(index(p)==t) {
+                for(int draw=0;draw<3;draw++) {
+                    Graphics3D.Draw d=Graphics3D.history.elementAt(draw);int offset=0,strip=0;
+                    int first=draw==0?0:draw==1?1:4,last=draw==1?3:first;
+                    for(int t=first;t<=last;t++)for(RenderObject p:mesh.getPolygons())if(index(p)==t) {
                         int n=p instanceof Polygon4V?4:3;check(d.lengths[strip++]==n,"quad/tri lost");
                         int[] order=n==4?new int[]{0,1,3,2}:new int[]{0,1,2};for(int k=0;k<n;k++)check(d.indices[offset+k]==offset+order[k],"strip diagonal/winding changed");
                         for(int v=0;v<n;v++) {
@@ -125,8 +180,8 @@ public final class StaticRoomTest {
                         }offset+=n;
                     }
                     check(offset*3==d.positions.length && strip==d.lengths.length,"extra/missing vertices");
-                    check(d.depthTest && d.depthWrite==(t!=4) && !d.fog && !d.lit,"depth/material state");
-                    RawImage raw=materials.textures[t].rImg;for(int pixel=0;pixel<raw.img.length;pixel++) {
+                    check(d.depthTest && d.depthWrite==(draw!=2) && !d.fog && !d.lit,"depth/material state");
+                    RawImage raw=materials.textures[first].rImg;for(int pixel=0;pixel<raw.img.length;pixel++) {
                         int src=raw.img[pixel];byte[] data=d.source.image.pixels;
                         check(data[pixel*4]==(byte)(src>>16) && data[pixel*4+1]==(byte)(src>>8) && data[pixel*4+2]==(byte)src && (data[pixel*4+3]&255)==(src==0?0:255),"texture/river frame content changed");
                     }
@@ -135,7 +190,8 @@ public final class StaticRoomTest {
             check(cached.uploadedVertices==expectedVertices && cached.triangles==expectedTriangles,"room face counts differ");
             System.out.println("PASS sym9 real first room / "+mesh.getPolygons().length+" faces / "+expectedVertices+" vertices / "+expectedTriangles+" triangles / "+cached.parts()+" draws / 96 poses+river frames / exact XYZ UV baked colors texture bytes");
             System.out.println("PASS 10032 baked values / warm native vertex sets=0 allocations=0 index allocations=0 texture uploads=0 transforms allocated=0; no CPU projection in cached module");
-            cached.dispose();
+            cached.dispose();reference.dispose();
+            System.out.println("PASS checkpoint ac57d89 vs new: 96 identical ordered triangle/state/texture/camera witnesses; 5 -> 3 calls, no FPS claim");
             Field table=code.utils.Asset.class.getDeclaredField("table");table.setAccessible(true);
             Hashtable cache=(Hashtable)table.get(null);
             for(Map.Entry<String,RawImage> entry:raws.entrySet())cache.put("RIMG_/"+entry.getKey(),entry.getValue());
@@ -146,7 +202,7 @@ public final class StaticRoomTest {
             Object canvas=constructor.newInstance(new StaticRoomPreview());
             Method load=viewer.getDeclaredMethod("load");load.setAccessible(true);load.invoke(canvas);
             Field nr=viewer.getDeclaredField("nativeRoom");nr.setAccessible(true);StaticRoomMesh loaded=(StaticRoomMesh)nr.get(canvas);
-            check(loaded.uploadedVertices==10032 && loaded.triangles==4750 && loaded.parts()==5,"actual viewer config/WTEX/model/lightmap initialization differs");
+            check(loaded.uploadedVertices==10032 && loaded.triangles==4750 && loaded.parts()==3,"actual viewer config/WTEX/model/lightmap initialization differs");
             Field ready=viewer.getDeclaredField("ready");ready.setAccessible(true);check(ready.getBoolean(canvas),"viewer did not initialize");
             Method paint=viewer.getDeclaredMethod("paint",javax.microedition.lcdui.Graphics.class);paint.setAccessible(true);
             Field toggle=viewer.getDeclaredField("cached");toggle.setAccessible(true);Field error=viewer.getDeclaredField("error");error.setAccessible(true);
@@ -159,5 +215,5 @@ public final class StaticRoomTest {
             System.out.println("PASS actual viewer load + A/B/A render / exact published level1 + WTEX + scale + baked file / all 5 materials; no save/game startup");
         }
     }
-    public static void main(String[] args)throws Exception{failures();projection();colors();realFixture(args[0]);System.out.println("NOT a pixel-equivalence, full-game, handset GPU or FPS test");}
+    public static void main(String[] args)throws Exception{failures();projection();colors();mergeBoundaries();realFixture(args[0]);System.out.println("NOT a pixel-equivalence, full-game, handset GPU or FPS test");}
 }

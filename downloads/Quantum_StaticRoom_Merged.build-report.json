@@ -1,0 +1,48 @@
+{
+  "classes": 160,
+  "code_methods": 2010,
+  "stackmap_attributes": 1095,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar_sha256": "e07b8d98d2e8b74d2c6f3261b09f8684a0ec5e9da578662a693e680e56c2fcd1",
+  "jar_sha256": "b510eb90b72edb03627c658fb605eee13bc2b542d2e3d57b6b22085b7e93b9eb",
+  "jar_bytes": 7880304,
+  "added_classes": [
+    "code/Rendering/StaticRoomMesh$NativeImage.class",
+    "code/Rendering/StaticRoomMesh$Part.class",
+    "code/Rendering/StaticRoomMesh$Pending.class",
+    "code/Rendering/StaticRoomMesh.class",
+    "code/Rendering/StaticRoomPreview$Viewer.class",
+    "code/Rendering/StaticRoomPreview.class"
+  ],
+  "baseline_engine_and_resources_unchanged": true,
+  "purpose": "Separate first-room A/B experiment. Not a gameplay replacement or pixel-equivalent renderer.",
+  "handset_tested": false,
+  "fps_measured": false,
+  "verification": {
+    "room_faces": 2641,
+    "uploaded_vertices": 10032,
+    "triangles": 4750,
+    "source_materials": 5,
+    "api_draws_before": 5,
+    "api_draws_after": 3,
+    "reference_source_commit": "ac57d8946257b44b349a85509b9b7b56def852c9",
+    "unchanged_ordered_triangle_state_texture_camera_witnesses": 96,
+    "warm_native_vertex_uploads": 0,
+    "warm_native_vertex_index_allocations": 0,
+    "warm_texture_uploads": 0,
+    "viewer_load_A_B_A": "PASS with API doubles",
+    "merge_barriers_and_lossless_capacity_guards": "PASS",
+    "visual_gpu_equivalence_or_handset_fps_measured": false
+  },
+  "source_sha256": {
+    "experiments/static-room/src/code/Rendering/StaticRoomMesh.java": "3e56685d7de5d7feffc18648d4e4e2439c7736304d24817107b7d2edddec5ee9",
+    "experiments/static-room/src/code/Rendering/StaticRoomPreview.java": "f46eebdd980fa46159a8feff62ff108aab2824a2d5d1bda5c7292bc3cd3ac48b"
+  },
+  "test_log_sha256": "15192232ed1b3bd4cbc6db07426130413969c18b0f4ca29ad939667d1d8aa0c5",
+  "rollback_manifest": "configs/render-checkpoints.json"
+}
