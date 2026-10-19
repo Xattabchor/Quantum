@@ -1,5 +1,22 @@
 # Quantum — M3G preverified preview
 
+## BSP без Z — отдельный A/B/C тест на карте
+
+[JAR](Quantum_StaticRoom_Bsp.jar) · [JAD](Quantum_StaticRoom_Bsp.jad) ·
+[Отчёт](Quantum_StaticRoom_Bsp.build-report.json) ·
+[Методика, точность и проверки](../docs/static-room-bsp.md).
+
+Запуск **A GRID+Z**; **0** — A↔B, **1** — A, **3** — **B BSP-Z**,
+**\*** — B↔**C BSP+Z**, **5** — исходная камера. Фото A/B/C в одной позе после
+прогрева и числовых окон. B/C — совершенно одинаковая геометрия/порядок, только
+bind/test/write/clear глубины меняются; река depth-write OFF, alpha ON.
+Настоящий BSP с разрезанием **на компьютере**, без пересборки вершин на телефоне.
+После разрезания4750→9591 треугольник;76 resident pages, exact ordered index cache.
+В desktop стартовом ракурсе A2090tri/3calls, B/C1063tri/104calls — **не FPS телефона**.
+Меньше геометрии не гарантирует ускорение при большем числе вызовов. У новых
+упакованных координат возможна ошибка до1.5 world units (исходные вершины точны); не pixel-identical к A.
+Основная игра/старые JAR сохранены, BSP на E65 пока не измерен.
+
 ## M3G Perspective — ON/OFF на настоящей карте
 
 [JAR](Quantum_StaticRoom_Perspective.jar) · [JAD](Quantum_StaticRoom_Perspective.jad) ·
@@ -13,7 +30,7 @@
 индексы/свет/alpha/река/far60000 прежние. OFF — **подсказка M3G**, не гарантированное
 принудительное affine: драйвер может её игнорировать. Выигрыш Software P0 здесь
 не обещается; нужны FPS/N/R и вид текстур на E65. Основная игра и старые JAR сохранены.
-Телефонный ON/OFF ещё не измерен.
+По отзыву пользователя на E65 эффект ON/OFF почти незаметен; точных чисел нет.
 
 ## Software PolyFill — полигонаж/fillrate старого CPU Quantum
 

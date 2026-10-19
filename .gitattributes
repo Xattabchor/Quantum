@@ -1,2 +1,5 @@
 # PDF manuals are binary: do not normalize line endings or run text diffs.
 *.pdf binary
+
+# Offline split BSP geometry: never normalize binary data.
+/experiments/static-room-bsp/resources/maps/kordos/kordos.bsp binary

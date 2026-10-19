@@ -1,0 +1,103 @@
+{
+  "classes": 195,
+  "code_methods": 2228,
+  "stackmap_attributes": 1225,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "bsp_data": {
+    "splits": 2815,
+    "max_depth": 68,
+    "source_degenerate_triangles": 0,
+    "nodes": 5827,
+    "resident_pages": 76,
+    "page_max_vertices": 384,
+    "ordered_spans": 5852,
+    "source_triangles": 4750,
+    "split_triangles": 9591,
+    "uploaded_vertices": 28773,
+    "max_position_component_error_world": 1.5,
+    "max_uv_component_error": 1.52587890625e-05,
+    "max_color_component_error": 0.5,
+    "position_packing": "common lattice, exact original vertices, only new cut vertices rounded; NOT pixel-identical",
+    "global_position_step_world": 3.0,
+    "global_position_origin": [
+      -45000.0,
+      -444.0,
+      -139038.0
+    ],
+    "data_bytes": 772061,
+    "data_sha256": "fc0e2e070ddf0c0b796ca2ac3fabcc99530a3ed55d6c97e675a42f3c67f91a81",
+    "input_sha256": "2d1a17daca2daaca79b18904846e3eda7e74061f8a46b1422ecb7ea82cce00b3"
+  },
+  "resource_sha256": "fc0e2e070ddf0c0b796ca2ac3fabcc99530a3ed55d6c97e675a42f3c67f91a81",
+  "exporter_sha256": "02b5c3107d8ddcff48faaa19f71b1159d712381c040cad88c8b0f8b560495cd3",
+  "converter_sha256": "452088047f910469efbd2397a6929e1a98eeb628e73f4c3821741b16f7be8f7c",
+  "base_jar": "Quantum_StaticRoom_Tex3.jar",
+  "base_commit": "b9b477f3de65e2a2ecc2e0f88ad10a09244f22fa",
+  "base_sha256": "8617f348e04f4b10c03b0049e60f2e92c41532d6939546ad96f6e44d11aa6880",
+  "jar_bytes": 1092937,
+  "jar_sha256": "01cc7e675094283dd448520fabdeace8888207f639b74f97dfe8117b56fc8c2b",
+  "all_182_baseline_classes_and_all_map_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/StaticRoomBspGrid$Masked.class",
+    "code/Rendering/StaticRoomBspGrid$NativeImage.class",
+    "code/Rendering/StaticRoomBspGrid$Part.class",
+    "code/Rendering/StaticRoomBspGrid$Pending.class",
+    "code/Rendering/StaticRoomBspGrid.class",
+    "code/Rendering/StaticRoomBspMesh$Material.class",
+    "code/Rendering/StaticRoomBspMesh$NativeImage.class",
+    "code/Rendering/StaticRoomBspMesh$Page.class",
+    "code/Rendering/StaticRoomBspMesh$Selection.class",
+    "code/Rendering/StaticRoomBspMesh.class",
+    "code/Rendering/StaticRoomBspPreview$Viewer.class",
+    "code/Rendering/StaticRoomBspPreview.class",
+    "code/Rendering/StaticRoomBspStats.class"
+  ],
+  "source_sha256": {
+    "experiments/static-room-bsp/src/code/Rendering/StaticRoomBspGrid.java": "3d4d85c4d75f645d3e6c44147d33b502002b6e267114acc87f38905cf01762b9",
+    "experiments/static-room-bsp/src/code/Rendering/StaticRoomBspMesh.java": "7bb14153516e989ef42b73cd63772710e0041efb7d5e823c6655275d1da7e169",
+    "experiments/static-room-bsp/src/code/Rendering/StaticRoomBspPreview.java": "54a8f1db5884eceacbec1cf7f4836fab60cdd2f00e6d4139024a82626fa9ccd6",
+    "experiments/static-room-bsp/src/code/Rendering/StaticRoomBspStats.java": "b9cd0afab0108341a990c15d0c4e5ba07362712de659eb52be58b0bd930a291c"
+  },
+  "builder_sha256": "03e7d0296fe29a8620df6635d387a24ffa18222c8a5566ea2e0dc82d0288d6e1",
+  "renderer_parent_source_sha256": "3a579f0cd84b3332e8de890e6fc313c1d329b1ad29123f905f806a3652442f21",
+  "diagnostic": {
+    "default": "A GRID+Z",
+    "modes": [
+      "A GRID+Z",
+      "B BSP-Z",
+      "C BSP+Z"
+    ],
+    "key0": "A/B toggle, freeze input, preserve pose",
+    "key1": "A",
+    "key3": "B",
+    "star": "B/C toggle",
+    "key5": "spawn/yaw0",
+    "geometry": "A frozen GRID; B/C same offline split BSP; bounded position/UV/color quantization, not pixel-identical",
+    "bsp": "polygon-plane cuts offline, runtime far/node/near from actual shifted eye; frustum only, NOT PVS/occlusion",
+    "batching": "only consecutive same-page ordered spans; 384-vertex resident pages; two exact ordered index selections",
+    "near": 128,
+    "far": 60000,
+    "fov": 74,
+    "viewport": "same full Canvas/Image target",
+    "depth": "A/C bind/test/opaque-write/clear ON; B all OFF; river write OFF in every mode",
+    "alpha": "original thresholds ON",
+    "river": "all4 cached frames/speed6/mode7; B/C ordered in BSP, not forced last",
+    "perspective": "ON respecting original per-material flag in all modes",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "fractional_fps": true,
+    "native_stages": "J prepare/cache, B bind, K state/clear, R render, E release; API wall time, NOT GPU timestamps",
+    "VB_is_not_driver_processing_counter": true,
+    "no_software_fallback": true,
+    "map_assets_changed": false
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "BSP painter without depth versus GRID+Z; C isolates depth on identical BSP geometry/order. Offline cuts can raise triangles/calls. No phone speed claim."
+}
