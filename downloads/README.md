@@ -1,5 +1,21 @@
 # Quantum — M3G preverified preview
 
+## Static Room Tex3 — один atlas-слот, река прежняя
+
+[JAR](Quantum_StaticRoom_Tex3.jar) · [JAD](Quantum_StaticRoom_Tex3.jad) ·
+[Отчёт](Quantum_StaticRoom_Tex3.build-report.json) ·
+[Изменения и проверки](../docs/static-room-textures.md).
+
+Три записи `map-selo1.png` сведены к одной: **5 material slots → 3**
+(лес0, карта1, река2). У реки только перенумерован слот4→2; все4 изображения,
+скорость6, режим7 и остальная строка WTEX сохранены. Геометрия/UV/свет прежние,
+`.vla` побайтно прежняя. Startup-permutation сохраняет старый native draw order.
+
+Default **B GRID**, **0 = A BVH / B GRID**; alpha test всегда ON, near128/far60000.
+1728 original-ZIP / edited-packet comparisons PASS, включая736 river draw states;
+11 resource tests / preverify PASS. PNG и раньше был один, native packets
+уже объединялись: это cleanup лишних слотов, не обещание FPS. Старые JAR сохранены.
+
 ## Static Room BVH — другое отсечение, alpha test включён
 
 [JAR](Quantum_StaticRoom_Bvh.jar) · [JAD](Quantum_StaticRoom_Bvh.jad) ·
@@ -14,8 +30,9 @@ back-face CULL_BACK/CW, текстуры, свет, геометрия и кон
 
 В контрольной позе desktop-теста T2090→493; 864 независимые clipping-проверки,
 208 tree cases, original GRID equivalence, native OOM safety и preverify PASS.
-Это не FPS: BVH занимает heap и делает больше CPU-проверок. Нужен замер A/B
-на телефоне. HUD **T** — отправленные треугольники, **V** — проверки bounding box.
+Это не FPS: BVH занимает heap и делает больше CPU-проверок. Пользователь
+сообщил A N98/I126/T1218/V363, B N97/I122/T2864/V33, FPS8 у обоих —
+прирост не подтверждён; в следующем Tex3 по умолчанию оставлена сетка. HUD **T** — отправленные треугольники, **V** — проверки bounding box.
 
 ## Static Room Alpha — временно отключить alpha test
 

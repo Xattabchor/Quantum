@@ -1,0 +1,111 @@
+{
+  "classes": 182,
+  "code_methods": 2154,
+  "stackmap_attributes": 1185,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Bvh.jar",
+  "base_commit": "b8ef81fcda64ca155ee72dc4edb6bcf932f4e4b9",
+  "base_sha256": "1eecd62d8a01917eff0d7b5354f15f44fd6199351ef8ce5d5937c2a1ba4f93aa",
+  "jar_bytes": 790566,
+  "jar_sha256": "8617f348e04f4b10c03b0049e60f2e92c41532d6939546ad96f6e44d11aa6880",
+  "all_180_baseline_class_bytes_unchanged": true,
+  "modified_assets": [
+    "level1.txt",
+    "maps/kordos/kordos.3d"
+  ],
+  "added_asset": "maps/kordos/kordos.draworder",
+  "material_remap": {
+    "remap": {
+      "0": 0,
+      "1": 1,
+      "2": 1,
+      "3": 1,
+      "4": 2
+    },
+    "vertices": 2729,
+    "faces": 2641,
+    "triangles": 4750,
+    "corners": 10032,
+    "old_material_faces": {
+      "2": 169,
+      "1": 2398,
+      "3": 17,
+      "0": 33,
+      "4": 24
+    },
+    "new_material_faces": {
+      "1": 2584,
+      "0": 33,
+      "2": 24
+    },
+    "material_marker_offsets": [
+      16384,
+      17216,
+      22728,
+      22782,
+      24386,
+      24918,
+      55946,
+      56334
+    ],
+    "face_order_unchanged": true,
+    "xyz_uv_topology_bytes_unchanged": true,
+    "lightmap_bytes_unchanged": true,
+    "native_submission_order_restored_after_lightmap": true
+  },
+  "all_texture_pixels_and_lightmap_bytes_unchanged": true,
+  "artifact_resource_sha256": {
+    "level1.txt": "311d3c93aa55a010f7587e505b8bca37db333efc8a3353e6492b3cb881359588",
+    "lightmap/kordod.vla": "c855bc70cb796fb7f0078f167459fefa065b3cab3e8b17e8fb354bcb7615ec5a",
+    "maps/kordos/forestOrigy.png": "9e540b2d0af59f19bdcd1e78834213be91c4d27927ccbb9d686594e00326760a",
+    "maps/kordos/kordos.3d": "9e954009bb869ac1ef76006765a1d44b1bcc39af43fcfbd71fe9478e8aff6c92",
+    "maps/kordos/map-selo1.png": "8785d527b769c5d880e64f7343dd36da0e14763672f5fb27019be545d33496d2",
+    "maps/kordos/river0.bmp": "5b56d101a28f64752a6aefab4acd265d3c09de8abd7d945004aa69d5aa87a4ee",
+    "maps/kordos/river1.bmp": "bae2c765b599c866bef6e5d19ae4ba7af10609eae64db05acebf08a4b2fab44f",
+    "maps/kordos/river2.bmp": "2b7e27e686fe92e8be5b92c957b1a053ff52fe7d49ec2ddff5de69bd8f299d5c",
+    "maps/kordos/river3.bmp": "b8317bb31b125190089220e77ab1b0b68e4dccdddc13871c38b8ec5dd16c62e7",
+    "setting.txt": "b697d7df2dce2c758fb9ba682ba7c59e1f07bcbf027be79e2673b93ffdcd8a97",
+    "maps/kordos/kordos.draworder": "895391694628f035aef5051a47c48874cca2845b313cfdfaca5708fd0de7b892",
+    "META-INF/MANIFEST.MF": "8cb6fe34bc3938429cb169bf5c233ae9620571dae87cf06997bc8c8c0093815d"
+  },
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/StaticRoomTexturesPreview$Viewer.class",
+    "code/Rendering/StaticRoomTexturesPreview.class"
+  ],
+  "transform_source_sha256": {
+    "scripts/build_static_room_textures.py": "274f66baaed6e4963f43f63cc52bc26db06d445d9a4331eabac7024ca24f8d85",
+    "scripts/merge_room_texture_slots.py": "d635dea59f28cded5771cfa7b362ce1acfb89d1b5a9b8441a1cebcc1eea693c9"
+  },
+  "source_sha256": {
+    "experiments/static-room-textures/src/code/Rendering/StaticRoomTexturesPreview.java": "7222bacdb78f4651d29ed3bb50180d2f11160091bfd512c4951c3f0137536f63"
+  },
+  "diagnostic": {
+    "default_mode": "B GRID (based on user BVH/grid comparison)",
+    "key0": "A BVH / B GRID",
+    "old_slots": 5,
+    "new_slots": 3,
+    "forest_slot": 0,
+    "atlas_slot": 1,
+    "river_old_slot": 4,
+    "river_new_slot": 2,
+    "river_WTEX_line_images_speed_mode_unchanged": true,
+    "fixed_near": 128,
+    "fixed_far": 60000,
+    "alpha_discard_original_thresholds_always": true,
+    "native_render_calls_maximum": 3,
+    "uploaded_vertices": 10032,
+    "full_source_triangles": 4750,
+    "native_submission_order_preserved_by_startup_delta_permutation": true,
+    "no_frame_geometry_or_texture_uploads": true,
+    "note": "PNG was already stored once and native atlas batches already merged; no drawcall/FPS reduction promised."
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Authorized 3 atlas references -> 1. Three total material slots, river unchanged except slot renumbering. Separate rollback-safe preview."
+}
