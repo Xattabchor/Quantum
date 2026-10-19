@@ -1,5 +1,21 @@
 # Quantum — M3G preverified preview
 
+## Static Room Packets — A/B размера vertex buffer на той же карте
+
+[JAR](Quantum_StaticRoom_Packets.jar) · [JAD](Quantum_StaticRoom_Packets.jad) ·
+[Отчёт](Quantum_StaticRoom_Packets.build-report.json) ·
+[Как сравнить и что означают счётчики](../docs/static-room-packets.md).
+
+**A LARGE по умолчанию / 0 → B COMPACT512 / 0 → A**, **5 = исходная точка**.
+Одинаковые GRID visibility, T/strip order/XYZ/UV/свет/alpha/материалы/река,
+near128/far60000/FOV74. B — точные срезы прежних buffers, ≤512 вершин,
+пространственно-локальные непрерывные группы без перестановки граней.
+HUD: FPS, N/C/I, **T / D / VB**, S/RES. VB — ёмкость переданных буферов,
+**не аппаратный счётчик обработки вершин**. Меньше VB, но больше calls —
+ускорение не обещается. Замерять неподвижно A/B/A после8секунд ожидания.
+Все182 старых класса и assets Tex3 неизменны, добавлены9 diagnostic classes.
+Это отдельный тест, не замена основной сборки; Tex3/PolyFill сохранены.
+
 ## PolyFill — отдельный тест полигонажа и fillrate
 
 [JAR](Quantum_PolyFill_Test.jar) · [JAD](Quantum_PolyFill_Test.jad) ·
@@ -11,7 +27,7 @@
 при постоянной площади; FILL: 1…32 fullscreen-слоя, depth test/write OFF.
 Один native render call, opaque checker64², alpha threshold0.5 всегда ON.
 FPS, Ktri/s и nominal Mpix/s относятся к целому тестовому пути, **не к паспортной
-производительности GPU**. N/C/I отдельно; измерений на телефоне пока нет.
+производительности GPU**. N/C/I отдельно; первый телефонный прогон записан в описании.
 Все182 класса Tex3 и все его assets побайтно сохранены; карта и река не менялись.
 Отдельное имя MIDlet, исходный Tex3 и остальные rollback JAR остаются на месте.
 

@@ -1,0 +1,66 @@
+{
+  "classes": 191,
+  "code_methods": 2222,
+  "stackmap_attributes": 1224,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Tex3.jar",
+  "base_commit": "b9b477f3de65e2a2ecc2e0f88ad10a09244f22fa",
+  "base_sha256": "8617f348e04f4b10c03b0049e60f2e92c41532d6939546ad96f6e44d11aa6880",
+  "jar_bytes": 814513,
+  "jar_sha256": "97fddf15ae35e794110111f251b33191a4277525a57f002f8f6f2558f1bf3bf2",
+  "all_182_baseline_classes_and_all_map_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/StaticRoomPacketsMesh$Masked.class",
+    "code/Rendering/StaticRoomPacketsMesh$NativeImage.class",
+    "code/Rendering/StaticRoomPacketsMesh$Packet.class",
+    "code/Rendering/StaticRoomPacketsMesh$Part.class",
+    "code/Rendering/StaticRoomPacketsMesh$Pending.class",
+    "code/Rendering/StaticRoomPacketsMesh.class",
+    "code/Rendering/StaticRoomPacketsPreview$Viewer.class",
+    "code/Rendering/StaticRoomPacketsPreview.class",
+    "code/Rendering/StaticRoomPacketsStats.class"
+  ],
+  "source_sha256": {
+    "experiments/static-room-packets/src/code/Rendering/StaticRoomPacketsMesh.java": "5f2e46fc7d149cbacdc6dee62de2dfe86cde7d3b99caf6a66c77bf6f7e9b28e2",
+    "experiments/static-room-packets/src/code/Rendering/StaticRoomPacketsPreview.java": "71ec05d17287eee5b551dd8be89bb560200bb73172221901e172640f93260721",
+    "experiments/static-room-packets/src/code/Rendering/StaticRoomPacketsStats.java": "117d4547138b6e7ac76acc7e14af4ce3d00d7d8774b7709fabe14c09ec8d3b62"
+  },
+  "builder_sha256": "fd5d158d9b41eab0c8aeeb4ac87a842541620d30062e050584ee334ada4e9683",
+  "renderer_parent_source_sha256": "05c7ffdcd762eaefe10427d859a428dddc2ec443911f4707f60ac04c2b696c06",
+  "diagnostic": {
+    "A": "original full per-material buffers and original selected index stream",
+    "B": "contiguous spatial runs; <=512 corners and <=2x2 parent-grid centroid cells",
+    "default": "A LARGE",
+    "key0": "A/B only; freeze motion, reset warmup/timing; no pose change",
+    "key5": "original spawn/yaw0",
+    "selection": "same GRID selector and exactly same ordered face/strip stream in both modes",
+    "packet_faces_never_split_or_reordered": true,
+    "buffer_coordinates_uv_rgba_scale_bias": "exact parent slices, no requantization",
+    "near": 128,
+    "far": 60000,
+    "fov": 74,
+    "viewport": "full Canvas; unchanged Image target and projection",
+    "alpha": "original per-image threshold, cutout ON; no disable control",
+    "river": "same four cached original frames/speed6/mode7/depth-write false; original order",
+    "geometry_texture_uploads": "cold only; both layouts resident, no geometry/index/texture allocation on A/B switch at warmed fixed masks",
+    "visibility_masks": "two-entry cache per parent, lazy compact index cache; no whole-room OOM substitution",
+    "metrics": "fractional FPS; N/C/I ms; T selected triangles; D calls; VB sum submitted buffer capacities; S selected corners; RES both resident layouts",
+    "VB_is_not_measured_driver_vertex_processing": true,
+    "draw_calls_may_increase": true,
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "first_completed_frame_anchor": true,
+    "failure": "optional compact build OOM disables B but preserves A; render failure releases target; explicit A recovery, never silently labelled B",
+    "no_software_fallback": true,
+    "map_assets_changed": false
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Test vertex-buffer-capacity hypothesis on the same city geometry. More compact buffers trade extra calls for smaller submitted capacities; no FPS gain or full-VB driver processing claimed."
+}
