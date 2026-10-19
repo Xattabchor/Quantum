@@ -1,5 +1,22 @@
 # Quantum — M3G preverified preview
 
+## Static Room Layouts — одинаковые calls, exact shared vertices, разбивка N
+
+[JAR](Quantum_StaticRoom_Layouts.jar) · [JAD](Quantum_StaticRoom_Layouts.jad) ·
+[Отчёт](Quantum_StaticRoom_Layouts.build-report.json) ·
+[Управление и методика](../docs/static-room-layouts.md).
+
+**1 = A LARGE**, **3 = D SHARED**, **0 = A→B→C→D**, **5 = исходная точка**.
+Сначала сравнить неподвижно **A/D/A**: ровно прежние calls, D объединяет только
+одинаковые XYZ/UV/RGBA (8790 вместо10032 резидентных вершин, не обещание FPS).
+B LARGE/SPLIT и C COMPACT512 имеют одинаковые calls/strip batches — контроль
+стоимости организации буферов без прежнего смешения с ростом calls.
+**B специально тяжёлый**; ждать числового FPS, не судить по warming.
+J/B/K/R/E разделяют N на prepare/bind/state+clear/render/release; не GPU timestamps.
+Карта, атрибуты, порядок граней, alpha, река, проекция и Image target прежние.
+Все182 класса/все assets Tex3 сохранены; отдельный MIDlet, старые JAR не заменены.
+На телефоне эта сборка ещё не измерена.
+
 ## Static Room Packets — A/B размера vertex buffer на той же карте
 
 [JAR](Quantum_StaticRoom_Packets.jar) · [JAD](Quantum_StaticRoom_Packets.jad) ·

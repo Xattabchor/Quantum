@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum Static Room Layouts
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: Layouts A-D,,code.Rendering.StaticRoomLayoutsPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_StaticRoom_Layouts.jar
+MIDlet-Jar-Size: 817279

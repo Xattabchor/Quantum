@@ -10,6 +10,10 @@
 [JAD](../downloads/Quantum_StaticRoom_Packets.jad) ·
 [Build report / SHA-256](../downloads/Quantum_StaticRoom_Packets.build-report.json).
 
+**Продолжение диагностики:** [Layouts A–D](static-room-layouts.md) добавляет
+matched-call контроль B/C, exact shared vertices A/D и разбивку N. Старый
+Packets B COMPACT512 соответствует Layouts C; этот JAR оставлен неизменным.
+
 ## Как сравнить на телефоне
 
 1. Установить отдельный `Quantum_StaticRoom_Packets.jar`. Имя MIDlet другое,

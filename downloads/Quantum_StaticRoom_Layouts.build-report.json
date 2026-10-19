@@ -1,0 +1,72 @@
+{
+  "classes": 191,
+  "code_methods": 2231,
+  "stackmap_attributes": 1230,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Tex3.jar",
+  "base_commit": "b9b477f3de65e2a2ecc2e0f88ad10a09244f22fa",
+  "base_sha256": "8617f348e04f4b10c03b0049e60f2e92c41532d6939546ad96f6e44d11aa6880",
+  "jar_bytes": 817279,
+  "jar_sha256": "24ab6cba7fef3a85a4d19b06c4da2d76883062622fa6b0343968fc5379a2adf2",
+  "all_182_baseline_classes_and_all_map_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/StaticRoomLayoutsMesh$Masked.class",
+    "code/Rendering/StaticRoomLayoutsMesh$NativeImage.class",
+    "code/Rendering/StaticRoomLayoutsMesh$Packet.class",
+    "code/Rendering/StaticRoomLayoutsMesh$Part.class",
+    "code/Rendering/StaticRoomLayoutsMesh$Pending.class",
+    "code/Rendering/StaticRoomLayoutsMesh.class",
+    "code/Rendering/StaticRoomLayoutsPreview$Viewer.class",
+    "code/Rendering/StaticRoomLayoutsPreview.class",
+    "code/Rendering/StaticRoomLayoutsStats.class"
+  ],
+  "source_sha256": {
+    "experiments/static-room-layouts/src/code/Rendering/StaticRoomLayoutsMesh.java": "1e9b49e1cf2fcf5a246465bbc7d6a3d868f4660e73f990e8e5005f84c0efec19",
+    "experiments/static-room-layouts/src/code/Rendering/StaticRoomLayoutsPreview.java": "d55c60113e96809352f042a708347e30395d2e1b93235cb3ba3467c734f2adce",
+    "experiments/static-room-layouts/src/code/Rendering/StaticRoomLayoutsStats.java": "b59e881955c6b2f4e1df965941384d4a04ddc153b6d76d37164d22e5e63c8e7e"
+  },
+  "builder_sha256": "febb257f3b1e6c2a9c144335d6f63e018d9d1a8cc6c8170c7ecc66a4a3b5125c",
+  "renderer_parent_source_sha256": "05c7ffdcd762eaefe10427d859a428dddc2ec443911f4707f60ac04c2b696c06",
+  "packet_parent_source_sha256": "5f2e46fc7d149cbacdc6dee62de2dfe86cde7d3b99caf6a66c77bf6f7e9b28e2",
+  "diagnostic": {
+    "A": "original large buffers, original calls",
+    "B": "large parent buffers, split calls: matched control for C",
+    "C": "compact512 buffers, exactly same calls and strip batches as B",
+    "D": "shared exact XYZ/UV/RGBA tuples per parent; same calls and ordered strips as A",
+    "default": "A LARGE",
+    "key0": "cycle available A/B/C/D, freeze input without changing pose",
+    "key1": "explicit original A recovery",
+    "key3": "direct shared D",
+    "key5": "original spawn/yaw0",
+    "selection": "same GRID face selection, ordered strips, alpha/depth/materials in all four",
+    "vertex_identity": "packed signed-short XYZ, short UV, byte RGBA; same scale/bias; no epsilon, no cross-material merging",
+    "cold_only": true,
+    "mask_cache_entries": 2,
+    "masks": "lazy paired B/C and D indices; no fixed-mask rebuild after warmup",
+    "near": 128,
+    "far": 60000,
+    "fov": 74,
+    "viewport": "same full Canvas/Image target",
+    "alpha": "original cutout thresholds ON, no disable key",
+    "river": "all4 original cached frames/speed6/mode7/order unchanged",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "fractional_fps": true,
+    "native_stages": "J prepare, B bind, K camera/state/clear, R render loop, E release; coarse wall time, NOT GPU timestamps",
+    "counters": "T triangles, DC calls, VB submitted capacity sum, S selected corners, RES resident vertices, AV available modes, N/C/I API wall time",
+    "VB_is_not_driver_processing_counter": true,
+    "no_software_fallback": true,
+    "failure": "optional layouts disabled on OOM; explicit A recovery, never silently relabelled; no visibility substitution",
+    "matched_calls_does_not_prove_internal_index_representation_or_cache_behavior": true,
+    "map_assets_changed": false
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Controlled organization tests, not an FPS claim. Compare B/C at matched calls, A/D at matched calls; hold camera/geometry/materials fixed."
+}
