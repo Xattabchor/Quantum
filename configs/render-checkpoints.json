@@ -145,7 +145,9 @@
       "I_ms": 140,
       "T": 3421
     },
-    "interpretation": "No discernible target-path benefit at timer resolution; nativeRoom.render includes Java prep, so split profiling is still needed."
+    "interpretation": "No discernible target-path benefit at timer resolution; nativeRoom.render includes Java prep, so split profiling is still needed.",
+    "device_model": "Nokia E65",
+    "device_source": "User follow-up after reporting A/B timings"
   },
   "native_room_present": {
     "name": "Quantum_StaticRoom_Present",
@@ -167,5 +169,14 @@
         "sha256": "c1fca2a63ace252da4b2dfaf1c6fa128a4d4e934c22ddc1ac4779252db558556"
       }
     ]
+  },
+  "test_device": {
+    "model": "Nokia E65",
+    "processor": "TI OMAP1710",
+    "cache_as_reported": "32/16",
+    "source": "User follow-up identifying the device for the current tests; not independently inspected",
+    "clock_mhz": null,
+    "m3g_implementation": null,
+    "hardware_3d_acceleration_verified": false
   }
 }
