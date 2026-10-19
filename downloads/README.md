@@ -1,5 +1,20 @@
 # Quantum — M3G preverified preview
 
+## Portal Map Far — 40000 / 30000 / 20000
+
+[JAR](Quantum_PortalMap_Far.jar) · [JAD](Quantum_PortalMap_Far.jad) ·
+[Отчёт](Quantum_PortalMap_Far.build-report.json) ·
+[Методика](../docs/portal-map-far.md).
+
+Отдельный far-only тест новой карты, **порталы всегда ON**, без BVH/BSP.
+Запуск40000, **0** цикл40k→30k→20k→40k; **1**40k, **3**30k, **\***20k.
+Переключение сохраняет позу и холодные buffers, останавливает движение и заново
+прогревает статистику. Всё остальное как в PORT ON/OFF; родитель не изменён.
+**T/DC/VB/Rooms при одной камере не уменьшатся**: selector прежний, меняется
+только native clipping far. Возможный FPS-выигрыш проверяем на телефоне, не обещаем.
+Фото40→30→20→40 без движения, примерно8сек на режим, FPS/N/R и вид обрезания.
+Geometry-only, без неба/погоды/gameplay во всех3 режимах; исходные assets неизменны.
+
 ## Новая карта с порталами — ON/OFF, без BSP
 
 [JAR](Quantum_PortalMap_Test.jar) · [JAD](Quantum_PortalMap_Test.jad) ·

@@ -1,0 +1,232 @@
+{
+  "classes": 192,
+  "code_methods": 2234,
+  "stackmap_attributes": 1234,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "user_map": {
+    "archive_sha256": "16beaa29fe143cc4010b66e21d90c729a0f83c5f2f3f282b04c17c96577b1ddf",
+    "archive_bytes": 272211,
+    "rooms": 15,
+    "portals": 18,
+    "links": [
+      [
+        4,
+        13
+      ],
+      [
+        5,
+        13
+      ],
+      [
+        2,
+        8
+      ],
+      [
+        6,
+        10
+      ],
+      [
+        10,
+        12
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        12,
+        13
+      ],
+      [
+        1,
+        10
+      ],
+      [
+        6,
+        7
+      ],
+      [
+        4,
+        6
+      ],
+      [
+        6,
+        9
+      ],
+      [
+        6,
+        11
+      ],
+      [
+        5,
+        7
+      ],
+      [
+        8,
+        11
+      ],
+      [
+        3,
+        14
+      ],
+      [
+        8,
+        9
+      ]
+    ],
+    "triangles_by_room": [
+      48,
+      47,
+      110,
+      720,
+      29,
+      442,
+      1384,
+      12,
+      68,
+      40,
+      93,
+      565,
+      56,
+      113,
+      34
+    ],
+    "corners_by_room": [
+      98,
+      97,
+      220,
+      1506,
+      61,
+      938,
+      2990,
+      24,
+      140,
+      84,
+      189,
+      1185,
+      114,
+      239,
+      70
+    ],
+    "source_room_vertices": [
+      36,
+      33,
+      75,
+      395,
+      24,
+      334,
+      789,
+      12,
+      48,
+      30,
+      65,
+      326,
+      40,
+      76,
+      34
+    ],
+    "world_triangles": 3761,
+    "portal_mesh_triangles": 36,
+    "lightmap_rgb_faces": 2085,
+    "lightmap_gray_faces": 30,
+    "lightmap_bytes": 25956,
+    "image_dimensions": {
+      "portal-map/maps/kordon.png": [
+        256,
+        256
+      ],
+      "portal-map/skies/n.png": [
+        512,
+        512
+      ]
+    },
+    "config": {
+      "DMODE": 13,
+      "DIST": 40000,
+      "WORLD_SCALE": 6,
+      "START": [
+        -76338,
+        -2536,
+        -102034
+      ]
+    },
+    "assets_sha256": {
+      "portal-map/level1.txt": "1d5b848d6406f95f5d3f79f32d061dae7d043b2b599ba8c1574dd7cc283c3cae",
+      "portal-map/lightmap/kordon.vla": "61468d9a8958a601cee41bc375225c964571f27cafea931a865288f4a3be70e0",
+      "portal-map/maps/kordon.3d": "0b9aa25fcdb5a74b4c21dba39164a8209d9ceb95bb00caced37ba477c72e1ae9",
+      "portal-map/maps/kordon.png": "ab0d25c3bd635784a6bb996e1f66cad820e51cd900702d163033a22bfa836248",
+      "portal-map/skies/n.png": "1223f6bf427ae1be7909b22f1800257e4570643f37bdf42533ebb1f46f0b2fda",
+      "portal-map/skies/skybox5.3d": "cf2a66609a1f5d19e742ac9d4faac8680caf4dfce04a11bb010ac2cba5b7d973"
+    }
+  },
+  "source_archive": "fixtures/portal-map/lightmap.zip",
+  "auditor_sha256": "6aadf57cfdbce9596c5b7c050747beda9ea2d0033696636ba7478a8e2d21ccde",
+  "base_jar": "Quantum_PortalMap_Test.jar",
+  "base_commit": "6fe1257924b52fa252461c4ef36bb78cb57edc2f",
+  "base_sha256": "116abb3817186dec6c753e4031f4a8d66f03690f6c73db939989592062064be4",
+  "jar_bytes": 1093010,
+  "jar_sha256": "9377e88652c47102a81046e80c318e37a3ee187b337e2afabaf2181d2f0485fe",
+  "all_190_parent_classes_and_all_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/PortalMapFarPreview$Viewer.class",
+    "code/Rendering/PortalMapFarPreview.class"
+  ],
+  "source_sha256": {
+    "experiments/portal-map-far/src/code/Rendering/PortalMapFarPreview.java": "d240cee4b71dcc83e61581adcf040e369886ff203c2d253baa2429beeaa3f7c4"
+  },
+  "builder_sha256": "cc7b69a5918c52fea8b64067048e4398d1cad9ef11a5ef05558834d8872d6e76",
+  "renderer_parent_source_sha256": "e99536da4e55d81094a592d44b7c523f03263b8685c172a6ef401746fb06bd79",
+  "diagnostic": {
+    "default": 40000,
+    "far_presets": [
+      40000,
+      30000,
+      20000
+    ],
+    "key0": "cycle40k/30k/20k, freeze movement and preserve pose",
+    "key1": 40000,
+    "key3": 30000,
+    "star": 20000,
+    "key5": "spawn/yaw0",
+    "portals": "always ON; exact parent selector unchanged, not clipped by far",
+    "changed_state": "native projection far only; no CPU geometry/distance culling added",
+    "counters": "T/DC/VB/Rooms unchanged at fixed camera; submitted, not post-clipping triangles",
+    "near": 128,
+    "fov": 74,
+    "viewport": "same full Canvas/Image target",
+    "DMODE": 13,
+    "world_scale": 6,
+    "cold_only": true,
+    "hot_geometry_uploads": false,
+    "hot_index_builds": false,
+    "alpha": "ON unchanged",
+    "depth": "ON unchanged",
+    "perspective": "ON unchanged",
+    "effects": "same geometry-only viewer; no sky/weather/gameplay in all three presets",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "fractional_fps": true,
+    "native_stages": "J prepare, B bind, K camera/state/clear, R render, E release; API wall time, NOT GPU timestamps",
+    "no_software_fallback": true,
+    "original_map_assets_changed": false,
+    "BVH": false,
+    "BSP": false
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Far plane only 40000/30000/20000 with portals ON; expect identical submitted geometry. Reduced visible distance is intentional. No handset speed claim."
+}

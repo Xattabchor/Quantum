@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum Portal Map Far
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: Far 40k-30k-20k,,code.Rendering.PortalMapFarPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_PortalMap_Far.jar
+MIDlet-Jar-Size: 1093010
