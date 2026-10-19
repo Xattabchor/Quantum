@@ -2,7 +2,7 @@
 """Isolated M3G contract doubles. No raster/FPS/device equivalence claims.
 The production suite/stubs are not modified to accommodate the new depth path.
 """
-import ast,os,subprocess,tempfile,zipfile
+import argparse,ast,os,subprocess,tempfile,zipfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
 module=ast.parse((ROOT/'tests/m3g/run.py').read_text())
@@ -26,8 +26,26 @@ stubs['javax/microedition/lcdui/Displayable.java']='package javax.microedition.l
 stubs['javax/microedition/lcdui/Canvas.java']='package javax.microedition.lcdui; public abstract class Canvas extends Displayable {public static final int KEY_NUM0=48,KEY_NUM2=50,KEY_NUM4=52,KEY_NUM6=54,KEY_NUM7=55,KEY_NUM8=56,KEY_NUM9=57,KEY_POUND=35; public int getWidth(){return 240;}public int getHeight(){return 340;}public void setFullScreenMode(boolean b){}public void repaint(){}public void serviceRepaints(){}protected abstract void paint(Graphics g);}'
 stubs['javax/microedition/lcdui/Display.java']='package javax.microedition.lcdui;import javax.microedition.midlet.MIDlet;public class Display{public static Display getDisplay(MIDlet m){return new Display();}public void setCurrent(Displayable d){}}'
 stubs['javax/microedition/midlet/MIDlet.java']='package javax.microedition.midlet;public abstract class MIDlet{protected abstract void startApp();protected abstract void pauseApp();protected abstract void destroyApp(boolean u);public void notifyDestroyed(){}}'
+parser=argparse.ArgumentParser()
+parser.add_argument('--jar',type=Path,default=ROOT/'downloads/Quantum_Sym9_DrawCalls.jar')
+parser.add_argument('--packaged',action='store_true',help='Test the actual packaged StaticRoom classes, not a recompiled experiment')
+args=parser.parse_args()
+stubs['javax/microedition/lcdui/Image.java']=stubs['javax/microedition/lcdui/Image.java'].replace('public class Image {', '''public class Image {
+ public static java.util.Set<String> resourceReads=new java.util.HashSet<String>();
+ public static java.util.Set<String> missingResources=new java.util.HashSet<String>();
+ public static Image createImage(String path)throws java.io.IOException {
+  resourceReads.add(path);
+  java.io.InputStream stream=Image.class.getResourceAsStream(path);
+  if(stream==null){missingResources.add(path);throw new java.io.IOException("missing image "+path);}
+  java.awt.image.BufferedImage decoded;
+  try{decoded=javax.imageio.ImageIO.read(stream);}finally{stream.close();}
+  if(decoded==null){missingResources.add(path);throw new java.io.IOException("invalid image "+path);}
+  Image result=createImage(decoded.getWidth(),decoded.getHeight());
+  result.pixels=decoded.getRGB(0,0,result.w,result.h,null,0,result.w);return result;
+ }
+''')
 java=os.environ.get('JAVA','java');ecj=os.environ.get('ECJ_JAR')
-base=ROOT/'downloads/Quantum_Sym9_DrawCalls.jar';api=ROOT/'build/cldc/api.jar'
+base=args.jar.resolve();api=ROOT/'build/cldc/api.jar'
 assert api.exists(),'build API first (scripts/build_cldc.py)'
 with tempfile.TemporaryDirectory(prefix='static-room-')as temp:
     temp=Path(temp);sources=[]
@@ -45,7 +63,7 @@ with tempfile.TemporaryDirectory(prefix='static-room-')as temp:
     reference=subprocess.check_output(['git','show','ac57d8946257b44b349a85509b9b7b56def852c9:experiments/static-room/src/code/Rendering/StaticRoomMesh.java'],cwd=ROOT,text=True)
     path=temp/'reference'/'StaticRoomMeshReference.java';path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(reference.replace('StaticRoomMesh','StaticRoomMeshReference'));sources.append(path)
-    sources+=list((ROOT/'experiments/static-room/src').rglob('*.java'))
+    if not args.packaged:sources+=list((ROOT/'experiments/static-room/src').rglob('*.java'))
     sources+=list((ROOT/'tests/static_room').glob('*.java'))
     classes=temp/'classes';classes.mkdir()
     compiler=[java,'-jar',ecj,'-8','-proc:none','-nowarn']if ecj else ['javac','-source','8','-target','8']

@@ -195,13 +195,25 @@ public final class StaticRoomTest {
             System.out.println("PASS checkpoint ac57d89 vs new: 96 identical ordered triangle/state/texture/camera witnesses; 5 -> 3 calls, no FPS claim");
             Field table=code.utils.Asset.class.getDeclaredField("table");table.setAccessible(true);
             Hashtable cache=(Hashtable)table.get(null);
-            for(Map.Entry<String,RawImage> entry:raws.entrySet())cache.put("RIMG_/"+entry.getKey(),entry.getValue());
-            for(int f=0;f<4;f++)cache.put("RIMG_/maps/kordos/river"+f+".bmp",frames[f]);
+            // Cold viewer must read the actual JAR resources, not fixture cache
+            // entries that could hide an omitted texture or a fallback image.
+            cache.clear();Image.resourceReads.clear();Image.missingResources.clear();
             Main.mipMapping=false;
             Class<?> viewer=Class.forName("code.Rendering.StaticRoomPreview$Viewer");
             Constructor<?> constructor=viewer.getDeclaredConstructor(StaticRoomPreview.class);constructor.setAccessible(true);
             Object canvas=constructor.newInstance(new StaticRoomPreview());
             Method load=viewer.getDeclaredMethod("load");load.setAccessible(true);load.invoke(canvas);
+            check(Image.missingResources.isEmpty(),"viewer used error-image fallback: "+Image.missingResources);
+            Set<String> expectedReads=new HashSet<String>();
+            expectedReads.add("/maps/kordos/forestOrigy.png");expectedReads.add("/maps/kordos/map-selo1.png");
+            for(int f=0;f<4;f++)expectedReads.add("/maps/kordos/river"+f+".bmp");
+            check(Image.resourceReads.equals(expectedReads),"cold viewer texture dependencies changed: "+Image.resourceReads);
+            for(String pathName:expectedReads) {
+                RawImage actual=(RawImage)cache.get("RIMG_"+pathName);
+                BufferedImage expected=ImageIO.read(jar.getInputStream(jar.getEntry(pathName.substring(1))));
+                RawImage decoded=new RawImage(expected.getRGB(0,0,expected.getWidth(),expected.getHeight(),null,0,expected.getWidth()),expected.getWidth(),expected.getHeight());
+                check(actual!=null && actual.w==decoded.w && actual.h==decoded.h && Arrays.equals(actual.img,decoded.img),"cold texture decode/fallback differs: "+pathName);
+            }
             Field nr=viewer.getDeclaredField("nativeRoom");nr.setAccessible(true);StaticRoomMesh loaded=(StaticRoomMesh)nr.get(canvas);
             check(loaded.uploadedVertices==10032 && loaded.triangles==4750 && loaded.parts()==3,"actual viewer config/WTEX/model/lightmap initialization differs");
             Field ready=viewer.getDeclaredField("ready");ready.setAccessible(true);check(ready.getBoolean(canvas),"viewer did not initialize");
@@ -213,7 +225,7 @@ public final class StaticRoomTest {
                 check(Graphics3D.target==null,"viewer target leak");
             }
             loaded.dispose();Field legacy=viewer.getDeclaredField("legacy");legacy.setAccessible(true);((DirectX7)legacy.get(canvas)).destroy();
-            System.out.println("PASS actual viewer load + A/B/A render / exact published level1 + WTEX + scale + baked file / all 5 materials; no save/game startup");
+            System.out.println("PASS cold actual viewer load + A/B/A render / all 6 images decoded from selected JAR, zero missing/error images / exact level1 + WTEX + scale + baked file / all 5 materials; no save/game startup");
         }
     }
     public static void main(String[] args)throws Exception{failures();projection();colors();mergeBoundaries();realFixture(args[0]);System.out.println("NOT a pixel-equivalence, full-game, handset GPU or FPS test");}

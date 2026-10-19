@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum Static Room Cull Lite
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: Room A-B,,code.Rendering.StaticRoomPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_StaticRoom_Cull_Lite.jar
+MIDlet-Jar-Size: 734744

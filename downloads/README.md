@@ -1,5 +1,20 @@
 # Quantum — M3G preverified preview
 
+## Static Room Cull Lite — облегчённый тест комнаты
+
+[JAR](Quantum_StaticRoom_Cull_Lite.jar) · [JAD](Quantum_StaticRoom_Cull_Lite.jad) ·
+[Состав и хеши](Quantum_StaticRoom_Cull_Lite.build-report.json) ·
+[Описание и проверки](../docs/static-room-lite.md).
+
+**735 КБ вместо 7,88 МБ (−90,68%)**. Только 10 необходимых ресурсов: целые
+конфиги, модель комнаты, baked lightmap, две текстуры и четыре кадра реки.
+Неиспользуемые музыка/звуки/NPC/небо/прочие карты исключены из Lite. Все 162
+preverified class-файла оставлены без изменений для совместимости Java ME.
+Кнопка `0`: те же **cached cull / cached whole**; прежние картинка и дальность.
+Cold load и A/B готового Lite JAR, без подложенного texture cache: PASS.
+Размер JAR не является измерением heap/FPS. На телефоне Lite ещё не проверен.
+Полный Cull и все старые сборки для отката сохранены.
+
 ## Static Room Cull — отсечение без роста draw calls
 
 [JAR](Quantum_StaticRoom_Cull.jar) · [JAD](Quantum_StaticRoom_Cull.jad) ·
