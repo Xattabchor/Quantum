@@ -29,13 +29,14 @@ stubs['javax/microedition/lcdui/Display.java']='package javax.microedition.lcdui
 stubs['javax/microedition/midlet/MIDlet.java']='package javax.microedition.midlet;public abstract class MIDlet{protected abstract void startApp();protected abstract void pauseApp();protected abstract void destroyApp(boolean u);public void notifyDestroyed(){}}'
 parser=argparse.ArgumentParser()
 parser.add_argument('--jar',type=Path,default=ROOT/'downloads/Quantum_Sym9_DrawCalls.jar')
+parser.add_argument('--bvh',action='store_true',help='Also validate BVH/grid frustum diagnostic (also runs --depth)')
 parser.add_argument('--alpha',action='store_true',help='Also validate isolated alpha-test OFF/ON (also runs --depth)')
 parser.add_argument('--depth',action='store_true',help='Also validate near128/near1 depth-precision diagnostic')
 parser.add_argument('--strips',action='store_true',help='Also validate joined vs original native strips')
 parser.add_argument('--present',action='store_true',help='Also validate direct Canvas vs image target viewer')
 parser.add_argument('--packaged',action='store_true',help='Test the actual packaged StaticRoom classes, not a recompiled experiment')
 args=parser.parse_args()
-if args.alpha:args.depth=True
+if args.alpha or args.bvh:args.depth=True
 stubs['javax/microedition/lcdui/Image.java']=stubs['javax/microedition/lcdui/Image.java'].replace('public class Image {', '''public class Image {
  public static java.util.Set<String> resourceReads=new java.util.HashSet<String>();
  public static java.util.Set<String> missingResources=new java.util.HashSet<String>();
@@ -83,6 +84,9 @@ with tempfile.TemporaryDirectory(prefix='static-room-')as temp:
     if args.alpha:
         if not args.packaged:sources+=list((ROOT/'experiments/static-room-alpha/src').rglob('*.java'))
         sources+=list((ROOT/'tests/static_room_alpha').glob('*.java'))
+    if args.bvh:
+        if not args.packaged:sources+=list((ROOT/'experiments/static-room-bvh/src').rglob('*.java'))
+        sources+=list((ROOT/'tests/static_room_bvh').glob('*.java'))
     classes=temp/'classes';classes.mkdir()
     compiler=[java,'-jar',ecj,'-8','-proc:none','-nowarn']if ecj else ['javac','-source','8','-target','8']
     subprocess.run(compiler+['-cp',os.pathsep.join(map(str,[base,api])),'-d',str(classes)]+list(map(str,sources)),check=True)
@@ -101,3 +105,7 @@ with tempfile.TemporaryDirectory(prefix='static-room-')as temp:
     if args.alpha:
         subprocess.run([java,'-Djava.awt.headless=true','-Dm3g.maxTexture=256','-cp',os.pathsep.join(map(str,[classes,base,api])),
                         'code.Rendering.StaticRoomAlphaTest'],check=True)
+
+    if args.bvh:
+        subprocess.run([java,'-Djava.awt.headless=true','-Dm3g.maxTexture=256','-cp',os.pathsep.join(map(str,[classes,base,api])),
+                        'code.Rendering.StaticRoomBvhTest'],check=True)

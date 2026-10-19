@@ -1,0 +1,59 @@
+{
+  "classes": 180,
+  "code_methods": 2137,
+  "stackmap_attributes": 1172,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Depth.jar",
+  "base_commit": "1cc9663e22a7aa3753b780570fb34f839b3208ea",
+  "base_sha256": "053252da302fa8e9c8661617e6b4985b20887c57af942fb8e10939a8f0079316",
+  "jar_bytes": 783160,
+  "jar_sha256": "1eecd62d8a01917eff0d7b5354f15f44fd6199351ef8ce5d5937c2a1ba4f93aa",
+  "all_baseline_class_bytes_and_10_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/StaticRoomBvh.class",
+    "code/Rendering/StaticRoomBvhMesh$Masked.class",
+    "code/Rendering/StaticRoomBvhMesh$NativeImage.class",
+    "code/Rendering/StaticRoomBvhMesh$Part.class",
+    "code/Rendering/StaticRoomBvhMesh$Pending.class",
+    "code/Rendering/StaticRoomBvhMesh.class",
+    "code/Rendering/StaticRoomBvhPreview$Viewer.class",
+    "code/Rendering/StaticRoomBvhPreview.class"
+  ],
+  "source_sha256": {
+    "experiments/static-room-bvh/src/code/Rendering/StaticRoomBvh.java": "11462da3919a4d93da8f7cc88e401d26f5fdaa84295abe7bce628883751699e1",
+    "experiments/static-room-bvh/src/code/Rendering/StaticRoomBvhMesh.java": "05c7ffdcd762eaefe10427d859a428dddc2ec443911f4707f60ac04c2b696c06",
+    "experiments/static-room-bvh/src/code/Rendering/StaticRoomBvhPreview.java": "3f936e83630aa717be4e2aac83f7d74e5161760906cac0dc3d4344ebc17934b9"
+  },
+  "diagnostic": {
+    "A": "BVH frustum, max8 full-face AABBs per leaf",
+    "B": "original conservative 4x4 grid",
+    "key0": "BVH / original grid; resets timing window",
+    "default_bvh": true,
+    "fixed_near": 128,
+    "fixed_far": 60000,
+    "near_far_keys_disabled": true,
+    "original_config_DIST_bytes_unchanged": true,
+    "target": "same offscreen Image",
+    "culling": true,
+    "strips": "original, not joined",
+    "native_render_calls_maximum": 3,
+    "uploaded_vertices": 10032,
+    "full_source_triangles": 4750,
+    "alpha_discard_original_thresholds_always": true,
+    "alpha_disable_code_absent": true,
+    "texture_RGBA_bytes_blending_depth_states_unchanged": true,
+    "mask_cache_entries_per_packet": 2,
+    "mask_cache_shared_between_modes": true,
+    "caution": "BVH adds CPU tests and cold heap; index-mask OOM uses whole native room.",
+    "occlusion_culling": false
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Conservative BVH vs grid frustum A/B; not guaranteed faster. Alpha discard stays ON."
+}

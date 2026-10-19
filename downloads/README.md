@@ -1,5 +1,22 @@
 # Quantum — M3G preverified preview
 
+## Static Room BVH — другое отсечение, alpha test включён
+
+[JAR](Quantum_StaticRoom_Bvh.jar) · [JAD](Quantum_StaticRoom_Bvh.jad) ·
+[Отчёт](Quantum_StaticRoom_Bvh.build-report.json) ·
+[Описание и проверки](../docs/static-room-bvh.md).
+
+**A BVH по умолчанию / 0 → B GRID / обратно A**. BVH отсекает поддеревья полных
+face-AABB, до8 граней/лист; B — прежняя сетка4×4. Alpha discard всегда исходный
+ON, кода отключения и StaticRoomAlpha-классов **в новом JAR нет**. Старый
+Alpha-тест ниже оставлен отдельно для отката. Near128/far60000 фиксированы,
+back-face CULL_BACK/CW, текстуры, свет, геометрия и конфиги прежние.
+
+В контрольной позе desktop-теста T2090→493; 864 независимые clipping-проверки,
+208 tree cases, original GRID equivalence, native OOM safety и preverify PASS.
+Это не FPS: BVH занимает heap и делает больше CPU-проверок. Нужен замер A/B
+на телефоне. HUD **T** — отправленные треугольники, **V** — проверки bounding box.
+
 ## Static Room Alpha — временно отключить alpha test
 
 [JAR](Quantum_StaticRoom_Alpha.jar) · [JAD](Quantum_StaticRoom_Alpha.jad) ·
@@ -15,7 +32,9 @@ OFF может заполнить прозрачные вырезы прямоу
 дальних поверхностей. Любая разница FPS включает и изменение overdraw, а не
 только стоимость alpha test. 864 real pose/frame comparisons, 1320 cutout draw
 states, ON exactly Depth, OFF only threshold, cold Viewer / animation / native
-failure / OOM / preverify PASS. На телефоне скорость ещё не измерена.
+failure / OOM / preverify PASS. Пользователь сообщил A OFF N82/I109,
+B ON N85/I109, FPS9/8: устойчивое ускорение не установлено; в новом BVH
+alpha test оставлен включённым.
 
 ## Quantum Model Optimizer — отдельная офлайн-утилита для ПК
 
