@@ -178,5 +178,44 @@
     "clock_mhz": null,
     "m3g_implementation": null,
     "hardware_3d_acceleration_verified": false
+  },
+  "e65_visual_issue": {
+    "source": "User report",
+    "device": "Nokia E65",
+    "location": "All green village houses",
+    "symptom": "Interior polygons including tables, chairs and floor appear through exterior walls",
+    "also_in_previous_builds": true,
+    "emulator_reported_ok": true,
+    "affected_specific_build": null,
+    "depth_precision_hypothesis_confirmed_on_device": false
+  },
+  "distance_authorization": {
+    "source": "User permits reducing far distance to60000 if it helps",
+    "diagnostic_default_far": 60000,
+    "original_configured_far": 68500,
+    "runtime_rollback_key": "5",
+    "config_resource_bytes_changed": false,
+    "handset_result_pending": true
+  },
+  "native_room_strips": {
+    "name": "Quantum_StaticRoom_Strips",
+    "commit": "9e714b04625ebac1a6d02af7fb1d505bf32d9283",
+    "files": [
+      {
+        "path": "downloads/Quantum_StaticRoom_Strips.jar",
+        "bytes": 762967,
+        "sha256": "1ab0983a1aa135119eef7e7f095f67aaaaf25a3c0a3f00588b4287eb4b0f5e75"
+      },
+      {
+        "path": "downloads/Quantum_StaticRoom_Strips.jad",
+        "bytes": 304,
+        "sha256": "9bbad5dfb9d021b2c4e6a2b6d283e4598e4c5949ca8e1afeada1db2c04fab8cb"
+      },
+      {
+        "path": "downloads/Quantum_StaticRoom_Strips.build-report.json",
+        "bytes": 2581,
+        "sha256": "fcfd30b05b65d4accdba0412579d305e36b7bfd3b4e2b39a98c63afe9d4a100e"
+      }
+    ]
   }
 }

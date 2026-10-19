@@ -1,5 +1,21 @@
 # Quantum — M3G preverified preview
 
+## Static Room Depth — E65: проверка просвечивания стен и дальности
+
+[JAR](Quantum_StaticRoom_Depth.jar) · [JAD](Quantum_StaticRoom_Depth.jad) ·
+[Отчёт](Quantum_StaticRoom_Depth.build-report.json) ·
+[Ограничения и проверки](../docs/static-room-depth.md).
+
+Отдельный лёгкий тест без объединения полос: **0 = A near128 / B near1**,
+**5 = far60000 / 68500**, по умолчанию A/60000. Сокращение far до60000 разрешено
+пользователем; исходный level1.txt оставлен побайтно прежним, меняется runtime
+параметр с явным возвратом. Проверяем точность глубины после сообщения о мебели
+через внешние стены всех зелёных домов на E65, включая предыдущие сборки.
+Near128 может подрезать очень близкую поверхность! Это диагностическая гипотеза,
+не подтверждённое исправление на телефоне. 3456 near/far/pose/frame cases,
+original near1 equivalence, independent culling, byte identity и preverify PASS.
+Все прошлые JAR сохранены.
+
 ## Static Room Strips — проверка тысяч полос внутри M3G calls
 
 [JAR](Quantum_StaticRoom_Strips.jar) · [JAD](Quantum_StaticRoom_Strips.jad) ·

@@ -1,0 +1,51 @@
+{
+  "classes": 172,
+  "code_methods": 2082,
+  "stackmap_attributes": 1138,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Present.jar",
+  "base_commit": "0ec8560d908d9ff2bce14a589f98a462bd9767ab",
+  "base_sha256": "02842aa06a86a49ff0cd5f5506acd0ce0ddd213888eb38449c99715a44b1767f",
+  "jar_bytes": 761697,
+  "jar_sha256": "053252da302fa8e9c8661617e6b4985b20887c57af942fb8e10939a8f0079316",
+  "all_baseline_class_bytes_and_10_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/StaticRoomDepthMesh$Masked.class",
+    "code/Rendering/StaticRoomDepthMesh$NativeImage.class",
+    "code/Rendering/StaticRoomDepthMesh$Part.class",
+    "code/Rendering/StaticRoomDepthMesh$Pending.class",
+    "code/Rendering/StaticRoomDepthMesh.class",
+    "code/Rendering/StaticRoomDepthPreview$Viewer.class",
+    "code/Rendering/StaticRoomDepthPreview.class"
+  ],
+  "source_sha256": {
+    "experiments/static-room-depth/src/code/Rendering/StaticRoomDepthMesh.java": "0f5e6c3251cc38d9e999a5b0eedbcca483b9a8040223a7c5147b36de8b5f7e1b",
+    "experiments/static-room-depth/src/code/Rendering/StaticRoomDepthPreview.java": "99daba2ce21753b8693f7f6dfcd4a82563f597e7eced08d08d908cceba92f931"
+  },
+  "diagnostic": {
+    "A": "near128",
+    "B": "near1",
+    "key5": "far60000 / configured far68500",
+    "default_near": 128,
+    "default_far": 60000,
+    "original_config_DIST_bytes_unchanged": true,
+    "target": "same offscreen Image in every mode",
+    "culling": true,
+    "strips": "original, not joined",
+    "native_render_calls_maximum": 3,
+    "uploaded_vertices": 10032,
+    "full_source_triangles": 4750,
+    "caution": "Larger near may clip very close surfaces; reduced far deliberately limits distant visibility.",
+    "hypothesis": "Limited depth precision can cause equal-depth leaks; E65 depth-buffer bit count unknown.",
+    "user_report": "Nokia E65, all green village houses, interior furniture/floor through outer walls; previous builds affected, emulator reported OK."
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Separate depth-precision and authorized distance diagnostic, not a confirmed handset fix or FPS gain."
+}

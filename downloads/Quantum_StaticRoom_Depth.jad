@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum Static Room Depth
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: Depth A-B,,code.Rendering.StaticRoomDepthPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_StaticRoom_Depth.jar
+MIDlet-Jar-Size: 761697

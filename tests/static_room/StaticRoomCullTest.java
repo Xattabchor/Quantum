@@ -49,7 +49,7 @@ final class StaticRoomCullTest {
         }
         return !poly.isEmpty();
     }
-    private static int verify(List<Graphics3D.Draw> whole,List<Graphics3D.Draw> reduced,float[] camera) {
+    static int verify(List<Graphics3D.Draw> whole,List<Graphics3D.Draw> reduced,float[] camera) {
         int removed=0;
         for(Graphics3D.Draw full:whole) {
             Graphics3D.Draw selected=null;
