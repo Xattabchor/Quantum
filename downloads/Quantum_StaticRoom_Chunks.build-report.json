@@ -1,0 +1,71 @@
+{
+  "classes": 191,
+  "code_methods": 2215,
+  "stackmap_attributes": 1221,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Tex3.jar",
+  "base_commit": "b9b477f3de65e2a2ecc2e0f88ad10a09244f22fa",
+  "base_sha256": "8617f348e04f4b10c03b0049e60f2e92c41532d6939546ad96f6e44d11aa6880",
+  "jar_bytes": 814161,
+  "jar_sha256": "2136df26fc7dd8a8dac5a102ffa21020d0bf8761d374a8cc313d073ca378c32b",
+  "all_182_baseline_classes_and_all_map_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/StaticRoomChunkGrid.class",
+    "code/Rendering/StaticRoomChunksMesh$Masked.class",
+    "code/Rendering/StaticRoomChunksMesh$NativeImage.class",
+    "code/Rendering/StaticRoomChunksMesh$Part.class",
+    "code/Rendering/StaticRoomChunksMesh$Pending.class",
+    "code/Rendering/StaticRoomChunksMesh.class",
+    "code/Rendering/StaticRoomChunksPreview$Viewer.class",
+    "code/Rendering/StaticRoomChunksPreview.class",
+    "code/Rendering/StaticRoomChunksStats.class"
+  ],
+  "source_sha256": {
+    "experiments/static-room-chunks/src/code/Rendering/StaticRoomChunkGrid.java": "f246421a1fa5d5d0fe0d805cce97c044943a53fc0053c36789233b0e55da47da",
+    "experiments/static-room-chunks/src/code/Rendering/StaticRoomChunksMesh.java": "1ba6b1e7e9497d4f9b5ff67fc0a97af901fccd781723fbd02aad51edac852474",
+    "experiments/static-room-chunks/src/code/Rendering/StaticRoomChunksPreview.java": "3a116967ef2b41873483dee2c019967af40dc5b2b38227d6f60b9b9e9693392a",
+    "experiments/static-room-chunks/src/code/Rendering/StaticRoomChunksStats.java": "9f0f1a6f9556cd44f58fc9aa4badc124fdb8474318a6d46d2f35e8bd159d8d43"
+  },
+  "builder_sha256": "01d6dd009dbbadbc376b9f13dcb4bb5f9f5434e5875bef2bb71fee09060e6750",
+  "renderer_parent_source_sha256": "05c7ffdcd762eaefe10427d859a428dddc2ec443911f4707f60ac04c2b696c06",
+  "diagnostic": {
+    "default": 60000,
+    "chunk_sizes": [
+      60000,
+      40000
+    ],
+    "control": "legacy fixed4x4",
+    "key0": "toggle60000/40000, freeze input, preserve pose",
+    "key1": "control GRID4x4",
+    "key3": "40000",
+    "key5": "spawn/yaw0",
+    "selection": "world-unit sparse X/Z grid; full face AABBs, room-min origin; all occupied cells frustum-tested, no3x3 radius cut",
+    "cold_only": true,
+    "mask_cache_entries": 2,
+    "masks": "shared two-entry exact face mask cache; never upload geometry on size switch",
+    "near": 128,
+    "far": 60000,
+    "fov": 74,
+    "viewport": "same full Canvas/Image target",
+    "alpha": "original thresholds ON",
+    "river": "all4 original cached frames/speed6/mode7/order unchanged",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "fractional_fps": true,
+    "native_stages": "J prepare, B bind, K camera/state/clear, R render loop, E release; coarse wall time, NOT GPU timestamps",
+    "counters": "T triangles, DC calls, VB submitted capacity, S corners, V tested cells, CUT culled cells, N/C/I",
+    "VB_is_not_driver_processing_counter": true,
+    "no_software_fallback": true,
+    "failure": "explicit error on OOM, no silent all-visible fallback",
+    "map_assets_changed": false
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "CHUNK_SIZE60000/40000 conservative culling comparison, not an FPS claim. Far60000 unchanged; same original large VBs, aggregated ordered indices per parent, no added per-cell calls."
+}

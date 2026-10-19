@@ -1,5 +1,20 @@
 # Quantum — M3G preverified preview
 
+## Static Room Chunks — CHUNK_SIZE 60000 / 40000
+
+[JAR](Quantum_StaticRoom_Chunks.jar) · [JAD](Quantum_StaticRoom_Chunks.jad) ·
+[Отчёт](Quantum_StaticRoom_Chunks.build-report.json) ·
+[Управление и методика](../docs/static-room-chunks.md).
+
+Запуск **CHUNK60000**, **0** переключает60000↔40000 в одной неподвижной позе,
+**1** — контроль прежней GRID4x4, **3** —40000, **5** — исходная камера.
+Сравнить60000→40000→60000 после полных числовых FPS-окон.
+Реальные world-unit ячейки с полными AABB граней; не старое3×3 ограничение соседями.
+Дальность60000/alpha/свет/река прежние, исходные крупные VBs и calls по родителям,
+не отдельный call на ячейку. HUD T/DC/VB/S/V/CUT и J/B/K/R/E.
+Меньший размер не гарантирует ускорение; это измерение, не готовая оптимизация.
+Tex3/Packets/Layouts и игровой renderer сохранены. Телефонных замеров ещё нет.
+
 ## Static Room Layouts — одинаковые calls, exact shared vertices, разбивка N
 
 [JAR](Quantum_StaticRoom_Layouts.jar) · [JAD](Quantum_StaticRoom_Layouts.jad) ·
