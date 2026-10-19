@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum L2D Map
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: Map L2D vs Q,,code.Rendering.L2DMapPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_L2D_Map.jar
+MIDlet-Jar-Size: 1153622

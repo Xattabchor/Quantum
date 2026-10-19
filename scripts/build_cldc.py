@@ -57,7 +57,7 @@ def restore_unicode_resources(path, resources):
         temporary.unlink(missing_ok=True)
 
 
-def audit_jar(path):
+def audit_jar(path, allowed_prefixes=("code/",)):
     """Structural audit; actual CLDC data-flow preverification is ProGuard's job."""
     counts = {"classes": 0, "code_methods": 0, "stackmap_attributes": 0}
     versions = set()
@@ -65,7 +65,7 @@ def audit_jar(path):
         for name in jar.namelist():
             if not name.endswith(".class"):
                 continue
-            if not name.startswith("code/"):
+            if not name.startswith(allowed_prefixes):
                 raise ValueError("Unexpected packaged class: " + name)
             data = jar.read(name)
             pos = 0

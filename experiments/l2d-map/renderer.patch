@@ -1,0 +1,75 @@
+--- upstream/src/com/MeshData.java
++++ benchmark/src/com/MeshData.java
+@@ -37,7 +37,7 @@
+ 		InputStream var1 = null;
+ 
+ 		try {
+-			var1 = (new Object()).getClass().getResourceAsStream(file);
++			var1 = MeshData.class.getResourceAsStream(file);
+ 			StringBuffer var5 = new StringBuffer();
+ 
+ 			int var2;
+@@ -257,7 +257,7 @@
+ 		DataInputStream dis = null;
+ 
+ 		try {
+-			is = (new Object()).getClass().getResourceAsStream(file);
++			is = MeshData.class.getResourceAsStream(file);
+ 			dis = new DataInputStream(is);
+ 			
+ 			dis.skipBytes(4);//Format
+--- upstream/src/com/Renderer.java
++++ benchmark/src/com/Renderer.java
+@@ -12,7 +12,9 @@
+ 	private final Graphics3D g3d = Graphics3D.getInstance();
+ 	private final Background bck = new Background();
+ 	
+-	private final int g3dClearFlags;
++	private int g3dClearFlags;
++    private boolean benchmark,benchmarkBound;
++    public boolean isBenchmarkBound(){return benchmarkBound;}
+ 	
+ 	public final Vector3D camPos = new Vector3D();
+ 	public final Vector3D camRot = new Vector3D();
+@@ -58,6 +60,17 @@
+ 		//System.out.println("maxLights: " + params.get("maxLights"));
+ 	}
+ 
++    /** Benchmark adapter only: match Quantum projection/view/clear, no game logic changes. */
++    public void configureBenchmark(float[] projection,float[] cameraWorld) {
++        benchmark=true;
++        System.arraycopy(projection,0,camPersTmp,0,16);
++        System.arraycopy(projection,0,camPersTmp2,0,16);
++        camTrans.set(cameraWorld);nearPlane=128;
++        invCam.set(camTrans);invCam.invert();
++        bck.setColor(0x203040);bck.setColorClearEnable(true);bck.setDepthClearEnable(true);
++        g3dClearFlags=0;
++    }
++
+ 	public final void destroy() {
+ 		//??? useless
+ 	}
+@@ -122,6 +135,7 @@
+ 			
+ 			g3d.setViewport(x1 + renderX, y1 + renderY, x2 - x1, y2 - y1);
+ 		} catch (Exception e) {
++            if(benchmark)throw new IllegalStateException("L2D viewport: "+e.toString());
+ 			System.out.println(x1 + " " + y1 + " " + x2 + " " + y2);
+ 			e.printStackTrace();
+ 		}
+@@ -167,6 +181,7 @@
+ 		this.renderX = x;
+ 		this.renderY = y;
+ 		g3d.bindTarget(g, true, g3dClearFlags);
++        benchmarkBound=true;
+ 		g3d.setViewport(x, y, width, height);
+ 		g3d.clear(bck);
+ 		
+@@ -183,6 +198,6 @@
+ 	}
+ 
+ 	public final void flush(Graphics g) {
+-		g3d.releaseTarget();
++		try{g3d.releaseTarget();}finally{benchmarkBound=false;}
+ 	}
+ }

@@ -1,0 +1,2 @@
+# Converted geometry and RGBA pixels are binary even when they contain no NUL.
+assets/** binary

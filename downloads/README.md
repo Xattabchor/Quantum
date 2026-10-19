@@ -1,5 +1,21 @@
 # Quantum — M3G preverified preview
 
+## Карта на L2D_M3G — настоящий Node renderer против Quantum FULL
+
+[JAR](Quantum_L2D_Map.jar) · [JAD](Quantum_L2D_Map.jad) ·
+[Отчёт](Quantum_L2D_Map.build-report.json) · [Методика/адаптации](../docs/l2d-map.md).
+
+Запуск **B L2D IMAGE**; **1 = A Q FULL IMAGE**, **3 = B**, **0 = A↔B**,
+**5** исходная камера. Сравнить B/A/B в одной позе после числовых окон FPS.
+**\*** — дополнительный C L2D CANVAS; при ошибке **3** возвращает Image.
+Реальные MeshData3D2 и Renderer.addMesh(Node) из rmn20/l2d_m3g35c5c26.
+Везде полные4750 треугольников/10032 вершины, те же UV/цвета/река/камера,
+near128/far60000, без Java culling. Конвертация без потерь и order sidecar.
+L2D RGB против Q RGBA(alpha255) — намеренно оставлен штатный формат.
+Это renderer viewer, **не полный порт игровой логики**; старые сборки сохранены.
+Не сравнивать абсолютный FPS с прежним GRID (там меньше подаваемых граней).
+Телефонных замеров пока нет; сходная скорость не доказывает «виновата карта».
+
 ## Static Room Chunks — CHUNK_SIZE 60000 / 40000
 
 [JAR](Quantum_StaticRoom_Chunks.jar) · [JAD](Quantum_StaticRoom_Chunks.jad) ·
