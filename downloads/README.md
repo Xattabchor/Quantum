@@ -1,5 +1,20 @@
 # Quantum — M3G preverified preview
 
+## sym9 — эксперимент Static Room A/B (не игра)
+
+[JAR](Quantum_StaticRoom_Test.jar) · [JAD](Quantum_StaticRoom_Test.jad) ·
+[Отчёт](Quantum_StaticRoom_Test.build-report.json) ·
+[Инструкция и ограничения](../docs/static-room-experiment.md).
+
+Отдельный MIDlet первой комнаты: `0` переключает resident world-space M3G geometry
+и прежний projected painter. `4/6` поворот, `2/8` движение, `7/9` стрейф, `#` выход.
+Нет NPC/неба/дождя/сохранений — это не замена полноценной игре.
+Новый путь: 5 API draws, warm vertex/index allocations и uploads = 0 в contract test.
+Настоящий depth buffer и perspective отличаются от painter/addsz; картинка и FPS
+ещё требуют проверки на телефоне. Исходный движок/ресурсы DrawCalls JAR побайтно
+сохранены; только новый тестовый entry point и 5 экспериментальных классов.
+
+
 ## Level41: исправление анимированной реки mode7, тест 48bd4d0
 
 [JAR с исходными ресурсами q92](Quantum_Level41_River7_48bd4d0.jar) ·

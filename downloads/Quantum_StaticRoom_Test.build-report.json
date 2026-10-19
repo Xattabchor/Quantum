@@ -1,0 +1,56 @@
+{
+  "classes": 159,
+  "code_methods": 2005,
+  "stackmap_attributes": 1092,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar_sha256": "e07b8d98d2e8b74d2c6f3261b09f8684a0ec5e9da578662a693e680e56c2fcd1",
+  "jar_sha256": "791c32ce697780e8b3cfbaac233f36ef2022ed92e02f80f1d904c4b7afa668e4",
+  "jar_bytes": 7879026,
+  "added_classes": [
+    "code/Rendering/StaticRoomMesh$NativeImage.class",
+    "code/Rendering/StaticRoomMesh$Part.class",
+    "code/Rendering/StaticRoomMesh.class",
+    "code/Rendering/StaticRoomPreview$Viewer.class",
+    "code/Rendering/StaticRoomPreview.class"
+  ],
+  "baseline_engine_and_resources_unchanged": true,
+  "purpose": "Separate first-room A/B experiment. Not a gameplay replacement or pixel-equivalent renderer.",
+  "handset_tested": false,
+  "fps_measured": false,
+  "verification": {
+    "contract_test": "PASS",
+    "room_faces": 2641,
+    "uploaded_vertices": 10032,
+    "triangles": 4750,
+    "api_draws_full_room": 5,
+    "poses_and_river_frames": 96,
+    "baked_lightmap_values_verified": 10032,
+    "warm_vertex_upload_calls": 0,
+    "warm_native_vertex_allocations": 0,
+    "warm_native_index_allocations": 0,
+    "warm_texture_uploads": 0,
+    "warm_transform_allocations": 0,
+    "viewer_actual_load_and_A_B_A_paint": "PASS (API doubles)",
+    "production_synthetic_pass_lines": 193,
+    "pixels_or_handset_fps_verified": false
+  },
+  "source_sha256": {
+    "experiments/static-room/src/code/Rendering/StaticRoomMesh.java": "22a30f2470f95ff68dc03a457e085dcd1fca8bf68050b60e0c04bd40a9af9296",
+    "experiments/static-room/src/code/Rendering/StaticRoomPreview.java": "f46eebdd980fa46159a8feff62ff108aab2824a2d5d1bda5c7292bc3cd3ac48b"
+  },
+  "test_log_sha256": "f6e9ab0581de39cf7aa328158c54582b747508675c72f4d7d541a7a89c2a511a",
+  "benchmark_settings": {
+    "full_canvas": true,
+    "fov": 74,
+    "pixelsQ": 2,
+    "persQ": 4,
+    "fogQ_baked_color_quality": 2,
+    "mipMapping": false,
+    "DIST": "unchanged value from level1.txt"
+  }
+}
