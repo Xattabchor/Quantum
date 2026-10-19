@@ -88,7 +88,7 @@ public final class StaticRoomPreview extends MIDlet {
             String lightmap=config.get("LIGHTMAP");if(lightmap==null)throw new IllegalArgumentException("baked LIGHTMAP required");
             loadLightmap(meshes,StaticRoomPreview.class.getResourceAsStream(lightmap));room=meshes[0];
             int[] start=GameIni.createPos(config.get("START"),',');x=start[0];y=start[1]+1503;z=start[2];
-            width=getWidth();height=getHeight();legacy=new DirectX7(width,height);legacy.requireM3G();
+            width=getWidth();height=getHeight();legacy=new DirectX7(width,height);
             surface=Image.createImage(width,height);
             nativeRoom=new StaticRoomMesh(room,Main.fogQ,true);ready=true;
         }
@@ -106,19 +106,16 @@ public final class StaticRoomPreview extends MIDlet {
                 x+=(int)((pose.m02*(long)move+pose.m00*(long)strafe)*elapsed*10/Matrix.FP);
                 z+=(int)((pose.m22*(long)move+pose.m20*(long)strafe)*elapsed*10/Matrix.FP);
                 pose.setPosition(x,y,z);materials.updateAnimation();
-                if(cached) {
-                    nativeRoom.render(surface.getGraphics(),pose,width,height,legacy.distX,legacy.distY,far);
-                    g.drawImage(surface,0,0,20);draws=nativeRoom.draws;
-                } else {
-                    legacy.setCamera(pose);legacy.clearDisplay(0x203040);legacy.beginFrameStats();
-                    legacy.transformAndProjectVertices(room,legacy.getInvCamera());legacy.addMesh(room,0,0,width,height);
-                    legacy.renderGameFrameImage(null,false,false,null,0,null);legacy.flush(g,0,0);draws=legacy.getM3GDrawCalls();
-                }
+                // A/B now isolates visibility: same native geometry, camera,
+                // target, textures and shaders. B is the verified whole-room cache.
+                nativeRoom.setCullingEnabled(cached);
+                nativeRoom.render(surface.getGraphics(),pose,width,height,legacy.distX,legacy.distY,far);
+                g.drawImage(surface,0,0,20);draws=nativeRoom.draws;
                 frames++;long now=System.currentTimeMillis();if(now-since>=1000){fps=(int)(frames*1000L/(now-since));frames=0;since=now;}
                 g.setColor(0);g.fillRect(0,0,width,44);g.setColor(0xffffff);
-                g.drawString((cached?"A cached world":"B projected painter")+" FPS "+fps+" D "+draws,0,0,20);
+                g.drawString((cached?"A cached cull":"B cached whole")+" FPS "+fps+" D "+draws,0,0,20);
                 g.drawString("0 A/B; 4/6 turn; 2/8 move; 7/9 strafe",0,15,20);
-                g.drawString("ROOM TEST ONLY: no NPC/sky/rain/save",0,30,20);
+                g.drawString("T "+nativeRoom.submittedTriangles+"/"+nativeRoom.triangles+(nativeRoom.isCullingFallbackActive()?" MEM->whole":"; ROOM TEST"),0,30,20);
             }catch(Throwable ex){error=ex.toString();running=false;repaint();}
         }
         protected void keyPressed(int key) {

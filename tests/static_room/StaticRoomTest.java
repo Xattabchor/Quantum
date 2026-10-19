@@ -191,6 +191,7 @@ public final class StaticRoomTest {
             System.out.println("PASS sym9 real first room / "+mesh.getPolygons().length+" faces / "+expectedVertices+" vertices / "+expectedTriangles+" triangles / "+cached.parts()+" draws / 96 poses+river frames / exact XYZ UV baked colors texture bytes");
             System.out.println("PASS 10032 baked values / warm native vertex sets=0 allocations=0 index allocations=0 texture uploads=0 transforms allocated=0; no CPU projection in cached module");
             cached.dispose();reference.dispose();
+            StaticRoomCullTest.run(mesh,river,frames);
             System.out.println("PASS checkpoint ac57d89 vs new: 96 identical ordered triangle/state/texture/camera witnesses; 5 -> 3 calls, no FPS claim");
             Field table=code.utils.Asset.class.getDeclaredField("table");table.setAccessible(true);
             Hashtable cache=(Hashtable)table.get(null);

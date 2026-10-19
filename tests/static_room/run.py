@@ -15,12 +15,12 @@ stubs['javax/microedition/m3g/TriangleStripArray.java']=stubs['javax/microeditio
 g=stubs['javax/microedition/m3g/Graphics3D.java']
 g=g.replace('public static Camera camera;','public static Camera camera;public static Transform cameraTransform;public static boolean boundDepth;')
 g=g.replace('public class Graphics3D {','public class Graphics3D {public void render(VertexBuffer v,IndexBuffer i,Appearance a,Transform t){render(v,(TriangleStripArray)i,a,t);}')
-g=g.replace('public int positionCapacity;','public float[] bias;public int positionCapacity;')
+g=g.replace('public int positionCapacity;','public VertexBuffer vertexBuffer;public float[] bias;public int positionCapacity;')
 g=g.replace('target=(Graphics)g;binds++;','target=(Graphics)g;boundDepth=depth;binds++;')
 g=g.replace('camera=c;}','camera=c;cameraTransform=t;}')
 g=g.replace('!b.colorClear || b.depthClear','!b.colorClear || !b.depthClear || !boundDepth')
 g=g.replace('target==null || a.comp.depth','target==null || (a.comp.depthTest && !boundDepth)')
-g=g.replace('draw.positionCapacity=v.positions.capacity;','draw.positionCapacity=v.positions.capacity;draw.bias=v.bias==null?null:v.bias.clone();')
+g=g.replace('draw.positionCapacity=v.positions.capacity;','draw.positionCapacity=v.positions.capacity;draw.bias=v.bias==null?null:v.bias.clone();draw.vertexBuffer=v;')
 stubs['javax/microedition/m3g/Graphics3D.java']=g
 stubs['javax/microedition/lcdui/Displayable.java']='package javax.microedition.lcdui; public class Displayable {}'
 stubs['javax/microedition/lcdui/Canvas.java']='package javax.microedition.lcdui; public abstract class Canvas extends Displayable {public static final int KEY_NUM0=48,KEY_NUM2=50,KEY_NUM4=52,KEY_NUM6=54,KEY_NUM7=55,KEY_NUM8=56,KEY_NUM9=57,KEY_POUND=35; public int getWidth(){return 240;}public int getHeight(){return 340;}public void setFullScreenMode(boolean b){}public void repaint(){}public void serviceRepaints(){}protected abstract void paint(Graphics g);}'

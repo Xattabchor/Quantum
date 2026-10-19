@@ -1,0 +1,80 @@
+{
+  "classes": 162,
+  "code_methods": 2018,
+  "stackmap_attributes": 1098,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar_sha256": "e07b8d98d2e8b74d2c6f3261b09f8684a0ec5e9da578662a693e680e56c2fcd1",
+  "jar_sha256": "bf3bf49f24bb672af7ed2fb5274c88bdc1ad82522a0604b87a226670537d45c6",
+  "jar_bytes": 7883827,
+  "added_classes": [
+    "code/Rendering/StaticRoomMesh$Masked.class",
+    "code/Rendering/StaticRoomMesh$NativeImage.class",
+    "code/Rendering/StaticRoomMesh$Part.class",
+    "code/Rendering/StaticRoomMesh$Pending.class",
+    "code/Rendering/StaticRoomMesh.class",
+    "code/Rendering/StaticRoomPreview$Viewer.class",
+    "code/Rendering/StaticRoomPreview.class",
+    "code/Rendering/StaticRoomVisibility.class"
+  ],
+  "baseline_engine_and_resources_unchanged": true,
+  "purpose": "Separate cached cull vs cached whole visibility A/B experiment. Not a full-game replacement or handset FPS measurement.",
+  "handset_tested": false,
+  "fps_measured": false,
+  "verification": {
+    "room_faces": 2641,
+    "uploaded_vertices_retained": 10032,
+    "total_triangles": 4750,
+    "source_materials": 5,
+    "draw_calls_maximum": 3,
+    "whole_cache_ordered_witnesses_vs_checkpoint": 96,
+    "culling_sweep": {
+      "samples": 864,
+      "totalTriangles": 4750,
+      "minSubmitted": 0,
+      "maxSubmitted": 3923,
+      "sumSubmitted": 1408340,
+      "sumDraws": 1504,
+      "maskUploads": 264
+    },
+    "start_point_pitch0": {
+      "samples": 96,
+      "minSubmitted": 1538,
+      "maxSubmitted": 3745,
+      "sumSubmitted": 224380,
+      "yaw0Submitted": 2090
+    },
+    "omitted_triangle_check": "independent double-precision homogeneous clipping; zero potentially visible triangles rejected",
+    "random_aabbs": 10000,
+    "unchanged_remaining_order_xyz_uv_rgba_texture_state": true,
+    "vertex_arrays_or_texture_uploads_during_sweep": 0,
+    "stationary_mask_native_index_allocations": 0,
+    "mask_cache_entries_per_part": 2,
+    "new_mask_may_allocate_indices": true,
+    "index_mask_oom": "cached whole native room, no CPU fallback, no repeated mask allocation",
+    "viewer_load_A_B_A": "PASS with API doubles",
+    "handset_new_culling_fps_measured": false
+  },
+  "benchmark_settings": {
+    "A": "cached cull",
+    "B": "cached whole, not projected",
+    "full_canvas": true,
+    "fov": 74,
+    "pixelsQ": 2,
+    "persQ": 4,
+    "fogQ_baked_color_quality": 2,
+    "mipMapping": false,
+    "DIST": "unchanged from original level1.txt"
+  },
+  "source_sha256": {
+    "experiments/static-room/src/code/Rendering/StaticRoomMesh.java": "b979531d8fc8e2a6ee76ef9dab4ca109a59ce07b6ef05ccd96a8d31768461007",
+    "experiments/static-room/src/code/Rendering/StaticRoomPreview.java": "c93be3af1f40ba5a4d7d0a92480bb4849c068c30df7bea039df6173a35e246bb",
+    "experiments/static-room/src/code/Rendering/StaticRoomVisibility.java": "40a8973902867b0b681e8b8c2c47c7d043946a6ee25e7ef9c43b980801c27cb5"
+  },
+  "test_log_sha256": "542f59774b0a84e2cfb863d73e72aa734f9d61028513f45cf18b3d5f89eff449",
+  "rollback_manifest": "configs/render-checkpoints.json"
+}

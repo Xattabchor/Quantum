@@ -1,5 +1,20 @@
 # Quantum — M3G preverified preview
 
+## Static Room Cull — отсечение без роста draw calls
+
+[JAR](Quantum_StaticRoom_Cull.jar) · [JAD](Quantum_StaticRoom_Cull.jad) ·
+[Отчёт](Quantum_StaticRoom_Cull.build-report.json) ·
+[Инструкция и ограничения](../docs/static-room-culling.md).
+
+**Новые A/B:** `0` переключает **cached cull / cached whole**. B теперь тоже
+кэшированный, не projected. До 3 draws, в стартовой точке в среднем 2337 вместо
+4750 отправленных треугольников по 24 углам камеры; это не замер FPS телефона.
+864 вида проверены независимым homogeneous triangle clipping — ни одного
+potentially visible треугольника не отброшено. При новой маске видимости возможна
+аллокация native indices; тёплая фиксированная маска не аллоцирует. Все прежние
+JAR сохранены; исходники v2 и его артефакты закреплены для отката.
+
+
 ## Static Room v2 — продолжаем новый режим, откат сохранён
 
 [JAR](Quantum_StaticRoom_Merged.jar) · [JAD](Quantum_StaticRoom_Merged.jad) ·

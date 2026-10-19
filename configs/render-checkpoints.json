@@ -44,5 +44,33 @@
     ]
   },
   "native_source_commit": "ac57d8946257b44b349a85509b9b7b56def852c9",
-  "policy": "Keep these artifacts immutable. Continue native work in separate versioned artifacts; do not reset the shared branch."
+  "policy": "Keep these artifacts immutable. Continue native work in separate versioned artifacts; do not reset the shared branch.",
+  "native_room_v2": {
+    "name": "Quantum_StaticRoom_Merged",
+    "commit": "98e00e7125e047cedb7ee5e9cfd17ef1da38225f",
+    "files": [
+      {
+        "path": "downloads/Quantum_StaticRoom_Merged.jar",
+        "bytes": 7880304,
+        "sha256": "b510eb90b72edb03627c658fb605eee13bc2b542d2e3d57b6b22085b7e93b9eb"
+      },
+      {
+        "path": "downloads/Quantum_StaticRoom_Merged.jad",
+        "bytes": 297,
+        "sha256": "dfe32726e28dcc5d3fecffded1ab3798b3fa5c1286a444231c6d6e8774ae5acf"
+      },
+      {
+        "path": "downloads/Quantum_StaticRoom_Merged.build-report.json",
+        "bytes": 1926,
+        "sha256": "fcbffdf19e8e45b171aa2b226bd47c1f3c9cbebc93261fe663de5c936bc2bffd"
+      }
+    ]
+  },
+  "user_observation": {
+    "cached_fps": 7,
+    "projected_fps": 5,
+    "image_correct": true,
+    "device_model": null,
+    "source": "user report, not an independently controlled handset measurement"
+  }
 }

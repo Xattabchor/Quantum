@@ -9,6 +9,16 @@ projected painter в `src/` и его опубликованный JAR пока 
 Точная игровая сборка до эксперимента:
 https://github.com/Xattabchor/Quantum/raw/73d43ee42dd9d116ad2b3780deff900bbb12d8cd/downloads/Quantum_Sym9_DrawCalls.jar
 
+## Вернуться к cached merged v2 (до отсечения)
+
+https://github.com/Xattabchor/Quantum/raw/98e00e7125e047cedb7ee5e9cfd17ef1da38225f/downloads/Quantum_StaticRoom_Merged.jar
+
+Исходники и артефакты закреплены commit `98e00e7125e047cedb7ee5e9cfd17ef1da38225f`.
+Пользователь подтвердил правильную картинку cached и сообщил 7 FPS против 5
+projected. Модель телефона и метод измерения не уточнены; точный установленный
+artifact не проверялся независимо. Дальнейшая работа с отсечением идёт отдельным
+`Quantum_StaticRoom_Cull.jar`, не перезаписывая эту контрольную точку.
+
 ## Вернуться к первой версии нового режима
 
 Тестовый JAR:

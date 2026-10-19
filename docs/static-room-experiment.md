@@ -1,12 +1,17 @@
 # Static Room A/B — изолированный эксперимент, не игровая сборка
 
+**Текущий этап — [Static Room Cull](static-room-culling.md): A/B теперь cached cull
+против cached whole, не projected renderer.** Описание v1/v2 ниже сохранено
+для предыдущих контрольных точек и относится к `Quantum_StaticRoom_Merged.jar`.
+
+
 ## Контрольные точки и текущая версия
 
 - **Стабильная игра:** `Quantum_Sym9_DrawCalls.jar`, commit
   `73d43ee42dd9d116ad2b3780deff900bbb12d8cd`.
 - **Новый режим v1 (5 draws):** `Quantum_StaticRoom_Test.jar`, исходники и артефакты
   в commit `ac57d8946257b44b349a85509b9b7b56def852c9`.
-- **Продолжаем новый режим v2 (3 draws):** `Quantum_StaticRoom_Merged.jar`.
+- **Сохранённый новый режим v2 (3 draws):** `Quantum_StaticRoom_Merged.jar`.
   Новый artifact и MIDlet name не перезаписывают оба предыдущих JAR.
 
 Файлы контрольных точек, размеры и SHA-256 закреплены в
