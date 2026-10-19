@@ -1,0 +1,89 @@
+{
+  "classes": 187,
+  "code_methods": 2197,
+  "stackmap_attributes": 1215,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Tex3.jar",
+  "base_commit": "b9b477f3de65e2a2ecc2e0f88ad10a09244f22fa",
+  "base_sha256": "8617f348e04f4b10c03b0049e60f2e92c41532d6939546ad96f6e44d11aa6880",
+  "jar_bytes": 802248,
+  "jar_sha256": "10d5d84fbe288df1f8c1972b45f3682424e5b0a81d79a27f21f01c4accdcda41",
+  "all_182_baseline_classes_and_all_map_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/SoftwarePolyFillMesh.class",
+    "code/Rendering/SoftwarePolyFillPreview$Viewer.class",
+    "code/Rendering/SoftwarePolyFillPreview.class",
+    "code/Rendering/SoftwarePolyFillWindow$Result.class",
+    "code/Rendering/SoftwarePolyFillWindow.class"
+  ],
+  "source_sha256": {
+    "experiments/software-poly-fill/src/code/Rendering/SoftwarePolyFillMesh.java": "3d0669e868e53fd97ed786c62fc5b5d89437d567579e5c673a2156f5e0af9913",
+    "experiments/software-poly-fill/src/code/Rendering/SoftwarePolyFillPreview.java": "265e42093460117391bdade25fadf27be33bee2b6fac607213237b2a56d8ce0e",
+    "experiments/software-poly-fill/src/code/Rendering/SoftwarePolyFillWindow.java": "e745090bf4bac55a3595deae60c9294d694396016aeabd5c055d5ef4563eb62d"
+  },
+  "builder_sha256": "2fb2f1d1d6e044798eec17128cc4f302b1faaf558a35fa5a982afb7b04078c8d",
+  "benchmark": {
+    "geometry_grids": [
+      8,
+      16,
+      24,
+      32,
+      48,
+      64,
+      96,
+      120
+    ],
+    "geometry_triangles": [
+      128,
+      512,
+      1152,
+      2048,
+      4608,
+      8192,
+      18432,
+      28800
+    ],
+    "fill_layers": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32
+    ],
+    "backend": "explicit DirectX7.SOFTWARE + renderSoftware, frozen Tex3 CPU classes",
+    "pipeline": "clearDisplay -> transform/project shared vertices -> visibility/enqueue -> painter sort -> LightedPolygon3V -> TexturingPers/Affine -> flush/drawRGB",
+    "texture": "same opaque procedural64x64 checker, drawmode9, no mipmaps",
+    "shading": "P4 la221 becomes220 via original getLight255/256; P0 renderFast receives220 directly; CPU sampler rounding differs from M3G",
+    "default_persQ": 4,
+    "optional_persQ": 0,
+    "q": 24,
+    "fogQ": 2,
+    "fDist": 1,
+    "depth": "painter: NO Z buffer; native POLY has depth ON; FILL native Z OFF",
+    "alpha": "opaque texels only; CPU nonzero sampling, not native threshold0.5",
+    "projection": "constant-depth full rectangle, integer screen grid; native subpixel/strip representation differs",
+    "viewport": "canvas width x (canvas height - 90), HUD excluded",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "auto_profiles": 14,
+    "metrics": "fractional FPS, R/software pipeline ms, C/drawRGB ms, I/frame interval; end-to-end Ktri/s or nominal Mpix/s",
+    "no_m3g_calls": true,
+    "no_nokia_directgraphics": true,
+    "cold_only_geometry": true,
+    "queue_prewarmed": true,
+    "builds_and_pause_excluded": true,
+    "small_resolution": "grid > min(width,height) marked ERR, never count collapsed triangles",
+    "failure_policy": "manual lower/retry; auto OOM/ERR and skip, no alternative backend",
+    "results": "in-memory table/stdout, cleared on resize or P4/P0 toggle; not persisted after exit"
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Actual original Quantum software pipeline throughput, same nominal workloads as native PolyFill; NOT pixel-identical depth-equivalent rendering or a game FPS prediction."
+}

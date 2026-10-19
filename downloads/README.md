@@ -1,5 +1,20 @@
 # Quantum — M3G preverified preview
 
+## Software PolyFill — полигонаж/fillrate старого CPU Quantum
+
+[JAR](Quantum_SoftwarePolyFill_Test.jar) · [JAD](Quantum_SoftwarePolyFill_Test.jad) ·
+[Отчёт](Quantum_SoftwarePolyFill_Test.build-report.json) ·
+[Методика/ограничения](../docs/software-poly-fill.md).
+
+**5** полный auto14 нагрузок, таблица **4/6**. По умолчанию **SW P4**,
+**\*** переключает **P0 affine** и очищает результаты; снова **5** для второго прогона.
+Настоящий frozen DirectX7.SOFTWARE: clear/project/visibility/queue/sort/raster/drawRGB.
+Те же сетки128..28800 треугольников, слои1..32, checker64, nominal viewport W×(H−90).
+R=CPU pipeline, C=drawRGB, I=frame interval; сравнивать с native PolyFill при том же
+viewport. **Нет Z-буфера**, не равный native feature set и не прогноз FPS карты.
+Ни M3G вызовов, ни Nokia DirectGraphics; основная игра и старые JAR не менялись.
+Фото нужны отдельно **P4/P0**, с заголовком/размером. Скорость телефона ещё не измерена.
+
 ## Карта на L2D_M3G — настоящий Node renderer против Quantum FULL
 
 [JAR](Quantum_L2D_Map.jar) · [JAD](Quantum_L2D_Map.jad) ·
