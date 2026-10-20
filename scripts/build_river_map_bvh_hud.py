@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""Build isolated river-map BVH/GRID + HUD diagnostic over Perspective release."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import zipfile
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from build_cldc import API_NAMES, audit_jar
+
+ROOT = Path(__file__).resolve().parents[1]
+BASE = ROOT / 'downloads/Quantum_StaticRoom_Perspective.jar'
+BASE_SHA = '652626cddcc8b991a4c9ba76ac810cd1d163f7041f393ff7e31fd8f44f3dcb57'
+BASE_COMMIT = '7bbc7b172c87aa05026c98bed3b6854b94f9a1a5'
+STEM = 'Quantum_RiverMap_BvhHud'
+NEW_CLASSES = {
+    'code/Rendering/RiverMapBvhHudPreview.class',
+    'code/Rendering/RiverMapBvhHudPreview$Viewer.class',
+}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--java', default=os.environ.get('JAVA', 'java'))
+    parser.add_argument('--ecj-jar', default=os.environ.get('ECJ_JAR', 'build/tools/ecj.jar'))
+    parser.add_argument('--api-dir', type=Path, default=ROOT / 'build/sdk/lib')
+    parser.add_argument('--proguard-jar', default=str(ROOT / 'build/sdk/proguard/lib/proguard.jar'))
+    parser.add_argument('--output-dir', type=Path, default=ROOT / 'artifacts/river-map-bvh-hud')
+    args = parser.parse_args()
+    subprocess.run([sys.executable, str(ROOT / 'scripts/verify_render_checkpoints.py')], check=True)
+    if hashlib.sha256(BASE.read_bytes()).hexdigest() != BASE_SHA:
+        raise ValueError('Wrong immutable Perspective parent')
+
+    work = ROOT / 'build/river-map-bvh-hud'
+    classes = work / 'classes'
+    classes.mkdir(parents=True, exist_ok=True)
+    for stale in classes.rglob('*.class'):
+        stale.unlink()
+    api = [(args.api_dir / name).resolve() for name in API_NAMES]
+    sources = sorted((ROOT / 'experiments/river-map-bvh-hud/src').rglob('*.java'))
+    subprocess.run([
+        args.java, '-jar', args.ecj_jar, '-source', '1.3', '-target', '1.3',
+        '-encoding', 'UTF-8', '-proc:none', '-nowarn',
+        '-bootclasspath', os.pathsep.join(map(str, api)),
+        '-classpath', str(BASE), '-d', str(classes),
+    ] + list(map(str, sources)), check=True)
+
+    raw, verified = work / 'unverified.jar', work / 'verified.jar'
+    with zipfile.ZipFile(raw, 'w', zipfile.ZIP_DEFLATED) as target:
+        for path in sorted(classes.rglob('*.class')):
+            target.write(path, path.relative_to(classes).as_posix())
+    command = [args.java, '-jar', args.proguard_jar, '-injars', str(raw), '-outjars', str(verified), '-libraryjars', str(BASE)]
+    for path in api:
+        command += ['-libraryjars', str(path)]
+    subprocess.run(command + ['-microedition', '-dontshrink', '-dontoptimize', '-dontobfuscate', '-dontnote', '-dontwarn'], check=True)
+
+    out = args.output_dir.resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    manifest = '\r\n'.join([
+        'Manifest-Version: 1.0',
+        'MIDlet-Name: Quantum River Map BVH HUD',
+        'MIDlet-Version: 1.0.0',
+        'MIDlet-Vendor: Quantum Experiments',
+        'MIDlet-1: River BVH HUD,,code.Rendering.RiverMapBvhHudPreview',
+        'MicroEdition-Configuration: CLDC-1.1',
+        'MicroEdition-Profile: MIDP-2.0',
+        '',
+        '',
+    ])
+    jar = out / (STEM + '.jar')
+    with zipfile.ZipFile(BASE) as base, zipfile.ZipFile(verified) as patch, zipfile.ZipFile(jar, 'w') as result:
+        added = {name for name in patch.namelist() if name.endswith('.class')}
+        assert added == NEW_CLASSES and not added.intersection(base.namelist())
+        entries = {name: base.read(name) for name in base.namelist() if name != 'META-INF/MANIFEST.MF'}
+        entries.update({name: patch.read(name) for name in added})
+        entries['META-INF/MANIFEST.MF'] = manifest.encode('utf-8')
+        for name in sorted(entries):
+            info = zipfile.ZipInfo(name, (2026, 10, 20, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            result.writestr(info, entries[name], compresslevel=9)
+
+    with zipfile.ZipFile(BASE) as base, zipfile.ZipFile(jar) as result:
+        assert result.testzip() is None
+        assert set(result.namelist()) == set(base.namelist()) | NEW_CLASSES
+        assert all(result.read(name) == base.read(name) for name in base.namelist() if name != 'META-INF/MANIFEST.MF')
+
+    report = audit_jar(jar)
+    report.update(
+        base_jar=BASE.name,
+        base_commit=BASE_COMMIT,
+        base_sha256=BASE_SHA,
+        jar_bytes=jar.stat().st_size,
+        jar_sha256=hashlib.sha256(jar.read_bytes()).hexdigest(),
+        all_parent_classes_and_all_assets_unchanged_except_manifest=True,
+        added_classes=sorted(NEW_CLASSES),
+        added_assets=[],
+        source_sha256={
+            str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sources
+        },
+        builder_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        renderer_parent_source_sha256=hashlib.sha256(
+            (ROOT / 'experiments/static-room-bvh/src/code/Rendering/StaticRoomBvhMesh.java').read_bytes()
+        ).hexdigest(),
+        bvh_parent_source_sha256=hashlib.sha256(
+            (ROOT / 'experiments/static-room-bvh/src/code/Rendering/StaticRoomBvh.java').read_bytes()
+        ).hexdigest(),
+        stats_parent_source_sha256=hashlib.sha256(
+            (ROOT / 'experiments/static-room-perspective/src/code/Rendering/StaticRoomPerspectiveStats.java').read_bytes()
+        ).hexdigest(),
+        diagnostic={
+            'purpose': 'Repeat HUD FULL/MIN/OFF A/B on the river/village map with BVH frustum selection available in the same preview. No FPS promise.',
+            'map': 'old sym9 village/river map from immutable Perspective/Tex3 parent: maps/kordos/kordos.3d, baked lightmap/kordod.vla, Tex3 slots forest/map-selo1/river',
+            'geometry_changed': False,
+            'textures_changed': False,
+            'lightmap_changed': False,
+            'renderer': 'immutable parent StaticRoomBvhMesh class bytes retained; StaticRoomPerspectiveStats used only as fractional wall-clock timer',
+            'selection_default': 'BVH ON',
+            'selection_keys': {
+                'key7': 'BVH ON (face-AABB frustum BVH, leaf <=8; not occlusion/BSP)',
+                'key9': 'GRID (same mesh setBvhEnabled(false), legacy 4x4 full-face-AABB cells)',
+                'note': 'keys 7/9 are selection in this diagnostic, not strafe',
+            },
+            'hud_modes': {
+                'key1': 'FULL: six lines on 90px panel, drawn every frame',
+                'key3': 'MIN: heading + N/C/I on 30px panel, drawn every frame',
+                'key0': 'OFF: no panel/text after map Image copy; stats still collected',
+                'star': 'in OFF, freeze and show last completed FULL result; press star again to resume with fresh warmup',
+            },
+            'default': 'BVH ON + FULL HUD at original START pose/yaw0',
+            'key5': 'home; preserves selected BVH/GRID and HUD mode, resets stats',
+            'movement': '2/8 move, 4/6 turn; no strafe because 7/9 select BVH/GRID',
+            'pump': 'same worker repaint()+serviceRepaints()+sleep(1) in all modes; not FramePump SELF/S0',
+            'near': 128,
+            'far': 60000,
+            'configured_far': 68500,
+            'fov': 74,
+            'DMODE': 9,
+            'world_scale': 6,
+            'alpha': 'original thresholds ON; no alpha-disable code in this preview path',
+            'depth': 'ON; river depth write OFF as in parent materials',
+            'perspective': 'ON (constructor true; no perspective toggle)',
+            'river': 'all 4 cached frames, speed6, mode7, UV/order unchanged',
+            'warmup_ms': 1000,
+            'measure_ms': 3000,
+            'fallback': 'selection-index OOM keeps whole-room native path and heading shows MEM; culling comparison is then invalid',
+            'scope': 'world-only preview: no sky/weather/gameplay/collision changes',
+            'stats_note': 'Wall-clock API timings and submitted counters, NOT GPU timestamps or proven LCD flips',
+        },
+        handset_tested=False,
+        handset_fps_measured=False,
+        purpose='Isolated river-map BVH/GRID selection plus HUD FULL/MIN/OFF A/B over immutable Perspective release; map/assets unchanged.',
+    )
+    (out / (STEM + '.build-report.json')).write_text(json.dumps(report, indent=2) + '\n')
+    jad = manifest.replace('Manifest-Version: 1.0\r\n', '').rstrip()
+    jad += '\r\nMIDlet-Jar-URL: ' + jar.name + '\r\nMIDlet-Jar-Size: ' + str(jar.stat().st_size) + '\r\n'
+    (out / (STEM + '.jad')).write_bytes(jad.encode('utf-8'))
+    print(json.dumps(report, indent=2))
+
+
+if __name__ == '__main__':
+    main()

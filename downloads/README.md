@@ -1,3 +1,16 @@
+## River Map BVH HUD: карта с рекой, BVH/GRID и FULL / MIN / OFF счётчик
+
+[Quantum_RiverMap_BvhHud.jar](Quantum_RiverMap_BvhHud.jar) ·
+[JAD](Quantum_RiverMap_BvhHud.jad) ·
+[Отчёт](Quantum_RiverMap_BvhHud.build-report.json) ·
+[методика](../docs/river-map-bvh-hud.md).
+
+По умолчанию **BVH ON + FULL HUD** на той же карте с рекой. **7** BVH,
+**9** GRID; HUD: **1** FULL, **3** MIN, **0** OFF, **`*`** показать результат OFF.
+Снять сначала BVH: FULL → MIN → OFF+`*` → FULL в одной позе; GRID — контроль
+по необходимости. Геометрия/река/свет/текстуры неизменны; BVH здесь старый
+frustum BVH деревни, не Portal BVH/BSP. Прежние JAR сохранены.
+
 ## River Map HUD: карта с рекой, FULL / MIN / OFF счётчик (отдельный тест)
 
 [Quantum_RiverMap_Hud.jar](Quantum_RiverMap_Hud.jar) ·

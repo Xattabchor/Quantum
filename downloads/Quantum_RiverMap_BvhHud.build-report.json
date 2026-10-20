@@ -1,0 +1,71 @@
+{
+  "classes": 192,
+  "code_methods": 2233,
+  "stackmap_attributes": 1231,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Perspective.jar",
+  "base_commit": "7bbc7b172c87aa05026c98bed3b6854b94f9a1a5",
+  "base_sha256": "652626cddcc8b991a4c9ba76ac810cd1d163f7041f393ff7e31fd8f44f3dcb57",
+  "jar_bytes": 819268,
+  "jar_sha256": "c68e5121de0f8d981e2da2cf5d008cf6a962331513cc7ee62e16e94feb42c07c",
+  "all_parent_classes_and_all_assets_unchanged_except_manifest": true,
+  "added_classes": [
+    "code/Rendering/RiverMapBvhHudPreview$Viewer.class",
+    "code/Rendering/RiverMapBvhHudPreview.class"
+  ],
+  "added_assets": [],
+  "source_sha256": {
+    "experiments/river-map-bvh-hud/src/code/Rendering/RiverMapBvhHudPreview.java": "4889a8bcc0399bb1f365eb4e0c9d3d87d5aecfb707a89a6695b3d31ee779c90d"
+  },
+  "builder_sha256": "d03f66c55316ca66de635e164ceb7c541c5600dc7d373dc3f4d5346b80e88375",
+  "renderer_parent_source_sha256": "05c7ffdcd762eaefe10427d859a428dddc2ec443911f4707f60ac04c2b696c06",
+  "bvh_parent_source_sha256": "11462da3919a4d93da8f7cc88e401d26f5fdaa84295abe7bce628883751699e1",
+  "stats_parent_source_sha256": "7dc69df1e386993c56370d3fc79603bacc10a753b5c50e7f74584ca325699cff",
+  "diagnostic": {
+    "purpose": "Repeat HUD FULL/MIN/OFF A/B on the river/village map with BVH frustum selection available in the same preview. No FPS promise.",
+    "map": "old sym9 village/river map from immutable Perspective/Tex3 parent: maps/kordos/kordos.3d, baked lightmap/kordod.vla, Tex3 slots forest/map-selo1/river",
+    "geometry_changed": false,
+    "textures_changed": false,
+    "lightmap_changed": false,
+    "renderer": "immutable parent StaticRoomBvhMesh class bytes retained; StaticRoomPerspectiveStats used only as fractional wall-clock timer",
+    "selection_default": "BVH ON",
+    "selection_keys": {
+      "key7": "BVH ON (face-AABB frustum BVH, leaf <=8; not occlusion/BSP)",
+      "key9": "GRID (same mesh setBvhEnabled(false), legacy 4x4 full-face-AABB cells)",
+      "note": "keys 7/9 are selection in this diagnostic, not strafe"
+    },
+    "hud_modes": {
+      "key1": "FULL: six lines on 90px panel, drawn every frame",
+      "key3": "MIN: heading + N/C/I on 30px panel, drawn every frame",
+      "key0": "OFF: no panel/text after map Image copy; stats still collected",
+      "star": "in OFF, freeze and show last completed FULL result; press star again to resume with fresh warmup"
+    },
+    "default": "BVH ON + FULL HUD at original START pose/yaw0",
+    "key5": "home; preserves selected BVH/GRID and HUD mode, resets stats",
+    "movement": "2/8 move, 4/6 turn; no strafe because 7/9 select BVH/GRID",
+    "pump": "same worker repaint()+serviceRepaints()+sleep(1) in all modes; not FramePump SELF/S0",
+    "near": 128,
+    "far": 60000,
+    "configured_far": 68500,
+    "fov": 74,
+    "DMODE": 9,
+    "world_scale": 6,
+    "alpha": "original thresholds ON; no alpha-disable code in this preview path",
+    "depth": "ON; river depth write OFF as in parent materials",
+    "perspective": "ON (constructor true; no perspective toggle)",
+    "river": "all 4 cached frames, speed6, mode7, UV/order unchanged",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "fallback": "selection-index OOM keeps whole-room native path and heading shows MEM; culling comparison is then invalid",
+    "scope": "world-only preview: no sky/weather/gameplay/collision changes",
+    "stats_note": "Wall-clock API timings and submitted counters, NOT GPU timestamps or proven LCD flips"
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Isolated river-map BVH/GRID selection plus HUD FULL/MIN/OFF A/B over immutable Perspective release; map/assets unchanged."
+}
