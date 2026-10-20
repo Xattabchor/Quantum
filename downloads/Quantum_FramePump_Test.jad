@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum Frame Pump
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: Frame Pump,,code.Diagnostics.FramePumpPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_FramePump_Test.jar
+MIDlet-Jar-Size: 9061

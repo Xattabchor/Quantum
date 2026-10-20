@@ -1,3 +1,15 @@
+## Frame Pump: Canvas SELF и GameCanvas FLUSH (отдельный тест)
+
+[Quantum_FramePump_Test.jar](Quantum_FramePump_Test.jar) ·
+[JAD](Quantum_FramePump_Test.jad) ·
+[методика и результаты предыдущего контроля](../docs/frame-pump.md).
+
+**1** WORKER Canvas, **3** SELF Canvas без пробуждения worker на кадр,
+**5** однопоточный GameCanvas + flushGraphics. Все без sleep (S0).
+**7** FULL/MIN HUD, **#** выход. Подождать 8–10 секунд и снять все три
+режима с одинаковым HUD. На телефоне новый тест при публикации ещё не
+измерен; прирост FPS не обещается. Игровые сборки и Empty Frame сохранены.
+
 # Quantum — M3G preverified preview
 
 ## Empty Frame — расходы пустого кадра, без карты

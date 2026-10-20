@@ -1,0 +1,54 @@
+{
+  "classes": 4,
+  "code_methods": 47,
+  "stackmap_attributes": 23,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "jar_bytes": 9061,
+  "jar_sha256": "79afef0d05ca4cfe8c1dcc52ec3d70821a1146c4b896929f52b9cb622a4cbc91",
+  "builder_sha256": "0d1e563f99f51b875f9732d7c35b2725be979ee62dbfbd83fade77761436ba92",
+  "source_sha256": {
+    "experiments/frame-pump/src/code/Diagnostics/FramePumpPreview.java": "9fdb5e5bef028ae9817522b5eabfbe3b8b514fd3e0fbe4866f080a3937b26d3d",
+    "experiments/frame-pump/src/code/Diagnostics/FramePumpStats.java": "8d31451e22092bdd3d65047b9ce0c8f8a1d3a3ca8123d2b179fdefd28a014b62"
+  },
+  "standalone": true,
+  "game_files_changed": false,
+  "geometry_render_calls": 0,
+  "textures": 0,
+  "world_assets": 0,
+  "modes": [
+    "0 WORKER Canvas repaint + completion handshake",
+    "1 SELF Canvas repaint at end of paint, worker parked",
+    "2 single worker GameCanvas fill + flushGraphics"
+  ],
+  "controls": {
+    "key0": "next",
+    "key1": "worker Canvas",
+    "key3": "self Canvas",
+    "key5": "GameCanvas flush",
+    "key7": "FULL/MIN HUD",
+    "pound": "exit"
+  },
+  "measurement": {
+    "warmup_ms": 1000,
+    "window_ms": 3000,
+    "I": "start-to-start",
+    "P": "previous paint body for Canvas; previous draw+flush for GameCanvas",
+    "G": "I minus P; includes statistics, return and scheduling, not pure OS wait",
+    "F": "fill",
+    "U": "flush wall time, included in P, only GameCanvas",
+    "H": "HUD and marker",
+    "Q": "request-to-paint only Canvas, unknown samples excluded",
+    "clock": "coarse currentTimeMillis wall time; tenth-ms averages not timer resolution; callback/flush FPS NOT proven LCD flips"
+  },
+  "buffers": "GameCanvas managed buffer, no Image or M3G objects; no per-frame test-side allocation except text once per window",
+  "pump": "all S0: no sleep/yield/serviceRepaints; Canvas one pending request; SELF does not wake worker per frame; GameCanvas one drawing/flush thread; lifecycle and controls serialized against frames",
+  "unsupported": "flush failure stops measurement and shows Alert, no silent Canvas fallback",
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Compare worker handshake, self repaint and single-thread flush after ~30ms gaps on handset Canvas controls; no promised speedup."
+}
