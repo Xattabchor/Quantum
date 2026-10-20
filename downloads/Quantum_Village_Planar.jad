@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum Village Planar
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: Planar A-B,,code.Rendering.VillagePlanarPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_Village_Planar.jar
+MIDlet-Jar-Size: 856125

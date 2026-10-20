@@ -1,5 +1,21 @@
 # Quantum — M3G preverified preview
 
+## Старая деревня — строгое planar-упрощение перед новым bake
+
+[JAR](Quantum_Village_Planar.jar) · [JAD](Quantum_Village_Planar.jad) ·
+[Модель для bake](Quantum_Village_Planar_Model.zip) ·
+[Отчёт](Quantum_Village_Planar.build-report.json) · [Методика](../docs/village-planar.md).
+
+Старая карта sym9, не portal map. **4750→4748 triangles**, 10032→10028 native
+corners: только один exact planar patch8→6, без сдвига позиций/UV/границы.
+Дубликатов/вырожденных triangles не найдено. Это минимальный строгий проход,
+**заметного FPS-выигрыша не ожидается**, не «массовая оптимизация без потерь».
+**0** ORIGINAL/SIMPLE, **1** SIMPLE, **3** ORIGINAL, **\*** к изменённой детали,
+**5** исходная камера. Свет **NEUTRAL в обоих вариантах**, исходный bake не применён.
+ZIP содержит .3d/.draworder и временную neutral VLA: свет надо запечь заново.
+Renderer/GRID/near128/far60000/текстуры/река прежние; старые JAR/основная игра сохранены.
+
+
 ## Portal Map BVH — порталы + BVH внутри комнат, map-selo.png
 
 [JAR](Quantum_PortalMap_Bvh.jar) · [JAD](Quantum_PortalMap_Bvh.jad) ·

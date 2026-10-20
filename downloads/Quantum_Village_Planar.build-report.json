@@ -1,0 +1,213 @@
+{
+  "classes": 192,
+  "code_methods": 2228,
+  "stackmap_attributes": 1229,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "geometry": {
+    "algorithm": "exact convex planar patches + exact rational affine UV; boundary corners locked; no geometric tolerance/QEM/occlusion deletion",
+    "before": {
+      "vertices": 2729,
+      "faces": 2641,
+      "triangles": 4750,
+      "corners": 10032,
+      "material_faces": {
+        "0": 33,
+        "1": 2584,
+        "2": 24
+      }
+    },
+    "after": {
+      "vertices": 2729,
+      "faces": 2640,
+      "triangles": 4748,
+      "corners": 10028,
+      "material_faces": {
+        "0": 33,
+        "1": 2583,
+        "2": 24
+      }
+    },
+    "patches": [
+      {
+        "source_native_face_ordinals": [
+          676,
+          683,
+          685,
+          688
+        ],
+        "source_file_face_ordinals": [
+          849,
+          856,
+          858,
+          861
+        ],
+        "before_triangles": 8,
+        "after_triangles": 6,
+        "boundary_preserved": true,
+        "uv_exact": true,
+        "plane": [
+          0,
+          1,
+          0,
+          -78
+        ],
+        "replacement_corners": [
+          [
+            [
+              288,
+              [
+                81,
+                99
+              ]
+            ],
+            [
+              287,
+              [
+                81,
+                99
+              ]
+            ],
+            [
+              284,
+              [
+                81,
+                99
+              ]
+            ],
+            [
+              285,
+              [
+                81,
+                99
+              ]
+            ]
+          ],
+          [
+            [
+              288,
+              [
+                81,
+                99
+              ]
+            ],
+            [
+              285,
+              [
+                81,
+                99
+              ]
+            ],
+            [
+              270,
+              [
+                81,
+                99
+              ]
+            ],
+            [
+              269,
+              [
+                81,
+                99
+              ]
+            ]
+          ],
+          [
+            [
+              288,
+              [
+                81,
+                99
+              ]
+            ],
+            [
+              269,
+              [
+                81,
+                99
+              ]
+            ],
+            [
+              268,
+              [
+                81,
+                99
+              ]
+            ],
+            [
+              290,
+              [
+                81,
+                99
+              ]
+            ]
+          ]
+        ]
+      }
+    ],
+    "protected_materials": [
+      0,
+      2
+    ],
+    "all_source_positions_retained": true,
+    "lighting": "requires rebake; diagnostic uses identical neutral255 vertex light in both modes",
+    "warning": "Very small conservative reduction; no handset FPS benefit promised."
+  },
+  "asset_sha256": {
+    "village-planar/kordos-planar.3d": "ab5fa2fb9c0fc3326d2543e23e581ce7cf864b824b09e86734bb7d4987900939",
+    "village-planar/kordos-planar.draworder": "f7078852a87d4a34245a93dfed9bda8952f905ccb35493e4ef2de11076960492",
+    "village-planar/original-neutral.vla": "1203ec363e4b3828321affb00ea404a71181158645e06833cee8dd0bb087d0c7",
+    "village-planar/planar-neutral.vla": "0f5cd1f5ae445d81674f6a9f33f8d6a0a411527f8f0c6c757a5d12919a58cc8f"
+  },
+  "simplifier_sha256": "4147296ed43ded84f7198d1808bda408461f3e014d5083b134d3547b98de3628",
+  "base_jar": "Quantum_StaticRoom_Perspective.jar",
+  "base_commit": "7bbc7b172c87aa05026c98bed3b6854b94f9a1a5",
+  "base_sha256": "652626cddcc8b991a4c9ba76ac810cd1d163f7041f393ff7e31fd8f44f3dcb57",
+  "jar_bytes": 856125,
+  "jar_sha256": "538c161480a95b8d93847daa37dbad2469cfb4c3ff05db986045f3006df11caf",
+  "all_190_parent_classes_and_all_assets_unchanged": true,
+  "old_native_mesh_and_visibility_class_bytes_retained_unchanged": true,
+  "added_classes": [
+    "code/Rendering/VillagePlanarPreview$Viewer.class",
+    "code/Rendering/VillagePlanarPreview.class"
+  ],
+  "source_sha256": {
+    "experiments/village-planar/src/code/Rendering/VillagePlanarPreview.java": "d13b0ea140ac32737ae30ba2c3bf73eeacf9bbb517d1383baaca9de4902d29da"
+  },
+  "builder_sha256": "06a7942d5a9f36159b0125ea7b4f016aaf47b2d5c4f70743ce73fe17549f2c46",
+  "renderer_parent_source_sha256": "3a579f0cd84b3332e8de890e6fc313c1d329b1ad29123f905f806a3652442f21",
+  "diagnostic": {
+    "default": "SIMPLE",
+    "key0": "toggle original/simplified, freeze movement, preserve pose",
+    "key1": "SIMPLE",
+    "key3": "ORIGINAL",
+    "star": "focus edited patch; same pose for both meshes",
+    "key5": "home",
+    "lighting": "neutral255 in BOTH modes, explicitly NOT old bake; requires new bake",
+    "source_map": "old sym9 kordos.3d, Tex3 slots/order",
+    "texture": "unchanged old map-selo1.png, forest and animated river unchanged",
+    "renderer": "same immutable StaticRoomPerspectiveMesh with perspective ON; GRID4x4 in both modes; no new BVH/BSP",
+    "near": 128,
+    "far": 60000,
+    "configured_far": 68500,
+    "fov": 74,
+    "DMODE": 9,
+    "world_scale": 6,
+    "alpha": "original thresholds ON",
+    "depth": "ON, river depth write OFF",
+    "perspective": "ON",
+    "buffers": "both meshes built once; no vertex/texture rebuild on A/B; selected-index two-entry cache on movement",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "scope": "world geometry only; no sky/weather/gameplay; not collision replacement",
+    "caution": "2 / 4750 triangles removed; no material FPS benefit expected. Not a large LOD reduction."
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Strictly exact geometry/UV planar-patch reduction, old village, neutral-light A/B. Re-bake separately."
+}
