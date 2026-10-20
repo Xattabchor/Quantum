@@ -1,0 +1,63 @@
+{
+  "classes": 192,
+  "code_methods": 2232,
+  "stackmap_attributes": 1229,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Perspective.jar",
+  "base_commit": "7bbc7b172c87aa05026c98bed3b6854b94f9a1a5",
+  "base_sha256": "652626cddcc8b991a4c9ba76ac810cd1d163f7041f393ff7e31fd8f44f3dcb57",
+  "jar_bytes": 819170,
+  "jar_sha256": "0b8004c8a46e7e4c45e95dd7127d51ede9bd26f75b52798f3198710834e7b898",
+  "all_parent_classes_and_all_assets_unchanged_except_manifest": true,
+  "added_classes": [
+    "code/Rendering/RiverMapHudPreview$Viewer.class",
+    "code/Rendering/RiverMapHudPreview.class"
+  ],
+  "added_assets": [],
+  "source_sha256": {
+    "experiments/river-map-hud/src/code/Rendering/RiverMapHudPreview.java": "9a8e7051991a7e5aa80898fa403c54e2d1d97664a1ee3a085fa465a8278d4314"
+  },
+  "builder_sha256": "9596813165b454488fb27bfecc6365a1606b121a0df19bfabd3670cc71e52f12",
+  "renderer_parent_source_sha256": "3a579f0cd84b3332e8de890e6fc313c1d329b1ad29123f905f806a3652442f21",
+  "stats_parent_source_sha256": "7dc69df1e386993c56370d3fc79603bacc10a753b5c50e7f74584ca325699cff",
+  "diagnostic": {
+    "purpose": "Measure whether the diagnostic HUD itself changes frame interval on the river/village map. No renderer optimization claim.",
+    "map": "old sym9 village/river map from immutable Perspective/Tex3 parent: maps/kordos/kordos.3d, baked kordod.vla, Tex3 slots forest/map-selo1/river",
+    "geometry_changed": false,
+    "textures_changed": false,
+    "lightmap_changed": false,
+    "renderer_changed": false,
+    "renderer": "immutable parent StaticRoomPerspectiveMesh/Stats class bytes retained; GRID4x4, perspective ON",
+    "hud_modes": {
+      "key1": "FULL: six lines on 90px panel, drawn every frame",
+      "key3": "MIN: heading + N/C/I on 30px panel, drawn every frame",
+      "key0": "OFF: no panel/text after map Image copy; stats still collected",
+      "star": "in OFF, freeze and show last completed FULL result; press star again to resume with fresh warmup"
+    },
+    "default": "FULL at original START pose/yaw0",
+    "key5": "home; preserves selected HUD mode, resets stats",
+    "pump": "same parent worker repaint()+serviceRepaints()+sleep(1) in all HUD modes; not FramePump SELF/S0",
+    "near": 128,
+    "far": 60000,
+    "configured_far": 68500,
+    "fov": 74,
+    "DMODE": 9,
+    "world_scale": 6,
+    "alpha": "original thresholds ON",
+    "depth": "ON; river depth write OFF as in parent materials",
+    "perspective": "ON (fixed; no ON/OFF toggle in this HUD diagnostic)",
+    "river": "all 4 cached frames, speed6, mode7, UV/order unchanged",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "scope": "world-only preview: no sky/weather/gameplay/collision changes",
+    "stats_note": "StaticRoomPerspectiveStats wall-clock API timings, NOT GPU timestamps or proven LCD flips"
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Isolated river-map HUD FULL/MIN/OFF A/B over immutable Perspective release; map/renderer/pump unchanged."
+}

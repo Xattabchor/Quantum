@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum River Map HUD
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: River HUD A-B,,code.Rendering.RiverMapHudPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_RiverMap_Hud.jar
+MIDlet-Jar-Size: 819170

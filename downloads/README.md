@@ -1,3 +1,17 @@
+## River Map HUD: карта с рекой, FULL / MIN / OFF счётчик (отдельный тест)
+
+[Quantum_RiverMap_Hud.jar](Quantum_RiverMap_Hud.jar) ·
+[JAD](Quantum_RiverMap_Hud.jad) ·
+[Отчёт](Quantum_RiverMap_Hud.build-report.json) ·
+[методика](../docs/river-map-hud.md).
+
+Та же старая деревня/карта с рекой и тот же renderer/pump, меняется только
+диагностический HUD: **1** FULL (6 строк), **3** MIN (2 строки), **0** OFF
+(без панели/текста), **`*`** в OFF показывает замороженный результат, **5** home.
+Снять FULL → MIN → OFF+`*` → FULL в одной позе, по 8–10 секунд на режим.
+Геометрия/река/свет/текстуры не изменены; это проверка цены самого счётчика,
+не обещание ускорения полной игры. Прежние JAR сохранены.
+
 ## Frame Pump: Canvas SELF и GameCanvas FLUSH (отдельный тест)
 
 [Quantum_FramePump_Test.jar](Quantum_FramePump_Test.jar) ·
