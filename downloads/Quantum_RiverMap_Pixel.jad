@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum River Pixel
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: River Pixel,,code.Rendering.RiverPixelPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_RiverMap_Pixel.jar
+MIDlet-Jar-Size: 833736

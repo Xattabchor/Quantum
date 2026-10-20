@@ -1,3 +1,17 @@
+## River Map Pixel: масштаб viewport, текстура, shading и mip
+
+[Quantum_RiverMap_Pixel.jar](Quantum_RiverMap_Pixel.jar) ·
+[JAD](Quantum_RiverMap_Pixel.jad) ·
+[Отчёт](Quantum_RiverMap_Pixel.build-report.json) ·
+[методика](../docs/river-pixel.md).
+
+База — быстрый A LARGE путь карты с рекой. По умолчанию `S100 TEX SM B`.
+**0** масштаб 100→75→50→25%, **3** сразу 50%, **7** атлас/1×1 текстура,
+**9** SMOOTH/FLAT, **`*`** BASE_LEVEL/ближайший mip, **1** BASE, **5** home.
+Живой HUD — только `FPS` и `N/R/I`. Снять в тяжёлой позе BASE → S75 → S50 → S25,
+затем отдельно 1X1, FLAT и MIP. Геометрия/отбор/река неизменны; рассчитано
+на M3G 1.0 в E65. Прежние JAR сохранены, ускорение до телефонного A/B не обещается.
+
 ## River Map Overdraw: компактные пакеты front-to-back и depth prepass
 
 [Quantum_RiverMap_Overdraw.jar](Quantum_RiverMap_Overdraw.jar) ·

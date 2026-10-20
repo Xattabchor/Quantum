@@ -1,0 +1,76 @@
+{
+  "classes": 198,
+  "code_methods": 2276,
+  "stackmap_attributes": 1251,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Perspective.jar",
+  "base_commit": "7bbc7b172c87aa05026c98bed3b6854b94f9a1a5",
+  "base_sha256": "652626cddcc8b991a4c9ba76ac810cd1d163f7041f393ff7e31fd8f44f3dcb57",
+  "jar_bytes": 833736,
+  "jar_sha256": "2f3d602dc347cbd8cb7897859a1e8d3640e7982c731e617960a2ef401011de0c",
+  "all_parent_classes_and_all_assets_unchanged_except_manifest": true,
+  "added_classes": [
+    "code/Rendering/RiverPixelMesh$Masked.class",
+    "code/Rendering/RiverPixelMesh$NativeImage.class",
+    "code/Rendering/RiverPixelMesh$Part.class",
+    "code/Rendering/RiverPixelMesh$Pending.class",
+    "code/Rendering/RiverPixelMesh.class",
+    "code/Rendering/RiverPixelPreview$Viewer.class",
+    "code/Rendering/RiverPixelPreview.class",
+    "code/Rendering/RiverPixelStats.class"
+  ],
+  "added_assets": [],
+  "source_sha256": {
+    "experiments/river-pixel/src/code/Rendering/RiverPixelMesh.java": "62277bd72799f47e5e567f6289bc7625c2fe44c7deec079a6d678877281dfa48",
+    "experiments/river-pixel/src/code/Rendering/RiverPixelPreview.java": "d755608e1d899b6a498aa6f6cfbdd8d858f7e776acc52ba7f616583ad8e46226",
+    "experiments/river-pixel/src/code/Rendering/RiverPixelStats.java": "6da114daecfcab81166242abc42fceb377336d2c648d2bc012381a06dfee8452"
+  },
+  "builder_sha256": "19a9e17bbfe9ceaa4d0fbcb6d8b2e8761257f640d8b9378e59fabd5acf14d15c",
+  "renderer_parent_source_sha256": "3a579f0cd84b3332e8de890e6fc313c1d329b1ad29123f905f806a3652442f21",
+  "stats_parent_source_sha256": "7dc69df1e386993c56370d3fc79603bacc10a753b5c50e7f74584ca325699cff",
+  "diagnostic": {
+    "purpose": "Split R on the river map by shaded area and per-pixel texture/shading/filter cost. No handset FPS claim.",
+    "map": "old sym9 village/river map from immutable Perspective/Tex3 parent: maps/kordos/kordos.3d, baked lightmap/kordod.vla, Tex3 slots forest/map-selo1/river",
+    "geometry_changed": false,
+    "textures_changed": false,
+    "lightmap_changed": false,
+    "renderer": "fork of immutable StaticRoomPerspectiveMesh/Stats; same GRID selector, face order, buffers, calls and stage timers",
+    "default": "S100 TEX SM B (full viewport, atlas textures, smooth shading, base-level filtering)",
+    "controls": {
+      "key1": "BASE reset: S100 + TEX + SMOOTH + BASE_LEVEL",
+      "key0": "cycle render scale 100 -> 75 -> 50 -> 25 percent (other toggles preserved)",
+      "key3": "render scale 50 percent (other toggles preserved)",
+      "key7": "toggle atlas textures <-> 1x1 white texture modulated by baked vertex colors (alpha threshold forced 0 in 1X1; diagnostic image intentionally grayscale/solid)",
+      "key9": "toggle PolygonMode SMOOTH <-> FLAT shading",
+      "star": "toggle texture level filter BASE_LEVEL <-> NEAREST (nearest mip level; image filter remains NEAREST)",
+      "key5": "home; scale/texture/shading/filter preserved",
+      "movement": "2/8 move, 4/6 turn; no strafe because 7/9 are pixel toggles"
+    },
+    "render_scale": "native M3G Image/viewport itself is scaled with proportional focals and drawn 1:1 at top-left; uncovered Canvas bars are filled black outside native render timing",
+    "hud": "always two live lines: mode/FPS and N/R/I; no full diagnostic panel in measured frames",
+    "m3g_compatibility": "Target user-reported Nokia E65 M3G 1.0: only basic Texture2D filtering and PolygonMode shading switches already present in JSR-184; mip level filter is a hint and may be ignored by the implementation",
+    "near": 128,
+    "far": 60000,
+    "configured_far": 68500,
+    "fov": 74,
+    "DMODE": 9,
+    "world_scale": 6,
+    "alpha": "original thresholds in TEX modes; diagnostic 1X1 mode intentionally uses threshold 0",
+    "depth": "test/write ON except river write OFF, as parent",
+    "perspective": "ON fixed (previous handset result: OFF almost no effect)",
+    "river": "all 4 cached frames, speed6, mode7; in 1X1 mode the same geometry/pass samples the white texel instead",
+    "pump": "same worker repaint()+serviceRepaints()+sleep(1) in all modes",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "scope": "world-only preview: no sky/weather/gameplay/collision changes",
+    "stats_note": "R is the Graphics3D.render loop inside N; Java API wall time, NOT GPU timestamps or proven LCD flips"
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Isolated river-map pixel-cost A/B: render scale, atlas vs 1x1 texture, smooth/flat shading, and base vs nearest-mip filtering."
+}
