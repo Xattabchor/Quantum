@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum Empty Frame
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: Empty Frame,,code.Diagnostics.EmptyFramePreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_EmptyFrame_Test.jar
+MIDlet-Jar-Size: 10092

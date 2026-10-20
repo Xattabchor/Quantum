@@ -1,0 +1,71 @@
+{
+  "classes": 4,
+  "code_methods": 30,
+  "stackmap_attributes": 21,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "jar_bytes": 10092,
+  "jar_sha256": "20fff8c2a18a10cf4e597c34ca421d8ac568dc615b9eb00090c2a30b7c2a09c6",
+  "builder_sha256": "ea943fde839211210bce61c32a5f028d297c5b52268b0e7524631b7c90f28867",
+  "source_sha256": {
+    "experiments/empty-frame/src/code/Diagnostics/EmptyFrameNative.java": "d3a0724687ccf15442da0966e1919ef53e856d9a309b1972115a1656e3facdb1",
+    "experiments/empty-frame/src/code/Diagnostics/EmptyFramePreview.java": "e9cb8866163af842b0973853734dcf16e853184296306d24d82da7113df55250",
+    "experiments/empty-frame/src/code/Diagnostics/EmptyFrameStats.java": "9a48d42fbaa6777030410a42e785b6133af07f759e1f1ca27e01cf073ca7b1c9"
+  },
+  "standalone": true,
+  "game_files_changed": false,
+  "geometry_render_calls": 0,
+  "textures": 0,
+  "world_assets": 0,
+  "modes": [
+    "0 Canvas fill",
+    "1 cached Image copy",
+    "2 Image fill + copy",
+    "3 M3G bind/release + copy, depth attached, NO clear",
+    "4 M3G RGB clear + copy, depth attached",
+    "5 M3G RGB+Z clear + copy, depth attached",
+    "6 M3G RGB clear + copy, NO depth attachment",
+    "7 M3G directly on Canvas RGB+Z, optional support",
+    "8 Canvas idle, only HUD/marker"
+  ],
+  "controls": {
+    "key0": "next",
+    "key2": "previous",
+    "key1": "Canvas fill",
+    "key3": "Image copy",
+    "key5": "M3G RGBZ + copy",
+    "star": "SYNC serviceRepaints / QUEUED one-pending repaint",
+    "key7": "FULL / MIN two-line HUD",
+    "key9": "S1 sleep(1) / S0 no intentional sleep",
+    "pound": "exit"
+  },
+  "measurement": {
+    "warmup_ms": 1000,
+    "window_ms": 3000,
+    "F": "MIDP fill",
+    "B": "bindTarget",
+    "S": "viewport/camera/resetLights/background flags",
+    "K": "clear only",
+    "E": "releaseTarget",
+    "C": "drawImage",
+    "H": "HUD+changing marker",
+    "Q": "request timestamp to paint entry, requested samples only",
+    "I": "paint start-to-start",
+    "P": "previous measured paint body including HUD/state restoration",
+    "G": "previous measured paint end to next paint start; includes statistics/return/loop/display/scheduling, NOT pure OS wait",
+    "identity": "sumI == sumP + sumG exactly; displayed integer means rounded down independently",
+    "svc": "LAST serviceRepaints wall duration; overlaps paint, never add to I/P/G",
+    "sleep": "LAST actual sleep(1) wall duration; S0 skips Thread.sleep entirely, not sleep(0); clock is coarse",
+    "clock": "System.currentTimeMillis, coarse wall time; displayed tenth-ms averages are NOT sub-ms clock resolution; 0.0 does NOT prove free; not GPU timestamps"
+  },
+  "buffers": "Image/native helper lazy cold allocation once; Image recreated only on resize; no geometry or texture uploads",
+  "pump": "default same sleep(1) in both; key9 explicitly disables sleep for either pump; at most one outstanding request; monitor released before repaint/serviceRepaints; QUEUED waits for paint completion without flooding",
+  "unsupported": "per-mode explicit failure, no silent target fallback; other modes remain selectable",
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Locate the ~24ms outside existing native-path timer; no promised handset speedup."
+}

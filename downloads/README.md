@@ -1,5 +1,22 @@
 # Quantum — M3G preverified preview
 
+## Empty Frame — расходы пустого кадра, без карты
+
+[JAR](Quantum_EmptyFrame_Test.jar) · [JAD](Quantum_EmptyFrame_Test.jad) ·
+[Отчёт](Quantum_EmptyFrame_Test.build-report.json) · [Методика](../docs/empty-frame.md).
+
+Standalone ~10КБ, **никакой карты/текстур/geometry render calls**. 9 режимов:
+Canvas fill, Image copy/fill, M3G bind/clearRGB/clearRGBZ/no-depth, optional direct
+Canvas, IDLE. **0/2** следующий/предыдущий, **1** Canvas, **3** Image, **5** RGBZ;
+**\*** SYNC/QUEUED pump, **7** FULL/MIN HUD, **9** sleep(1)/вообще без sleep, **#** exit.
+**I/P/G** — interval / measured paint / остаток между measured paints (не чистый
+OS wait). **B/S/K/E** отдельно native bind/state/clear/release, **F/C/H/Q**
+fill/copy/HUD/request queue. svc/sl(last) не оконные средние, svc перекрывает paint.
+Снять1→3→5, затем9 в том же режиме, по8сек/фото. Остальное сравнивать по одному
+переключателю. S0 может увеличить CPU load; только короткие замеры.
+Старые JAR/игра не менялись. Phone FPS новой сборки ещё не измерен, выигрыш не обещан.
+
+
 ## Старая деревня — строгое planar-упрощение перед новым bake
 
 [JAR](Quantum_Village_Planar.jar) · [JAD](Quantum_Village_Planar.jad) ·
