@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum River Overdraw
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: River Overdraw,,code.Rendering.RiverOverdrawPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_RiverMap_Overdraw.jar
+MIDlet-Jar-Size: 817482

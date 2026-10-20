@@ -1,3 +1,18 @@
+## River Map Overdraw: компактные пакеты front-to-back и depth prepass
+
+[Quantum_RiverMap_Overdraw.jar](Quantum_RiverMap_Overdraw.jar) ·
+[JAD](Quantum_RiverMap_Overdraw.jad) ·
+[Отчёт](Quantum_RiverMap_Overdraw.build-report.json) ·
+[методика](../docs/river-overdraw.md).
+
+Та же карта с рекой и GRID-отбор; по умолчанию **C F2B** — компактные пакеты
+подаются спереди назад. **1** A LARGE, **3** C ORIG, **7** C F2B, **9** C ZPRE
+(depth-only prepass), **0** цикл, **`*`** полные счётчики, **5** home.
+Живой HUD — только 2 строки `FPS` и `N/R/I`. Снять в тяжёлой позе
+F2B → ORIG → A → F2B, по желанию ZPRE; смотреть прежде всего **R**.
+Геометрия/текстуры/свет/река неизменны; рассчитано на M3G 1.0 в E65.
+Прежние JAR сохранены, ускорение до телефонного A/B не обещается.
+
 ## River Map BVH HUD: карта с рекой, BVH/GRID и FULL / MIN / OFF счётчик
 
 [Quantum_RiverMap_BvhHud.jar](Quantum_RiverMap_BvhHud.jar) ·

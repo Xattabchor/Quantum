@@ -1,0 +1,77 @@
+{
+  "classes": 191,
+  "code_methods": 2237,
+  "stackmap_attributes": 1228,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Tex3.jar",
+  "base_commit": "b9b477f3de65e2a2ecc2e0f88ad10a09244f22fa",
+  "base_sha256": "8617f348e04f4b10c03b0049e60f2e92c41532d6939546ad96f6e44d11aa6880",
+  "jar_bytes": 817482,
+  "jar_sha256": "13efc34de19afa5eb31e94e82c2aae97e8dbe2785d25cfd5b7139e181b1ba93a",
+  "all_parent_classes_and_all_assets_unchanged_except_manifest": true,
+  "added_classes": [
+    "code/Rendering/RiverOverdrawMesh$Masked.class",
+    "code/Rendering/RiverOverdrawMesh$NativeImage.class",
+    "code/Rendering/RiverOverdrawMesh$Packet.class",
+    "code/Rendering/RiverOverdrawMesh$Part.class",
+    "code/Rendering/RiverOverdrawMesh$Pending.class",
+    "code/Rendering/RiverOverdrawMesh.class",
+    "code/Rendering/RiverOverdrawPreview$Viewer.class",
+    "code/Rendering/RiverOverdrawPreview.class",
+    "code/Rendering/RiverOverdrawStats.class"
+  ],
+  "added_assets": [],
+  "source_sha256": {
+    "experiments/river-overdraw/src/code/Rendering/RiverOverdrawMesh.java": "aad593d90be51410cbc5353dd0c317054edbf1551b3e5c0c9b9d449b63f5325c",
+    "experiments/river-overdraw/src/code/Rendering/RiverOverdrawPreview.java": "176c0aad092c64ce2a2fe70739754465560ae3a5bea43b34c79e96c1e81d1f87",
+    "experiments/river-overdraw/src/code/Rendering/RiverOverdrawStats.java": "8c580ad1f89e998bf122be2750c731cb7c723d3898a8166c906944ee5621a62b"
+  },
+  "builder_sha256": "ba132425788db72a7e8e780d4f2b1acd4958d9b640fdb5fe66a56060d4ae11d0",
+  "renderer_parent_source_sha256": "5f2e46fc7d149cbacdc6dee62de2dfe86cde7d3b99caf6a66c77bf6f7e9b28e2",
+  "stats_parent_source_sha256": "b59e881955c6b2f4e1df965941384d4a04ddc153b6d76d37164d22e5e63c8e7e",
+  "diagnostic": {
+    "purpose": "Reduce/measure opaque overdraw on the river/village map without changing selected geometry. No handset FPS claim.",
+    "map": "old sym9 village/river map from immutable Tex3 parent: maps/kordos/kordos.3d, baked lightmap/kordod.vla, Tex3 slots forest/map-selo1/river",
+    "geometry_changed": false,
+    "textures_changed": false,
+    "lightmap_changed": false,
+    "selection": "same GRID selector and same selected faces in every mode; BVH explicitly OFF",
+    "modes": {
+      "default": "C F2B",
+      "key1": "A LARGE: original per-material large VertexBuffers, original order (control)",
+      "key3": "C ORIG: compact <=512-corner spatial packets, original order",
+      "key7": "C F2B: same compact packets/calls, opaque packets sorted front-to-back by nearest AABB depth",
+      "key9": "C ZPRE: C F2B plus depth-only prepass (color/alpha write off), then color pass with depth write off; river pass unchanged",
+      "key0": "cycle A -> C ORIG -> C F2B -> C ZPRE",
+      "star": "freeze/show full counters; press again to resume with fresh warmup"
+    },
+    "hud": "live measurement uses only two lines (mode/FPS and N/R/I); full counters only in frozen result",
+    "packet_sort": "stable insertion sort of selected opaque compact packets by nearest world-AABB depth along camera forward; sorting cost is in J/prepare, no per-frame index or vertex allocation",
+    "depth_prepass": "JSR-184 CompositingMode color/alpha write masks; cutout parts keep texture+alpha threshold in depth pass, fully opaque parts use no texture there; M3G depth test is LEQUAL so the color pass can pass at equal depth",
+    "m3g_compatibility": "Target user-reported Nokia E65 M3G 1.0: no M3G 1.1 OVERWRITE hint/getters or new renderer APIs; color/alpha write masks and LEQUAL depth are JSR-184 1.0 features, still to be verified on handset",
+    "near": 128,
+    "far": 60000,
+    "configured_far": 68500,
+    "fov": 74,
+    "DMODE": 9,
+    "world_scale": 6,
+    "alpha": "original per-image thresholds ON in color passes; no alpha-disable control",
+    "depth": "test ON; write ON for opaque color/prepass as specified per mode, OFF for river",
+    "perspective": "ON fixed",
+    "river": "all 4 cached frames, speed6, mode7, original pass/order; excluded from depth prepass",
+    "pump": "same worker repaint()+serviceRepaints()+sleep(1) in all modes",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "visual_risk": "front-to-back packet order can change winners only for exactly/near coplanar overlapping faces; check for flicker/artifacts on handset",
+    "scope": "world-only preview: no sky/weather/gameplay/collision changes",
+    "stats_note": "J/B/K/R/E and N/C/I are Java API wall times, NOT GPU timestamps or proven LCD flips; VB counts actual submitted buffer capacities including both ZPRE passes"
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Isolated river-map overdraw A/B: large vs compact packets, front-to-back packet submission, and optional M3G depth prepass."
+}
