@@ -1,3 +1,21 @@
+## Quantum Kordos FX: полная игра на kordos с аппаратным M3G-светом и омни-вспышкой оружия
+
+[Quantum_Kordos_Full.jar](Quantum_Kordos_Full.jar) ·
+[JAD](Quantum_Kordos_Full.jad) ·
+[методика](../docs/kordos-full.md).
+
+Полноигровой билд (меню/арсенал/ХУД/враги) на мире kordos (старая sym9-деревня):
+нормали полигонов поданы как M3G VertexNormals, world-проход переведён на
+настоящий true-3D (view-координаты + перспективная камера + hardware depth),
+аппаратный свет AMBIENT+DIRECTIONAL и OMNI-вспышка выстрела (питание от
+`shootIntensity`, как у legacy CPU-`Mode5WeaponLight`). Baked-лайтмапа
+сохранена в вершинных цветах. Противники: 6 стрелков DROZH_ENEMY на
+позициях деревенских NPC + 6 зомби по лесным респаунам. Флаг `M3G_LIT`
+(в setting.txt): =2 без омни, =0 полный откат на старый packed-путь —
+см. таблицу ключей и протокол теста в docs; FPS всегда на ХУДе.
+Замер на E65 отвечает на главный вопрос: цена hardware T&L+lighting vs
+CPU-packed пайплайн на той же карте.
+
 ## L2D Metro: стоковое метро из l2d_m3g (indoor-зонд)
 
 [Quantum_L2D_Metro.jar](Quantum_L2D_Metro.jar) ·

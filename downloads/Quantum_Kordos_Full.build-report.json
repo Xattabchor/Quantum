@@ -1,0 +1,31 @@
+{
+  "classes": 155,
+  "code_methods": 1973,
+  "stackmap_attributes": 1071,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "jar_sha256": "11b3d59f32699ba73c794851a77aaebd767394248f7c5f08fcc0a2deb4687bf6",
+  "resource_files": 160,
+  "source_files": 145,
+  "preverifier": "ProGuard -microedition (CLDC StackMap)",
+  "tools_sha256": {
+    "org.eclipse.jdt.core_3.16.0.v20181004-1305.jar": "01971245e470f07cb9f9730325d9c57b58782f57c1df396d6ed74c5619a4db39",
+    "proguard.jar": "bd9b6c58daf01e5088b86fc8aa99ae9af53d3821c622e5e01d68db97ee82f2eb",
+    "cldc11.jar": "1c3ec9a7057bd3b4daf7a6474cf508676b51066b4e56cbebbe7b326a90efe87a",
+    "midp21.jar": "0a0bc48207dd8bedea027968c3c9bdcf5dadd37be42e356d0802c81a8fa2c43f",
+    "jsr135.jar": "34fb379affaa83b7941307c51071eb363ce15ddf451510866cdb54f009defca5",
+    "jsr184.jar": "161a49bb715dd732f75ff1a39fbf524cae307e7b4596feb2c6830315da75165b",
+    "jsr75_file.jar": "b66a74c215f48d3f319757d1a5f1d7773016defe17344631682be4051c7802f3"
+  },
+  "resource_archive_sha256": "e5a537845550d7619b7857a849d43882d1ab83e7f175242faa96c9f78e4f2029",
+  "frame_profile": false,
+  "runtime_tested": false,
+  "resource_overlay_sha256": {
+    "level1.txt": "b426efef522b55c41c237f03fa949ddca17ad448a9851572ede0e1bcdd60cded",
+    "setting.txt": "141e345d8cf7ff25eab49c961dfc7fea94b25e1e047ff50d9a8e1711d2c11ea9"
+  }
+}

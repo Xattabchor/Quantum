@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""Downloads/Quantum_Kordos_Full.jar: full game on the kordos (old sym9
+village) map with hardware (M3G) lighting and a weapon omni flash.
+
+Content sources (already published in this repository, so the pack is
+reproducible offline):
+  - downloads/Quantum_Level41_River7_48bd4d0.jar - complete full-game asset
+    set (UI/HUD/weapons/enemies/sounds), minus its maps and most music.
+  - downloads/Quantum_Village_Planar.jar - kordos map + WMAP lightmap
+    + village weather textures (the kordos build the user tested first).
+  - tools/kordos-full/overlay/{setting.txt,level1.txt} - kordos world
+    configuration with M3G_LIT=1 and combat spawns.
+
+Code comes from the current tree (build_cldc.py); the manifest is patched
+last so the MIDlet shows as "Quantum Kordos FX" instead of "Quantum".
+
+Usage: python3 tools/kordos-full/build_kordos_full.py
+Toolchain resolved the same way as scripts/build_cldc.py defaults
+(build/tools/*, build/sdk/*); see .github or docs/build-cldc.md.
+"""
+import json
+import os
+import shutil
+import subprocess
+import sys
+import zipfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+BUILD = ROOT / 'build/kordos-full'
+STAGE = BUILD / 'stage.zip'
+OUT = BUILD / 'out'
+RESULT_JAR = ROOT / 'downloads/Quantum_Kordos_Full.jar'
+RESULT_JAD = ROOT / 'downloads/Quantum_Kordos_Full.jad'
+
+RIVER7 = ROOT / 'downloads/Quantum_Level41_River7_48bd4d0.jar'
+VILLAGE = ROOT / 'downloads/Quantum_Village_Planar.jar'
+
+KEEP_RIVER7_PREFIXES = ('bots/', 'frontrooms/', 'images/', 'languages/',
+                        'player/', 'scripts/', 'shop/', 'sounds/')
+KEEP_RIVER7_FILES = (
+    # Menu/title-instrumental and in-level tracks used by setting/level.
+    'music/Yamaoka_Akira-EndOfSmallSanctuary.mid',
+    'music/thunderforce/TF2Title.mid',
+    'music/gaping_hole.mid',
+    # skybox referenced by the kordos level.
+    'skies/skybox5.3d', 'skies/skybox5.png',
+)
+VILLAGE_KEEP = ('maps/kordos/', 'lightmap/')
+
+
+def stage_resources() -> None:
+    stage: dict[str, bytes] = {}
+    with zipfile.ZipFile(RIVER7) as jar:
+        for name in jar.namelist():
+            if name.endswith(('.class',)) or name.startswith('META-INF'):
+                continue
+            base = name.rsplit('/', 1)[-1]
+            if base in ('setting.txt',) or base.startswith('level') and base.endswith('.txt'):
+                continue  # replaced by the overlay, on purpose
+            if name in KEEP_RIVER7_FILES or any(name.startswith(p) for p in KEEP_RIVER7_PREFIXES):
+                stage[name] = jar.read(name)
+            elif '/' not in name:
+                stage[name] = jar.read(name)  # root fonts/lang/preview text
+    with zipfile.ZipFile(VILLAGE) as jar:
+        for name in jar.namelist():
+            if name.startswith(VILLAGE_KEEP):
+                stage[name] = jar.read(name)
+    BUILD.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(STAGE, 'w', zipfile.ZIP_DEFLATED) as jar:
+        for name in sorted(stage):
+            jar.writestr(name, stage[name])
+    print(f'staged {len(stage)} assets',
+          f'({sum(len(v) for v in stage.values()) / 1e6:.2f} MB unpacked)')
+
+
+def run_build(java: str) -> None:
+    if OUT.exists():
+        shutil.rmtree(OUT)
+    cmd = [sys.executable, str(ROOT / 'scripts/build_cldc.py'),
+           '--java', java,
+           '--ecj-jar', str(ROOT / 'build/tools/package/server/plugins/org.eclipse.jdt.core_3.16.0.v20181004-1305.jar'),
+           '--api-dir', str(ROOT / 'build/sdk/lib'),
+           '--proguard-jar', str(ROOT / 'build/sdk/proguard/lib/proguard.jar'),
+           '--output-dir', str(OUT),
+           '--resource-archive', str(STAGE),
+           '--resource-overlay', str(ROOT / 'tools/kordos-full/overlay')]
+    subprocess.run(cmd, check=True)
+
+
+def patch_manifest(jar_path: Path, app_name='Quantum Kordos FX') -> None:
+    tmp = jar_path.with_suffix('.tmp')
+    with zipfile.ZipFile(jar_path) as src, \
+            zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as dst:
+        for info in src.infolist():
+            data = src.read(info.filename)
+            if info.filename == 'META-INF/MANIFEST.MF':
+                text = data.decode('ascii')
+                text = text.replace('MIDlet-Name: Quantum', f'MIDlet-Name: {app_name}')
+                text = text.replace('MIDlet-1: Quantum,', f'MIDlet-1: {app_name},')
+                data = text.encode('ascii')
+            dst.writestr(info, data)
+    tmp.replace(jar_path)
+
+
+def main() -> None:
+    java = os.environ.get('JAVA', str(ROOT / 'build/tools/jdk4py/jdk4py/java-runtime/bin/java'))
+    stage_resources()
+    run_build(java)
+    jar = OUT / 'Quantum.jar'
+    print(f'jar: {jar} ({jar.stat().st_size} B)')
+    patch_manifest(jar)
+    RESULT_JAR.write_bytes(jar.read_bytes())  # final bytes AFTER repacking
+    jad_text = (OUT / 'Quantum.jad').read_text(encoding='ascii') \
+        .replace('\r\n', '\n')
+    lines = []
+    for line in jad_text.split('\n'):
+        if line.startswith('MIDlet-Jar-Size:'):
+            line = f'MIDlet-Jar-Size: {RESULT_JAR.stat().st_size}'
+        elif line.startswith('MIDlet-Jar-URL:'):
+            line = 'MIDlet-Jar-URL: Quantum_Kordos_Full.jar'
+        elif line.startswith('MIDlet-Name:'):
+            line = f'MIDlet-Name: Quantum Kordos FX'
+        elif line.startswith('MIDlet-1:'):
+            line = 'MIDlet-1: Quantum Kordos FX,,code.utils.Main'
+        lines.append(line)
+    RESULT_JAD.write_text('\r\n'.join(lines), encoding='ascii')
+    print(f'published {RESULT_JAR} ({RESULT_JAR.stat().st_size} B)')
+    with zipfile.ZipFile(RESULT_JAR) as z:
+        names = z.namelist()
+        print(json.dumps({
+            'entries': len(names),
+            'assets': sum(1 for n in names if not n.endswith('.class') and not n.startswith('META-INF')),
+        }))
+
+
+if __name__ == '__main__':
+    main()

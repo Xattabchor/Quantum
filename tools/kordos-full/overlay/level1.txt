@@ -1,0 +1,51 @@
+WORLD_MODEL=/maps/kordos/kordos.3d
+WORLD_SCALE=6
+LIGHTMAP=/lightmap/kordod.vla
+[WTEX_BEGIN]
+/maps/kordos/forestOrigy.png,std,-20000
+/maps/kordos/map-selo1.png
+6:/maps/kordos/river0.bmp:/maps/kordos/river1.bmp:/maps/kordos/river2.bmp:/maps/kordos/river3.bmp,7
+[WTEX_END]
+
+SKYBOX_MODEL=/skies/skybox5.3d
+SKYBOX_TEXTURE=/skies/skybox5.png
+
+WEATHER=RAIN
+WEATHER_PARTICLES_COUNT=8
+WEATHER_PARTICLES_SIZE=7
+
+START=-77706,-2712,-103802
+FINISH=-132710,-661,1936
+
+DIST=68500
+
+DMODE=9
+
+MUSIC=/music/gaping_hole.mid
+FALL_DAMAGE=1
+
+// Radiation pockets from the original village level (silent: no geiger wav
+// shipped in this bundle, trigger/damage logic intact).
+[OBJECT]
+POS=-111277,-3045,-91234;-30015,-2903,-104656;-73944,-4148,-69379
+ACTIVABLE=1
+ALWAYS_ACTIVATE=1
+REUSETIMER=380
+ON_ACTIVATE=player:hp-=1
+SINGLEUSE=0
+DESTROYONUSE=0
+RADIUS=6000
+
+// Shooter NPCs where the village quest placed its armed villagers.
+[NPC]
+POS=-32924,-346,5269;-28589,568,-11337;-43111,-348,8545;-44690,-345,-3406
+PRESET=DROZH_ENEMY
+
+[NPC]
+POS=-33043,-346,-1783;-96852,-289,-47250
+PRESET=DROZH_ENEMY
+
+// Zombie respawn spots: original forest/stalker positions on the ground.
+ENEMIES=-64336,-3801,-95565;-85974,-3350,-100109;-110648,-2851,-133274;-73825,-3626,-113803;-95321,-3147,-107077
+ENEMY_COUNT=6
+ZOMBIE_COUNT=6

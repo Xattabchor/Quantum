@@ -544,6 +544,8 @@ this.buffer.resetTex();
                    saved = true;
                    if(effects!=null) sceneRenderer.prepareEffects(this,effects);
                    if(weather!=null) sceneRenderer.prepareWeather(this,weather);
+                   if(sceneRenderer instanceof M3GSceneRenderer)
+                       ((M3GSceneRenderer)sceneRenderer).beginFrame(this);
                    nativePass = true;
                    drawBuffer();
                    if(effects!=null) drawRenderObject(effects,null,false);

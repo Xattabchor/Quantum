@@ -19,6 +19,8 @@ public class Vertex {
     public void recordView(int x,int y,int z) {viewX=x;viewY=y;viewDepth=z;}
     public int getViewX() {return viewX;}
     public int getViewY() {return viewY;}
+    // True-3D lit pass (M3G_LIT) also needs eye depth; MAX_VALUE = unset.
+    public int getViewDepth() {return viewDepth;}
     public boolean hasView(DirectX7 g) {
         if(viewDepth==Integer.MAX_VALUE || viewDepth!=rz) return false;
         long x=viewX,y=-(long)viewY;

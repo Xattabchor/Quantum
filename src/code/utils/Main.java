@@ -84,6 +84,19 @@ public final class Main extends MIDlet {
     public static int pixelsQ = 2; //0-4xmax 1 - 2xmax 2 - 1xmax
     public static final int renderer = DirectX7.M3G;
     public static boolean m3gPerspective = true;
+    // True-3D hardware-lit world pass (M3GLitRenderer). 0=off, 1=ambient+
+    // directional+weapon omni flash, 2=ambient+directional only. Off keeps
+    // every previous build/rasterizer bit-identical.
+    public static int m3gWorldLighting = 0;
+    public static int m3gLitAmbient = 96;     // 0..255 ambient lamp strength
+    public static int m3gLitDir = 150;        // 0..255 directional strength
+    public static int m3gOmniBase = 0;        // idle omni floor (0..255->I)
+    public static int m3gOmniFlash = 204;     // muzzle-flash peak (0..255->I)
+    public static int m3gOmniHalfDistX = 1000; // half-distance, % of distX
+    public static int m3gOmniOffsetX = 8, m3gOmniOffsetY = -6, m3gOmniOffsetZ = -45; // % of focal
+    public static int m3gLitNear = 16, m3gLitFar = 600000; // world units
+    public static boolean m3gLitNoVertexColors = false; // 1 strips baked lightmap
+    public static boolean m3gLitFlipWinding = false; // inside-out rescue
     public static int persQ = 2;
     public static int availableLevel = 1; // номер доступного уровня
     public static boolean forceLQFog = false;
@@ -274,6 +287,19 @@ public final class Main extends MIDlet {
         // M3G-only gameplay ignores the old Renderer choice without deleting its
         // store or changing the original settings/game-save record layouts.
         m3gPerspective = settings.getIntNoLang("M3G_PERSPECTIVE",1)!=0;
+        m3gWorldLighting = Math.min(2, Math.max(0, settings.getIntNoLang("M3G_LIT", 0)));
+        m3gLitAmbient = settings.getIntNoLang("M3G_LIT_AMBIENT", 96);
+        m3gLitDir = settings.getIntNoLang("M3G_LIT_DIR", 150);
+        m3gOmniBase = settings.getIntNoLang("M3G_OMNI_BASE", 0);
+        m3gOmniFlash = settings.getIntNoLang("M3G_OMNI_FLASH", 204);
+        m3gOmniHalfDistX = settings.getIntNoLang("M3G_OMNI_HALFX", 1000);
+        m3gOmniOffsetX = settings.getIntNoLang("M3G_OMNI_X", 8);
+        m3gOmniOffsetY = settings.getIntNoLang("M3G_OMNI_Y", -6);
+        m3gOmniOffsetZ = settings.getIntNoLang("M3G_OMNI_Z", -45);
+        m3gLitNear = settings.getIntNoLang("M3G_LIT_NEAR", 16);
+        m3gLitFar = settings.getIntNoLang("M3G_LIT_FAR", 600000);
+        m3gLitNoVertexColors = settings.getIntNoLang("M3G_LIT_NOVCOL", 0) == 1;
+        m3gLitFlipWinding = settings.getIntNoLang("M3G_LIT_FLIP", 0) == 1;
         byte[] perspectiveSetting = RmsUtils.openStore("Quantum.M3GPerspective");
         if(perspectiveSetting!=null && perspectiveSetting.length==1
                 && (perspectiveSetting[0]==0 || perspectiveSetting[0]==1))

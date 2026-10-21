@@ -39,7 +39,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final Vertex[] vertices = new Vertex[4];
     private final int[] uv = new int[8];
     private final short[] positions = new short[12], coords = new short[8];
-    private final byte[] colors = new byte[16];
+    final byte[] colors = new byte[16];
+    private M3GLitRenderer litRenderer; // created only when M3G_LIT != 0
     private final float[] work = new float[12];
     private final VertexBuffer[] buffers = new VertexBuffer[2];
     // These two buffers own stable position arrays; contents change, bindings do not.
@@ -179,6 +180,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         graphics.setViewport(0, 0, g.width, g.height);
         graphics.setCamera(camera, null);
         graphics.resetLights();
+        if(litRenderer != null) litRenderer.applyLights(g);
     }
 
     void restoreCamera(DirectX7 g) {
@@ -207,7 +209,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     private void flushPolygons(DirectX7 g) {if(batch!=null) batch.flush(g);}
-    private void flushBatch(DirectX7 g) {
+    void flushBatch(DirectX7 g) {
         flushPolygons(g);
         if(spriteRenderer!=null) spriteRenderer.flush(g);
     }
@@ -225,6 +227,13 @@ public final class M3GSceneRenderer implements SceneRenderer {
     public void prepareEffects(DirectX7 g,FrameEffects effects) {
         if(frameEffects==null) frameEffects=new M3GFrameEffects(this,graphics,maxTexture);
         frameEffects.prepare(g,effects);
+    }
+
+    /** Frame start (native passes): refresh true-3D lit-pass camera/lights. */
+    public void beginFrame(DirectX7 g) {
+        if(Main.m3gWorldLighting == 0) return;
+        if(litRenderer == null) litRenderer = new M3GLitRenderer(this, graphics);
+        litRenderer.beginFrame(g);
     }
 
     /** Prepare native weather before binding the shared scene target. */
@@ -384,6 +393,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
             uv[4] = p.cu; uv[5] = p.cv; uv[6] = p.du; uv[7] = p.dv;
             count = 4;
         }
+        // True-3D hardware-lit pass (M3G_LIT): consumes the polygon in view
+        // space with hardware lights, or returns false to keep the packed path.
+        if(litRenderer != null
+                && litRenderer.draw(g, object, texture, mode, count, vertices, uv)) return true;
         materialMath.resetBounds();
         boolean fastPath = fast || (Main.persQ == 0 && !Main.mipMapping);
         boolean alternate = count == 4 && type == Polygon4V.class && !fastPath
@@ -560,7 +573,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     private static int clamp(int value) {return Math.max(0,Math.min(255,value));}
 
-    private void setColors(DirectX7 g, RenderObject object, int count, int mode) {
+    // Lit pass (M3GLitRenderer) replays this exact baked-lightmap recipe.
+    void setColors(DirectX7 g, RenderObject object, int count, int mode) {
         boolean lit=(mode==9 || mode==13) && Main.fogQ>0;
         // Baked lightmap values only: no muzzle/torch/camera lighting here.
         // Classify the polygon once, not once for every vertex/channel.
