@@ -1,3 +1,20 @@
+## River Map Upscale: чёрные полосы или nearest-апскейл на весь экран (DIR / UP)
+
+[Quantum_RiverMap_Upscale.jar](Quantum_RiverMap_Upscale.jar) ·
+[JAD](Quantum_RiverMap_Upscale.jad) ·
+[Отчёт](Quantum_RiverMap_Upscale.build-report.json) ·
+[методика](../docs/river-upscale.md).
+
+База — renderer Pixel-сборки побайтно; по умолчанию `S100 DIR TEX SM B`.
+**3** — главный A/B: полосы 1:1 ↔ `getRGB`+Java nearest-поднятие+`drawRGB`
+на весь экран, **0** масштаб 100→75→50→25, **7** атлас/1×1, **9** SMOOTH/FLAT,
+**`*`** BASE_LEVEL/ближайший mip, **1** BASE, **5** home.
+Живой HUD — `FPS` и `N/R/C/I`, **C** — измеренное окно доставки.
+Снять в одной позе S100 DIR/UP, затем S75 DIR→UP→DIR и S50 DIR→UP→DIR;
+смотреть R (не должен меняться) и C (цена апскейла). Геометрия/река/свет/
+текстуры неизменны; рассчитано на M3G 1.0 в E65. Прежние JAR сохранены,
+ускорение до телефонного A/B не обещается.
+
 ## River Map Pixel: масштаб viewport, текстура, shading и mip
 
 [Quantum_RiverMap_Pixel.jar](Quantum_RiverMap_Pixel.jar) ·

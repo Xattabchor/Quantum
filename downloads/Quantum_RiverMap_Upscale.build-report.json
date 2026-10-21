@@ -1,0 +1,100 @@
+{
+  "classes": 198,
+  "code_methods": 2277,
+  "stackmap_attributes": 1252,
+  "class_versions": [
+    [
+      47,
+      0
+    ]
+  ],
+  "base_jar": "Quantum_StaticRoom_Perspective.jar",
+  "base_commit": "7bbc7b172c87aa05026c98bed3b6854b94f9a1a5",
+  "base_sha256": "652626cddcc8b991a4c9ba76ac810cd1d163f7041f393ff7e31fd8f44f3dcb57",
+  "pixel_parent_jar": "Quantum_RiverMap_Pixel.jar",
+  "pixel_parent_commit": "d7d1e67bd59b020957df1eaef78d128be8a39228",
+  "pixel_parent_sha256": "2f3d602dc347cbd8cb7897859a1e8d3640e7982c731e617960a2ef401011de0c",
+  "jar_bytes": 834426,
+  "jar_sha256": "00204419b4c068193e1aa2f9c96fb13f2884066b608a3424a617d6ced3f925d9",
+  "all_parent_classes_and_all_assets_unchanged_except_manifest": true,
+  "reused_pixel_classes_byte_identical": true,
+  "reused_pixel_classes": [
+    "code/Rendering/RiverPixelMesh$Masked.class",
+    "code/Rendering/RiverPixelMesh$NativeImage.class",
+    "code/Rendering/RiverPixelMesh$Part.class",
+    "code/Rendering/RiverPixelMesh$Pending.class",
+    "code/Rendering/RiverPixelMesh.class",
+    "code/Rendering/RiverPixelStats.class"
+  ],
+  "excluded_pixel_classes": [
+    "code/Rendering/RiverPixelPreview$Viewer.class",
+    "code/Rendering/RiverPixelPreview.class"
+  ],
+  "added_classes": [
+    "code/Rendering/RiverPixelMesh$Masked.class",
+    "code/Rendering/RiverPixelMesh$NativeImage.class",
+    "code/Rendering/RiverPixelMesh$Part.class",
+    "code/Rendering/RiverPixelMesh$Pending.class",
+    "code/Rendering/RiverPixelMesh.class",
+    "code/Rendering/RiverPixelStats.class",
+    "code/Rendering/RiverUpscalePreview$Viewer.class",
+    "code/Rendering/RiverUpscalePreview.class"
+  ],
+  "added_assets": [],
+  "source_sha256": {
+    "experiments/river-upscale/src/code/Rendering/RiverUpscalePreview.java": "d230a28b161dd4d68df679b26f8d8adfb40c3641c4eac28af9fa2643750bf74f"
+  },
+  "builder_sha256": "6b9ce926880c0c555106a36798b24a89bb8e1950bf5866e0c14bf41a22bbbf9d",
+  "renderer_parent_source_sha256": "62277bd72799f47e5e567f6289bc7625c2fe44c7deec079a6d678877281dfa48",
+  "stats_parent_source_sha256": "6da114daecfcab81166242abc42fceb377336d2c648d2bc012381a06dfee8452",
+  "toolchain_note": "Restored ephemeral toolchain (jdk4py 25.0.2.1, ECJ 3.16.0 from npm coc-java@1.0.0, api jars and ProGuard from vipaoL/j2me-build-tools). Rebuilding Quantum_RiverMap_Pixel from unchanged sources is byte-identical for 209/210 entries; only the compiled RiverPixelPreview$Viewer differs: the original toolchain bound inherited getWidth/getHeight calls to the compile-time subclass (Viewer), while the restored ECJ binds them to the declaring supertype javax/microedition/lcdui/Displayable. Both references resolve identically on a real MIDP 2.0 device. This build therefore reuses the six published RiverPixel renderer/stats classes byte-for-byte instead of recompiling them, and no RiverPixelPreview classes are packaged.",
+  "diagnostic": {
+    "purpose": "Price nearest-neighbour upscale delivery (C) of a reduced viewport against the fill it saves (R). No handset FPS claim.",
+    "map": "old sym9 village/river map from immutable Perspective/Tex3 parent: maps/kordos/kordos.3d, baked lightmap/kordod.vla, Tex3 slots forest/map-selo1/river",
+    "geometry_changed": false,
+    "textures_changed": false,
+    "lightmap_changed": false,
+    "renderer": "byte-identical published RiverPixelMesh/Stats classes; verifier compares jar entries against Quantum_RiverMap_Pixel",
+    "handset_model_prior": {
+      "area_model": "R ~= 30 ms fixed + ~74 ms x full-screen area, confirmed at S100/S75/S50/S25; S50 R48-51, S25 R32",
+      "fill_split_fullscreen": "texture ~20 ms, smooth colour interpolation ~16 ms, depth+iterate+write ~42 ms",
+      "farm_pump_copy_baseline": "full-screen Image drawImage copy was small (~1 ms) in FramePump; Java NN upscale expand cost unknown on E65"
+    },
+    "default": "S100 DIR TEX SM B (full viewport, 1:1 delivery, atlas textures, smooth shading, base-level filtering)",
+    "controls": {
+      "key1": "BASE reset: S100 + DIR + TEX + SMOOTH + BASE_LEVEL",
+      "key0": "cycle render scale 100 -> 75 -> 50 -> 25 percent (other toggles preserved)",
+      "key3": "toggle delivery DIR <-> UP: black-bar 1:1 image copy vs nearest upscale to full screen",
+      "key7": "toggle atlas textures <-> 1x1 white texture (pixel diagnostic inheritance)",
+      "key9": "toggle PolygonMode SMOOTH <-> FLAT shading",
+      "star": "toggle texture level filter BASE_LEVEL <-> NEAREST (nearest mip level; a hint, may be ignored)",
+      "key5": "home; scale/delivery/texture/shading/filter preserved",
+      "movement": "2/8 move, 4/6 turn; no strafe because 7/9 are pixel toggles"
+    },
+    "delivery": {
+      "dir": "native Image rendered at scaled viewport size, drawn 1:1 top-left; uncovered Canvas bars filled black outside native render timing (identical to river pixel diagnostic)",
+      "up": "same offscreen native Image, then Image.getRGB + integer nearest-neighbour expand + Graphics.drawRGB false-alpha over the whole Canvas; at S100 UP intentionally degrades to the same 1:1 drawImage as DIR (pipeline control)",
+      "upscale_algorithm": "dst(x,y)=src(floor(x*sw/dw), floor(y*sh/dh)); same-source rows reused via arraycopy; buffers allocated once per scale change, not per frame",
+      "hud": "drawn after delivery so it is never upscaled; two live lines: mode/FPS and N/R/C/I where C is the measured delivery window getRGB+expand+draw (or DIR bar+copy)"
+    },
+    "m3g_compatibility": "Target user-reported Nokia E65 M3G 1.0: renderer unchanged from the pixel diagnostic; upscale uses only MIDP 2.0 Graphics/Image entry points already exercised by the game",
+    "near": 128,
+    "far": 60000,
+    "configured_far": 68500,
+    "fov": 74,
+    "DMODE": 9,
+    "world_scale": 6,
+    "alpha": "original thresholds in TEX modes, as parent",
+    "depth": "test/write ON except river write OFF, as parent",
+    "perspective": "ON fixed",
+    "river": "all 4 cached frames, speed6, mode7, as parent",
+    "pump": "same worker repaint()+serviceRepaints()+sleep(1) in all modes, as parent",
+    "warmup_ms": 1000,
+    "measure_ms": 3000,
+    "scope": "world-only preview: no sky/weather/gameplay/collision changes",
+    "stats_note": "N/R/C/I are Java API wall time, NOT GPU timestamps or proven LCD flips; C is not free even when it reads 0.0 because lower timer resolution may hide sub-ms work"
+  },
+  "handset_tested": false,
+  "handset_fps_measured": false,
+  "purpose": "Isolated river-map upscale-delivery A/B: DIR black bars vs UP nearest full-screen expansion over the existing pixel-cost renderer."
+}
