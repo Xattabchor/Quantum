@@ -13,7 +13,7 @@ public class TitleScreen extends GUIScreen {
     TextView text;
 
     private static final long TITLE_FADE_DURATION = 4000L;
-    private static final long TITLE_FADE_OUT_DURATION = 2500L;
+    private static final long TITLE_FADE_OUT_DURATION = 4500L;
 
     private Image title;
     private int[] titlePixels;
