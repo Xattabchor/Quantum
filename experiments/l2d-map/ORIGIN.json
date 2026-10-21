@@ -4,7 +4,8 @@
   "license": "GPL-3.0",
   "modified_files": [
     "src/com/MeshData.java",
-    "src/com/Renderer.java"
+    "src/com/Renderer.java",
+    "src/com/BMPLoader.java"
   ],
   "upstream_sha256": {
     "src/com/Arsenal.java": "ab41d9c896d6aa129a7b657d5ccf32b78ee01f47006dcd4c62803523038664b1",
@@ -60,5 +61,5 @@
     "src/home/Main.java": "3f220116ef5f3cc0f0f63ebb8bb2428a0c36f58edc97abed07d0c97e38a45fae"
   },
   "renderer_patch": "Exact camera/projection/near/far/clear/hints adapter; explicit viewport errors and target transaction recovery; addMesh(Node) unchanged.",
-  "loader_patch": "Resource anchor Object.class to MeshData.class, no binary loader logic changed."
+  "loader_patch": "Resource anchors Object.class -> MeshData.class / BMPLoader.class (desktop-classloaders; same bytes on MIDlet lookup path), no binary loader logic changed."
 }

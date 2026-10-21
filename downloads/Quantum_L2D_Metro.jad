@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum L2D Metro
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: Quantum Experiments
+MIDlet-1: Metro L2D,,code.Rendering.L2DMetroPreview
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_L2D_Metro.jar
+MIDlet-Jar-Size: 967380

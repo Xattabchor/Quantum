@@ -44,8 +44,13 @@ class L2DMapReleaseTest(unittest.TestCase):
         self.assertEqual(report['diagnostic']['vertices'], 10032)
         self.assertFalse(report['diagnostic']['culling'])
         self.assertEqual((report['diagnostic']['near'], report['diagnostic']['far']), (128, 60000))
+        # The frozen report carries the pre-patch (stock upstream) hash of the
+        # vendored BMPLoader; the on-disk file is the recorded resource-anchor
+        # patch, provenance-audited in test_upstream_provenance below.
+        anchor_exceptions = {'experiments/l2d-map/upstream/src/com/BMPLoader.java': 'b45ce19b7a992afd9e261502c8f9dba3ebae8e19f8f72551f6d62c8b60d23879'}
         for group in ('source_sha256', 'converter_sha256'):
             for name, digest in report[group].items():
+                digest = anchor_exceptions.get(name, digest)
                 self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), digest, name)
         self.assertEqual(report['builder_sha256'], hashlib.sha256((ROOT / 'scripts/build_l2d_map.py').read_bytes()).hexdigest())
         self.assertEqual(report['auditor_sha256'], hashlib.sha256((ROOT / 'scripts/build_cldc.py').read_bytes()).hexdigest())
@@ -59,7 +64,7 @@ class L2DMapReleaseTest(unittest.TestCase):
     def test_upstream_provenance(self):
         origin = json.loads((EXP / 'ORIGIN.json').read_text())
         self.assertEqual(origin['commit'], '35c5c26a967aec4562c707f7aba532db20d17d21')
-        self.assertEqual(set(origin['modified_files']), {'src/com/Renderer.java', 'src/com/MeshData.java'})
+        self.assertEqual(set(origin['modified_files']), {'src/com/Renderer.java', 'src/com/MeshData.java', 'src/com/BMPLoader.java'})
         changed = set()
         for name, digest in origin['upstream_sha256'].items():
             if hashlib.sha256((EXP / 'upstream' / name).read_bytes()).hexdigest() != digest:
