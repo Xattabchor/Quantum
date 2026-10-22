@@ -155,7 +155,8 @@ public final class Weapon {
         short dxb, dxmb;
         dxb = dx;
         dxmb = dx_max;
-        if (meleeAnim) {
+        // WEAPON_SWAY=0 (kordos-FX): no melee/fire sway of the gun sprite.
+        if (meleeAnim && Main.weaponSway) {
             dx = (short) (dx_max - dx);
             dy = (short) (dy_max - dy);
         }
@@ -207,7 +208,7 @@ public final class Weapon {
                 }
             }
         }
-        if (meleeAnim) dy = (short) (dy_max - dy);
+        if (meleeAnim && Main.weaponSway) dy = (short) (dy_max - dy);
         dx_max = dxmb;
         dx = dxb;
 
@@ -224,7 +225,7 @@ public final class Weapon {
         
         if (sight == null && sightWeapon == null) return;
         
-        if (meleeAnim) {
+        if (meleeAnim && Main.weaponSway) {
             dx = (short) (dx_max - dx);
             dy = (short) (dy_max - dy);
         }
@@ -239,7 +240,7 @@ public final class Weapon {
         }
         if (sight != null) drawImage(g,images,sight, 0, y, Graphics.TOP | Graphics.LEFT);
         
-        if (meleeAnim) {
+        if (meleeAnim && Main.weaponSway) {
             dx = (short) (dx_max - dx);
             dy = (short) (dy_max - dy);
         }

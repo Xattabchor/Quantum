@@ -99,6 +99,9 @@ public final class Main extends MIDlet {
     public static boolean m3gLitNoVertexColors = false; // 1 strips baked lightmap
     public static boolean m3gLitFlipWinding = false; // rescue only: CW derived from pack()
     public static int m3gLitSelfTest = 0; // seconds to flash omni+ambient at spawn
+    public static int m3gLitMip = 0;      // 1: hw NEAREST_MIPMAP_NEAREST chains, 0: base level
+    public static int m3gScreenScale = 100; // viewport % of canvas (world pass only)
+    public static boolean weaponSway = true; // melee/fire sway of the HUD gun sprite
     public static int persQ = 2;
     public static int availableLevel = 1; // номер доступного уровня
     public static boolean forceLQFog = false;
@@ -304,6 +307,9 @@ public final class Main extends MIDlet {
         m3gLitNoVertexColors = settings.getIntNoLang("M3G_LIT_NOVCOL", 0) == 1;
         m3gLitFlipWinding = settings.getIntNoLang("M3G_LIT_FLIP", 0) == 1;
         m3gLitSelfTest = settings.getIntNoLang("M3G_LIT_SELFTEST", 0);
+        m3gLitMip = settings.getIntNoLang("M3G_LIT_MIP", 0);
+        m3gScreenScale = Math.max(25, Math.min(100, settings.getIntNoLang("M3G_SCREEN_SCALE", 100)));
+        weaponSway = settings.getIntNoLang("WEAPON_SWAY", 1) == 1;
         byte[] perspectiveSetting = RmsUtils.openStore("Quantum.M3GPerspective");
         if(perspectiveSetting!=null && perspectiveSetting.length==1
                 && (perspectiveSetting[0]==0 || perspectiveSetting[0]==1))

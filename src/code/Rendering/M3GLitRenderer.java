@@ -17,6 +17,9 @@ import javax.microedition.m3g.Transform;
 import code.Rendering.Meshes.Polygon3V;
 import code.Rendering.Meshes.Polygon4V;
 import code.utils.Main;
+import java.util.Vector;
+import javax.microedition.lcdui.Image;
+import javax.microedition.m3g.Image2D;
 
 /**
  * True-3D hardware-lit world pass for the M3G backend (M3G_LIT).
@@ -78,6 +81,61 @@ public final class M3GLitRenderer {
     private boolean depthCleared;
     private long frameId;
     private long selfTestStart;
+
+    // HW-mip texture stores (M3G_LIT_MIP=1): full Image2D mip chain per
+    // source Texture; filters {NEAREST, NEAREST} = NEAREST_MIPMAP_NEAREST,
+    // so no CPU-side mip picking or software interpolation is left.
+    private final Vector litTextures = new Vector();
+
+    private static final class LitTexture {
+        Texture source;
+        int kind;
+        int[] img0;
+        Texture2D texture;
+    }
+
+    private Texture2D litTexture(DirectX7 g, Texture texture, RawImage raw, int kind) {
+        boolean hwMip = Main.m3gLitMip == 1
+                && texture.mip != null && texture.mip.length > 0 && texture.mip[0] != null;
+        if(!hwMip) return owner.texture(g, raw, kind);
+        int[] live0 = texture.mip[0].img;
+        for(int i = 0; i < litTextures.size(); i++) {
+            LitTexture lt = (LitTexture) litTextures.elementAt(i);
+            // Animated sources (river water) swap pixel arrays in place:
+            // react to identity changes by rebuilding the chain.
+            if(lt.source == texture && lt.kind == kind && lt.img0 == live0)
+                return lt.texture;
+        }
+        try {
+            int levels = Math.min(3, texture.mip.length);
+            Image[] chain = new Image[levels];
+            for(int l = 0; l < levels; l++) {
+                RawImage m = texture.mip[l];
+                int size = m.w * m.h;
+                int[] px = new int[size];
+                boolean alpha = kind == M3GSceneRenderer.ALPHA_TEXTURE;
+                for(int p = 0; p < size; p++) {
+                    int rgb = m.img[p];
+                    int a = alpha ? (rgb >>> 24) : (rgb != 0 ? 255 : 0);
+                    px[p] = (a << 24) | (rgb & 0xffffff);
+                }
+                chain[l] = Image.createRGBImage(px, m.w, m.h, true);
+            }
+            Texture2D tex = new Texture2D(new Image2D(Image2D.RGBA, chain));
+            tex.setFiltering(Texture2D.FILTER_NEAREST, Texture2D.FILTER_NEAREST);
+            tex.setWrapping(Texture2D.WRAP_REPEAT, Texture2D.WRAP_REPEAT);
+            LitTexture lt = new LitTexture();
+            lt.source = texture; lt.kind = kind; lt.texture = tex;
+            lt.img0 = live0;
+            litTextures.addElement(lt);
+            g.frameTextureUploads++;
+            return tex;
+        } catch(Exception e) {
+            return owner.texture(g, raw, kind); // device without mip chains
+        } catch(Error e) {
+            return owner.texture(g, raw, kind);
+        }
+    }
 
     public M3GLitRenderer(M3GSceneRenderer owner, Graphics3D graphics) {
         this.owner = owner;
@@ -260,7 +318,7 @@ public final class M3GLitRenderer {
         normalArray.set(0, count, nrm);
 
         RawImage base = texture.mip != null && texture.mip.length > 0
-                ? texture.mip[0] : raw;
+                && Main.m3gLitMip == 0 ? texture.mip[0] : raw;
         if(base == null) return false;
         for(int i = 0; i < count; i++) {
             int u = uvIn[i * 2], v = uvIn[i * 2 + 1];
@@ -284,7 +342,7 @@ public final class M3GLitRenderer {
         int kind = mode == 2 ? M3GSceneRenderer.ADD_TEXTURE
                 : mode == 1 || mode == 11 || (mode == 4 && raw.alphaMixing)
                 ? M3GSceneRenderer.ALPHA_TEXTURE : M3GSceneRenderer.OPAQUE_TEXTURE;
-        Texture2D tex = owner.texture(g, raw, kind);
+        Texture2D tex = litTexture(g, texture, raw, kind);
         if(lastTex != tex) {
             appearance.setTexture(0, tex);
             lastTex = tex;
@@ -292,8 +350,9 @@ public final class M3GLitRenderer {
         tex.setBlending(mode == 11 ? Texture2D.FUNC_DECAL
                 : mode == 5 ? Texture2D.FUNC_BLEND : Texture2D.FUNC_MODULATE);
 
-        float threshold = kind == M3GSceneRenderer.ALPHA_TEXTURE
-                ? 0 : owner.textureCutoutThreshold();
+        // Alpha threshold: cutout punch for non-alpha kinds (owner cache and
+        // hw-mip chains share this semantics), plain alpha blend elsewhere.
+        float threshold = kind == M3GSceneRenderer.ALPHA_TEXTURE ? 0f : 0.5f;
         if(kind == M3GSceneRenderer.OPAQUE_TEXTURE) {
             compositing.setBlending(CompositingMode.REPLACE);
             compositing.setDepthWriteEnable(true);

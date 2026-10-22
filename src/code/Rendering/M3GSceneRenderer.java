@@ -159,10 +159,17 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     void bind(DirectX7 g) { bind(g,true); }
 
+    // M3G_SCREEN_SCALE: the world pass renders into a smaller viewport
+    // surface (area cut), presentation nearest-upscales at finishImage.
+    static int targetScale() {return Main.m3gScreenScale;}
+
     void bind(DirectX7 g,boolean preserve) {
         if(bound) return;
-        if(surface == null || surface.getWidth() != g.width || surface.getHeight() != g.height)
-            surface = Image.createImage(g.width, g.height);
+        int scale=targetScale();
+        if(scale < 100) preserve=false; // staged/stretch presentation instead
+        if(surface == null || surface.getWidth() != g.width*scale/100
+                || surface.getHeight() != g.height*scale/100)
+            surface = Image.createImage(g.width*scale/100, g.height*scale/100);
         // Copy the CPU background, skybox, and any earlier software segment.
         if(preserve) surface.getGraphics().drawRGB(g.display, 0, g.width, 0, 0, g.width, g.height, false);
         if(!projectionReady || projectionWidth!=g.width || projectionHeight!=g.height
@@ -177,7 +184,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
         graphics.bindTarget(surface.getGraphics(), false, 0);
         bound = true;
-        graphics.setViewport(0, 0, g.width, g.height);
+        graphics.setViewport(0, 0, surface.getWidth(), surface.getHeight());
         graphics.setCamera(camera, null);
         graphics.resetLights();
         if(litRenderer != null) litRenderer.applyLights(g);
@@ -272,19 +279,40 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     public void finish(DirectX7 g) {
+        // finishImage also fills g.display directly when a scaled viewport stretched.
         Image result=finishImage(g);
-        if(result!=null) result.getRGB(g.display,0,g.width,0,0,g.width,g.height);
+        if(result!=null && targetScale()>=100) result.getRGB(g.display,0,g.width,0,0,g.width,g.height);
     }
 
     /** Final image presentation needs a released target, not a Java pixel copy.
-     * Intermediate CPU barriers still call finish(), preserving their contract. */
+     * Scaled viewport (M3G_SCREEN_SCALE<100) nearest-upscales into g.display
+     * here and returns a reusable full-size presentation image. */
     public Image finishImage(DirectX7 g) {
         flushBatch(g);
         if(!bound) return null;
         try { graphics.releaseTarget(); }
         finally { bound = false; }
-        return surface;
+        int scale=targetScale();
+        if(scale >= 100) return surface;
+        int sw=surface.getWidth(), sh=surface.getHeight();
+        if(scaleBuffer == null || scaleBuffer.length != sw*sh) scaleBuffer=new int[sw*sh];
+        surface.getRGB(scaleBuffer, 0, sw, 0, 0, sw, sh);
+        int gw=g.width, gh=g.height;
+        int[] dst=g.display;
+        for(int y=0; y<gh; y++) {
+            int srcRow=(y*sh/gh)*sw;
+            for(int x=0; x<gw; x++) {
+                dst[y*gw+x]=scaleBuffer[srcRow+(x*sw/gw)];
+            }
+        }
+        if(present==null || present.getWidth()!=gw || present.getHeight()!=gh)
+            present=Image.createImage(gw, gh);
+        present.getGraphics().drawRGB(dst, 0, gw, 0, 0, gw, gh, false);
+        return present;
     }
+
+    private int[] scaleBuffer;
+    private Image present;
 
     public void dispose() {
         if(batch!=null) batch.discard();
@@ -575,6 +603,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     // Lit pass (M3GLitRenderer) replays this exact baked-lightmap recipe.
     void setColors(DirectX7 g, RenderObject object, int count, int mode) {
+        // M3G_LIT_NOVCOL builds cut static (baked) lighting everywhere:
+        // vertex colors are forced white so only hardware lights shade.
+        if(Main.m3gLitNoVertexColors) {uniformColors(count,0xffffff,255);return;}
         boolean lit=(mode==9 || mode==13) && Main.fogQ>0;
         // Baked lightmap values only: no muzzle/torch/camera lighting here.
         // Classify the polygon once, not once for every vertex/channel.
