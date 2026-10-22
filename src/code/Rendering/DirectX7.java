@@ -41,8 +41,11 @@ public final class DirectX7 {
        peakUploads=Math.max(peakUploads,frameTextureUploads);
        boolean active=isM3GActive();
        if(statsText==null || now>=statsNext || now<statsNext-250 || active!=statsNative) {
-           statsText=(active?"M3G ":"CPU ")+"D:"+peakDraws+" B:"+peakBarriers+" T:"+peakUploads;
+           statsText=(active?"M3G ":"CPU ")+"D:"+peakDraws+" B:"+peakBarriers+" T:"+peakUploads
+                   +" L:"+M3GLitRenderer.statsLit+" F:"+M3GLitRenderer.statsFail
+                   +" r"+M3GLitRenderer.statsReason;
            peakDraws=peakBarriers=peakUploads=0;statsNext=now+250;statsNative=active;
+           M3GLitRenderer.resetLitStats();
        }
        return statsText;
    }

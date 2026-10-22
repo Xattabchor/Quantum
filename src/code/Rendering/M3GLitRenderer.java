@@ -153,6 +153,9 @@ public final class M3GLitRenderer {
         polygon.setShading(PolygonMode.SHADE_SMOOTH);
         owner.registerPolygonMode(polygon);
         material.setColor(Material.DIFFUSE, 0xffffffff);
+        // JSR-184 default material AMBIENT is dark grey (0x333333-ish): it
+        // multiplies the ambient light down to ~nothing. Open it fully.
+        material.setColor(Material.AMBIENT, 0xffffffff);
         material.setColor(Material.SPECULAR, 0xff000000); // specular off
         appearance.setPolygonMode(polygon);
         appearance.setMaterial(material);
@@ -184,9 +187,23 @@ public final class M3GLitRenderer {
     private final float[] projection = {0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, -1, 0};
 
+    // On-device diagnostics (debug stats line): polygons consumed by the lit
+    // pass vs rejected per frame, and the last rejection reason.
+    // reason: 1=exotic mode, 2=no/null texture or unsupported, 3=no view
+    // record, 4=uv out of 16-bit range, 0=none.
+    public static int statsLit, statsFail, statsReason;
+    private int frameLit, frameFail, frameReason;
+
+    public static void resetLitStats() {
+        statsLit = 0; statsFail = 0; statsReason = 0;
+    }
+
     public void beginFrame(DirectX7 g) {
         frameId++;
         depthCleared = false;
+        if(frameLit > statsLit) statsLit = frameLit;
+        if(frameFail > statsFail) { statsFail = frameFail; statsReason = frameReason; }
+        frameLit = 0; frameFail = 0; frameReason = 0;
         // near<1 = auto: 1*focal span. far/near=3000 keeps the 16-bit depth
         // useful across the map instead of collapsing the far field into a
         // few dozen steps (near=16 was ratio 37500 and distant z-fighting).
@@ -256,16 +273,16 @@ public final class M3GLitRenderer {
     public boolean draw(DirectX7 g, RenderObject object, Texture texture,
             int mode, int count, Vertex[] vertices, int[] uvIn) {
         // Keep exotic fill/fog modes on their certified CPU-equivalent path.
-        if(mode == 8 || mode == 10 || mode == 12) return false;
+        if(mode == 8 || mode == 10 || mode == 12) { frameFail++; frameReason = 1; return false; }
         RawImage raw = texture.rImg;
         if(texture.mip != null && texture.mip.length > 0) raw = texture.mip[0];
-        if(raw == null || !owner.supportsTexture(raw)) return false;
+        if(raw == null || !owner.supportsTexture(raw)) { frameFail++; frameReason = 2; return false; }
 
         int maxAbs = 1;
         boolean behind = true;
         for(int i = 0; i < count; i++) {
             Vertex v = vertices[i];
-            if(v.getViewDepth() == Integer.MAX_VALUE) return false; // no view record: fall back
+            if(v.getViewDepth() == Integer.MAX_VALUE) { frameFail++; frameReason = 3; return false; } // no view record
             int x = v.getViewX(), y = v.getViewY(), z = v.getViewDepth();
             if(z < 0) behind = false;
             maxAbs = Math.max(maxAbs, Math.max(Math.abs(x),
@@ -349,7 +366,7 @@ public final class M3GLitRenderer {
             if(u == 255 && base.w < 255) u = 256;
             if(v == 255 && base.h < 256) v = 256;
             if(u < Short.MIN_VALUE || u > Short.MAX_VALUE
-                    || v < Short.MIN_VALUE || v > Short.MAX_VALUE) return false;
+                    || v < Short.MIN_VALUE || v > Short.MAX_VALUE) { frameFail++; frameReason = 4; return false; }
             uv[i * 2] = (short) u;
             uv[i * 2 + 1] = (short) v;
         }
@@ -403,6 +420,7 @@ public final class M3GLitRenderer {
         owner.flushBatch(g);
         graphics.setCamera(camera, null);
         owner.renderNative(g, buffer, count == 3 ? triStrip : quadStrip, appearance);
+        frameLit++;
         return true;
     }
 }
