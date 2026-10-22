@@ -105,6 +105,8 @@ public final class Main extends MIDlet {
     public static int m3gLitDebug = 0; // 1: unlit white-silhouette probe (geometry isolation)
     public static int m3gLitDist = 0;  // >0: drop lit polys fully beyond this view depth
     public static int m3gLitFlat = 0;  // 1: SHADE_FLAT (cheaper software-raster lighting)
+    public static int m3gLitDyn = 0;   // 1: auto distance cull tracking the target FPS
+    public static int m3gLitFps = 20;  // dyn-dist target frames per second
     public static int m3gScreenScale = 100; // viewport % of canvas (world pass only)
     public static boolean weaponSway = true; // melee/fire sway of the HUD gun sprite
     public static int persQ = 2;
@@ -318,6 +320,8 @@ public final class Main extends MIDlet {
         m3gLitDebug = settings.getIntNoLang("M3G_LIT_DEBUG", 0);
         m3gLitDist = settings.getIntNoLang("M3G_LIT_DIST", 0);
         m3gLitFlat = settings.getIntNoLang("M3G_LIT_FLAT", 0);
+        m3gLitDyn = settings.getIntNoLang("M3G_LIT_DYN", 0);
+        m3gLitFps = settings.getIntNoLang("M3G_LIT_FPS", 20);
         m3gScreenScale = Math.max(25, Math.min(100, settings.getIntNoLang("M3G_SCREEN_SCALE", 100)));
         weaponSway = settings.getIntNoLang("WEAPON_SWAY", 1) == 1;
         // Menu-driven hardware toggles (Setting screen) persist separately.

@@ -256,6 +256,7 @@ public final class M3GLitRenderer {
     // reason: 1=exotic mode, 2=no/null texture or unsupported, 3=no view
     // record, 4=uv out of 16-bit range, 0=none.
     public static int statsLit, statsFail, statsReason;
+    public static int statsDynDist;     // live dyn-cull distance (M3G_LIT_DYN=1)
     public static String statsErr = ""; // last fatal lit-pass failure (nullable text)
     private int frameLit, frameFail, frameReason;
 
@@ -273,6 +274,28 @@ public final class M3GLitRenderer {
             LitBucket bk = (LitBucket) buckets.elementAt(i);
             bk.verts = 0; bk.indexLen = 0; bk.stripCount = 0;
         }
+        // Dynamic distance cull (M3G_LIT_DYN=1): track the frame-time moving
+        // average and shrink/relax the cutoff toward the target FPS.
+        if(Main.m3gLitDyn == 1) {
+            int cap = Main.m3gLitDist > 0 ? Main.m3gLitDist : (int) Main.m3gLitFar;
+            if(dynDist <= 0) dynDist = cap;
+            long now = System.currentTimeMillis();
+            if(lastFrameTime != 0) {
+                float dt = now - lastFrameTime;
+                if(dt > 250) dt = 250; // pauses/hiccups must not sink the average
+                avgDt = avgDt == 0 ? dt : avgDt * 0.85f + dt * 0.15f;
+                float target = 1000f / Math.max(5, Main.m3gLitFps);
+                if(avgDt > target * 1.1f) {
+                    dynDist = (int) (dynDist * 0.92f);
+                    if(dynDist < 20000) dynDist = 20000;
+                } else if(avgDt < target * 0.92f) {
+                    dynDist = (int) (dynDist * 1.06f) + 1500;
+                    if(dynDist > cap) dynDist = cap;
+                }
+            }
+            lastFrameTime = now;
+            statsDynDist = dynDist;
+        } else statsDynDist = 0;
         float near = Main.m3gLitNear > 0 ? Main.m3gLitNear : Math.max(16, g.distX);
         float far = Main.m3gLitFar;
         camera.setPerspective(g.fovY > 0 ? g.fovY : 60,
@@ -356,12 +379,14 @@ public final class M3GLitRenderer {
                     Math.max(Math.abs(y), Math.abs(z))));
         }
         if(behind) return true; // entirely behind the eye plane
-        // Distance cull (M3G_LIT_DIST): drop polys entirely beyond the cutoff.
-        // Consumed-without-draw keeps the counter honest: L shows survivors.
-        if(Main.m3gLitDist > 0) {
+        // Distance cull (M3G_LIT_DIST, or the live M3G_LIT_DYN value): drop
+        // polys entirely beyond the cutoff. Consumed-without-draw keeps the
+        // counter honest: L shows survivors.
+        int distLimit = Main.m3gLitDyn == 1 ? dynDist : Main.m3gLitDist;
+        if(distLimit > 0) {
             boolean beyond = true;
             for(int i = 0; i < count; i++)
-                if(vertices[i].getViewDepth() > -Main.m3gLitDist) { beyond = false; break; }
+                if(vertices[i].getViewDepth() > -distLimit) { beyond = false; break; }
             if(beyond) return true;
         }
 
@@ -555,6 +580,11 @@ public final class M3GLitRenderer {
             }
         }
     }
+
+    /** Dynamic-cull state (per renderer): live distance + frame-time average. */
+    private int dynDist;
+    private long lastFrameTime;
+    private float avgDt;
 
     private void flushBucket(DirectX7 g, LitBucket bk) {
         if(bk.verts == 0) return;
