@@ -220,6 +220,8 @@ public final class M3GLitRenderer {
         projection[14] = 2f * far * near / (near - far);
         cameraTransform.set(projection);
         camera.setGeneric(cameraTransform);
+        polygon.setCulling(Main.m3gLitCullNone
+                ? PolygonMode.CULL_NONE : PolygonMode.CULL_BACK);
         polygon.setWinding(Main.m3gLitFlipWinding
                 ? PolygonMode.WINDING_CCW : PolygonMode.WINDING_CW);
         ambient.setIntensity(Main.m3gLitAmbient / 255f);

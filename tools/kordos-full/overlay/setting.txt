@@ -126,6 +126,8 @@ M3G_LIT_NOVCOL=0
 // 0 = baked vertex lightmap under HW lights (menu: Baked light ON/OFF)
 M3G_LIT_MIP=1
 M3G_LIT_NORMALVIZ=0
+M3G_LIT_FLIP=1
+// 1 = lit fronts are CCW in NDC (geometry was fully back-face culled)
 M3G_SCREEN_SCALE=100
 WEAPON_SWAY=0
 
