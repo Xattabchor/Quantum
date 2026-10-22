@@ -113,3 +113,22 @@ M3G-блок обязан лежать в глобальной зоне (до п
 Весь код за флагом `M3G_LIT` (default 0) — предыдущие рендер-пути побайтово
 не меняются; RMS/save-layout не тронут (сейвы называются `QUANTUM_KORDOS_FX`).
 Предыдущие JAR сохраняются.
+
+## Hardware settings menu (replaces software quality items)
+
+The in-game **Settings → Perfomance** section no longer exposes software
+raster quality items; those rows are now hardware toggles, persisted in RMS
+store `Quantum.M3GFx` (4 bytes: light mode, hw mip, viewport scale, baked-flag):
+
+| Menu row (label → fallback) | Drives | Values |
+|---|---|---|
+| `M3G_VIEWPORT` → "Viewport:NN%" | `Main.m3gScreenScale` | 25/50/75/100 (step 25 per key press, clamped) |
+| `M3G_HWLIGHT` → "HW light:OFF/FULL/NO OMNI" | `Main.m3gWorldLighting` | 0 off, 1 full omni flash, 2 without omni |
+| `M3G_HWMIP` → "HW mip:ON/OFF" | `Main.m3gLitMip` | hardware NEAREST_MIPMAP chain for lit textures |
+| `M3G_BAKED` → "Baked light:ON/OFF" | `Main.m3gLitNoVertexColors` (inverted) | ON = vertex lightmap, OFF = pure hardware light |
+| `M3G_OMNI` → "Omni flash:ON/OFF" | `Main.m3gWorldLighting` 1↔2 quick toggle | only when light > 0 |
+
+Software rows removed from the menu (engine fields remain, no longer
+reachable from settings): DISPLAY_SIZE (legacy screen size), PERSQ, TEXQ,
+FOGQ, MIPMAPPING. CORPSES / BLOOD / FRAMESKIP and the trailing
+M3G-only `M3G_PERSPECTIVE` item are unchanged.

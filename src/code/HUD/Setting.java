@@ -53,6 +53,11 @@ public final class Setting extends Selectable {
         return 21+(hasLangSelect()?1:0);
     }
 
+    private static String langGetDef(IniFile lang, String key, String def) {
+        String s = lang.get(key);
+        return s == null || s.equals(key) ? def : s;
+    }
+
     private void setItems() {
         IniFile lang = Main.getGameText();
         if(getItems().length!=itemCount()) {
@@ -97,22 +102,22 @@ public final class Setting extends Selectable {
         var2[i] = lang.get("PERF") + ":";
         i++;
         ms[i - 1] = true;
-        var2[i] = lang.get("DISPLAY_SIZE") + ":" + Main.getDisplaySize();
+        var2[i] = langGetDef(lang, "M3G_VIEWPORT", "Viewport") + ":" + Main.m3gScreenScale + "%";
         i++;
         ms[i - 1] = false;
-        var2[i] = lang.get("PERSQ") + ":" + Main.persQ * 25;
+        var2[i] = langGetDef(lang, "M3G_HWLIGHT", "HW light") + ":"
+                + (Main.m3gWorldLighting == 0 ? lang.get("OFF")
+                : Main.m3gWorldLighting == 1 ? "FULL" : "NO OMNI");
         i++;
 
-        var2[i] = lang.get("TEXQ") + ":" + lang.get("HQ");
+        var2[i] = langGetDef(lang, "M3G_HWMIP", "HW mip") + ":"
+                + (Main.m3gLitMip == 1 ? lang.get("ON") : lang.get("OFF"));
         ms[i] = false;
-        if(Main.pixelsQ == 0) var2[i] = lang.get("TEXQ") + ":" + lang.get("LLQ");
-        if(Main.pixelsQ == 1) var2[i] = lang.get("TEXQ") + ":" + lang.get("LQ");
         i++;
 
-        var2[i] = lang.get("FOGQ") + ":" + lang.get("HQ");
+        var2[i] = langGetDef(lang, "M3G_BAKED", "Baked light") + ":"
+                + (Main.m3gLitNoVertexColors ? lang.get("OFF") : lang.get("ON"));
         ms[i] = false;
-        if(Main.fogQ == 0) var2[i] = lang.get("FOGQ") + ":" + lang.get("OFF");
-        if(Main.fogQ == 1) var2[i] = lang.get("FOGQ") + ":" + lang.get("LLQ");
         i++;
         var2[i] = lang.get("CORPSES") + ":" + (Main.isCorpses() ? lang.get("ON") : lang.get("OFF"));
         ms[i] = false;
@@ -120,7 +125,8 @@ public final class Setting extends Selectable {
         var2[i] = lang.get("BLOOD") + ":" + (this.main.isBlood() ? lang.get("ON") : lang.get("OFF"));
         ms[i] = false;
         i++;
-        var2[i] = lang.get("MIPMAPPING") + ":" + (Main.isMipMapping() ? lang.get("ON") : lang.get("OFF"));
+        var2[i] = langGetDef(lang, "M3G_OMNI", "Omni flash") + ":"
+                + (Main.m3gWorldLighting == 1 ? lang.get("ON") : lang.get("OFF"));
         ms[i] = false;
         i++;
         var2[i] = lang.get("FRAMESKIP") + ":" + (Main.isFrameskip() ? lang.get("ON") : lang.get("OFF"));
@@ -259,19 +265,25 @@ public final class Setting extends Selectable {
         id++;
         id++;//KEYS
         id++;//Perfomance
-        if(var1 == id) Main.setDisplaySize(Main.getDisplaySize() - 5);
+        if(var1 == id) {
+            Main.m3gScreenScale -= 25;
+            if(Main.m3gScreenScale < 25) Main.m3gScreenScale = 25;
+        }
         id++;
-        if(var1 == id) Main.setPersQ(Math.max(0, Main.persQ - 1));
+        if(var1 == id) {
+            Main.m3gWorldLighting--;
+            if(Main.m3gWorldLighting < 0) Main.m3gWorldLighting = 0;
+        }
         id++;
-        if(var1 == id) Main.pixelsQ = (Math.max(0, Main.pixelsQ - 1));
+        if(var1 == id) Main.m3gLitMip = 0;
         id++;
-        if(var1 == id) Main.fogQ = (Math.max(0, Main.fogQ - 1));
+        if(var1 == id) Main.m3gLitNoVertexColors = true;
         id++;
         if(var1 == id) Main.corpses = false;
         id++;
         if(var1 == id) Main.blood = false;
         id++;
-        if(var1 == id) Main.mipMapping = false;
+        if(var1 == id) { if(Main.m3gWorldLighting > 0) Main.m3gWorldLighting = 2; }
         id++;
         if(var1 == id) Main.frameskip = false;
         id++;
@@ -339,19 +351,25 @@ public final class Setting extends Selectable {
         id++;
         id++;//KEYS
         id++;//Perfomance
-        if(var1 == id) Main.setDisplaySize(Main.getDisplaySize() + 5);
+        if(var1 == id) {
+            Main.m3gScreenScale += 25;
+            if(Main.m3gScreenScale > 100) Main.m3gScreenScale = 100;
+        }
         id++;
-        if(var1 == id) Main.setPersQ(Math.min(4, Main.persQ + 1));
+        if(var1 == id) {
+            Main.m3gWorldLighting++;
+            if(Main.m3gWorldLighting > 2) Main.m3gWorldLighting = 2;
+        }
         id++;
-        if(var1 == id) Main.pixelsQ = (Math.min(2, Main.pixelsQ + 1));
+        if(var1 == id) Main.m3gLitMip = 1;
         id++;
-        if(var1 == id) Main.fogQ = (Math.min(2, Main.fogQ + 1));
+        if(var1 == id) Main.m3gLitNoVertexColors = false;
         id++;
         if(var1 == id) Main.corpses = true;
         id++;
         if(var1 == id) Main.blood = true;
         id++;
-        if(var1 == id) Main.mipMapping = true;
+        if(var1 == id) { if(Main.m3gWorldLighting > 0) Main.m3gWorldLighting = 1; }
         id++;
         if(var1 == id) Main.frameskip = true;
         id++;

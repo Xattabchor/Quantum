@@ -310,6 +310,15 @@ public final class Main extends MIDlet {
         m3gLitMip = settings.getIntNoLang("M3G_LIT_MIP", 0);
         m3gScreenScale = Math.max(25, Math.min(100, settings.getIntNoLang("M3G_SCREEN_SCALE", 100)));
         weaponSway = settings.getIntNoLang("WEAPON_SWAY", 1) == 1;
+        // Menu-driven hardware toggles (Setting screen) persist separately.
+        byte[] fx = RmsUtils.openStore("Quantum.M3GFx");
+        if(fx != null && fx.length >= 4) {
+            int lit = fx[0] & 0xff; if(lit > 2) lit = 2;
+            m3gWorldLighting = lit;
+            m3gLitMip = (fx[1] & 0xff) != 0 ? 1 : 0;
+            m3gScreenScale = Math.max(25, Math.min(100, fx[2] & 0xff));
+            m3gLitNoVertexColors = (fx[3] & 0xff) == 1;
+        }
         byte[] perspectiveSetting = RmsUtils.openStore("Quantum.M3GPerspective");
         if(perspectiveSetting!=null && perspectiveSetting.length==1
                 && (perspectiveSetting[0]==0 || perspectiveSetting[0]==1))
@@ -479,6 +488,10 @@ public final class Main extends MIDlet {
         RmsUtils.saveStore("Quantum.Renderer", new byte[]{(byte)renderer});
         RmsUtils.removeStore("Quantum.M3GPerspective");
         RmsUtils.saveStore("Quantum.M3GPerspective",new byte[]{(byte)(m3gPerspective?1:0)});
+        RmsUtils.removeStore("Quantum.M3GFx");
+        RmsUtils.saveStore("Quantum.M3GFx", new byte[]{
+            (byte) m3gWorldLighting, (byte) m3gLitMip, (byte) m3gScreenScale,
+            (byte) (m3gLitNoVertexColors ? 1 : 0)});
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream dos = new DataOutputStream(baos);

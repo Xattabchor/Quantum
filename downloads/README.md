@@ -1000,3 +1000,8 @@ packing/shading, расчёт mode5Shade, арифметический FrameEffe
 
 [Точный состав и проверки](../docs/m3g-pre-kvm-rollback.md).
 Старые KVM-отчёты сохранены как архив и не описывают оптимизации этой сборки.
+
+Settings menu now exposes hardware toggles instead of the old software quality
+rows: Viewport (25/50/75/100%), HW light (OFF/FULL/NO OMNI), HW mip,
+Baked light (vertex lightmap vs pure hardware light) and Omni flash. Choices
+persist in RMS store Quantum.M3GFx. See docs/kordos-full.md.
