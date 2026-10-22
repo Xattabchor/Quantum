@@ -183,8 +183,16 @@ public final class M3GSceneRenderer implements SceneRenderer {
             projectionWidth=g.width;projectionHeight=g.height;projectionX=g.centreX;projectionY=g.centreY;
             projectionReady=true;
         }
-        graphics.bindTarget(surface.getGraphics(), false, 0);
+        graphics.bindTarget(surface.getGraphics(), true, 0);
         bound = true;
+        // Depth buffer now exists: every (re-)bind resets it so stale depth
+        // from the previous native transaction never masks the world.
+        if(depthClearBg == null) {
+            depthClearBg = new Background();
+            depthClearBg.setColorClearEnable(false);
+            depthClearBg.setDepthClearEnable(true);
+        }
+        graphics.clear(depthClearBg);
         graphics.setViewport(0, 0, surface.getWidth(), surface.getHeight());
         graphics.setCamera(camera, null);
         graphics.resetLights();
@@ -329,6 +337,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     private int[] scaleBuffer;
     private Image present;
+    private Background depthClearBg;
 
     public void dispose() {
         if(batch!=null) batch.discard();

@@ -98,7 +98,7 @@ public final class Main extends MIDlet {
     public static int m3gLitNear = -1, m3gLitFar = 600000; // -1: auto = 1*distX (anti z-fight)
     public static boolean m3gLitNoVertexColors = false; // 1 strips baked lightmap
     public static boolean m3gLitFlipWinding = false; // rescue only: CW derived from pack()
-    public static boolean m3gLitCullNone = true; // default: mixed poly orientations, no back-cull
+    public static boolean m3gLitCullNone = false; // CULL_BACK w/ per-poly winding normalization
     public static int m3gLitSelfTest = 0; // seconds to flash omni+ambient at spawn
     public static int m3gLitMip = 0;      // 1: hw NEAREST_MIPMAP_NEAREST chains, 0: base level
     public static boolean m3gLitNormalViz = false; // debug: paint geometry by its normals
@@ -309,7 +309,7 @@ public final class Main extends MIDlet {
         m3gLitFar = settings.getIntNoLang("M3G_LIT_FAR", 600000);
         m3gLitNoVertexColors = settings.getIntNoLang("M3G_LIT_NOVCOL", 0) == 1;
         m3gLitFlipWinding = settings.getIntNoLang("M3G_LIT_FLIP", 0) == 1;
-        m3gLitCullNone = settings.getIntNoLang("M3G_LIT_CULL", 0) == 0;
+        m3gLitCullNone = settings.getIntNoLang("M3G_LIT_CULL", 1) == 0;
         m3gLitSelfTest = settings.getIntNoLang("M3G_LIT_SELFTEST", 0);
         m3gLitMip = settings.getIntNoLang("M3G_LIT_MIP", 0);
         m3gLitNormalViz = settings.getIntNoLang("M3G_LIT_NORMALVIZ", 0) == 1;

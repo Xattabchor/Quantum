@@ -71,8 +71,12 @@ public final class M3GLitRenderer {
     private final VertexArray normalArray = new VertexArray(4, 3, 1);
     private final TriangleStripArray triStrip =
             new TriangleStripArray(new int[]{0, 1, 2}, new int[]{3});
+    private final TriangleStripArray triStripRev =
+            new TriangleStripArray(new int[]{0, 2, 1}, new int[]{3});
     private final TriangleStripArray quadStrip =
             new TriangleStripArray(new int[]{0, 1, 3, 1, 2, 3}, new int[]{3, 3});
+    private final TriangleStripArray quadStripRev =
+            new TriangleStripArray(new int[]{0, 3, 1, 1, 3, 2}, new int[]{3, 3});
 
     private final short[] xyz = new short[12];
     private final short[] uv = new short[8];
@@ -448,7 +452,19 @@ public final class M3GLitRenderer {
         // J2ME-Loader's bindTarget/render path).
         owner.bind(g);
         graphics.setCamera(camera, identity);
-        owner.renderNative(g, buffer, count == 3 ? triStrip : quadStrip, appearance);
+        // Per-poly winding normalization: engine poly vertex order is mixed
+        // across mesh types, but every polygon is submitted alone, so steer
+        // the index order from the projected screen-space signed area.
+        // CULL_BACK then keeps the camera-facing side deterministically.
+        long a2 = (long) (vertices[1].sx - vertices[0].sx)
+                * (vertices[2].sy - vertices[0].sy)
+                - (long) (vertices[2].sx - vertices[0].sx)
+                * (vertices[1].sy - vertices[0].sy);
+        boolean rev = (a2 > 0) != Main.m3gLitFlipWinding;
+        TriangleStripArray strip = count == 3
+                ? (rev ? triStripRev : triStrip)
+                : (rev ? quadStripRev : quadStrip);
+        owner.renderNative(g, buffer, strip, appearance);
         frameLit++;
         return true;
     }
