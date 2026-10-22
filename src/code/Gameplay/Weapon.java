@@ -44,6 +44,7 @@ public final class Weapon {
     public boolean patronbuy = true;
     private Image imgWeapon, imgFire;
     private Image sight, sightWeapon;
+    private int spriteW = -1, spriteH = -1; // dims the cached sprites were built for
     public Image imgPatron, imgPatronLow;
 	public int lowPatronAmount = 20;
     private long distance = 999999999L;
@@ -103,10 +104,12 @@ public final class Weapon {
 
     public final void reset() {
         imgWeapon = imgFire = sight = sightWeapon = null;
+        spriteW = spriteH = -1;
     }
 
     // ?
     public final void createSprite(int width_g3d, int height_g3d) {
+        spriteW = width_g3d; spriteH = height_g3d;
         float coof=(float) (height_g3d) / (256.0F);
         float coof2=(float) (width_g3d) / (240.0F);
         if(customPos || !Main.resizeWeapons) coof2=coof;
@@ -127,6 +130,7 @@ public final class Weapon {
     }
 
     private void createSights(int width, int height) {
+        spriteW = width; spriteH = height;
         float coof = (float) (height) / (256.0F);
         if (sight == null && fileSight != null) 
             sight = ImageResize.createImage(fileSight, width, height);
@@ -147,6 +151,10 @@ public final class Weapon {
     public final void drawNative(ScreenImages images,int x,int y,int width,int height) {draw(null,images,x,y,width,height);}
 
     private void draw(Graphics g,ScreenImages images,int x,int y,int width,int height) {
+        // Viewport scale may change at runtime — rebuild cached sprites on mismatch.
+        if((imgWeapon != null || sight != null || sightWeapon != null)
+                && (spriteW != width || spriteH != height))
+            imgWeapon = imgFire = sight = sightWeapon = null;
         if (imgWeapon == null && fileWeapon != null) createSprite(width, height);
         
         if ((sight == null && fileSight != null) || (sightWeapon == null && fileSightWeapon != null)) 

@@ -459,6 +459,11 @@ public final class GameScreen extends MyCanvas {
         }
         
         int screenY = (height - g3d.getHeight()) / 2;
+        // Scaled viewport rect (M3G_SCREEN_SCALE<100): centered sub-area of the
+        // scene band; weapon/sight sprites live inside it, not on the full canvas.
+        int vScale = Main.m3gScreenScale;
+        int vW = g3d.getWidth() * vScale / 100, vH = g3d.getHeight() * vScale / 100;
+        int vX = (g3d.getWidth() - vW) / 2, vY = screenY + (g3d.getHeight() - vH) / 2;
         try {
             if(g3d.getRenderer()==DirectX7.SOFTWARE) {
                 if(playerDied) deathScr(g3d.getDisplay());
@@ -502,11 +507,11 @@ public final class GameScreen extends MyCanvas {
             if(!Main.hideHud) {
 
                 if(!playerDied && player.arsenal.current != -1) {
-                    g.setClip(0, screenY, g3d.getWidth(), g3d.getHeight());
+                    g.setClip(vX, vY, vW, vH);
                     foreground.setClip(g.getClipX(),g.getClipY(),g.getClipWidth(),g.getClipHeight());
-                
-                    if(player.show2D()) player.arsenal.drawWeaponNative(foreground, screenY, g3d.getWidth(), g3d.getHeight(), this);
-                    player.arsenal.drawReloadAnimationNative(foreground, g, screenY, g3d.getWidth(), g3d.getHeight());
+
+                    if(player.show2D()) player.arsenal.drawWeaponNative(foreground, vX, vY, vW, vH, this);
+                    player.arsenal.drawReloadAnimationNative(foreground, g, vX, vY, vW, vH);
                 
                     g.setClip(0, 0, width, height);
                     if(!redrawInfo) g.setClip(0, screenY, width, g3d.getHeight());
@@ -517,7 +522,7 @@ public final class GameScreen extends MyCanvas {
                         ((weapon != null && !player.zoom) || weapon == null || (player.canAttack() && !player.show2D()))
                         ) {
                     if(imgHand == null || lookAtObj == null || !MainCanvas.pstros) {
-                        foreground.drawImage(imgSight, g3d.getWidth() / 2, screenY + g3d.getHeight() / 2, 3);
+                        foreground.drawImage(imgSight, vX + vW / 2, vY + vH / 2, 3);
                     }
                 }
             
