@@ -43,7 +43,7 @@ public final class DirectX7 {
        if(statsText==null || now>=statsNext || now<statsNext-250 || active!=statsNative) {
            statsText=(active?"M3G ":"CPU ")+"D:"+peakDraws+" B:"+peakBarriers+" T:"+peakUploads
                    +" L:"+M3GLitRenderer.statsLit+" F:"+M3GLitRenderer.statsFail
-                   +" r"+M3GLitRenderer.statsReason;
+                   +" r"+M3GLitRenderer.statsReason+" W"+code.utils.Main.m3gWorldLighting;
            peakDraws=peakBarriers=peakUploads=0;statsNext=now+250;statsNative=active;
            M3GLitRenderer.resetLitStats();
        }
@@ -599,6 +599,10 @@ this.buffer.resetTex();
            ensureNativeRenderer();
            if(effects!=null) sceneRenderer.prepareEffects(this,effects);
            if(weather!=null) sceneRenderer.prepareWeather(this,weather);
+           // Refresh the true-3D lit-pass camera/lights (M3G_LIT) — without
+           // this the hardware-lit pass never exists in the required path.
+           if(sceneRenderer instanceof M3GSceneRenderer)
+               ((M3GSceneRenderer)sceneRenderer).beginFrame(this);
            nativePass=true;
            drawBuffer();
            if(effects!=null) drawRenderObject(effects,null,false);
