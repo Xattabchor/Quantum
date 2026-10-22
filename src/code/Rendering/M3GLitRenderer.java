@@ -181,14 +181,28 @@ public final class M3GLitRenderer {
         buffer.setNormals(normalArray);
         buffer.setColors(colorArray);
         buffer.setTexCoords(0, uvArray, 1.0f / 256, null);
+
+        // M3G_LIT_DEBUG=1: unlit white-silhouette probe (no Material = no
+        // lighting per JSR-184, no texture, CULL_NONE). Separates "geometry
+        // never reaches the screen" from "geometry is textured/shaded black".
+        debugPolygon.setCulling(PolygonMode.CULL_NONE);
+        debugPolygon.setShading(PolygonMode.SHADE_SMOOTH);
+        debugComposite.setBlending(CompositingMode.REPLACE);
+        debugComposite.setDepthTestEnable(true);
+        debugComposite.setDepthWriteEnable(true);
+        debugComposite.setAlphaThreshold(0);
+        debugAppearance.setPolygonMode(debugPolygon);
+        debugAppearance.setCompositingMode(debugComposite);
     }
 
+    private final Appearance debugAppearance = new Appearance();
+    private final PolygonMode debugPolygon = new PolygonMode();
+    private final CompositingMode debugComposite = new CompositingMode();
+
     /** Frame-unique state: real perspective camera + light parameters. */
-    // Generic projection = classic pinhole with the engine focal lengths
-    // (distX/distY): x_clip = x*fx/z_neg. Avoids CLDC-missing Math.atan.
-    private final Transform cameraTransform = new Transform();
-    private final float[] projection = {0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, -1, 0};
+    // OpenSM3D-proven path: setPerspective with the engine's own FOV fields
+    // (their m3g runtime renders retained/perspective cameras reliably;
+    // fully custom generic matrices stay for the proven packed path only).
 
     // On-device diagnostics (debug stats line): polygons consumed by the lit
     // pass vs rejected per frame, and the last rejection reason.
@@ -208,18 +222,10 @@ public final class M3GLitRenderer {
         if(frameLit > statsLit) statsLit = frameLit;
         if(frameFail > statsFail) { statsFail = frameFail; statsReason = frameReason; }
         frameLit = 0; frameFail = 0; frameReason = 0;
-        // near<1 = auto: 1*focal span. far/near=3000 keeps the 16-bit depth
-        // useful across the map instead of collapsing the far field into a
-        // few dozen steps (near=16 was ratio 37500 and distant z-fighting).
         float near = Main.m3gLitNear > 0 ? Main.m3gLitNear : Math.max(16, g.distX);
         float far = Main.m3gLitFar;
-        projection[0] = (float) g.distX / g.centreX;
-        projection[5] = (float) g.distY / g.centreY;
-        // OpenGL-style RHCS: z_clip = z*(f+n)/(n-f) + 2fn/(n-f), w = -z.
-        projection[10] = (far + near) / (near - far);
-        projection[14] = 2f * far * near / (near - far);
-        cameraTransform.set(projection);
-        camera.setGeneric(cameraTransform);
+        camera.setPerspective(g.fovY > 0 ? g.fovY : 60,
+                (float) g.width / (float) g.height, near, far);
         polygon.setCulling(Main.m3gLitCullNone
                 ? PolygonMode.CULL_NONE : PolygonMode.CULL_BACK);
         polygon.setWinding(Main.m3gLitFlipWinding
@@ -310,6 +316,18 @@ public final class M3GLitRenderer {
         if(posScale != scale) {
             buffer.setPositions(posArray, scale, null);
             posScale = scale;
+        }
+
+        if(Main.m3gLitDebug == 1) {
+            // White-silhouette probe: skip normals/colors/uv/lights entirely.
+            for(int i = 0; i < count * 4; i++) rgba[i] = (byte) 255;
+            colorArray.set(0, count, rgba);
+            owner.flushBatch(g);
+            owner.bind(g);
+            graphics.setCamera(camera, identity);
+            owner.renderNative(g, buffer, count == 3 ? triStrip : quadStrip, debugAppearance);
+            frameLit++;
+            return true;
         }
 
         // Flats: cross((b-a),(c-a)) in view space, auto-oriented toward the eye,

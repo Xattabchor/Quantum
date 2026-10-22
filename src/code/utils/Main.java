@@ -102,6 +102,7 @@ public final class Main extends MIDlet {
     public static int m3gLitSelfTest = 0; // seconds to flash omni+ambient at spawn
     public static int m3gLitMip = 0;      // 1: hw NEAREST_MIPMAP_NEAREST chains, 0: base level
     public static boolean m3gLitNormalViz = false; // debug: paint geometry by its normals
+    public static int m3gLitDebug = 0; // 1: unlit white-silhouette probe (geometry isolation)
     public static int m3gScreenScale = 100; // viewport % of canvas (world pass only)
     public static boolean weaponSway = true; // melee/fire sway of the HUD gun sprite
     public static int persQ = 2;
@@ -312,6 +313,7 @@ public final class Main extends MIDlet {
         m3gLitSelfTest = settings.getIntNoLang("M3G_LIT_SELFTEST", 0);
         m3gLitMip = settings.getIntNoLang("M3G_LIT_MIP", 0);
         m3gLitNormalViz = settings.getIntNoLang("M3G_LIT_NORMALVIZ", 0) == 1;
+        m3gLitDebug = settings.getIntNoLang("M3G_LIT_DEBUG", 0);
         m3gScreenScale = Math.max(25, Math.min(100, settings.getIntNoLang("M3G_SCREEN_SCALE", 100)));
         weaponSway = settings.getIntNoLang("WEAPON_SWAY", 1) == 1;
         // Menu-driven hardware toggles (Setting screen) persist separately.
