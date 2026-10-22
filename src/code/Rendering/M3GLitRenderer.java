@@ -77,6 +77,7 @@ public final class M3GLitRenderer {
     private Texture2D lastTex;
     private boolean depthCleared;
     private long frameId;
+    private long selfTestStart;
 
     public M3GLitRenderer(M3GSceneRenderer owner, Graphics3D graphics) {
         this.owner = owner;
@@ -155,9 +156,18 @@ public final class M3GLitRenderer {
             depthCleared = true;
         }
         float pulse = 0f;
-        if(g.shootIntensity > 0 && g.shootLength > 0)
-            pulse = (float) g.shootIntensity / (float) g.shootLength;
+        if(g.shootIntensity > 0)
+            pulse = g.shootLength > 0
+                    ? (float) g.shootIntensity / (float) g.shootLength : 1f;
         else if(g.flashlightEnabled) pulse = 1f;
+        // Spawn self-test (M3G_LIT_SELFTEST>0): full flash for the first
+        // seconds, weapon-independent - proves the whole light path on hw.
+        if(Main.m3gLitSelfTest > 0) {
+            if(selfTestStart == 0) selfTestStart = System.currentTimeMillis();
+            if(System.currentTimeMillis() - selfTestStart
+                    < Main.m3gLitSelfTest * 1000L) pulse = 1f;
+            else Main.m3gLitSelfTest = 0; // once per level load
+        }
         // Ambient pulse isolates the muzzle event on hw: global light CANNOT
         // be invisible, so if the ambient flash shows but the omni does not,
         // the device's OMNI implementation (not the code path) is at fault.

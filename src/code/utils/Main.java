@@ -98,6 +98,7 @@ public final class Main extends MIDlet {
     public static int m3gLitNear = 16, m3gLitFar = 600000; // world units
     public static boolean m3gLitNoVertexColors = false; // 1 strips baked lightmap
     public static boolean m3gLitFlipWinding = false; // inside-out rescue
+    public static int m3gLitSelfTest = 0; // seconds to flash omni+ambient at spawn
     public static int persQ = 2;
     public static int availableLevel = 1; // номер доступного уровня
     public static boolean forceLQFog = false;
@@ -302,6 +303,7 @@ public final class Main extends MIDlet {
         m3gLitFar = settings.getIntNoLang("M3G_LIT_FAR", 600000);
         m3gLitNoVertexColors = settings.getIntNoLang("M3G_LIT_NOVCOL", 0) == 1;
         m3gLitFlipWinding = settings.getIntNoLang("M3G_LIT_FLIP", 0) == 1;
+        m3gLitSelfTest = settings.getIntNoLang("M3G_LIT_SELFTEST", 0);
         byte[] perspectiveSetting = RmsUtils.openStore("Quantum.M3GPerspective");
         if(perspectiveSetting!=null && perspectiveSetting.length==1
                 && (perspectiveSetting[0]==0 || perspectiveSetting[0]==1))
