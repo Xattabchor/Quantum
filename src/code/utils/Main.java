@@ -92,7 +92,8 @@ public final class Main extends MIDlet {
     public static int m3gLitDir = 150;        // 0..255 directional strength
     public static int m3gOmniBase = 0;        // idle omni floor (0..255->I)
     public static int m3gOmniFlash = 204;     // muzzle-flash peak (0..255->I)
-    public static int m3gOmniHalfDistX = 1000; // half-distance, % of distX
+    public static int m3gOmniHalfDistX = 4000; // half-distance, % of distX
+    public static int m3gLitAmbPulse = 64;    // ambient flash boost (0..255->dI)
     public static int m3gOmniOffsetX = 8, m3gOmniOffsetY = -6, m3gOmniOffsetZ = -45; // % of focal
     public static int m3gLitNear = 16, m3gLitFar = 600000; // world units
     public static boolean m3gLitNoVertexColors = false; // 1 strips baked lightmap
@@ -292,7 +293,8 @@ public final class Main extends MIDlet {
         m3gLitDir = settings.getIntNoLang("M3G_LIT_DIR", 150);
         m3gOmniBase = settings.getIntNoLang("M3G_OMNI_BASE", 0);
         m3gOmniFlash = settings.getIntNoLang("M3G_OMNI_FLASH", 204);
-        m3gOmniHalfDistX = settings.getIntNoLang("M3G_OMNI_HALFX", 1000);
+        m3gOmniHalfDistX = settings.getIntNoLang("M3G_OMNI_HALFX", 4000);
+        m3gLitAmbPulse = settings.getIntNoLang("M3G_LIT_AMBPULSE", 64);
         m3gOmniOffsetX = settings.getIntNoLang("M3G_OMNI_X", 8);
         m3gOmniOffsetY = settings.getIntNoLang("M3G_OMNI_Y", -6);
         m3gOmniOffsetZ = settings.getIntNoLang("M3G_OMNI_Z", -45);

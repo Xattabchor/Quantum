@@ -139,9 +139,9 @@ public final class M3GLitRenderer {
 
         float half = g.distX * Main.m3gOmniHalfDistX / 100f;
         if(half < 1f) half = 1f;
-        // 1/(kc + kq*d^2): kc floor keeps close surfaces below clipping,
-        // kq gives 50% at the configured half-distance.
-        omni.setAttenuation(0.4f, 0f, 0.6f / (half * half));
+        // 1/(kc + kq*d^2): low constant floor (~6.7x peak) so the flash is
+        // visible well before fine-tuning, kq gives 50% at half-distance.
+        omni.setAttenuation(0.15f, 0f, 0.85f / (half * half));
         omniTransform.setIdentity();
         omniTransform.postTranslate(g.distX * Main.m3gOmniOffsetX / 100f,
                 g.distY * Main.m3gOmniOffsetY / 100f,
@@ -154,12 +154,17 @@ public final class M3GLitRenderer {
             graphics.clear(depthClear);
             depthCleared = true;
         }
-        graphics.addLight(ambient, null);
-        graphics.addLight(sun, sunTransform);
         float pulse = 0f;
         if(g.shootIntensity > 0 && g.shootLength > 0)
             pulse = (float) g.shootIntensity / (float) g.shootLength;
         else if(g.flashlightEnabled) pulse = 1f;
+        // Ambient pulse isolates the muzzle event on hw: global light CANNOT
+        // be invisible, so if the ambient flash shows but the omni does not,
+        // the device's OMNI implementation (not the code path) is at fault.
+        ambient.setIntensity(Math.min(1f,
+                Main.m3gLitAmbient / 255f + Main.m3gLitAmbPulse / 255f * pulse));
+        graphics.addLight(ambient, null);
+        graphics.addLight(sun, sunTransform);
         if(Main.m3gWorldLighting == 1 && pulse > 0f) {
             float flash = Main.m3gOmniBase / 255f + Main.m3gOmniFlash / 255f * pulse;
             omni.setIntensity(flash * 2.2f);
