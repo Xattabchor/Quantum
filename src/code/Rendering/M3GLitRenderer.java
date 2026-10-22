@@ -273,7 +273,7 @@ public final class M3GLitRenderer {
         ambient.setIntensity(Math.min(1f,
                 Main.m3gLitAmbient / 255f + Main.m3gLitAmbPulse / 255f * pulse));
         graphics.addLight(ambient, identity);
-        graphics.addLight(sun, sunTransform);
+        if(Main.m3gLitDir > 0) graphics.addLight(sun, sunTransform);
         if(Main.m3gWorldLighting == 1 && pulse > 0f) {
             float flash = Main.m3gOmniBase / 255f + Main.m3gOmniFlash / 255f * pulse;
             omni.setIntensity(flash * 2.2f);
