@@ -60,6 +60,9 @@ public final class M3GLitRenderer {
     private final Light omni = new Light();
     private final Transform sunTransform = new Transform();
     private final Transform omniTransform = new Transform();
+    // OpenSM3D-proven immediate-mode style: pass an explicit identity matrix
+    // instead of null to addLight/setCamera — some runtimes reject null.
+    private final Transform identity = new Transform();
 
     private final VertexBuffer buffer = new VertexBuffer();
     private final VertexArray posArray = new VertexArray(4, 3, 2);
@@ -257,7 +260,7 @@ public final class M3GLitRenderer {
         // the device's OMNI implementation (not the code path) is at fault.
         ambient.setIntensity(Math.min(1f,
                 Main.m3gLitAmbient / 255f + Main.m3gLitAmbPulse / 255f * pulse));
-        graphics.addLight(ambient, null);
+        graphics.addLight(ambient, identity);
         graphics.addLight(sun, sunTransform);
         if(Main.m3gWorldLighting == 1 && pulse > 0f) {
             float flash = Main.m3gOmniBase / 255f + Main.m3gOmniFlash / 255f * pulse;
@@ -419,7 +422,12 @@ public final class M3GLitRenderer {
         compositing.setDepthTestEnable(true);
 
         owner.flushBatch(g);
-        graphics.setCamera(camera, null);
+        // Guaranteed target: a lit polygon may be the frame's first consumer
+        // (empty batch) — render() on an unbound target throws on m3g runtimes
+        // that lack opensm3d's retained-mode wrapper (bare IllegalState in
+        // J2ME-Loader's bindTarget/render path).
+        owner.bind(g);
+        graphics.setCamera(camera, identity);
         owner.renderNative(g, buffer, count == 3 ? triStrip : quadStrip, appearance);
         frameLit++;
         return true;
