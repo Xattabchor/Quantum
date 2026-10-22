@@ -95,9 +95,9 @@ public final class Main extends MIDlet {
     public static int m3gOmniHalfDistX = 4000; // half-distance, % of distX
     public static int m3gLitAmbPulse = 64;    // ambient flash boost (0..255->dI)
     public static int m3gOmniOffsetX = 8, m3gOmniOffsetY = -6, m3gOmniOffsetZ = -45; // % of focal
-    public static int m3gLitNear = 16, m3gLitFar = 600000; // world units
+    public static int m3gLitNear = -1, m3gLitFar = 600000; // -1: auto = 1*distX (anti z-fight)
     public static boolean m3gLitNoVertexColors = false; // 1 strips baked lightmap
-    public static boolean m3gLitFlipWinding = false; // inside-out rescue
+    public static boolean m3gLitFlipWinding = false; // rescue only: CW derived from pack()
     public static int m3gLitSelfTest = 0; // seconds to flash omni+ambient at spawn
     public static int persQ = 2;
     public static int availableLevel = 1; // номер доступного уровня
@@ -299,7 +299,7 @@ public final class Main extends MIDlet {
         m3gOmniOffsetX = settings.getIntNoLang("M3G_OMNI_X", 8);
         m3gOmniOffsetY = settings.getIntNoLang("M3G_OMNI_Y", -6);
         m3gOmniOffsetZ = settings.getIntNoLang("M3G_OMNI_Z", -45);
-        m3gLitNear = settings.getIntNoLang("M3G_LIT_NEAR", 16);
+        m3gLitNear = settings.getIntNoLang("M3G_LIT_NEAR", -1);
         m3gLitFar = settings.getIntNoLang("M3G_LIT_FAR", 600000);
         m3gLitNoVertexColors = settings.getIntNoLang("M3G_LIT_NOVCOL", 0) == 1;
         m3gLitFlipWinding = settings.getIntNoLang("M3G_LIT_FLIP", 0) == 1;

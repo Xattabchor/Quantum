@@ -86,6 +86,10 @@ public final class M3GLitRenderer {
         // Same shading/culling policy as the packed world appearance, but
         // with a Material: with lights enabled Material multiplies per the
         // JSR-184 lighting equation (specular off = cheaper per-vertex math).
+        // Winding CW is not a guess: the packed path judges fronts CW in NDC
+        // (= CCW in engine screen-y-down coords), and the recordView view
+        // space is y-up, which flips the winding exactly once again, so lit
+        // fronts arrive here as CW as well.
         polygon.setCulling(PolygonMode.CULL_BACK);
         polygon.setWinding(PolygonMode.WINDING_CW);
         polygon.setShading(PolygonMode.SHADE_SMOOTH);
@@ -125,7 +129,11 @@ public final class M3GLitRenderer {
     public void beginFrame(DirectX7 g) {
         frameId++;
         depthCleared = false;
-        float near = Main.m3gLitNear, far = Main.m3gLitFar;
+        // near<1 = auto: 1*focal span. far/near=3000 keeps the 16-bit depth
+        // useful across the map instead of collapsing the far field into a
+        // few dozen steps (near=16 was ratio 37500 and distant z-fighting).
+        float near = Main.m3gLitNear > 0 ? Main.m3gLitNear : Math.max(16, g.distX);
+        float far = Main.m3gLitFar;
         projection[0] = (float) g.distX / g.centreX;
         projection[5] = (float) g.distY / g.centreY;
         // OpenGL-style RHCS: z_clip = z*(f+n)/(n-f) + 2fn/(n-f), w = -z.
