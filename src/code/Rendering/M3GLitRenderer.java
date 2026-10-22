@@ -101,6 +101,49 @@ public final class M3GLitRenderer {
         Texture2D texture;
     }
 
+    // Deferred per-signature buckets (FPS): the whole frame's lit polys go out
+    // as ONE native draw per (texture, blend kind, texfunc) — D counter drops
+    // from ~260 per-poly calls to ~15 bucket calls. Opaque buckets flush
+    // first, then the blended ones; depth buffer resolves interleavings.
+    private final Vector buckets = new Vector();
+
+    private static final class LitBucket {
+        Texture2D tex; int kind; int func;
+        int verts, indexLen, stripCount;
+        int[] iv = new int[0];
+        short[] uva = new short[0];
+        byte[] cola = new byte[0];
+        byte[] nrma = new byte[0];
+        int[] indices = new int[0];
+        int[] strips = new int[0];
+        VertexBuffer vb;
+        VertexArray posA, uvA, colA, nrmA;
+        short[] xyz = new short[0];
+        float posScale = -1f;
+    }
+
+    private static int[] grow(int[] a, int n) {
+        if(a.length >= n) return a;
+        int c = a.length * 2; if(c < n) c = n; if(c < 96) c = 96;
+        int[] b = new int[c]; System.arraycopy(a, 0, b, 0, a.length); return b;
+    }
+
+    private static short[] growS(short[] a, int n) {
+        if(a.length >= n) return a;
+        int c = a.length * 2; if(c < n) c = n; if(c < 96) c = 96;
+        short[] b = new short[c]; System.arraycopy(a, 0, b, 0, a.length); return b;
+    }
+
+    private static byte[] growB(byte[] a, int n) {
+        if(a.length >= n) return a;
+        int c = a.length * 2; if(c < n) c = n; if(c < 96) c = 96;
+        byte[] b = new byte[c]; System.arraycopy(a, 0, b, 0, a.length); return b;
+    }
+
+    private static int[] trim(int[] a, int n) {
+        int[] b = new int[n]; System.arraycopy(a, 0, b, 0, n); return b;
+    }
+
     private Texture2D litTexture(DirectX7 g, Texture texture, RawImage raw, int kind) {
         boolean hwMip = Main.m3gLitMip == 1
                 && texture.mip != null && texture.mip.length > 0 && texture.mip[0] != null;
@@ -226,6 +269,10 @@ public final class M3GLitRenderer {
         if(frameLit > statsLit) statsLit = frameLit;
         if(frameFail > statsFail) { statsFail = frameFail; statsReason = frameReason; }
         frameLit = 0; frameFail = 0; frameReason = 0;
+        for(int i = 0; i < buckets.size(); i++) {
+            LitBucket bk = (LitBucket) buckets.elementAt(i);
+            bk.verts = 0; bk.indexLen = 0; bk.stripCount = 0;
+        }
         float near = Main.m3gLitNear > 0 ? Main.m3gLitNear : Math.max(16, g.distX);
         float far = Main.m3gLitFar;
         camera.setPerspective(g.fovY > 0 ? g.fovY : 60,
@@ -422,20 +469,124 @@ public final class M3GLitRenderer {
                 : mode == 1 || mode == 11 || (mode == 4 && raw.alphaMixing)
                 ? M3GSceneRenderer.ALPHA_TEXTURE : M3GSceneRenderer.OPAQUE_TEXTURE;
         Texture2D tex = litTexture(g, texture, raw, kind);
-        if(lastTex != tex) {
-            appearance.setTexture(0, tex);
-            lastTex = tex;
-        }
-        tex.setBlending(mode == 11 ? Texture2D.FUNC_DECAL
-                : mode == 5 ? Texture2D.FUNC_BLEND : Texture2D.FUNC_MODULATE);
+        int func = mode == 11 ? Texture2D.FUNC_DECAL
+                : mode == 5 ? Texture2D.FUNC_BLEND : Texture2D.FUNC_MODULATE;
 
-        // Alpha threshold: cutout punch for non-alpha kinds (owner cache and
-        // hw-mip chains share this semantics), plain alpha blend elsewhere.
-        float threshold = kind == M3GSceneRenderer.ALPHA_TEXTURE ? 0f : 0.5f;
-        if(kind == M3GSceneRenderer.OPAQUE_TEXTURE) {
+        // Deferred batching: append into the (tex, kind, func) bucket; the
+        // whole frame is emitted by flushBuckets() at the end of the native
+        // transaction. Winding no longer matters (CULL_NONE).
+        LitBucket bk = null;
+        for(int i = 0; i < buckets.size(); i++) {
+            LitBucket c = (LitBucket) buckets.elementAt(i);
+            if(c.tex == tex && c.kind == kind && c.func == func) { bk = c; break; }
+        }
+        if(bk == null) {
+            bk = new LitBucket();
+            bk.tex = tex; bk.kind = kind; bk.func = func;
+            buckets.addElement(bk);
+        }
+        int vbase = bk.verts;
+        bk.iv = grow(bk.iv, (vbase + count) * 3);
+        bk.uva = growS(bk.uva, (vbase + count) * 2);
+        bk.cola = growB(bk.cola, (vbase + count) * 4);
+        bk.nrma = growB(bk.nrma, (vbase + count) * 3);
+        for(int i = 0; i < count; i++) {
+            Vertex v = vertices[i];
+            bk.iv[(vbase + i) * 3] = v.getViewX();
+            bk.iv[(vbase + i) * 3 + 1] = v.getViewY();
+            bk.iv[(vbase + i) * 3 + 2] = v.getViewDepth();
+            bk.uva[(vbase + i) * 2] = uv[i * 2];
+            bk.uva[(vbase + i) * 2 + 1] = uv[i * 2 + 1];
+            bk.cola[(vbase + i) * 4] = rgba[i * 4];
+            bk.cola[(vbase + i) * 4 + 1] = rgba[i * 4 + 1];
+            bk.cola[(vbase + i) * 4 + 2] = rgba[i * 4 + 2];
+            bk.cola[(vbase + i) * 4 + 3] = rgba[i * 4 + 3];
+            bk.nrma[(vbase + i) * 3] = (byte) bxN;
+            bk.nrma[(vbase + i) * 3 + 1] = (byte) byN;
+            bk.nrma[(vbase + i) * 3 + 2] = (byte) bzN;
+        }
+        bk.verts += count;
+        if(count == 3) {
+            bk.indices = grow(bk.indices, bk.indexLen + 3);
+            bk.indices[bk.indexLen++] = vbase;
+            bk.indices[bk.indexLen++] = vbase + 1;
+            bk.indices[bk.indexLen++] = vbase + 2;
+            bk.strips = grow(bk.strips, bk.stripCount + 1);
+            bk.strips[bk.stripCount++] = 3;
+        } else {
+            bk.indices = grow(bk.indices, bk.indexLen + 6);
+            bk.indices[bk.indexLen++] = vbase;
+            bk.indices[bk.indexLen++] = vbase + 1;
+            bk.indices[bk.indexLen++] = vbase + 3;
+            bk.indices[bk.indexLen++] = vbase + 1;
+            bk.indices[bk.indexLen++] = vbase + 2;
+            bk.indices[bk.indexLen++] = vbase + 3;
+            bk.strips = grow(bk.strips, bk.stripCount + 2);
+            bk.strips[bk.stripCount++] = 3;
+            bk.strips[bk.stripCount++] = 3;
+        }
+        frameLit++;
+        return true;
+    }
+
+    /** Deferred draw: opaque buckets first, then blended buckets in creation
+     * order. Called from M3GSceneRenderer.flushBatch (end of transaction). */
+    void flushBuckets(DirectX7 g) {
+        int n = buckets.size();
+        if(n == 0) return;
+        for(int phase = 0; phase < 2; phase++) {
+            for(int bi = 0; bi < n; bi++) {
+                LitBucket bk = (LitBucket) buckets.elementAt(bi);
+                boolean opaque = bk.kind == M3GSceneRenderer.OPAQUE_TEXTURE;
+                if((phase == 0) != opaque) continue;
+                flushBucket(g, bk);
+            }
+        }
+    }
+
+    private void flushBucket(DirectX7 g, LitBucket bk) {
+        if(bk.verts == 0) return;
+        int maxAbs = 1;
+        for(int i = 0; i < bk.verts * 3; i++) {
+            int c = bk.iv[i]; if(c < 0) c = -c;
+            if(c > maxAbs) maxAbs = c;
+        }
+        float scale = maxAbs / 30000f;
+        if(scale < 0.001f) scale = 0.001f;
+        bk.xyz = growS(bk.xyz, bk.verts * 3);
+        for(int i = 0; i < bk.verts * 3; i++) {
+            float f = bk.iv[i] / scale;
+            bk.xyz[i] = (short) (int) (f + (f >= 0 ? 0.5f : -0.5f));
+        }
+        if(bk.vb == null || bk.posA.getVertexCount() < bk.verts) {
+            int cap = 8; while(cap < bk.verts) cap *= 2;
+            VertexBuffer vb = new VertexBuffer();
+            bk.posA = new VertexArray(cap, 3, 2);
+            bk.uvA = new VertexArray(cap, 2, 2);
+            bk.colA = new VertexArray(cap, 4, 1);
+            bk.nrmA = new VertexArray(cap, 3, 1);
+            vb.setNormals(bk.nrmA);
+            vb.setColors(bk.colA);
+            vb.setTexCoords(0, bk.uvA, 1.0f / 256, null);
+            bk.vb = vb;
+            bk.posScale = -1f;
+        }
+        bk.posA.set(0, bk.verts, bk.xyz);
+        bk.uvA.set(0, bk.verts, bk.uva);
+        bk.colA.set(0, bk.verts, bk.cola);
+        bk.nrmA.set(0, bk.verts, bk.nrma);
+        if(bk.posScale != scale) {
+            bk.vb.setPositions(bk.posA, scale, null);
+            bk.posScale = scale;
+        }
+        // Fresh strip object per flush: index sequences vary frame to frame.
+        TriangleStripArray strip = new TriangleStripArray(
+                trim(bk.indices, bk.indexLen), trim(bk.strips, bk.stripCount));
+        float threshold = bk.kind == M3GSceneRenderer.ALPHA_TEXTURE ? 0f : 0.5f;
+        if(bk.kind == M3GSceneRenderer.OPAQUE_TEXTURE) {
             compositing.setBlending(CompositingMode.REPLACE);
             compositing.setDepthWriteEnable(true);
-        } else if(kind == M3GSceneRenderer.ADD_TEXTURE) {
+        } else if(bk.kind == M3GSceneRenderer.ADD_TEXTURE) {
             compositing.setBlending(CompositingMode.ALPHA_ADD);
             compositing.setDepthWriteEnable(false);
         } else {
@@ -444,28 +595,10 @@ public final class M3GLitRenderer {
         }
         compositing.setAlphaThreshold(threshold);
         compositing.setDepthTestEnable(true);
-
-        owner.flushBatch(g);
-        // Guaranteed target: a lit polygon may be the frame's first consumer
-        // (empty batch) — render() on an unbound target throws on m3g runtimes
-        // that lack opensm3d's retained-mode wrapper (bare IllegalState in
-        // J2ME-Loader's bindTarget/render path).
+        bk.tex.setBlending(bk.func);
+        appearance.setTexture(0, bk.tex);
         owner.bind(g);
         graphics.setCamera(camera, identity);
-        // Per-poly winding normalization: engine poly vertex order is mixed
-        // across mesh types, but every polygon is submitted alone, so steer
-        // the index order from the projected screen-space signed area.
-        // CULL_BACK then keeps the camera-facing side deterministically.
-        long a2 = (long) (vertices[1].sx - vertices[0].sx)
-                * (vertices[2].sy - vertices[0].sy)
-                - (long) (vertices[2].sx - vertices[0].sx)
-                * (vertices[1].sy - vertices[0].sy);
-        boolean rev = (a2 > 0) != Main.m3gLitFlipWinding;
-        TriangleStripArray strip = count == 3
-                ? (rev ? triStripRev : triStrip)
-                : (rev ? quadStripRev : quadStrip);
-        owner.renderNative(g, buffer, strip, appearance);
-        frameLit++;
-        return true;
+        owner.renderNative(g, bk.vb, strip, appearance);
     }
 }

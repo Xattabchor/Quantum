@@ -228,6 +228,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     void flushBatch(DirectX7 g) {
         flushPolygons(g);
         if(spriteRenderer!=null) spriteRenderer.flush(g);
+        if(litRenderer!=null) litRenderer.flushBuckets(g); // deferred lit buckets
     }
 
     void bindCanvasTarget(javax.microedition.lcdui.Graphics target) {graphics.bindTarget(target,false,0);}
