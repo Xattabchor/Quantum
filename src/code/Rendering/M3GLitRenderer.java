@@ -192,6 +192,7 @@ public final class M3GLitRenderer {
     // reason: 1=exotic mode, 2=no/null texture or unsupported, 3=no view
     // record, 4=uv out of 16-bit range, 0=none.
     public static int statsLit, statsFail, statsReason;
+    public static String statsErr = ""; // last fatal lit-pass failure (nullable text)
     private int frameLit, frameFail, frameReason;
 
     public static void resetLitStats() {

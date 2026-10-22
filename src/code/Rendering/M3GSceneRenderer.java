@@ -239,10 +239,19 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     /** Frame start (native passes): refresh true-3D lit-pass camera/lights. */
     public void beginFrame(DirectX7 g) {
-        if(Main.m3gWorldLighting == 0) return;
-        if(litRenderer == null) litRenderer = new M3GLitRenderer(this, graphics);
-        litRenderer.beginFrame(g);
+        if(Main.m3gWorldLighting == 0 || litBroken) return;
+        try {
+            if(litRenderer == null) litRenderer = new M3GLitRenderer(this, graphics);
+            litRenderer.beginFrame(g);
+        } catch(Throwable t) {
+            // Device/runtime rejected the lit pass: degrade to packed, not crash.
+            M3GLitRenderer.statsErr = t.toString();
+            litRenderer = null;
+            litBroken = true;
+        }
     }
+
+    private boolean litBroken; // sticky: native side rejected the lit pass
 
     /** Prepare native weather before binding the shared scene target. */
     public void prepareWeather(DirectX7 g,ScreenLines weather) {
@@ -430,8 +439,16 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
         // True-3D hardware-lit pass (M3G_LIT): consumes the polygon in view
         // space with hardware lights, or returns false to keep the packed path.
-        if(litRenderer != null
-                && litRenderer.draw(g, object, texture, mode, count, vertices, uv)) return true;
+        // A native-side failure disables the pass instead of killing the frame.
+        if(litRenderer != null) {
+            try {
+                if(litRenderer.draw(g, object, texture, mode, count, vertices, uv)) return true;
+            } catch(Throwable t) {
+                M3GLitRenderer.statsErr = t.toString();
+                litRenderer = null;
+                litBroken = true;
+            }
+        }
         materialMath.resetBounds();
         boolean fastPath = fast || (Main.persQ == 0 && !Main.mipMapping);
         boolean alternate = count == 4 && type == Polygon4V.class && !fastPath

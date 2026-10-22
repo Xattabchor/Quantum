@@ -43,7 +43,10 @@ public final class DirectX7 {
        if(statsText==null || now>=statsNext || now<statsNext-250 || active!=statsNative) {
            statsText=(active?"M3G ":"CPU ")+"D:"+peakDraws+" B:"+peakBarriers+" T:"+peakUploads
                    +" L:"+M3GLitRenderer.statsLit+" F:"+M3GLitRenderer.statsFail
-                   +" r"+M3GLitRenderer.statsReason+" W"+code.utils.Main.m3gWorldLighting;
+                   +" r"+M3GLitRenderer.statsReason+" W"+code.utils.Main.m3gWorldLighting
+                   +(M3GLitRenderer.statsErr.length()>0
+                       ?" "+M3GLitRenderer.statsErr.length()+":"+M3GLitRenderer.statsErr.substring(0,Math.min(28,M3GLitRenderer.statsErr.length()))
+                       :"");
            peakDraws=peakBarriers=peakUploads=0;statsNext=now+250;statsNative=active;
            M3GLitRenderer.resetLitStats();
        }
