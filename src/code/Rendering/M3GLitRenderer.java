@@ -278,7 +278,9 @@ public final class M3GLitRenderer {
         // average and shrink/relax the cutoff toward the target FPS.
         if(Main.m3gLitDyn == 1) {
             int cap = Main.m3gLitDist > 0 ? Main.m3gLitDist : (int) Main.m3gLitFar;
-            if(dynDist <= 0) dynDist = cap;
+            if(cap > (int) Main.m3gLitFar) cap = (int) Main.m3gLitFar;
+            if(dynDist <= 0 || dynDist > cap) dynDist = cap;
+            int minD = cap < 20000 ? cap : 20000;
             long now = System.currentTimeMillis();
             if(lastFrameTime != 0) {
                 float dt = now - lastFrameTime;
@@ -287,7 +289,7 @@ public final class M3GLitRenderer {
                 float target = 1000f / Math.max(5, Main.m3gLitFps);
                 if(avgDt > target * 1.1f) {
                     dynDist = (int) (dynDist * 0.92f);
-                    if(dynDist < 20000) dynDist = 20000;
+                    if(dynDist < minD) dynDist = minD;
                 } else if(avgDt < target * 0.92f) {
                     dynDist = (int) (dynDist * 1.06f) + 1500;
                     if(dynDist > cap) dynDist = cap;
