@@ -4,6 +4,7 @@ import code.Rendering.Meshes.*;
 import code.utils.Main;
 import java.util.Hashtable;
 import java.util.Vector;
+import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
 import javax.microedition.m3g.*;
 
@@ -160,7 +161,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     void bind(DirectX7 g) { bind(g,true); }
 
     // M3G_SCREEN_SCALE: the world pass renders into a smaller viewport
-    // surface (area cut), presentation nearest-upscales at finishImage.
+    // surface (area cut), presentation blits centered (no upscale) at finishImage.
     static int targetScale() {return Main.m3gScreenScale;}
 
     void bind(DirectX7 g,boolean preserve) {
@@ -279,14 +280,16 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     public void finish(DirectX7 g) {
-        // finishImage also fills g.display directly when a scaled viewport stretched.
+        // finishImage also fills g.display directly when the viewport is scaled
+        // (centered native-resolution blit with black bars, no upscale).
         Image result=finishImage(g);
         if(result!=null && targetScale()>=100) result.getRGB(g.display,0,g.width,0,0,g.width,g.height);
     }
 
     /** Final image presentation needs a released target, not a Java pixel copy.
-     * Scaled viewport (M3G_SCREEN_SCALE<100) nearest-upscales into g.display
-     * here and returns a reusable full-size presentation image. */
+     * Scaled viewport (M3G_SCREEN_SCALE<100) is blitted centered on screen at
+     * native resolution (no upscale), surrounded by black bars, both into
+     * g.display and into a reusable full-size presentation image. */
     public Image finishImage(DirectX7 g) {
         flushBatch(g);
         if(!bound) return null;
@@ -298,16 +301,20 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(scaleBuffer == null || scaleBuffer.length != sw*sh) scaleBuffer=new int[sw*sh];
         surface.getRGB(scaleBuffer, 0, sw, 0, 0, sw, sh);
         int gw=g.width, gh=g.height;
-        int[] dst=g.display;
-        for(int y=0; y<gh; y++) {
-            int srcRow=(y*sh/gh)*sw;
-            for(int x=0; x<gw; x++) {
-                dst[y*gw+x]=scaleBuffer[srcRow+(x*sw/gw)];
-            }
-        }
+        int ox=(gw-sw)>>1, oy=(gh-sh)>>1;
         if(present==null || present.getWidth()!=gw || present.getHeight()!=gh)
             present=Image.createImage(gw, gh);
-        present.getGraphics().drawRGB(dst, 0, gw, 0, 0, gw, gh, false);
+        Graphics pg=present.getGraphics();
+        pg.setColor(0, 0, 0);
+        pg.fillRect(0, 0, gw, gh);
+        pg.drawRGB(scaleBuffer, 0, sw, ox, oy, sw, sh, false);
+        // keep g.display in the same centered state for direct display readers
+        int[] dst=g.display;
+        for(int i=dst.length-1; i>=0; i--) dst[i]=0xff000000;
+        for(int row=0; row<sh; row++) {
+            int di=(oy+row)*gw+ox, si=row*sw;
+            for(int x=0; x<sw; x++) dst[di+x]=scaleBuffer[si+x];
+        }
         return present;
     }
 

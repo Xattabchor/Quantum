@@ -122,7 +122,7 @@ store `Quantum.M3GFx` (4 bytes: light mode, hw mip, viewport scale, baked-flag):
 
 | Menu row (label → fallback) | Drives | Values |
 |---|---|---|
-| `M3G_VIEWPORT` → "Viewport:NN%" | `Main.m3gScreenScale` | 25/50/75/100 (step 25 per key press, clamped) |
+| `M3G_VIEWPORT` → "Viewport:NN%" | `Main.m3gScreenScale` | 25/50/75/100 (step 25 per key press, clamped); below 100 the scene renders into a smaller surface and is blitted centered at native resolution with black bars — no upscale |
 | `M3G_HWLIGHT` → "HW light:OFF/FULL/NO OMNI" | `Main.m3gWorldLighting` | 0 off, 1 full omni flash, 2 without omni |
 | `M3G_HWMIP` → "HW mip:ON/OFF" | `Main.m3gLitMip` | hardware NEAREST_MIPMAP chain for lit textures |
 | `M3G_BAKED` → "Baked light:ON/OFF" | `Main.m3gLitNoVertexColors` (inverted) | ON = vertex lightmap, OFF = pure hardware light |
