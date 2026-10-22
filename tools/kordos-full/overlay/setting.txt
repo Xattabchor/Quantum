@@ -127,6 +127,8 @@ M3G_LIT_NOVCOL=0
 M3G_LIT_MIP=1
 M3G_LIT_NORMALVIZ=0
 M3G_LIT_FLIP=1
+M3G_LIT_DEBUG=1
+// 1 = white-silhouette probe, 0 = normal shaded lit pass
 // 1 = lit fronts are CCW in NDC (geometry was fully back-face culled)
 M3G_SCREEN_SCALE=100
 WEAPON_SWAY=0
