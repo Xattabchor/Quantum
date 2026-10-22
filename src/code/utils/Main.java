@@ -88,7 +88,7 @@ public final class Main extends MIDlet {
     // directional+weapon omni flash, 2=ambient+directional only. Off keeps
     // every previous build/rasterizer bit-identical.
     public static int m3gWorldLighting = 0;
-    public static int m3gLitAmbient = 96;     // 0..255 ambient lamp strength
+    public static int m3gLitAmbient = 32;     // 0..255 ambient lamp strength (dark by default)
     public static int m3gLitDir = 150;        // 0..255 directional strength
     public static int m3gOmniBase = 0;        // idle omni floor (0..255->I)
     public static int m3gOmniFlash = 204;     // muzzle-flash peak (0..255->I)
@@ -100,6 +100,7 @@ public final class Main extends MIDlet {
     public static boolean m3gLitFlipWinding = false; // rescue only: CW derived from pack()
     public static int m3gLitSelfTest = 0; // seconds to flash omni+ambient at spawn
     public static int m3gLitMip = 0;      // 1: hw NEAREST_MIPMAP_NEAREST chains, 0: base level
+    public static boolean m3gLitNormalViz = false; // debug: paint geometry by its normals
     public static int m3gScreenScale = 100; // viewport % of canvas (world pass only)
     public static boolean weaponSway = true; // melee/fire sway of the HUD gun sprite
     public static int persQ = 2;
@@ -293,7 +294,7 @@ public final class Main extends MIDlet {
         // store or changing the original settings/game-save record layouts.
         m3gPerspective = settings.getIntNoLang("M3G_PERSPECTIVE",1)!=0;
         m3gWorldLighting = Math.min(2, Math.max(0, settings.getIntNoLang("M3G_LIT", 0)));
-        m3gLitAmbient = settings.getIntNoLang("M3G_LIT_AMBIENT", 96);
+        m3gLitAmbient = settings.getIntNoLang("M3G_LIT_AMBIENT", 32);
         m3gLitDir = settings.getIntNoLang("M3G_LIT_DIR", 150);
         m3gOmniBase = settings.getIntNoLang("M3G_OMNI_BASE", 0);
         m3gOmniFlash = settings.getIntNoLang("M3G_OMNI_FLASH", 204);
@@ -308,6 +309,7 @@ public final class Main extends MIDlet {
         m3gLitFlipWinding = settings.getIntNoLang("M3G_LIT_FLIP", 0) == 1;
         m3gLitSelfTest = settings.getIntNoLang("M3G_LIT_SELFTEST", 0);
         m3gLitMip = settings.getIntNoLang("M3G_LIT_MIP", 0);
+        m3gLitNormalViz = settings.getIntNoLang("M3G_LIT_NORMALVIZ", 0) == 1;
         m3gScreenScale = Math.max(25, Math.min(100, settings.getIntNoLang("M3G_SCREEN_SCALE", 100)));
         weaponSway = settings.getIntNoLang("WEAPON_SWAY", 1) == 1;
         // Menu-driven hardware toggles (Setting screen) persist separately.

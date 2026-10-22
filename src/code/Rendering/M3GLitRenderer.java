@@ -300,6 +300,21 @@ public final class M3GLitRenderer {
         long nx = ay * bz - az * by;
         long ny = az * bx - ax * bz;
         long nz = ax * by - ay * bx;
+        if(count == 4) {
+            // Quads with (near-)collinear first three vertices produce a
+            // degenerate normal: rate the other fan triangle (0,2,3) too and
+            // keep the larger-magnitude geometric normal.
+            long cx = bx, cy = by, cz = bz;
+            long dx = (long) vertices[3].getViewX() - vertices[0].getViewX();
+            long dy = (long) vertices[3].getViewY() - vertices[0].getViewY();
+            long dz = (long) vertices[3].getViewDepth() - vertices[0].getViewDepth();
+            long mx = cy * dz - cz * dy;
+            long my = cz * dx - cx * dz;
+            long mz = cx * dy - cy * dx;
+            if(mx * mx + my * my + mz * mz > nx * nx + ny * ny + nz * nz) {
+                nx = mx; ny = my; nz = mz;
+            }
+        }
         long px = vertices[0].getViewX(), py = vertices[0].getViewY(),
                 pz = vertices[0].getViewDepth();
         if(nx * px + ny * py + nz * pz > 0) { nx = -nx; ny = -ny; nz = -nz; }
@@ -309,13 +324,22 @@ public final class M3GLitRenderer {
             bxN = (int) (nx * 126.0 / len);
             byN = (int) (ny * 126.0 / len);
             bzN = (int) (nz * 126.0 / len);
-        } else { bxN = 0; byN = 0; bzN = 126; }
+        } else {
+            // Degenerate polygon: point at the eye instead of a hard axis.
+            double pl = Math.sqrt((double) (px * px + py * py + pz * pz));
+            if(pl > 0) {
+                bxN = (int) (-px * 126.0 / pl);
+                byN = (int) (-py * 126.0 / pl);
+                bzN = (int) (-pz * 126.0 / pl);
+            } else { bxN = 0; byN = 0; bzN = 126; }
+        }
         for(int i = 0; i < count; i++) {
             nrm[i * 3] = (byte) bxN;
             nrm[i * 3 + 1] = (byte) byN;
             nrm[i * 3 + 2] = (byte) bzN;
         }
         normalArray.set(0, count, nrm);
+        boolean normalViz = Main.m3gLitNormalViz;
 
         RawImage base = texture.mip != null && texture.mip.length > 0
                 && Main.m3gLitMip == 0 ? texture.mip[0] : raw;
@@ -331,7 +355,17 @@ public final class M3GLitRenderer {
         }
         uvArray.set(0, count, uv);
 
-        if(Main.m3gLitNoVertexColors) {
+        if(normalViz) {
+            // M3G_LIT_NORMALVIZ: paint vertices by the geometric normal
+            // (n/2+0.5 mapping), multiplied into the texture by MODULATE.
+            int rv = (bxN >> 1) + 127, gv = (byN >> 1) + 127, bv = (bzN >> 1) + 127;
+            for(int i = 0; i < count; i++) {
+                rgba[i * 4] = (byte) rv;
+                rgba[i * 4 + 1] = (byte) gv;
+                rgba[i * 4 + 2] = (byte) bv;
+                rgba[i * 4 + 3] = (byte) 255;
+            }
+        } else if(Main.m3gLitNoVertexColors) {
             for(int i = 0; i < count * 4; i++) rgba[i] = (byte) 255;
         } else {
             owner.setColors(g, object, count, mode);

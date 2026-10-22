@@ -132,3 +132,16 @@ Software rows removed from the menu (engine fields remain, no longer
 reachable from settings): DISPLAY_SIZE (legacy screen size), PERSQ, TEXQ,
 FOGQ, MIPMAPPING. CORPSES / BLOOD / FRAMESKIP and the trailing
 M3G-only `M3G_PERSPECTIVE` item are unchanged.
+
+## Lighting: normals hardening + dark ambient
+
+- Quad normals now pick the larger-magnitude fan triangle ((0,1,2) vs (0,2,3)),
+  so near-collinear triples no longer produce a dark face; degenerate polygons
+  fall back to an eye-pointing normal instead of a hard +Z axis.
+- New debug key `M3G_LIT_NORMALVIZ=1` (root zone, `setting.txt`): paints lit
+  geometry by its geometric normal (n/2+0.5 RGB) modulated onto the texture —
+  on-device check that normals point at the camera (front faces come out in
+  blue-tinted tones, everything looking red/green solid means a flip).
+- Default ambient is dark now: `M3G_LIT_AMBIENT=32` (was 96) in overlay and as
+  the code fallback — surfaces read mostly through the directional "sun" and
+  the omni flash, underground / night look.
