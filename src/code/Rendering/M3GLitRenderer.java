@@ -279,6 +279,10 @@ public final class M3GLitRenderer {
                 (float) g.width / (float) g.height, near, far);
         polygon.setCulling(Main.m3gLitCullNone
                 ? PolygonMode.CULL_NONE : PolygonMode.CULL_BACK);
+        // Flat shading reads dramatically cheaper on software m3g rasterizers;
+        // normals are replicated per corner anyway, so the look is identical.
+        polygon.setShading(Main.m3gLitFlat == 1
+                ? PolygonMode.SHADE_FLAT : PolygonMode.SHADE_SMOOTH);
         polygon.setWinding(Main.m3gLitFlipWinding
                 ? PolygonMode.WINDING_CCW : PolygonMode.WINDING_CW);
         ambient.setIntensity(Main.m3gLitAmbient / 255f);
@@ -352,6 +356,14 @@ public final class M3GLitRenderer {
                     Math.max(Math.abs(y), Math.abs(z))));
         }
         if(behind) return true; // entirely behind the eye plane
+        // Distance cull (M3G_LIT_DIST): drop polys entirely beyond the cutoff.
+        // Consumed-without-draw keeps the counter honest: L shows survivors.
+        if(Main.m3gLitDist > 0) {
+            boolean beyond = true;
+            for(int i = 0; i < count; i++)
+                if(vertices[i].getViewDepth() > -Main.m3gLitDist) { beyond = false; break; }
+            if(beyond) return true;
+        }
 
         float scale = maxAbs / 30000f;
         if(scale < 0.001f) scale = 0.001f;
