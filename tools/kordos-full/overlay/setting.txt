@@ -119,7 +119,8 @@ M3G_OMNI_HALFX=200
 M3G_OMNI_X=8
 M3G_OMNI_Y=-6
 M3G_OMNI_Z=-45
-M3G_LIT_FAR=10000
+M3G_LIT_FAR=40000
+// compromise: keeps close-range city, cuts distant forest; 10000 was too short
 M3G_LIT_SELFTEST=3
 M3G_LIT_AMBPULSE=64
 
