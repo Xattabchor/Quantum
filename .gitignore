@@ -7,6 +7,8 @@ Thumbs.db
 artifacts/*
 !artifacts/Quantum.jar
 !artifacts/Quantum.jad
+!artifacts/QctConverter.jar
+!artifacts/QctConverter.jad
 
 # python-артефакты от check-jar.py
 __pycache__/

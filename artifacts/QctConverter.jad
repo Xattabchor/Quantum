@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+MIDlet-1: QCT Converter,,tools.qctconv.QctConvMIDlet
+MIDlet-Name: QCT Converter
+MIDlet-Version: 1.0
+MIDlet-Vendor: AE-MODS.RU
+MIDlet-Description: PNG -> QCT (Quantum compressed textures)
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-Size: 18063

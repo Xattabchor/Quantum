@@ -263,11 +263,13 @@ def entries_of(target):
 
 
 def class_names_in_lib(lib):
-    """Имена классов банка API в виде "java/lang/Object" (без .class)."""
+    """Имена классов банка API в виде "java/lang/Object" (без .class).
+
+    lib - jar/zip или каталог с классами (например, compile-only заглушка).
+    """
     if not os.path.exists(lib):
         return set()
-    with zipfile.ZipFile(lib) as z:
-        return set(n[:-6] for n in z.namelist() if n.endswith('.class'))
+    return set(n[:-6] for n, _ in entries_of(lib) if n.endswith('.class'))
 
 
 def main(argv):

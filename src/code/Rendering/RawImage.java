@@ -1,5 +1,7 @@
 package code.Rendering;
 
+import code.utils.DeviceProfile;
+
 import code.Math.FastMath;
 import code.utils.Asset;
 import code.utils.ImageResize;
@@ -111,7 +113,7 @@ public class RawImage {
     }
     
     private static RawImage qctToRawImage(String path) {
-        InputStream is = (new Object()).getClass().getResourceAsStream(path);
+        InputStream is = RawImage.class.getResourceAsStream(path);
         DataInputStream dis = new DataInputStream(is);
         try {
             dis.skip(3); //format name
@@ -225,6 +227,23 @@ public class RawImage {
             
             if(format.equals("qct")) {
                 return qctToRawImage(file);
+            }
+            // Оригинальные конфигы продолжают указывать на .png, но если рядом
+            // в том же JAR лежит готовый .qct - берём его: меньше памяти на
+            // загрузку (не нужен промежуточный Image) и меньше вес файла.
+            // Ключ QCT=0 возвращает чисто png-поведение.
+            if(format.equals("png") && DeviceProfile.qct) {
+                String qctPath = file.substring(0, file.lastIndexOf('.') + 1)
+                        + "qct";
+                InputStream probe = RawImage.class
+                        .getResourceAsStream(qctPath);
+                if(probe != null) {
+                    try {
+                        probe.close();
+                    } catch (Exception ignore) {
+                    }
+                    return qctToRawImage(qctPath);
+                }
             }
             return imageToRawImage(Image.createImage(file));
         } catch (Throwable ex) {

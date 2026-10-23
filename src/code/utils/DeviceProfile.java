@@ -32,6 +32,8 @@ package code.utils;
  *   MORPH_LOD_DIST=<единиц>      - порог "далёкости" для MORPH_LOD (по умолч. 12000)
  *   FAST_CULL=0|1                - быстрый отсек BoundingBox (центр+радиус
  *                                  до полного теста по 8 углам)
+ *   QCT=0|1                      - подхватывать упакованные текстуры .qct,
+ *                                  лежащие рядом с .png (по умолчанию 1)
  *
  * @author Quantum engine (ARM9 optimization pack)
  */
@@ -66,6 +68,8 @@ public final class DeviceProfile {
     public static int morphLodDist = 12000;
     /** BoundingBox.isVisible(): сначала дешёвая проверка центра с радиусом. */
     public static boolean fastCull = false;
+    /** Загружать .qct рядом с .png, если упаковщик положил его в JAR. */
+    public static boolean qct = true;
 
     public static String platform = "";
     public static String osName = null;
@@ -107,6 +111,7 @@ public final class DeviceProfile {
         int aiLodOpt = -1;
         int morphLodOpt = -1;
         int fastCullOpt = -1;
+        int qctOpt = -1;
 
         if(settings != null) {
             String prof = settings.getNoLang("CPU_PROFILE");
@@ -123,6 +128,7 @@ public final class DeviceProfile {
             aiLodOpt = settings.getIntNoLang("AI_LOD", -1);
             morphLodOpt = settings.getIntNoLang("MORPH_LOD", -1);
             fastCullOpt = settings.getIntNoLang("FAST_CULL", -1);
+            qctOpt = settings.getIntNoLang("QCT", -1);
             morphLodDist = settings.getIntNoLang("MORPH_LOD_DIST", morphLodDist);
             if(morphLodDist < 0) morphLodDist = 0;
             if(morphLodDist > 1000000) morphLodDist = 1000000;   // без переполнения << 2
@@ -150,6 +156,8 @@ public final class DeviceProfile {
         aiLod = aiLodOpt >= 0 ? (aiLodOpt == 1) : lowEnd;
         morphLod = morphLodOpt >= 0 ? (morphLodOpt == 1) : lowEnd;
         fastCull = fastCullOpt >= 0 ? (fastCullOpt == 1) : lowEnd;
+        // QCT не зависит от профиля: это формат хранения, а не ухудшение.
+        qct = qctOpt >= 0 ? (qctOpt == 1) : true;
 
         if(lowEnd && perspectiveStep == 0 && settings != null
                 && settings.getIntNoLang("PERSPECTIVE_STEP", -1) < 0) {
