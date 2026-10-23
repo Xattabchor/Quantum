@@ -3,6 +3,7 @@ import code.Gameplay.Map.LightMapper;
 import code.HUD.DeveloperMenu;
 import code.Math.FastMath;
 import code.Math.MathUtils;
+import code.utils.DeviceProfile;
 import code.utils.Main;
 import code.Rendering.Texture;
 /**
@@ -12,6 +13,73 @@ import code.Rendering.Texture;
 public class TexturingPers {
    public final static int fp = 12, FP = 1<<fp;
    public static int move = 150;
+
+   // --- ARM9: подготовка полигона без idiv (см. docs/ARM9.md, §11) ---
+
+   /**
+    * Точное x/255 (усечение к нулю) без idiv. Тождество (a+1+(a>>8))>>8
+    * верно при 0 <= a < 65535 (первый сбой на 65535=255*257); произведения
+    * af*calcLightRender почти всегда в этом диапазоне, вне его - обычный idiv.
+    */
+   private static final int div255(int x) {
+       int a = x < 0 ? -x : x;          // x == MIN_VALUE -> a < 0 -> idiv
+       if(a < 0 || a >= 65535) return x / 255;
+       int q = (a + 1 + (a >> 8)) >> 8;
+       return x < 0 ? -q : q;
+   }
+
+   private static int fogDivCache = -1;
+   private static int fogMulCache = 0;
+   private static int waterDivCache = -1;
+   private static int waterMulCache = 0;
+
+   /** Усечение v/d умножением на floor(2^34/d); d>=256, погрешность <=1. */
+   private static final int divTruncMagic(int v, int m) {
+       long a = v < 0 ? -(long) v : v;
+       int q = (int) ((a * m) >> 34);
+       return v < 0 ? -q : q;
+   }
+
+   /** 0xff + (rz*0xFF)/fDist. FAST_SETUP и fDist>=256: без idiv, +/-1 из 255. */
+   private static final int fogCoef(int rz, int d) {
+       int v = rz * 0xFF;   // переполнение int как в оригинале
+       if(!DeviceProfile.fastSetup || d < 256) return 0xff + v / d;
+       if(d != fogDivCache) {
+           fogMulCache = (int) ((1L << 34) / d);
+           fogDivCache = d;
+       }
+       return 0xff + divTruncMagic(v, fogMulCache);
+   }
+
+   /** То же для подводного тумана (свой кэш делителя). */
+   private static final int waterCoef(int rz, int d) {
+       int v = rz * 0xFF;
+       if(!DeviceProfile.fastSetup || d < 256) return 0xff + v / d;
+       if(d != waterDivCache) {
+           waterMulCache = (int) ((1L << 34) / d);
+           waterDivCache = d;
+       }
+       return 0xff + divTruncMagic(v, waterMulCache);
+   }
+
+   /** ceil(2^37/dy) при dy>=64, иначе 0 (обычный idiv). Один раз на полигон. */
+   private static final long gradMagic(int dy) {
+       return dy >= 64 ? ((1L << 37) + dy - 1) / dy : 0L;
+   }
+
+   /**
+    * Точное усечение n/dy (n=(delta<<fp) как в оригинале). ceil-магия даёт
+    * floor или floor+1, поэтому один шаг коррекции: m >= 2^37/dy, значит
+    * q*dy >= n невозможен снизу - проверяем только перелёт. Точно для всех
+    * int при dy >= 64; проверено перебором в docs/verify/test_setup_math.py.
+    */
+   private static final int divGrad(int n, int dy, long m) {
+       if(m == 0 || n == -2147483648) return n / dy;
+       int an = n < 0 ? -n : n;
+       int q = (int) (((long) an * m) >> 37);
+       if((long) an - (long) q * dy < 0) q--;   // перелёт на 1 у больших n
+       return n < 0 ? -q : q;
+   }
 
    /*
    static {
@@ -125,13 +193,13 @@ x1++;
         }
 
         if (dmode == 11) {
-            al = 0xff + a.rz * 0xFF / DirectX7.waterDistance;
+            al = waterCoef(a.rz, DirectX7.waterDistance);
             if (al > 0xFF) al = 0xFF;
             if (al < 0) al = 0;
-            bl = 0xff + b.rz * 0xFF / DirectX7.waterDistance;
+            bl = waterCoef(b.rz, DirectX7.waterDistance);
             if (bl > 0xFF) bl = 0xFF;
             if (bl < 0) bl = 0;
-            cl = 0xff + c.rz * 0xFF / DirectX7.waterDistance;
+            cl = waterCoef(c.rz, DirectX7.waterDistance);
             if (cl > 0xFF) cl = 0xFF;
             if (cl < 0) cl = 0;
             TexturingAffine.paintDitherGradient(g3d, texture, a, al, b, bl, c, cl);
@@ -139,13 +207,13 @@ x1++;
         }
 
         if (dmode == 12) {
-            al = 0xff + a.rz * 0xFF / DirectX7.fDist;
+            al = fogCoef(a.rz, DirectX7.fDist);
             if (al > 0xFF) al = 0xFF;
             if (al < 0) al = 0;
-            bl = 0xff + b.rz * 0xFF / DirectX7.fDist;
+            bl = fogCoef(b.rz, DirectX7.fDist);
             if (bl > 0xFF) bl = 0xFF;
             if (bl < 0) bl = 0;
-            cl = 0xff + c.rz * 0xFF / DirectX7.fDist;
+            cl = fogCoef(c.rz, DirectX7.fDist);
             if (cl > 0xFF) cl = 0xFF;
             if (cl < 0) cl = 0;
             TexturingAffine.paintDitherGradient(g3d, texture, a, al, b, bl, c, cl);
@@ -185,13 +253,13 @@ x1++;
         int af, bf, cf;
         af = bf = cf = 255;
         if (DirectX7.fDist > 1) {
-            af = 0xff + a.rz * 0xFF / DirectX7.fDist;
+            af = fogCoef(a.rz, DirectX7.fDist);
             if (af > 0xFF) af = 0xFF;
             if (af < 0) af = 0;
-            bf = 0xff + b.rz * 0xFF / DirectX7.fDist;
+            bf = fogCoef(b.rz, DirectX7.fDist);
             if (bf > 0xFF) bf = 0xFF;
             if (bf < 0) bf = 0;
-            cf = 0xff + c.rz * 0xFF / DirectX7.fDist;
+            cf = fogCoef(c.rz, DirectX7.fDist);
             if (cf > 0xFF) cf = 0xFF;
             if (cf < 0) cf = 0;
         }
@@ -209,9 +277,9 @@ x1++;
         }
         
         if (LightMapper.cameraVectorLight && texture.drawmode == 6) {
-            af = af * MathUtils.calcLightRender(nx, ny, nz, a.x - g3d.getCamera().m03, a.y - g3d.getCamera().m13, a.z - g3d.getCamera().m23) / 255;
-            bf = bf * MathUtils.calcLightRender(nx, ny, nz, b.x - g3d.getCamera().m03, b.y - g3d.getCamera().m13, b.z - g3d.getCamera().m23) / 255;
-            cf = cf * MathUtils.calcLightRender(nx, ny, nz, c.x - g3d.getCamera().m03, c.y - g3d.getCamera().m13, c.z - g3d.getCamera().m23) / 255;
+            af = div255(af * MathUtils.calcLightRender(nx, ny, nz, a.x - g3d.getCamera().m03, a.y - g3d.getCamera().m13, a.z - g3d.getCamera().m23));
+            bf = div255(bf * MathUtils.calcLightRender(nx, ny, nz, b.x - g3d.getCamera().m03, b.y - g3d.getCamera().m13, b.z - g3d.getCamera().m23));
+            cf = div255(cf * MathUtils.calcLightRender(nx, ny, nz, c.x - g3d.getCamera().m03, c.y - g3d.getCamera().m13, c.z - g3d.getCamera().m23));
         }
         if ((dmode == 5 || dmode == 6 || dmode == 9) && af < 1 && bf < 1 && cf < 1) {
             TexturingAffine.paintFill(g3d, a, b, c, 0);
@@ -234,24 +302,26 @@ x1++;
         int cuz = cu*cwz; int cvz = cv*cwz;
 
         tempI = c.sy - a.sy;
-        int dx_start = ((c.sx - a.sx)<<fp) / tempI;
-        int dwz_start = ((cwz - awz)<<fp) / tempI;
-        int duz_start = ((cuz - auz)<<fp) / tempI;
-        int dvz_start = ((cvz - avz)<<fp) / tempI;
-        int df_start = ((cf - af)<<fp) / tempI;
-        int dg_start = ((cg - ag)<<fp) / tempI;
-        int db_start = ((cb - ab)<<fp) / tempI;
+        long gm_start = gradMagic(tempI);
+        int dx_start = divGrad((c.sx - a.sx)<<fp, tempI, gm_start);
+        int dwz_start = divGrad((cwz - awz)<<fp, tempI, gm_start);
+        int duz_start = divGrad((cuz - auz)<<fp, tempI, gm_start);
+        int dvz_start = divGrad((cvz - avz)<<fp, tempI, gm_start);
+        int df_start = divGrad((cf - af)<<fp, tempI, gm_start);
+        int dg_start = divGrad((cg - ag)<<fp, tempI, gm_start);
+        int db_start = divGrad((cb - ab)<<fp, tempI, gm_start);
         
         int dx_end=0, dwz_end=0, duz_end=0, dvz_end=0, df_end=0, dg_end=0, db_end=0;
         if(b.sy != a.sy) {
             tempI = b.sy - a.sy;
-            dx_end = ((b.sx - a.sx)<<fp) / tempI;
-            dwz_end = ((bwz - awz)<<fp) / tempI;
-            duz_end = ((buz - auz)<<fp) / tempI ;
-            dvz_end = ((bvz - avz)<<fp) / tempI ;
-            df_end = ((bf - af)<<fp) / tempI;
-            dg_end = ((bg - ag)<<fp) / tempI;
-            db_end = ((bb - ab)<<fp) / tempI;
+            long gm_end = gradMagic(tempI);
+            dx_end = divGrad((b.sx - a.sx)<<fp, tempI, gm_end);
+            dwz_end = divGrad((bwz - awz)<<fp, tempI, gm_end);
+            duz_end = divGrad((buz - auz)<<fp, tempI, gm_end);
+            dvz_end = divGrad((bvz - avz)<<fp, tempI, gm_end);
+            df_end = divGrad((bf - af)<<fp, tempI, gm_end);
+            dg_end = divGrad((bg - ag)<<fp, tempI, gm_end);
+            db_end = divGrad((bb - ab)<<fp, tempI, gm_end);
         }
 
         tempI = b.sy - a.sy;

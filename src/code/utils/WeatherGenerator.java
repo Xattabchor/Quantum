@@ -5,6 +5,7 @@ package code.utils;
  * @author Romash
  */
 import code.AI.Player;
+import code.Math.FastMath;
 import code.Rendering.DirectX7;
 import java.util.Random;
 import javax.microedition.lcdui.Graphics;
@@ -17,7 +18,11 @@ public class WeatherGenerator {
  * 1 - Rain
  * 2 - Snow
  */
-  public float[] coords; // X,Y
+  // ARM9: координаты частиц хранятся в int Q8 (1/256 пиксела) вместо float.
+  // Деления на частицу заменены умножением на магические числа (INV_DEPTH,
+  // FastMath.div50); константы кадра делятся один раз за вызов. Квантование
+  // 1/256 пиксела на глаз неотличимо, сигнатуры методов не изменились.
+  public int[] coords; // X,Y в Q8 (пиксел = значение >> 8)
   public int[] info; //Type,Depth
   public int screenWidth; //Screen width
   public int screenHeight; //Screen height
@@ -43,6 +48,12 @@ public class WeatherGenerator {
   //public int animationHorizonLine = 0;
   public final int horizonSize = 90;
   
+  /** ceil(2^24/d) для d=1..65: деление на глубину одним умножением. */
+  private static final int[] INV_DEPTH = new int[66];
+  static {
+      for(int d = 1; d < 66; d++) INV_DEPTH[d] = (int) (((1L << 24) + d - 1) / d);
+  }
+
   public WeatherGenerator(int scrwidth,int scrheight,int quality,
           int rcn,int rcf,int scn,int scf,
           boolean light, int[] lightingTimes,
@@ -52,7 +63,7 @@ public class WeatherGenerator {
       
       screenWidth=scrwidth;
       screenHeight=scrheight;
-      coords=new float[quality*scrwidth/240*scrheight/320*2];
+      coords=new int[quality*scrwidth/240*scrheight/320*2];
       info=new int[quality*scrwidth/240*scrheight/320*2];
       clearBuffers();
       lighting=light;
@@ -76,7 +87,7 @@ public class WeatherGenerator {
   
   public void clearBuffers() {
       
-      for(int i=0;i<coords.length;i++) {coords[i]=0F;}
+      for(int i=0;i<coords.length;i++) {coords[i]=0;}
       for(int i=0;i<info.length;i++) {info[i]=0;}
       
   }
@@ -86,8 +97,8 @@ public class WeatherGenerator {
       for(int i=0;i<coords.length/2;i++) { 
           
           if(info[i*2]==0) { // Генерируем новые партиклы
-              coords[i*2+1]=r.nextInt(screenHeight);
-              coords[i*2]=r.nextInt(screenWidth);
+              coords[i*2+1]=r.nextInt(screenHeight)<<8;
+              coords[i*2]=r.nextInt(screenWidth)<<8;
               info[i*2]=generate;
               info[i*2+1]=r.nextInt(100);
               
@@ -96,7 +107,7 @@ public class WeatherGenerator {
   }
   
     public void moveX(int x,int frameTime) {
-        float xx=x*3*frameTime/50;
+        int xx=FastMath.div50(x*3*frameTime*256);   // Q8
       for(int i=0;i<coords.length/2;i++) { 
           
               int depth=info[i*2+1]/22;
@@ -104,13 +115,13 @@ public class WeatherGenerator {
               if(depth>65) depth=65;
               
           if(info[i*2]!=0) { 
-              coords[i*2]+=xx/depth;
+              coords[i*2]+=(int)(((long)xx*INV_DEPTH[depth])>>24);
           }
       }
   }
     
         public void moveX2(int x,int frameTime) {
-float xx=x*4*frameTime/50;
+int xx=FastMath.div50(x*4*frameTime*256);   // Q8
       for(int i=0;i<coords.length/2;i++) { 
           if(info[i*2]!=0) { 
               coords[i*2]+=xx;
@@ -119,7 +130,7 @@ float xx=x*4*frameTime/50;
   }
     
     public void moveY(int y,int frameTime) {
-float yy=y*1.3f*4*frameTime/50;
+int yy=(int)((y*6656L*frameTime)/250);   // y*1.3*4/50 в Q8 = y*6656/250
       for(int i=0;i<coords.length/2;i++) { 
           
               /*int depth=info[i*2+1]/25;
@@ -132,7 +143,7 @@ float yy=y*1.3f*4*frameTime/50;
       }
   }
         public void moveY2(int y,int frameTime) {
-float yy=y*1.3f*3*frameTime/80/50;
+int yy=(int)((y*624L*frameTime)/2500);   // y*1.3*3/80/50 в Q8 = y*624/2500
       for(int i=0;i<coords.length/2;i++) { 
           
               int depth=info[i*2+1]/25;
@@ -140,35 +151,36 @@ float yy=y*1.3f*3*frameTime/80/50;
               if(depth>65) depth=65;
               
           if(info[i*2]!=0) { 
-              coords[i*2+1]+=yy/depth;
+              coords[i*2+1]+=(int)(((long)yy*INV_DEPTH[depth])>>24);
           }
       }
   }
     
     public void move(int z,int frameTime,int diry) {
-      float zz=z*2.75f*frameTime/50;
+      int zz4=(int)((z*11L*frameTime)/700);   // zz/3.5 = z*2.75*ft/50/3.5 = z*ft*11/700
       isZoom=true;
-      float mz=1.0F+0.05F*z/5*frameTime/50;
+      int mz=65536+(int)((z*frameTime*8192L)/625);   // 1+0.05*z/5*ft/50 = 1+z*ft/5000, Q16
       Random r = new Random();
       int centerY2=centerY*(90+diry*7/5)/90;
+      int cx8=centerX<<8, cy8=centerY2<<8;
       for(int i=0;i<coords.length/2;i++) { 
           
               
           if(info[i*2]!=0) { 
-              float x=coords[i*2]=(coords[i*2]-centerX)*mz+centerX;
-              float y=coords[i*2+1]=(coords[i*2+1]-centerY2)*mz+centerY2;
+              int x=coords[i*2]=cx8+(int)(((long)(coords[i*2]-cx8)*mz)>>16);
+              int y=coords[i*2+1]=cy8+(int)(((long)(coords[i*2+1]-cy8)*mz)>>16);
               
-              info[i*2+1]-=zz/3.5f;
+              info[i*2+1]-=zz4;
               
-          if(x>screenWidth || x<0 || y>screenHeight || y<0) {
-              coords[i*2]=r.nextInt(screenWidth);
-              coords[i*2+1]=r.nextInt(screenHeight);
+          if(x>(screenWidth<<8) || x<0 || y>(screenHeight<<8) || y<0) {
+              coords[i*2]=r.nextInt(screenWidth)<<8;
+              coords[i*2+1]=r.nextInt(screenHeight)<<8;
               info[i*2+1]=100;
           }
           }
           else if(info[i*2]==0) {             
-              coords[i*2]=r.nextInt(screenWidth);
-              coords[i*2+1]=r.nextInt(screenHeight);
+              coords[i*2]=r.nextInt(screenWidth)<<8;
+              coords[i*2+1]=r.nextInt(screenHeight)<<8;
               info[i*2+1]=100;
               info[i*2]=generate;
           }
@@ -179,27 +191,28 @@ float yy=y*1.3f*3*frameTime/80/50;
     
     
     public void moveB(int z,int frameTime,int diry) {
-      float zz=z*2.75f*frameTime/50;
-      float mz=1.0F-0.05F*z/5*frameTime/50;
+      int zz4=(int)((z*11L*frameTime)/800);   // zz/4 = z*2.75*ft/50/4 = z*ft*11/800
+      int mz=65536-(int)((z*frameTime*8192L)/625);   // 1-z*ft/5000, Q16
       Random r = new Random();
       int centerY2=centerY*(90+diry*7/5)/90;
+      int cx8=centerX<<8, cy8=centerY2<<8;
       for(int i=0;i<coords.length/2;i++) { 
           
               
           if(info[i*2]!=0) { 
-              float x=coords[i*2]=(coords[i*2]-centerX)*mz+centerX;
-              float y=coords[i*2+1]=(coords[i*2+1]-centerY2)*mz+centerY2;
+              int x=coords[i*2]=cx8+(int)(((long)(coords[i*2]-cx8)*mz)>>16);
+              int y=coords[i*2+1]=cy8+(int)(((long)(coords[i*2+1]-cy8)*mz)>>16);
               
-              info[i*2+1]+=zz/4;
+              info[i*2+1]+=zz4;
               
           if(info[i*2+1]>100) {
               if(r.nextInt(2)==0) {
-              coords[i*2]=r.nextInt(2)*screenWidth;
-              coords[i*2+1]=r.nextInt(screenHeight); 
+              coords[i*2]=(r.nextInt(2)*screenWidth)<<8;
+              coords[i*2+1]=r.nextInt(screenHeight)<<8; 
           }
               else{
-              coords[i*2]=r.nextInt(screenWidth);
-              coords[i*2+1]=r.nextInt(2)*screenHeight; 
+              coords[i*2]=r.nextInt(screenWidth)<<8;
+              coords[i*2+1]=(r.nextInt(2)*screenHeight)<<8; 
           }
               info[i*2+1]=0;
           }
@@ -215,28 +228,28 @@ float yy=y*1.3f*3*frameTime/80/50;
       for(int i=0;i<coords.length/2;i++) { // Удаляем партиклы за экраном
           
           
-          if(coords[i*2+1]<-2) coords[i*2+1]+=screenHeight-1;
-          if(coords[i*2]>screenWidth) coords[i*2]=coords[i*2]-screenWidth;
-          if(coords[i*2]<-2) coords[i*2]=coords[i*2]+screenWidth+2;
+          if(coords[i*2+1]<-512) coords[i*2+1]+=screenHeight*256-256;
+          if(coords[i*2]>screenWidth*256) coords[i*2]=coords[i*2]-screenWidth*256;
+          if(coords[i*2]<-512) coords[i*2]=coords[i*2]+screenWidth*256+512;
           
           if(isZoom==false) {
-          if(coords[i*2+1]>screenHeight) info[i*2]=0;
-          if(coords[i*2+1]>(screenHeight*(diry+90)/180)+screenHeight/5 && info[i*2+1]>40)  { info[i*2]=0; }
+          if(coords[i*2+1]>screenHeight*256) info[i*2]=0;
+          if(coords[i*2+1]>((screenHeight*(diry+90)/180)+screenHeight/5)*256 && info[i*2+1]>40)  { info[i*2]=0; }
           
-          if(coords[i*2]>screenWidth+10) info[i*2]=0;
-          if(coords[i*2]<-12) info[i*2]=0;
+          if(coords[i*2]>(screenWidth+10)*256) info[i*2]=0;
+          if(coords[i*2]<-12*256) info[i*2]=0;
          
           
           
           if(info[i*2]==0 && !underRoof) { // Генерируем новые партиклы
               if(!lastUnderRoof) {
                   coords[i*2+1] = 0;
-                  coords[i*2] = r.nextInt(screenWidth);
+                  coords[i*2] = r.nextInt(screenWidth)<<8;
                   info[i*2] = generate;
                   info[i*2+1] = r.nextInt(100);
               } else {
-                  coords[i*2+1] = r.nextInt(screenHeight);
-                  coords[i*2] = r.nextInt(screenWidth);
+                  coords[i*2+1] = r.nextInt(screenHeight)<<8;
+                  coords[i*2] = r.nextInt(screenWidth)<<8;
                   info[i*2] = generate;
                   info[i*2+1] = 100;
               }
@@ -248,7 +261,7 @@ float yy=y*1.3f*3*frameTime/80/50;
           if(info[i*2]==2) { // Двигаем снег
               int rand=r.nextInt(3)-1;
               
-              info[i*2+1]+=rand*snowSpeed*frameTime/50/4;
+              info[i*2+1]+=rand*snowSpeed*frameTime/200;   // /50/4 = /200
               int depth=info[i*2+1];
               if(depth<=0) depth=1;
               if(depth>100) depth=100;
@@ -256,8 +269,9 @@ float yy=y*1.3f*3*frameTime/80/50;
               if(info[i*2+1]>100) info[i*2+1]=100;
               if(info[i*2+1]<0) info[i*2+1]=0;
               
-              coords[i*2]+=rand*2*snowSpeed/((100-depth)/50+1)*frameTime/50/4;
-              coords[i*2+1]+=(snowSpeed+r.nextInt(4)/2)*(depth/40+2)/2*frameTime/50;
+              int d=(100-depth)/50+1;   // 1..3
+              coords[i*2]+=FastMath.div50((rand*snowSpeed*512/d)*frameTime)>>2;
+              coords[i*2+1]+=FastMath.div50(((snowSpeed*256+(r.nextInt(4)<<7))*(depth/40+2)>>1)*frameTime);
           } else if(info[i*2]==1) { // Двигаем дощ
           
               int depth=info[i*2+1];
@@ -266,9 +280,10 @@ float yy=y*1.3f*3*frameTime/80/50;
               depth=100-depth;
               if(info[i*2+1]>100) info[i*2+1]=100;
               if(info[i*2+1]<0) info[i*2+1]=0;
-              float speed=(rainSpeed)*(depth/40+2)/2*frameTime/50;
-              coords[i*2]-=speed/4;
-              coords[i*2+1]+=speed;
+              int speed8=(rainSpeed*(depth/40+2))<<7;   // rainSpeed*(depth/40+2)/2 в Q8
+              int add8=FastMath.div50(speed8*frameTime);
+              coords[i*2]-=add8>>2;
+              coords[i*2+1]+=add8;
           }
           
           
@@ -316,8 +331,8 @@ float yy=y*1.3f*3*frameTime/80/50;
               int col = mixColor(snowColorNear,snowColorFar,depth);
               if(light) col = 0xffffff;
               g.setColor(col);
-              int x=(int)coords[i*2];
-              int y=(int)coords[i*2+1];
+              int x=coords[i*2]>>8;
+              int y=coords[i*2+1]>>8;
               
               if(size>1)g.fillRect(x-size/2, y-size/2+xx, size-1, size-1);
               if(size<=1 )g.drawLine(x, y+xx, x,y+xx);
@@ -334,8 +349,8 @@ float yy=y*1.3f*3*frameTime/80/50;
               //if(light>0) col = mixColor(col,mixColor(0xffffff,0xcccccc,depth),light);
               if(light) col = 0xffffff;
               g.setColor(col);
-              int x=(int)coords[i*2];
-              int y=(int)coords[i*2+1];
+              int x=coords[i*2]>>8;
+              int y=coords[i*2+1]>>8;
               
               g.drawLine(x, y+xx, x-size/4,y+xx+size);
               
@@ -368,9 +383,9 @@ float yy=y*1.3f*3*frameTime/80/50;
         int cr = ((col1>>16)&0xff) * (100-mix) + ((col2>>16)&0xff) * mix;
         int cg = ((col1>>8)&0xff) * (100-mix) + ((col2>>8)&0xff) * mix;
         int cb = (col1&0xff) * (100-mix) + (col2&0xff) * mix;
-        cr/=100;
-        cg/=100;
-        cb/=100;
+        cr=FastMath.div100(cr);
+        cg=FastMath.div100(cg);
+        cb=FastMath.div100(cb);
         return ((cr<<16) | (cg<<8) | cb);
 
     }

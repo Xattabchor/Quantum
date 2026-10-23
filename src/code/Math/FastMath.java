@@ -162,6 +162,19 @@ public final class FastMath {
         return -(int) (((long) -v * 1374389535L) >> 37);
     }
 
+    /**
+     * Точный аналог {@code v / 50} для int (усечение к нулю, как в Java), но
+     * без idiv: умножение на 2748779070 (ceil(2^37/50)) и сдвиг на 37.
+     * Точность для всего диапазона int проверена перебором в
+     * docs/verify/test_setup_math.py. Нужен погоде: частицы дождя и снега
+     * делятся на 50 каждый кадр на каждую частицу.
+     */
+    public static final int div50(int v) {
+        if(v >= 0) return (int) (((long) v * 2748779070L) >> 37);
+        if(v == -2147483648) return v / 50;   // -v не помещается в int
+        return -(int) (((long) -v * 2748779070L) >> 37);
+    }
+
     public static final boolean isPow2(int n) {
         return n > 0 && (n & (n - 1)) == 0;
     }

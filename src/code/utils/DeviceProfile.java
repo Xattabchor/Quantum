@@ -34,6 +34,9 @@ package code.utils;
  *                                  до полного теста по 8 углам)
  *   QCT=0|1                      - подхватывать упакованные текстуры .qct,
  *                                  лежащие рядом с .png (по умолчанию 1)
+ *   FAST_SETUP=0|1               - подготовка полигонов без idiv: коэффициенты
+ *                                  тумана через магическое умножение, +/-1 из
+ *                                  255 (по умолчанию 1 на ARM9, иначе 0)
  *
  * @author Quantum engine (ARM9 optimization pack)
  */
@@ -70,6 +73,9 @@ public final class DeviceProfile {
     public static boolean fastCull = false;
     /** Загружать .qct рядом с .png, если упаковщик положил его в JAR. */
     public static boolean qct = true;
+
+    /** FAST_SETUP: коэффициенты тумана в подготовке полигонов без idiv (+/-1/255). */
+    public static boolean fastSetup = false;
 
     public static String platform = "";
     public static String osName = null;
@@ -112,6 +118,7 @@ public final class DeviceProfile {
         int morphLodOpt = -1;
         int fastCullOpt = -1;
         int qctOpt = -1;
+        int fastSetupOpt = -1;
 
         if(settings != null) {
             String prof = settings.getNoLang("CPU_PROFILE");
@@ -129,6 +136,7 @@ public final class DeviceProfile {
             morphLodOpt = settings.getIntNoLang("MORPH_LOD", -1);
             fastCullOpt = settings.getIntNoLang("FAST_CULL", -1);
             qctOpt = settings.getIntNoLang("QCT", -1);
+            fastSetupOpt = settings.getIntNoLang("FAST_SETUP", -1);
             morphLodDist = settings.getIntNoLang("MORPH_LOD_DIST", morphLodDist);
             if(morphLodDist < 0) morphLodDist = 0;
             if(morphLodDist > 1000000) morphLodDist = 1000000;   // без переполнения << 2
@@ -158,6 +166,8 @@ public final class DeviceProfile {
         fastCull = fastCullOpt >= 0 ? (fastCullOpt == 1) : lowEnd;
         // QCT не зависит от профиля: это формат хранения, а не ухудшение.
         qct = qctOpt >= 0 ? (qctOpt == 1) : true;
+        // FAST_SETUP: градации тумана +/-1 из 255, зато подготовка без idiv.
+        fastSetup = fastSetupOpt >= 0 ? (fastSetupOpt == 1) : lowEnd;
 
         if(lowEnd && perspectiveStep == 0 && settings != null
                 && settings.getIntNoLang("PERSPECTIVE_STEP", -1) < 0) {
@@ -173,6 +183,7 @@ public final class DeviceProfile {
                 + " nearOnly=" + (nearOnly ? 1 : 0)
                 + " aiLod=" + (aiLod ? 1 : 0)
                 + " morphLod=" + (morphLod ? 1 : 0)
+                + " fastSetup=" + (fastSetup ? 1 : 0)
                 + " fastCull=" + (fastCull ? 1 : 0)
                 + " persStep=" + perspectiveStep);
     }
