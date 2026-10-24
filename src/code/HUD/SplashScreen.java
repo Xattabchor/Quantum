@@ -144,7 +144,6 @@ public final class SplashScreen extends GUIScreen {
 			boolean mus = list.getIndex() == 0;
 			Main.isSounds = mus;
 			Main.isMusic = mus;
-			Main.isFootsteps = mus;
 			Main.setCurrent(new Menu(main));
 			destroy();
 		}

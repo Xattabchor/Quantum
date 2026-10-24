@@ -225,22 +225,6 @@ public class Asset {
     }
     
     
-    public static final Sound getFootsteps(String file) {
-        if(Main.footsteps == 0 || !Main.isFootsteps) return null;
-        
-        try {
-            Sound sound = (Sound) table.get("SND_" + file);
-            if (sound == null) {
-                sound = new Sound(file);
-                table.put("SND_" + file, sound);
-            }
-            return sound;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-        return null;
-    }
-
     public Asset() {
     }
 

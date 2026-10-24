@@ -60,8 +60,7 @@ public final class Main extends MIDlet {
             low_patron_icon, patron_no_weapon_icon;
 
     public static String[] splash;
-    public static String[] stepSound = null;
-    public static String jumpSound = null;
+    // Звуки ходьбы/прыжка вырезаны (WALK_SOUND, JUMP_SOUND больше не читаются).
     public static String menuMusic = null;
 
     public static boolean canSave = true, canSelectLevel,
@@ -89,12 +88,10 @@ public final class Main extends MIDlet {
 
     public static int music = 100;
     public static int sounds = 100;
-    public static int footsteps = 100;
     public static int mouseSpeed = 66;
 
     public static boolean isMusic = true;
     public static boolean isSounds = true;
-    public static boolean isFootsteps = true;
     public static Sound musicPlayer = Sound.createMusicPlayer();
 
     public static boolean verticalShopScroll = false;
@@ -207,7 +204,8 @@ public final class Main extends MIDlet {
                 DataInputStream var6 = new DataInputStream(var5);
                 music = var6.readInt();
                 sounds = var6.readInt();
-                footsteps = var6.readInt();
+                var6.readInt();   // бывший footsteps: звук ходьбы вырезан,
+                                  // int из старых сейвов просто выбрасывается
                 displaySize = var6.readInt();
                 availableLevel = var6.readInt();
                 setPersQ(var6.readInt());
@@ -273,7 +271,6 @@ public final class Main extends MIDlet {
     private static void defaultSettings() {
         music = 100;
         sounds = 100;
-        footsteps = 100;
         displaySize = 80;
         availableLevel = 1;
         persQ = 2;
@@ -447,7 +444,6 @@ public final class Main extends MIDlet {
 
             dos.writeInt(music);
             dos.writeInt(sounds);
-            dos.writeInt(footsteps);
             dos.writeInt(displaySize);
             dos.writeInt(availableLevel);
             dos.writeInt(persQ);
