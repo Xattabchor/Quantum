@@ -1,0 +1,14 @@
+Manifest-Version: 1.0
+MIDlet-1: Quantum DEBUG,/images/icon.png,code.utils.Main
+Nokia-MIDlet-Background-Event: pause
+MIDlet-Vendor: AE-MODS.RU
+MIDlet-Version: 1.0
+MIDlet-Info-URL: ae-mods.ru
+Nokia-UI-Enhancement: MusicKeysSupported
+Nokia-MIDlet-Category: Game
+MIDlet-Name: Quantum DEBUG
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: QuantumOptimize-debug.jar
+MIDlet-Jar-Size: 417780
+
