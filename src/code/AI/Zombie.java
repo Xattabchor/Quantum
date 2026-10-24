@@ -101,7 +101,7 @@ public final class Zombie extends Bot {
     protected final void action(Scene scene) {
         if (Math.abs(getFrameInterDiv()) % reactTimer == 1) {
             House house = scene.getHouse();
-            Vector objects = house.getObjects();
+            Vector objects = house.getObjectsCached();   // ARM9: перестройка списка максимум раз в кадр
             if (enemy != null && enemy.isDead() || enemy != null && QFPS.frames == 0) {
                 enemy = null;
             }

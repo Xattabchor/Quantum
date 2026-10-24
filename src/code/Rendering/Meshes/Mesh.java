@@ -50,6 +50,7 @@ public class Mesh {
 
         vertices = new Vertex[buf.size()];
         buf.copyInto(vertices);
+        invalidateAABB();   // ARM9: вершины пересобраны - кэш AABB недействителен
     }
 
     private static int search(Vector vertices, Vertex vertex) {
@@ -206,6 +207,90 @@ public class Mesh {
 
     public RenderObject[] getPolygons() {
         return polygons;
+    }
+
+    /**
+     * ARM9: кэш AABB полигонов для СТАТИЧЕСКИХ мешей (геометрия комнат).
+     * Физика (SphereCast, HeightComputer, Room.isPointOnMesh) на каждом
+     * персонаже каждый кадр пересчитывала min/max каждого полигона по
+     * вершинам - 12-18 сравнений на полигон только чтобы его отбросить.
+     * Вершины комнат после загрузки не меняются, поэтому считаем один раз.
+     * 6 int на полигон: minX,minY,minZ,maxX,maxY,maxZ. Для полигонов, не
+     * являющихся Polygon3V/4V, - "пустой" бокс (отбрасывается всегда: ровно
+     * как раньше такие полигоны проходили циклы как no-op). Кэш сбрасывается
+     * в DirectX7.transformSave() (вершины двигаются) и в optimize();
+     * запросы с матрицей (движущиеся меши) кэш не используют.
+     */
+    private int[] aabb;
+
+    public final int[] getAABB() {
+        int[] bb = aabb;
+        if(bb == null) {
+            final RenderObject[] els = polygons;
+            bb = new int[els.length * 6];
+            for(int i = 0; i < els.length; i++) {
+                RenderObject el = els[i];
+                final int o = i * 6;
+                if(el.kind == RenderObject.KIND_POLY4) {
+                    Polygon4V p = (Polygon4V) el;
+                    int minx = p.a.x, maxx = minx;
+                    int miny = p.a.y, maxy = miny;
+                    int minz = p.a.z, maxz = minz;
+                    if(p.b.x > maxx) maxx = p.b.x;
+                    if(p.c.x > maxx) maxx = p.c.x;
+                    if(p.d.x > maxx) maxx = p.d.x;
+                    if(p.b.x < minx) minx = p.b.x;
+                    if(p.c.x < minx) minx = p.c.x;
+                    if(p.d.x < minx) minx = p.d.x;
+                    if(p.b.y > maxy) maxy = p.b.y;
+                    if(p.c.y > maxy) maxy = p.c.y;
+                    if(p.d.y > maxy) maxy = p.d.y;
+                    if(p.b.y < miny) miny = p.b.y;
+                    if(p.c.y < miny) miny = p.c.y;
+                    if(p.d.y < miny) miny = p.d.y;
+                    if(p.b.z > maxz) maxz = p.b.z;
+                    if(p.c.z > maxz) maxz = p.c.z;
+                    if(p.d.z > maxz) maxz = p.d.z;
+                    if(p.b.z < minz) minz = p.b.z;
+                    if(p.c.z < minz) minz = p.c.z;
+                    if(p.d.z < minz) minz = p.d.z;
+                    bb[o] = minx; bb[o + 1] = miny; bb[o + 2] = minz;
+                    bb[o + 3] = maxx; bb[o + 4] = maxy; bb[o + 5] = maxz;
+                } else if(el.kind == RenderObject.KIND_POLY3) {
+                    Polygon3V p = (Polygon3V) el;
+                    int minx = p.a.x, maxx = minx;
+                    int miny = p.a.y, maxy = miny;
+                    int minz = p.a.z, maxz = minz;
+                    if(p.b.x > maxx) maxx = p.b.x;
+                    if(p.c.x > maxx) maxx = p.c.x;
+                    if(p.b.x < minx) minx = p.b.x;
+                    if(p.c.x < minx) minx = p.c.x;
+                    if(p.b.y > maxy) maxy = p.b.y;
+                    if(p.c.y > maxy) maxy = p.c.y;
+                    if(p.b.y < miny) miny = p.b.y;
+                    if(p.c.y < miny) miny = p.c.y;
+                    if(p.b.z > maxz) maxz = p.b.z;
+                    if(p.c.z > maxz) maxz = p.c.z;
+                    if(p.b.z < minz) minz = p.b.z;
+                    if(p.c.z < minz) minz = p.c.z;
+                    bb[o] = minx; bb[o + 1] = miny; bb[o + 2] = minz;
+                    bb[o + 3] = maxx; bb[o + 4] = maxy; bb[o + 5] = maxz;
+                } else {
+                    bb[o] = Integer.MAX_VALUE;
+                    bb[o + 1] = Integer.MAX_VALUE;
+                    bb[o + 2] = Integer.MAX_VALUE;
+                    bb[o + 3] = Integer.MIN_VALUE;
+                    bb[o + 4] = Integer.MIN_VALUE;
+                    bb[o + 5] = Integer.MIN_VALUE;
+                }
+            }
+            aabb = bb;
+        }
+        return bb;
+    }
+
+    public final void invalidateAABB() {
+        aabb = null;
     }
 
     void render(DirectX7 g3d) {

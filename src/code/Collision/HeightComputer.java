@@ -57,6 +57,11 @@ public class HeightComputer {
     public static void computeHeight(Mesh mesh, Matrix matrix, Height height, boolean updatePos) { //вычислить Y координату в точке XZ.
         if(matrix!=null) DirectX7.transformSave(mesh,matrix);
         final RenderObject[] polygons = mesh.getPolygons();
+        // ARM9: для статического запроса (matrix==null - геометрия комнат)
+        // XZ-AABB полигонов берётся из кэша Mesh вместо пересчёта по вершинам
+        // на каждый вызов. Для движущихся мешей (matrix!=null) transformSave
+        // только что изменил вершины и сбросил кэш - остаётся пересчёт по месту.
+        final int[] bb = (matrix == null) ? mesh.getAABB() : null;
         Vector3D pos = height.getPosition();
         final int x = pos.x, y = pos.y, z = pos.z;
         
@@ -65,7 +70,7 @@ public class HeightComputer {
             RenderObject el = polygons[i];
             int polyY = Integer.MAX_VALUE;
             int cx = Integer.MAX_VALUE, cz = Integer.MAX_VALUE, cy = Integer.MAX_VALUE;
-            int mat = -1;
+            int mat;
             
             if(el.kind == RenderObject.KIND_POLY4) {
                 Polygon4V p = (Polygon4V) el;
@@ -75,44 +80,50 @@ public class HeightComputer {
                 Vertex d = p.d;
                 mat = p.tex;
                 
-                final int ax = a.x, az = a.z;
-                final int bx = b.x, bz = b.z;
-                final int dx = d.x, dz = d.z;
-                
-                int maxx=ax;
-                if(bx>maxx) maxx=bx;
-                if(c.x>maxx) maxx=c.x;
-                if(dx>maxx) maxx=dx;
-                
-                int minx=ax;
-                if(bx<minx) minx=bx;
-                if(c.x<minx) minx=c.x;
-                if(dx<minx) minx=dx;
-                
-                int maxz=az;
-                if(bz>maxz) maxz=bz;
-                if(c.z>maxz) maxz=c.z;
-                if(dz>maxz) maxz=dz;
-                
-                int minz=az;
-                if(bz<minz) minz=bz;
-                if(c.z<minz) minz=c.z;
-                if(dz<minz) minz=dz;
+                int minx, maxx, minz, maxz;
+                if(bb != null) {
+                    final int o = i * 6;
+                    minx = bb[o]; minz = bb[o + 2]; maxx = bb[o + 3]; maxz = bb[o + 5];
+                } else {
+                    minx = maxx = a.x;
+                    if(b.x > maxx) maxx = b.x;
+                    if(c.x > maxx) maxx = c.x;
+                    if(d.x > maxx) maxx = d.x;
+                    if(b.x < minx) minx = b.x;
+                    if(c.x < minx) minx = c.x;
+                    if(d.x < minx) minx = d.x;
+                    minz = maxz = a.z;
+                    if(b.z > maxz) maxz = b.z;
+                    if(c.z > maxz) maxz = c.z;
+                    if(d.z > maxz) maxz = d.z;
+                    if(b.z < minz) minz = b.z;
+                    if(c.z < minz) minz = c.z;
+                    if(d.z < minz) minz = d.z;
+                }
                 
                 if( minx > x ) continue;
                 if( minz > z ) continue;
                 if( maxx < x ) continue;
                 if( maxz < z ) continue;
                 
-                if(el.ny >= 0) {//нормаль повернута вниз
+                if(el.ny >= 0) {//нормаль повернута вниз. Проверяется ДО фильтра
+                    //текстур (как в оригинале): underRoof от collision не зависит.
                     if(el.ny>2048 && ((a.y + b.y + c.y + d.y) >> 2)>y) height.setUnderRoof(true);
                     continue;
                 } 
                 
-                if(MathUtils2.isPointOnPolygon(x, z, ax, az, bx, bz, c.x, c.z, dx, dz, p.ny) ) {
-                    polyY = (y - ((x-ax)*p.nx + (y-a.y)*p.ny + (z-az)*p.nz) / p.ny);
-                    cx = (ax + bx + c.x + dx) >> 2;
-                    cz = (az + bz + c.z + dz) >> 2;
+                // ARM9: фильтр текстур поднят до дорогой проверки точки в
+                // полигоне и деления плоскости: неколлизионные полигоны раньше
+                // считали всё, а результат выбрасывался в конце цикла.
+                if(mat != -1) {
+                    Texture tex = mesh.getTexture().textures[mat];
+                    if(!tex.collision) continue;
+                }
+                
+                if(MathUtils2.isPointOnPolygon(x, z, a.x, a.z, b.x, b.z, c.x, c.z, d.x, d.z, p.ny) ) {
+                    polyY = (y - ((x-a.x)*p.nx + (y-a.y)*p.ny + (z-a.z)*p.nz) / p.ny);
+                    cx = (a.x + b.x + c.x + d.x) >> 2;
+                    cz = (a.z + b.z + c.z + d.z) >> 2;
                     cy = (a.y + b.y + c.y + d.y) >> 2;
                 }
             } else if(el.kind == RenderObject.KIND_POLY3) {
@@ -122,24 +133,22 @@ public class HeightComputer {
                 Vertex c = p.c;
                 mat = p.tex;
                
-                final int ax = a.x, az = a.z;
-                final int bx = b.x, bz = b.z;
-                
-                int maxx=ax;
-                if(bx>maxx) maxx=bx;
-                if(c.x>maxx) maxx=c.x;
-                
-                int minx=ax;
-                if(bx<minx) minx=bx;
-                if(c.x<minx) minx=c.x;
-                
-                int maxz=az;
-                if(bz>maxz) maxz=bz;
-                if(c.z>maxz) maxz=c.z;
-                
-                int minz=az;
-                if(bz<minz) minz=bz;
-                if(c.z<minz) minz=c.z;
+                int minx, maxx, minz, maxz;
+                if(bb != null) {
+                    final int o = i * 6;
+                    minx = bb[o]; minz = bb[o + 2]; maxx = bb[o + 3]; maxz = bb[o + 5];
+                } else {
+                    minx = maxx = a.x;
+                    if(b.x > maxx) maxx = b.x;
+                    if(c.x > maxx) maxx = c.x;
+                    if(b.x < minx) minx = b.x;
+                    if(c.x < minx) minx = c.x;
+                    minz = maxz = a.z;
+                    if(b.z > maxz) maxz = b.z;
+                    if(c.z > maxz) maxz = c.z;
+                    if(b.z < minz) minz = b.z;
+                    if(c.z < minz) minz = c.z;
+                }
                 
                 if( minx > x ) continue;
                 if( minz > z ) continue;
@@ -151,18 +160,18 @@ public class HeightComputer {
                     continue;
                 } 
                 
+                if(mat != -1) {
+                    Texture tex = mesh.getTexture().textures[mat];
+                    if(!tex.collision) continue;
+                }
+                
                 if(MathUtils2.isPointOnPolygon(x, z, a.x, a.z, b.x, b.z, c.x, c.z, p.ny) ) {
-                    polyY = (y - ((x-ax)*p.nx + (y-a.y)*p.ny + (z-az)*p.nz) / p.ny);
+                    polyY = (y - ((x-a.x)*p.nx + (y-a.y)*p.ny + (z-a.z)*p.nz) / p.ny);
                     cx = (a.x + b.x + c.x) / 3;
                     cz = (a.z + b.z + c.z) / 3;
                     cy = (a.y + b.y + c.y) / 3;
                 }
-            }
-            
-            if(mat!=-1) {
-                Texture tex = mesh.getTexture().textures[mat];
-                if(!tex.collision) continue;
-            }
+            } else continue;   // mat==-1, polyY==MAX - полигон и раньше был no-op
             
             if(polyY < y && polyY > height.getHeight()) { //высота должна быть ниже текущей Y и выше уже найденной
                 height.set(polyY, el, cx, cz, cy, matrix, updatePos);

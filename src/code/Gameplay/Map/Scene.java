@@ -413,7 +413,7 @@ house.addObject((RoomObject)bot);
 
         Vector objects;
         if (Main.updateOnlyNear) objects = house.getNearObjectsForUpdate(player.getPart());
-        else objects = house.getObjects();
+        else objects = house.getObjectsCached();   // ARM9: кадровый кэш вместо перестройки
 
         // Vector внутри этого цикла не меняется (комнаты перекладывают объекты
         // по своим спискам, а не по tVec2/tVec3), поэтому размер можно

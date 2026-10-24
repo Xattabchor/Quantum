@@ -746,6 +746,7 @@ python3 docs/verify/test_setup_math.py      # setup без idiv + погода Q
 python3 docs/verify/test_rms_settings.py    # симметрия RMS-настроек (§13)
 python3 docs/verify/test_glass.py           # стекло (режим 7): таблицы == умножения
 python3 docs/verify/test_modes913.py        # div3/div255 бит-в-бит + FPq субпиксель
+python3 docs/verify/test_ai_physics.py      # физика/AI: AABB-кэш и фильтры бит-в-бит
 ```
 
 ### 9.5 Деление на 100 без `idiv` (`FastMath.div100`)
@@ -1431,3 +1432,95 @@ guard'ом `|x| >= 65535 -> idiv` (та же формула, что приват
   сверх заявленных границ.
 * Полная пересборка: `check-jar.py` зелёный, QuantumOptimize.jar
   365 352 байта, все 10 verify-тестов PASS.
+
+## 19. Физика и AI: аудит узких мест NPC и пять устранений
+
+Замер на устройстве пользователя показывал просадку FPS от NPC, а не от
+растеризатора. Аудит кадрового пути бота (Scene.recomputePart ->
+House.recomputePart -> GameObject.update -> Character.collisionTest ->
+House.sphereCast/computeHeightFull + NPC/Zombie.action -> findBot) нашёл
+пять повторяющихся пересчётов; все устранены с сохранением поведения.
+
+Dijkstra при этом НЕ горячая: таблица byte[][] строится один раз на
+загрузке уровня, getNext() - O(1)-индексация.
+
+### 19.1 Кэш AABB полигонов в Mesh (getAABB/invalidateAABB)
+
+SphereCast.sphereCast и HeightComputer.computeHeight на каждого
+персонажа каждый кадр пересчитывали min/max КАЖДОГО полигона по вершинам
+(12-18 сравнений + 8-12 загрузок полей) только чтобы отбросить его.
+Вершины комнатной геометрии после загрузки не меняются, поэтому Mesh
+лениво строит кэш: 6 int на полигон (minX,minY,minZ,maxX,maxY,maxZ).
+
+Инвалидация: DirectX7.transformSave() (трансформация вершин движущихся
+мешей) и Mesh.optimize(). Запросы с матрицей/пересчётом нормалей
+(движущиеся MeshObject) кэш НЕ используют - там остался inline-пересчёт.
+Для RenderObject, не являющихся Polygon3V/4V, кэш хранит "пустой" бокс
+(min=MAX_VALUE, max=MIN_VALUE): такие полигоны и раньше проходили циклы
+как no-op.
+
+### 19.2 Фильтр неколлизионных текстур поднят до дорогих тестов
+
+В обоих запросах проверка `textures[mat].collision` стояла В КОНЦЕ цикла:
+полигон с неколлизионной текстурой сначала полностью обсчитывался
+(AABB, а в HeightComputer ещё isPointOnPolygon и деление плоскости), и
+только потом результат выбрасывался. Поднята:
+
+* SphereCast - в начало ветки (оба фильтра - независимые continue,
+  distanceSphereToPolygon не мутирует ничего внешнего; порядок мутаций
+  pos сохранён);
+* HeightComputer - ПОСЛЕ ветки ny>=0: underRoof в оригинале ставится до
+  проверки collision, семантика сохранена точно.
+
+### 19.3 Room.isPointOnMesh: отсечка по XZ-AABB
+
+Самый частый геометрический запрос (calcPart на каждый ДВИНУВШИЙСЯ
+объект каждый кадр) не имел отсечки вообще: полный тест (деление
+плоскости computePolygonY + 3-4 векторных произведения) на каждом
+полигоне чанка. Добавлена отсечка по кэшному XZ-AABB (19.1).
+
+Отсечка точна в реальных координатах: cross-тест возвращает true только
+для точки внутри выпуклой области полигона, а она целиком лежит в AABB.
+При экстремальных |x|~2^31 (в движке недостижимы: запросы гейтятся
+isPointInRoomBox, мировые координаты ~ ±2^22) старый cross-тест
+переполнялся и мог вернуть мусорный true для точки ЗА пределами AABB -
+новый код такие попадания отбрасывает, что строго корректнее.
+Оригинальный HeightComputer всегда использовал тот же AABB-фильтр.
+
+### 19.4 House.getObjectsCached + Room.objectsRevision
+
+NPC/Zombie/BigZombie.action() вызывали house.getObjects() на каждый
+react-тик - а это ПОЛНАЯ перестройка Vector: обход всех комнат и
+synchronized addElement на каждый объект (по разу на каждого бота).
+Теперь список кэшируется на кадр физики; инвалидация - по physicsFrame и
+счётчику Room.objectsRevision, который инкрементируется в
+Room.addObject/removeObject независимо от того, кто их вызвал.
+
+### 19.5 House.getNearRoomsArr: Room[] вместо перестройки Vector
+
+getNearRooms() перестраивала Vector (removeAllElements + synchronized
+addElement) на КАЖДЫЙ вызов sphereCast/rayCast/rayCastNoObjects - по
+нескольку раз на персонажа за кадр, хотя структура соседей после
+загрузки не меняется (то же допущение, что у существующего
+nearPartsCache). Заменено на кэш Room[] по номеру комнаты; порядок тот
+же: своя комната, затем соседи.
+
+### 19.6 Bot.findBot: copyInto вместо N synchronized elementAt
+
+Поиск цели идёт по всем объектам сцены на каждого бота каждый react-тик;
+Vector.elementAt() - synchronized-метод (без JIT каждый вызов -
+монитор). Один copyInto() в переиспользуемый статический Object[] +
+arraycopy заменяет N таких вызовов. Хвост буфера за прошлым размером
+зануляется (GC-гигиена: не удерживать удалённые объекты).
+
+### 19.7 Проверки
+
+* docs/verify/test_ai_physics.py - Python-зеркала (int-семантика Java,
+  включая переполнения и усечение делений) старых и новых версий трёх
+  геометрических запросов, fuzz на случайных выпуклых мешах: 360 000
+  сравнений, 0 расхождений. Сравниваются bit-в-бит: sphereCast -
+  результат И финальная позиция сферы (мутация внутри цикла),
+  computeHeight - высота/индекс полигона/центры/underRoof,
+  isPointOnMesh - индекс первого попадания.
+* Полная пересборка: check-jar.py зелёный, QuantumOptimize.jar
+  366 837 байт, все 11 verify-тестов PASS.

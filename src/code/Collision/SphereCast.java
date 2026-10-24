@@ -38,54 +38,64 @@ public final class SphereCast {
     public static boolean sphereCast(Mesh mesh, Vector3D pos, int rad, boolean recalc) {
         RenderObject[] elements = mesh.getPolygons();
         boolean col = false;
+        // ARM9: для статического запроса (recalc==false - геометрия комнат,
+        // вершины после загрузки не меняются) AABB полигонов берётся из кэша
+        // Mesh вместо пересчёта min/max по вершинам на каждый вызов (физика
+        // вызывает это на каждого персонажа каждый кадр). Для движущихся мешей
+        // (recalc==true, вершины только что трансформированы transformSave,
+        // который кэш сбросил) остался прежний пересчёт по месту.
+        final int[] bb = recalc ? null : mesh.getAABB();
         for(int i=0; i<elements.length; i++) {
             RenderObject poly = elements[i];
             int dis = Integer.MAX_VALUE;
-            int mat = -1;
-            
+            int mat;
+
             if(poly.kind == RenderObject.KIND_POLY4) {
                 Polygon4V p = (Polygon4V) poly;
+                mat = p.tex;
+
+                // ARM9: фильтр текстур поднят до AABB и расчёта расстояния:
+                // неколлизионные полигоны раньше считали всё целиком, а потом
+                // результат выбрасывался проверкой в конце цикла. Поведение
+                // идентично: оба фильтра - независимые continue.
+                if(mat != -1) {
+                    Texture tex = mesh.getTexture().textures[mat];
+                    if(!tex.collision) continue;
+                }
+
                 final Vertex a = p.a;
                 final Vertex b = p.b;
                 final Vertex c = p.c;
                 final Vertex d = p.d;
-                mat = p.tex;
-                
-                
-                final int ax = a.x, ay = a.y, az = a.z;
-                final int bx = b.x, by = b.y, bz = b.z;
-                final int cx = c.x, cy = c.y, cz = c.z;
-                final int dx = d.x, dy = d.y, dz = d.z;
-                
-                int maxx=ax;
-                if(bx>maxx) maxx=bx;
-                if(cx>maxx) maxx=cx;
-                if(dx>maxx) maxx=dx;
-                
-                int minx=ax;
-                if(bx<minx) minx=bx;
-                if(cx<minx) minx=cx;
-                if(dx<minx) minx=dx;
-                
-                int maxy=ay;
-                if(by>maxy) maxy=by;
-                if(cy>maxy) maxy=cy;
-                if(dy>maxy) maxy=dy;
-                
-                int miny=ay;
-                if(by<miny) miny=by;
-                if(cy<miny) miny=cy;
-                if(dy<miny) miny=dy;
-                
-                int maxz=az;
-                if(bz>maxz) maxz=bz;
-                if(cz>maxz) maxz=cz;
-                if(dz>maxz) maxz=dz;
-                
-                int minz=az;
-                if(bz<minz) minz=bz;
-                if(cz<minz) minz=cz;
-                if(dz<minz) minz=dz;
+
+                int minx, maxx, miny, maxy, minz, maxz;
+                if(bb != null) {
+                    final int o = i * 6;
+                    minx = bb[o]; miny = bb[o + 1]; minz = bb[o + 2];
+                    maxx = bb[o + 3]; maxy = bb[o + 4]; maxz = bb[o + 5];
+                } else {
+                    minx = maxx = a.x;
+                    if(b.x > maxx) maxx = b.x;
+                    if(c.x > maxx) maxx = c.x;
+                    if(d.x > maxx) maxx = d.x;
+                    if(b.x < minx) minx = b.x;
+                    if(c.x < minx) minx = c.x;
+                    if(d.x < minx) minx = d.x;
+                    miny = maxy = a.y;
+                    if(b.y > maxy) maxy = b.y;
+                    if(c.y > maxy) maxy = c.y;
+                    if(d.y > maxy) maxy = d.y;
+                    if(b.y < miny) miny = b.y;
+                    if(c.y < miny) miny = c.y;
+                    if(d.y < miny) miny = d.y;
+                    minz = maxz = a.z;
+                    if(b.z > maxz) maxz = b.z;
+                    if(c.z > maxz) maxz = c.z;
+                    if(d.z > maxz) maxz = d.z;
+                    if(b.z < minz) minz = b.z;
+                    if(c.z < minz) minz = c.z;
+                    if(d.z < minz) minz = d.z;
+                }
                 if(maxx < pos.x-rad) continue;
                 if(minx > pos.x+rad) continue;
                 if(maxz < pos.z-rad) continue;
@@ -93,10 +103,10 @@ public final class SphereCast {
                 if(maxy < pos.y-rad) continue;
                 if(miny > pos.y+rad) continue;
 
-                v1.x=ax; v1.y=ay; v1.z=az;
-                v2.x=bx; v2.y=by; v2.z=bz;
-                v3.x=cx; v3.y=cy; v3.z=cz;
-                v4.x=dx; v4.y=dy; v4.z=dz;
+                v1.x=a.x; v1.y=a.y; v1.z=a.z;
+                v2.x=b.x; v2.y=b.y; v2.z=b.z;
+                v3.x=c.x; v3.y=c.y; v3.z=c.z;
+                v4.x=d.x; v4.y=d.y; v4.z=d.z;
                 nor.x=p.nx;
                 nor.y=p.ny;
                 nor.z=p.nz;
@@ -104,40 +114,39 @@ public final class SphereCast {
                 dis = distanceSphereToPolygon(v1, v2, v3, v4, nor, pos, rad);
             } else if(poly.kind == RenderObject.KIND_POLY3) {
                 Polygon3V p = (Polygon3V) poly;
+                mat = p.tex;
+
+                if(mat != -1) {
+                    Texture tex = mesh.getTexture().textures[mat];
+                    if(!tex.collision) continue;
+                }
+
                 final Vertex a = p.a;
                 final Vertex b = p.b;
                 final Vertex c = p.c;
-                mat = p.tex;
-                
-                
-                final int ax = a.x, ay = a.y, az = a.z;
-                final int bx = b.x, by = b.y, bz = b.z;
-                final int cx = c.x, cy = c.y, cz = c.z;
-                
-                int maxx=ax;
-                if(bx>maxx) maxx=bx;
-                if(cx>maxx) maxx=cx;
-                
-                int minx=ax;
-                if(bx<minx) minx=bx;
-                if(cx<minx) minx=cx;
-                
-                int maxy=ay;
-                if(by>maxy) maxy=by;
-                if(cy>maxy) maxy=cy;
-                
-                int miny=ay;
-                if(by<miny) miny=by;
-                if(cy<miny) miny=cy;
-                
-                int maxz=az;
-                if(bz>maxz) maxz=bz;
-                if(cz>maxz) maxz=cz;
-                
-                int minz=az;
-                if(bz<minz) minz=bz;
-                if(cz<minz) minz=cz;
-                
+
+                int minx, maxx, miny, maxy, minz, maxz;
+                if(bb != null) {
+                    final int o = i * 6;
+                    minx = bb[o]; miny = bb[o + 1]; minz = bb[o + 2];
+                    maxx = bb[o + 3]; maxy = bb[o + 4]; maxz = bb[o + 5];
+                } else {
+                    minx = maxx = a.x;
+                    if(b.x > maxx) maxx = b.x;
+                    if(c.x > maxx) maxx = c.x;
+                    if(b.x < minx) minx = b.x;
+                    if(c.x < minx) minx = c.x;
+                    miny = maxy = a.y;
+                    if(b.y > maxy) maxy = b.y;
+                    if(c.y > maxy) maxy = c.y;
+                    if(b.y < miny) miny = b.y;
+                    if(c.y < miny) miny = c.y;
+                    minz = maxz = a.z;
+                    if(b.z > maxz) maxz = b.z;
+                    if(c.z > maxz) maxz = c.z;
+                    if(b.z < minz) minz = b.z;
+                    if(c.z < minz) minz = c.z;
+                }
                 if(maxx < pos.x-rad) continue;
                 if(minx > pos.x+rad) continue;
                 if(maxz < pos.z-rad) continue;
@@ -145,21 +154,16 @@ public final class SphereCast {
                 if(maxy < pos.y-rad) continue;
                 if(miny > pos.y+rad) continue;
 
-                v1.x=ax; v1.y=ay; v1.z=az;
-                v2.x=bx; v2.y=by; v2.z=bz;
-                v3.x=cx; v3.y=cy; v3.z=cz;
+                v1.x=a.x; v1.y=a.y; v1.z=a.z;
+                v2.x=b.x; v2.y=b.y; v2.z=b.z;
+                v3.x=c.x; v3.y=c.y; v3.z=c.z;
                 nor.x=p.nx;
                 nor.y=p.ny;
                 nor.z=p.nz;
                 if(recalc) MathUtils2.calcNormalFast(nor, v1, v2, v3);
                 dis = distanceSphereToPolygon(v1, v2, v3, nor, pos, rad);
-            }
-            
-            if(mat!=-1) {
-                Texture tex = mesh.getTexture().textures[mat];
-                if(!tex.collision) continue;
-            }
-            
+            } else continue;   // mat==-1, dis==MAX - полигон и раньше был no-op
+
             if(dis != Integer.MAX_VALUE && dis > 0) {
                 pos.add(-nor.x*dis>>12, -nor.y*dis>>12, -nor.z*dis>>12);
                 col = true;

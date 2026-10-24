@@ -155,15 +155,28 @@ public abstract class Bot extends GameObject {
         return !ray.isCollision();
     }
 
+    /** ARM9: буфер copyInto() - ОДИН synchronized-вызов + arraycopy вместо
+     *  N synchronized Vector.elementAt() на каждый поиск цели (findBot идёт
+     *  по всем объектам сцены на каждого бота каждый react-тик). Игровой цикл
+     *  однопоточный, findBot не рекурсивен - статический буфер безопасен.
+     *  Хвост за прошлым размером зануляется, чтобы не удерживать ссылки на
+     *  удалённые объекты (GC). */
+    private static Object[] findBuf = new Object[16];
+    private static int findBufUsed = 0;
+
     protected GameObject findBot(Vector objs, GameObject ignore, int[] fractions) {
         long dis = Long.MAX_VALUE;
         GameObject bot = null;
         final int count = objs.size();   // было isEmpty() + size() на каждой итерации
         if (count == 0) return null;
+        if (findBuf.length < count) findBuf = new Object[count];
+        objs.copyInto(findBuf);
+        final int prevUsed = findBufUsed;
+        findBufUsed = count;
         final Character myChar = getCharacter();
 
         for(int i = 0; i < count; ++i) {
-            Object el = objs.elementAt(i);
+            Object el = findBuf[i];
             if(el instanceof GameObject) {
                 GameObject obj = (GameObject) el;
 
@@ -188,7 +201,8 @@ public abstract class Bot extends GameObject {
                 }
             }
         }
-        
+
+        for(int i = count; i < prevUsed; ++i) findBuf[i] = null;   // GC-гигиена
         return bot;
     }
     

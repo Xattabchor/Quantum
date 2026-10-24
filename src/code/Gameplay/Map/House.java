@@ -80,6 +80,8 @@ public final class House {
         }
         invalidateNearObjects();
         nearPartsCache = new int[0][];
+        nearRoomsCache = new Room[0][];
+        allObjFrame = -1;
         tVec.removeAllElements();
         tVec2.removeAllElements();
         tVec3.removeAllElements();
@@ -124,15 +126,41 @@ public final class House {
         return roomsToRender;
     }
 
+    /** ARM9: "комната + соседи" кэшем Room[] - getNearRooms() перестраивала
+     *  Vector (removeAllElements + synchronized addElement) на каждый вызов
+     *  sphereCast/rayCast, то есть по нескольку раз на персонажа за кадр,
+     *  хотя структура соседей после загрузки не меняется. Порядок комнат тот
+     *  же: сначала своя, затем соседи. */
+    private Room[][] nearRoomsCache = new Room[0][];
+    private static final Room[] NO_ROOMS = new Room[0];
+
+    private final Room[] getNearRoomsArr(int part) {
+        if(part == -1) return NO_ROOMS;
+        if(part >= nearRoomsCache.length) {
+            Room[][] grown = new Room[part + 8][];
+            System.arraycopy(nearRoomsCache, 0, grown, 0, nearRoomsCache.length);
+            nearRoomsCache = grown;
+        }
+        Room[] cached = nearRoomsCache[part];
+        if(cached != null) return cached;
+        Room[] nei = neighbours[part];
+        int count = 0;
+        if(rooms[part] != null) count = 1;
+        for(int i = 0; i < nei.length; i++) if(nei[i] != null) count++;
+        Room[] out = new Room[count];
+        count = 0;
+        if(rooms[part] != null) out[count++] = rooms[part];
+        for(int i = 0; i < nei.length; i++) if(nei[i] != null) out[count++] = nei[i];
+        nearRoomsCache[part] = out;
+        return out;
+    }
+
     public final boolean sphereCast(int part, Vector3D pos, int rad) {
         boolean col = false;
 
-        Vector nearRms = getNearRooms(part); //Spherecast rooms
-        if(nearRms.size() > 0) {
-            for(int i=0; i<nearRms.size(); i++) {
-                Room room = (Room) nearRms.elementAt(i);
-                col |= room.sphereCast(pos, rad);
-            }
+        Room[] nearRms = getNearRoomsArr(part); //Spherecast rooms
+        for(int i=0; i<nearRms.length; i++) {
+            col |= nearRms[i].sphereCast(pos, rad);
         }
 
         Vector nearObj = getNearObjectsCached(part); //Spherecast meshobjects
@@ -196,9 +224,9 @@ public final class House {
     public final void rayCast(int part, Ray ray, boolean rayIsFromWeapons) {
         if(part == -1) return;
 
-        Vector nearRms = getNearRooms(part); //Raycast rooms
-        for(int i = 0; i < nearRms.size(); i++) {
-            ((Room) nearRms.elementAt(i)).rayCast(ray);
+        Room[] nearRms = getNearRoomsArr(part); //Raycast rooms
+        for(int i = 0; i < nearRms.length; i++) {
+            nearRms[i].rayCast(ray);
         }
 
         Vector nearObj = getNearObjectsCached(part); //Raycast meshobjects
@@ -218,9 +246,9 @@ public final class House {
     public final void rayCastNoObjects(int part, Ray ray) {
         if(part == -1) return;
 
-        Vector nearRms = getNearRooms(part); //Raycast rooms
-        for(int i = 0; i < nearRms.size(); i++) {
-            ((Room) nearRms.elementAt(i)).rayCast(ray);
+        Room[] nearRms = getNearRoomsArr(part); //Raycast rooms
+        for(int i = 0; i < nearRms.length; i++) {
+            nearRms[i].rayCast(ray);
         }
     }
 
@@ -479,6 +507,24 @@ public final class House {
         tVec2.removeAllElements();
         for(int i=0; i<rooms.length; i++) {
             rooms[i].getObjects(tVec2);
+        }
+        return tVec2;
+    }
+
+    /** ARM9: полный список объектов, закэшированный на кадр физики.
+     *  NPC/Zombie/BigZombie.action() вызывали getObjects() на каждый
+     *  react-тик - а это ПОЛНАЯ перестройка Vector (обход всех комнат и
+     *  synchronized addElement на каждый объект) по разу на каждого бота.
+     *  Теперь перестройка максимум раз на кадр; инвалидация - по номеру
+     *  кадра физики и Room.objectsRevision (любое добавление/удаление). */
+    private int allObjFrame = -1;
+    private int allObjRev = -1;
+
+    public final Vector getObjectsCached() {
+        if(allObjFrame != physicsFrame || allObjRev != Room.objectsRevision) {
+            getObjects();
+            allObjFrame = physicsFrame;
+            allObjRev = Room.objectsRevision;
         }
         return tVec2;
     }

@@ -90,6 +90,10 @@ public class Room {
     }
     public String reverb;
     private Vector objects = new Vector();
+    /** ARM9: ревизия состава объектов комнат - House.getObjectsCached()
+     *  инвалидирует закэшированный полный список по ней и по номеру кадра
+     *  физики, кто бы ни добавил/удалил объект. */
+    static int objectsRevision = 0;
     public Light[] lights;
 
     public Room(Mesh meshs, int id) {
@@ -561,8 +565,17 @@ public class Room {
         }
 
         RenderObject[] pols = testMesh.getPolygons();
+        // ARM9: до полного теста (деление плоскости + 3-4 векторных
+        // произведения) полигон отбрасывается по кэшному XZ-AABB. Отсечка
+        // точная: cross-производный тест возвращает true только для точки
+        // внутри выпуклой области полигона, а она целиком лежит в AABB.
+        // isPointOnMesh вызывается на каждый ДВИНУВШИЙСЯ объект каждый кадр
+        // (recomputePart -> calcPart), это самый частый геометрический запрос.
+        final int[] bb = testMesh.getAABB();
 
         for(int i = 0; i < pols.length; i++) {
+            final int o = i * 6;
+            if(x < bb[o] || x > bb[o + 3] || z < bb[o + 2] || z > bb[o + 5]) continue;
             if(isPointOnPolygon(x, y, z, pols[i])) {
                 return i;
             }
@@ -694,6 +707,7 @@ public class Room {
     public void addObject(RoomObject obj) {
         if(!objects.contains(obj)) {
             objects.addElement(obj);
+            objectsRevision++;
         } else {
             if(DeveloperMenu.debugMode) {
                 System.out.println("Room: такой обьект уже содержится");
@@ -703,6 +717,7 @@ public class Room {
 
     public void removeObject(RoomObject obj) {
         boolean remove = objects.removeElement(obj);
+        if(remove) objectsRevision++;
         if(!remove && DeveloperMenu.debugMode) {
             System.out.println("Room: такого обьекта не было");
         }

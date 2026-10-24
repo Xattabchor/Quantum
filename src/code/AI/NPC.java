@@ -247,7 +247,7 @@ public final class NPC extends Bot {
         final int react = aiFar ? (reacttimer << 1) : reacttimer;
         if (Math.abs(getFrameInterDiv()) % react == 2) {
             House house = scene.getHouse();
-            Vector objs = house.getObjects();
+            Vector objs = house.getObjectsCached();   // ARM9: перестройка списка максимум раз в кадр
             
             //Remove dead from unicalEnemies list
             if(unicalEnemies != null && !unicalEnemies.isEmpty()) {

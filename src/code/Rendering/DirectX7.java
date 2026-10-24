@@ -337,7 +337,11 @@ Vertex[] vers=ms.getVertices();
 
 public static void transformSave(Object ms, Matrix m) {
 Vertex[] vers;
-if(ms instanceof Mesh) vers = ((Mesh)ms).getVertices();
+if(ms instanceof Mesh) {
+    // ARM9: вершины меша сейчас будут трансформированы - кэш AABB недействителен
+    ((Mesh)ms).invalidateAABB();
+    vers = ((Mesh)ms).getVertices();
+}
 else if(ms instanceof Vertex[]) vers = (Vertex[]) ms;
 else return;
 
