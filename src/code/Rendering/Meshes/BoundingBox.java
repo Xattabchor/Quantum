@@ -252,22 +252,63 @@ public class BoundingBox {
     }
 
     public void reSort(Matrix matrix) {
-        DirectX7.transformSave( vertices, matrix );
-        
-        Vertex v = vertices[0];
-        minpx = maxpx = v.x;
-        minpy = maxpy = v.y;
-        minpz = maxpz = v.z;
-        for (int i = 1; i < vertices.length; i++) {
-            v = vertices[i];
-            if(v.x < minpx) minpx = v.x;
-            if(v.y < minpy) minpy = v.y;
-            if(v.z < minpz) minpz = v.z;
-            
-            if(v.x > maxpx) maxpx = v.x;
-            if(v.y > maxpy) maxpy = v.y;
-            if(v.z > maxpz) maxpz = v.z;
+        // ВАЖНО: transformSave() МУТИРУЕТ вершины - x,y,z перезаписываются
+        // трансформированными значениями (оригинал уходит в sx,sy,rz). В
+        // оригинале reSort() и isVisible() каждый вызов начинали с
+        // set(minx,..), сбрасывая все 8 углов, поэтому мутация была
+        // безвредной. Теперь вершины - поле экземпляра, заполненное один
+        // раз в конструкторе, и transformSave() на них накапливал бы
+        // умножение на матрицу каждый кадр (box*mat^k): полный тест
+        // видимости начинал возвращать случайные результаты, а [MESH]-
+        // объекты - мерцать и исчезать (MeshObject - единственный класс,
+        // вызывающий reSort каждый кадр; у NPC только isVisible, он
+        // вершины не портит). Поэтому reSort() вершины НЕ трогает:
+        // трансформированный AABB считается напрямую из неизменяемых
+        // minx..maxz - те же 8 углов и те же формулы, что в transformSave()
+        // (m>>2, fp=Matrix.fp-2, каждое произведение отдельно >>fp), то
+        // есть minpx..maxpz бит-в-бит как прежде. Вершины остаются
+        // нетронутыми для isVisible(): transformAndProjectVertices пишет
+        // только sx,sy,rz.
+        final int m00 = matrix.m00 >> 2;
+        final int m01 = matrix.m01 >> 2;
+        final int m02 = matrix.m02 >> 2;
+        final int m03 = matrix.m03;
+
+        final int m10 = matrix.m10 >> 2;
+        final int m11 = matrix.m11 >> 2;
+        final int m12 = matrix.m12 >> 2;
+        final int m13 = matrix.m13;
+
+        final int m20 = matrix.m20 >> 2;
+        final int m21 = matrix.m21 >> 2;
+        final int m22 = matrix.m22 >> 2;
+        final int m23 = matrix.m23;
+
+        final int fp = Matrix.fp - 2;
+
+        int mnx = 0, mny = 0, mnz = 0, mxx = 0, mxy = 0, mxz = 0;
+        for (int i = 0; i < 8; i++) {
+            final int x = (i & 1) == 0 ? minx : maxx;
+            final int y = (i & 2) == 0 ? miny : maxy;
+            final int z = (i & 4) == 0 ? minz : maxz;
+
+            final int tx = (x * m00 >> fp) + (y * m01 >> fp) + (z * m02 >> fp) + m03;
+            final int ty = (x * m10 >> fp) + (y * m11 >> fp) + (z * m12 >> fp) + m13;
+            final int tz = (x * m20 >> fp) + (y * m21 >> fp) + (z * m22 >> fp) + m23;
+
+            if (i == 0) {
+                mnx = mxx = tx; mny = mxy = ty; mnz = mxz = tz;
+            } else {
+                if (tx < mnx) mnx = tx;
+                if (ty < mny) mny = ty;
+                if (tz < mnz) mnz = tz;
+                if (tx > mxx) mxx = tx;
+                if (ty > mxy) mxy = ty;
+                if (tz > mxz) mxz = tz;
+            }
         }
+        minpx = mnx; minpy = mny; minpz = mnz;
+        maxpx = mxx; maxpy = mxy; maxpz = mxz;
     }
 
     public int getMinX() {
