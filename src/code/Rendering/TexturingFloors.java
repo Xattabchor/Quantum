@@ -9,6 +9,43 @@ import code.utils.Main;
  */
 public class TexturingFloors {
    public final static int fp = 12, FP = 1<<fp;
+
+    // ARM9 (§21): четыре 64-битных деления на переменный wz на КАЖДЫЙ
+    // сканлайн каждого полигона пола - на ARM9 64-битное деление
+    // эмулируется программно. divPairFp() считает пару (u,v) с общим
+    // знаменателем одним из трёх путей:
+    //   A - оба числителя помещаются в int32 (|n| < 2^19, значит n<<fp
+    //       тоже): две ТОЧНЫЕ 32-битные деления, бит-в-бит как оригинал;
+    //   B - |n| < 2^24 и |wz| >= 64: одно общее обратное деление
+    //       rq = 2^30/wz (32-битное) + два умножения; отклонение от
+    //       точного значения < 65 fp-единиц = 1/63 тексела (тексел =
+    //       4096 fp-единиц) - тот же класс погрешности, что у FPq
+    //       (§18.1); состояние uz/vz/wz мутируется только точными
+    //       сложениями, поэтому по строкам/сегментам погрешность не
+    //       накапливается;
+    //   иначе - точные 64-битные деления (побитово прежний результат).
+    // Деление на ноль ведёт себя как раньше: пути A и fallback бросают
+    // тот же ArithmeticException (стражи wz_a==0 у вызывающих сохранены).
+    private static final int RQ_BITS = 30;
+    private static final int RQB = 1 << RQ_BITS;
+    static int qu, qv;
+
+    static final void divPairFp(int nu, int nv, int den) {
+        if(nu >= -(1 << 19) && nu < (1 << 19)
+                && nv >= -(1 << 19) && nv < (1 << 19)) {
+            qu = (nu << fp) / den;
+            qv = (nv << fp) / den;
+        } else if((den >= 64 || den <= -64)
+                && nu >= -(1 << 24) && nu < (1 << 24)
+                && nv >= -(1 << 24) && nv < (1 << 24)) {
+            final int rq = RQB / den;
+            qu = (int)(((long)nu * rq) >> (RQ_BITS - fp));
+            qv = (int)(((long)nv * rq) >> (RQ_BITS - fp));
+        } else {
+            qu = (int)(((long)nu << fp) / den);
+            qv = (int)(((long)nv << fp) / den);
+        }
+    }
    
    
    static final void paintFloor(final DirectX7 g3d, final Texture texture, int y_start, final int y_end,
@@ -85,10 +122,10 @@ y++
             x2 += tempI;
             length = x2 - x1;
 if(length!=0) {
-            u = (int) (((long) uz_a << fp) / wz_a);
-            v = (int) (((long) vz_a << fp) / wz_a);
-            du = ((int) (((long) uz_b << fp) / wz_b) - u)  / length;
-            dv = ((int) (((long) vz_b << fp) / wz_b) - v)  / length;
+            divPairFp(uz_a, vz_a, wz_a); u = qu; v = qv;
+            divPairFp(uz_b, vz_b, wz_b);
+            du = (qu - u) / length;
+            dv = (qv - v) / length;
 
 while(x2-x1>=7) {
 if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT]) != 0) rgb[x1]=col; 
@@ -184,11 +221,10 @@ y++
             x2 += tempI;
             length = x2 - x1;
 if(length!=0) {
-            u = (int) (((long) uz_a << fp) / wz_a);
-            v = (int) (((long) vz_a << fp) / wz_a);
-
-            du = ((int) (((long) uz_b << fp) / wz_b) - u)  / length;
-            dv = ((int) (((long) vz_b << fp) / wz_b) - v)  / length;
+            divPairFp(uz_a, vz_a, wz_a); u = qu; v = qv;
+            divPairFp(uz_b, vz_b, wz_b);
+            du = (qu - u) / length;
+            dv = (qv - v) / length;
 
                 if(Main.s60Optimization == 1) {
                 while(x2-x1>=4) {
@@ -300,11 +336,10 @@ y++
             x2 += tempI;
             length = x2 - x1;
 if(length!=0) {
-            u = (int) (((long) uz_a << fp) / wz_a);
-            v = (int) (((long) vz_a << fp) / wz_a);
-
-            du = ((int) (((long) uz_b << fp) / wz_b) - u)  / length;
-            dv = ((int) (((long) vz_b << fp) / wz_b) - v)  / length;
+            divPairFp(uz_a, vz_a, wz_a); u = qu; v = qv;
+            divPairFp(uz_b, vz_b, wz_b);
+            du = (qu - u) / length;
+            dv = (qv - v) / length;
 
                 if(Main.s60Optimization == 1) {
                 while(x2-x1>=4) {
@@ -427,10 +462,8 @@ y++
             x2 += tempI;
             length = x2 - x1;
 if(length!=0) {
-            u = (int) (((long) uz_a << fp) / wz_a);
-            v = (int) (((long) vz_a << fp) / wz_a);
-            u_2 = (int) (((long) uz_b << fp) / wz_b);
-            v_2 = (int) (((long) vz_b << fp) / wz_b);
+            divPairFp(uz_a, vz_a, wz_a); u = qu; v = qv;
+            divPairFp(uz_b, vz_b, wz_b); u_2 = qu; v_2 = qv;
 
             du = (u_2 - u)  / length;
             dv = (v_2 - v)  / length;
@@ -570,10 +603,10 @@ y++
             x2 += tempI;
             length = x2 - x1;
 if(length!=0) {
-            u = (int) (((long) uz_a << fp) / wz_a);
-            v = (int) (((long) vz_a << fp) / wz_a);
-            du = ((int) (((long) uz_b << fp) / wz_b) - u)  / length;
-            dv = ((int) (((long) vz_b << fp) / wz_b) - v)  / length;
+            divPairFp(uz_a, vz_a, wz_a); u = qu; v = qv;
+            divPairFp(uz_b, vz_b, wz_b);
+            du = (qu - u) / length;
+            dv = (qv - v) / length;
 
                 if(Main.s60Optimization == 1) {
                 while(x2-x1>=3) {
@@ -711,11 +744,10 @@ y++
 
             if(wz_a == 0) return;
             if(length > 0) { // ������������ ���������� �������
-            u = (int) (((long) uz_a << fp) / wz_a); //������� ���������� � ��������
-            v = (int) (((long) vz_a << fp) / wz_a); //
-
-                du = ((int) (((long) uz_b << fp) / wz_b) - u) / length;
-                dv = ((int) (((long) vz_b << fp) / wz_b) - v) / length;
+            divPairFp(uz_a, vz_a, wz_a); u = qu; v = qv;
+            divPairFp(uz_b, vz_b, wz_b);
+            du = (qu - u) / length;
+            dv = (qv - v) / length;
 isz=0xFF-(isz2=f>>>fp);
 c1=(fogcolor)*isz;
 c2=(fogcolor2)*isz;
@@ -836,11 +868,10 @@ y++
 
             if(wz_a == 0) return;
             if(length > 0) { // ������������ ���������� �������
-            u = (int) (((long) uz_a << fp) / wz_a); //������� ���������� � ��������
-            v = (int) (((long) vz_a << fp) / wz_a); //
-
-                du = ((int) (((long) uz_b << fp) / wz_b) - u) / length;
-                dv = ((int) (((long) vz_b << fp) / wz_b) - v) / length;
+            divPairFp(uz_a, vz_a, wz_a); u = qu; v = qv;
+            divPairFp(uz_b, vz_b, wz_b);
+            du = (qu - u) / length;
+            dv = (qv - v) / length;
 int isz2=f>>fp;
 if(isz2<0) isz2=0;
 while(x2-x1>=2)
@@ -964,8 +995,13 @@ y++
             if(wz_a == 0) return;
             if(length > 0) { // ������������ ���������� �������
                 
-            du = ((int) (((long) uz_b << fp) / wz_b) - (u = (int) (((long) uz_a << fp) / wz_a))) / length;
-            dv = ((int) (((long) vz_b << fp) / wz_b) - (v = (int) (((long) vz_a << fp) / wz_a))) / length;
+            divPairFp(uz_a, vz_a, wz_a); u = qu; v = qv;
+                
+            divPairFp(uz_b, vz_b, wz_b);
+                
+            du = (qu - u) / length;
+                
+            dv = (qv - v) / length;
 while(x2-x1>=2)
 {
 if((col= tex[ ( (((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp) ) & lengthBIT ])  != 0) 
@@ -1097,8 +1133,10 @@ y++
 
             if(wz_a == 0) return;
             if(length > 0) { // ������������ ���������� �������
-            du = ((int) (((long) uz_b << fp) / wz_b) - (u = (int) (((long) uz_a << fp) / wz_a))) / length;
-            dv = ((int) (((long) vz_b << fp) / wz_b) - (v = (int) (((long) vz_a << fp) / wz_a))) / length;
+            divPairFp(uz_a, vz_a, wz_a); u = qu; v = qv;
+            divPairFp(uz_b, vz_b, wz_b);
+            du = (qu - u) / length;
+            dv = (qv - v) / length;
             if(Main.s60Optimization>0) {
 while(x2-x1>=2)
 {

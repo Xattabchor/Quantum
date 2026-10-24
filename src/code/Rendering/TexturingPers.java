@@ -809,22 +809,22 @@ x1++;
             x2 += tempI;
             length = x2 - x1;
 
-
-            
-            u = (int) (((long) uz_a << fp) / wz_a);
-            v = (int) (((long) vz_a << fp) / wz_a);
+            TexturingFloors.divPairFp(uz_a, vz_a, wz_a); u = TexturingFloors.qu; v = TexturingFloors.qv;
 
             
             while(length>0) {
                 if(length >= sz2) {
                     lineEnd = x1 + sz2;
-                    du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)/sz21);
-                    dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)/sz21);
+                    uz_a += duz4; wz_a += dwz4; vz_a += dvz4;
+                    TexturingFloors.divPairFp(uz_a, vz_a, wz_a);
+                    du = ((TexturingFloors.qu - u) / sz21);
+                    dv = ((TexturingFloors.qv - v) / sz21);
                     length -= sz2;
                 } else {
                     lineEnd = x2;
-                    du = ((int) (((long) uz_b << fp) / wz_b) - u) / length;
-                    dv = ((int) (((long) vz_b << fp) / wz_b) - v) / length;
+                    TexturingFloors.divPairFp(uz_b, vz_b, wz_b);
+                    du = (TexturingFloors.qu - u) / length;
+                    dv = (TexturingFloors.qv - v) / length;
                     length = 0;
                 }
                 
@@ -948,15 +948,16 @@ y++
 
 
             if(wz_a == 0) return;
-            u = (int) (((long) uz_a << fp) / wz_a); //������� ���������� � ��������
-            v = (int) (((long) vz_a << fp) / wz_a); //
+            TexturingFloors.divPairFp(uz_a, vz_a, wz_a); u = TexturingFloors.qu; v = TexturingFloors.qv;
 
 
 
 //Paste SUb fog here
 for(;length>=q; length-=q) {
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)*FPq)>>fp;   // ARM9: как в режиме 13 - /q заменено на *FPq>>fp //��������� du � dv �� ����
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)*FPq)>>fp;
+                uz_a += duz4; wz_a += dwz4; vz_a += dvz4;
+                TexturingFloors.divPairFp(uz_a, vz_a, wz_a);
+                du = ((TexturingFloors.qu - u) * FPq) >> fp;
+                dv = ((TexturingFloors.qv - v) * FPq) >> fp;
 
 
                     for(int i=x1+q;x1<i;)
@@ -981,8 +982,9 @@ x1+=4;
 
                            }
             if(length > 0) { // ������������ ���������� �������
-                du = ((int) (((long) uz_b << fp) / wz_b) - u) / length;
-                dv = ((int) (((long) vz_b << fp) / wz_b) - v) / length;
+                TexturingFloors.divPairFp(uz_b, vz_b, wz_b);
+                du = (TexturingFloors.qu - u) / length;
+                dv = (TexturingFloors.qv - v) / length;
 if(Main.s60Optimization==1) {
                                 while(x2-x1>=4) {
 if((col=tex[((((v += dv)>>>fp)<<widthBIT) + ((u += du)>>>fp)) &lengthBIT]) != 0) 
@@ -1096,15 +1098,16 @@ y++
 
 
             if(wz_a == 0) return;
-            u = (int) (((long) uz_a << fp) / wz_a); //������� ���������� � ��������
-            v = (int) (((long) vz_a << fp) / wz_a); //
+            TexturingFloors.divPairFp(uz_a, vz_a, wz_a); u = TexturingFloors.qu; v = TexturingFloors.qv;
 
 
 
 //Paste SUb fog here
 for(;length>=sz2; length-=sz2) {
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)/sz2); //��������� du � dv �� ����
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)/sz2);
+                uz_a += duz4; wz_a += dwz4; vz_a += dvz4;
+                TexturingFloors.divPairFp(uz_a, vz_a, wz_a);
+                du = ((TexturingFloors.qu - u) / sz2);
+                dv = ((TexturingFloors.qv - v) / sz2);
 
 
                     for(int i=x1+sz2;x1<i;)
@@ -1129,8 +1132,9 @@ x1+=3;
 
                            }
             if(length > 0) { // ������������ ���������� �������
-                du = ((int) (((long) uz_b << fp) / wz_b) - u) / length;
-                dv = ((int) (((long) vz_b << fp) / wz_b) - v) / length;
+                TexturingFloors.divPairFp(uz_b, vz_b, wz_b);
+                du = (TexturingFloors.qu - u) / length;
+                dv = (TexturingFloors.qv - v) / length;
                 if(Main.s60Optimization==1) {
 while(x2-x1>=3) {
 if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT]) != 0) 
@@ -1285,16 +1289,17 @@ y++
 
 
             if(wz_a == 0) return;
-            u = (int) (((long) uz_a << fp) / wz_a); //������� ���������� � ��������
-            v = (int) (((long) vz_a << fp) / wz_a); //
+            TexturingFloors.divPairFp(uz_a, vz_a, wz_a); u = TexturingFloors.qu; v = TexturingFloors.qv;
 
 
 
 //Paste SUb fog here
 for(;length>=q; length-=q) {
 
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)*FPq)>>fp;   // ARM9: как в режиме 13 - /q заменено на *FPq>>fp //��������� du � dv �� ����
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)*FPq)>>fp;
+                uz_a += duz4; wz_a += dwz4; vz_a += dvz4;
+                TexturingFloors.divPairFp(uz_a, vz_a, wz_a);
+                du = ((TexturingFloors.qu - u) * FPq) >> fp;
+                dv = ((TexturingFloors.qv - v) * FPq) >> fp;
 
 
                     for(int i=x1+q;x1<i;)
@@ -1313,8 +1318,9 @@ x1+=2;
 }
                            }
             if(length > 0) { // ������������ ���������� �������
-                du = ((int) (((long) uz_b << fp) / wz_b) - u) / length;
-                dv = ((int) (((long) vz_b << fp) / wz_b) - v) / length;
+                TexturingFloors.divPairFp(uz_b, vz_b, wz_b);
+                du = (TexturingFloors.qu - u) / length;
+                dv = (TexturingFloors.qv - v) / length;
 
 while(x1<x2) {
 if((col=tex[((((v += dv)>>>fp)<<widthBIT) + ((u += du)>>>fp)) &lengthBIT]) != 0)  
@@ -1433,15 +1439,16 @@ y++
 
 
             if(wz_a == 0) return;
-            u = (int) (((long) uz_a << fp) / wz_a); //������� ���������� � ��������
-            v = (int) (((long) vz_a << fp) / wz_a); //
+            TexturingFloors.divPairFp(uz_a, vz_a, wz_a); u = TexturingFloors.qu; v = TexturingFloors.qv;
 
 
 
 //Paste SUb fog here
 for(;length>=q; length-=q) {
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)*FPq)>>fp;   // ARM9: как в режиме 13 - /q заменено на *FPq>>fp //��������� du � dv �� ����
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)*FPq)>>fp;
+                uz_a += duz4; wz_a += dwz4; vz_a += dvz4;
+                TexturingFloors.divPairFp(uz_a, vz_a, wz_a);
+                du = ((TexturingFloors.qu - u) * FPq) >> fp;
+                dv = ((TexturingFloors.qv - v) * FPq) >> fp;
 
 int i=x1+q;
 while(i-x1>=2) {
@@ -1460,8 +1467,9 @@ x1+=2;
 
                            }
             if(length > 0) { // ������������ ���������� �������
-                du = ((int) (((long) uz_b << fp) / wz_b) - u) / length;
-                dv = ((int) (((long) vz_b << fp) / wz_b) - v) / length;
+                TexturingFloors.divPairFp(uz_b, vz_b, wz_b);
+                du = (TexturingFloors.qu - u) / length;
+                dv = (TexturingFloors.qv - v) / length;
 
 while(x1<x2)
 {
@@ -1567,16 +1575,17 @@ y++
 
 
             if(wz_a == 0) return;
-            u = (int) (((long) uz_a << fp) / wz_a); //������� ���������� � ��������
-            v = (int) (((long) vz_a << fp) / wz_a); //
+            TexturingFloors.divPairFp(uz_a, vz_a, wz_a); u = TexturingFloors.qu; v = TexturingFloors.qv;
 
 
 
 //Paste SUb fog here
 for(;length>=sz2; length-=sz2) {
 
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)/sz2); //��������� du � dv �� ����
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)/sz2);
+                uz_a += duz4; wz_a += dwz4; vz_a += dvz4;
+                TexturingFloors.divPairFp(uz_a, vz_a, wz_a);
+                du = ((TexturingFloors.qu - u) / sz2);
+                dv = ((TexturingFloors.qv - v) / sz2);
 
 
                     for(int i=x1+sz2;x1<i;)
@@ -1608,8 +1617,9 @@ x1+=2;
 }
                            }
             if(length > 0) { // ������������ ���������� �������
-                du = ((int) (((long) uz_b << fp) / wz_b) - u) / length;
-                dv = ((int) (((long) vz_b << fp) / wz_b) - v) / length;
+                TexturingFloors.divPairFp(uz_b, vz_b, wz_b);
+                du = (TexturingFloors.qu - u) / length;
+                dv = (TexturingFloors.qv - v) / length;
                 if(Main.s60Optimization==1) {
 while(x2-x1>=2) {
 if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT]) != 0) {
@@ -1765,16 +1775,17 @@ y++
 
 
             if(wz_a == 0) return;
-            u = (int) (((long) uz_a << fp) / wz_a); //������� ���������� � ��������
-            v = (int) (((long) vz_a << fp) / wz_a); //
+            TexturingFloors.divPairFp(uz_a, vz_a, wz_a); u = TexturingFloors.qu; v = TexturingFloors.qv;
 
 
 
 //Paste SUb fog here
 for(;length>=q; length-=q) {
 
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)*FPq)>>fp;   // ARM9: как в режиме 13 - /q заменено на *FPq>>fp //��������� du � dv �� ����
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)*FPq)>>fp;
+                uz_a += duz4; wz_a += dwz4; vz_a += dvz4;
+                TexturingFloors.divPairFp(uz_a, vz_a, wz_a);
+                du = ((TexturingFloors.qu - u) * FPq) >> fp;
+                dv = ((TexturingFloors.qv - v) * FPq) >> fp;
 
 
                     for(int i=x1+q;x1<i;)
@@ -1789,8 +1800,9 @@ x1++;
                            }
 
             if(length > 0) { // ������������ ���������� �������
-                du = ((int) (((long) uz_b << fp) / wz_b) - u) / length;
-                dv = ((int) (((long) vz_b << fp) / wz_b) - v) / length;
+                TexturingFloors.divPairFp(uz_b, vz_b, wz_b);
+                du = (TexturingFloors.qu - u) / length;
+                dv = (TexturingFloors.qv - v) / length;
 if(Main.s60Optimization==1) {
 while(x2-x1>=2) {
 if((col=tex[((((v+=dv)>>>fp)<<widthBIT) + ((u+=du)>>>fp)) &lengthBIT])!= 0) 
@@ -1925,8 +1937,7 @@ y++
 
 
             if(wz_a == 0) return;
-            u = (int) (((long) uz_a << fp) / wz_a); //������� ���������� � ��������
-            v = (int) (((long) vz_a << fp) / wz_a); //
+            TexturingFloors.divPairFp(uz_a, vz_a, wz_a); u = TexturingFloors.qu; v = TexturingFloors.qv;
             if(f<0) f=0;
             df2=df;
             if(f+df*length<0) df2=-f/length;
@@ -1934,8 +1945,10 @@ y++
 
 //Paste SUb fog here
 for(;length>=q; length-=q) {
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)*FPq)>>fp;   // ARM9: как в режиме 13 - /q заменено на *FPq>>fp //��������� du � dv �� ����
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)*FPq)>>fp;
+                uz_a += duz4; wz_a += dwz4; vz_a += dvz4;
+                TexturingFloors.divPairFp(uz_a, vz_a, wz_a);
+                du = ((TexturingFloors.qu - u) * FPq) >> fp;
+                dv = ((TexturingFloors.qv - v) * FPq) >> fp;
 int i=x1+q;
 if(Main.s60Optimization==1) {
 while(i-x1>=3)
@@ -1972,8 +1985,9 @@ x1++;
 
 
             if(length > 0) { // ������������ ���������� �������
-                du = ((int) (((long) uz_b << fp) / wz_b) - u) / length;
-                dv = ((int) (((long) vz_b << fp) / wz_b) - v) / length;
+                TexturingFloors.divPairFp(uz_b, vz_b, wz_b);
+                du = (TexturingFloors.qu - u) / length;
+                dv = (TexturingFloors.qv - v) / length;
 if(Main.s60Optimization==1) {
 while(x2-x1>=2)
 {
@@ -2129,12 +2143,13 @@ static final void paintMiniTrianglePers_13(final DirectX7 g3d, final Texture tex
 
 
             if(wz_a == 0) return;
-            u = (int) (((long) uz_a << fp) / wz_a); 
-            v = (int) (((long) vz_a << fp) / wz_a); 
+            TexturingFloors.divPairFp(uz_a, vz_a, wz_a); u = TexturingFloors.qu; v = TexturingFloors.qv;
             
 for(;length>=q; length-=q) {
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)*FPq)>>fp; 
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)*FPq)>>fp;
+                uz_a += duz4; wz_a += dwz4; vz_a += dvz4;
+                TexturingFloors.divPairFp(uz_a, vz_a, wz_a);
+                du = ((TexturingFloors.qu - u) * FPq) >> fp;
+                dv = ((TexturingFloors.qv - v) * FPq) >> fp;
 int i=x1+q;
 if(Main.s60Optimization>0) {
 while(i-x1>=2)
@@ -2167,8 +2182,11 @@ x1++;
                            }
             if(length > 0) { // ������������ ���������� �������
 
-                du = ((int) (((long) uz_b << fp) / wz_b) - u) / length;
-                dv = ((int) (((long) vz_b << fp) / wz_b) - v) / length;
+            TexturingFloors.divPairFp(uz_b, vz_b, wz_b);
+
+            du = (TexturingFloors.qu - u) / length;
+
+            dv = (TexturingFloors.qv - v) / length;
 
 while(x1<x2)
 {
@@ -2280,15 +2298,16 @@ y++
 
 
             if(wz_a == 0) return;
-            u = (int) (((long) uz_a << fp) / wz_a); //������� ���������� � ��������
-            v = (int) (((long) vz_a << fp) / wz_a); //
+            TexturingFloors.divPairFp(uz_a, vz_a, wz_a); u = TexturingFloors.qu; v = TexturingFloors.qv;
 
 
 
 //Paste SUb fog here
 for(;length>=sz2; length-=sz2) {
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)/sz2); //��������� du � dv �� ����
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)/sz2);
+                uz_a += duz4; wz_a += dwz4; vz_a += dvz4;
+                TexturingFloors.divPairFp(uz_a, vz_a, wz_a);
+                du = ((TexturingFloors.qu - u) / sz2);
+                dv = ((TexturingFloors.qv - v) / sz2);
 
 
                     for(int i=x1+sz2;x1<i; x1+=1)
@@ -2302,8 +2321,7 @@ col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
 }
                            }
             if(length > 0) { // ������������ ���������� �������
-                u_2 = (int) (((long) uz_b << fp) / wz_b);
-                v_2 = (int) (((long) vz_b << fp) / wz_b);
+                TexturingFloors.divPairFp(uz_b, vz_b, wz_b); u_2 = TexturingFloors.qu; v_2 = TexturingFloors.qv;
 
                 du = (u_2 - u) / length;
                 dv = (v_2 - v) / length;
