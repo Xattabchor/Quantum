@@ -346,17 +346,9 @@ public final class Main extends MIDlet {
             setPersQ(3);
         }
 
-        // ARM9: defaultSettings() вызывается только когда сохранённого профиля
-        // в RMS нет (первый запуск или повреждённая запись), поэтому чужие
-        // настройки мы никогда не перезаписываем. Всё это обычные пункты меню
-        // настроек - игрок может вернуть любое значение.
-        if(DeviceProfile.tuneDefaults && !maxQuality) {
-            displaySize = 70;  // меньше пикселов в кадре - главный выигрыш
-            fogQ = 1;          // освещение/туман по вершинам, без per-channel
-            pixelsQ = 1;       // текстуры в два раза ниже по памяти/кешу
-            setPersQ(2);       // q = DeviceProfile.perspectiveStep (на ARM9 крупнее)
-            System.out.println("ARM9 quality defaults applied");
-        }
+        // Ключ ARM9_QUALITY вырезан по запросу автора: дефолты качества
+        // (displaySize, fogQ, pixelsQ, persQ) при первом запуске больше не
+        // подменяются - игрок настраивает их в меню сам.
 
         updateLevelCount();
     }

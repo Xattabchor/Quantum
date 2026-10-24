@@ -7,13 +7,14 @@
 KEYS одновременно строит и сводную таблицу, и подробные разделы, чтобы они не
 разъезжались. Данные сверены с кодом:
     src/code/utils/DeviceProfile.java     - разбор ключей, значения по умолчанию
-    src/code/utils/Main.java              - ARM9_QUALITY, PERSPECTIVE_STEP (setPersQ)
+    src/code/utils/Main.java              - PERSPECTIVE_STEP (setPersQ)
     src/code/Gameplay/LevelLoader.java    - NEAR_ONLY -> UPDATE_ONLY_NEAR*
     src/code/AI/Bot.java, NPC.java        - AI_LOD, AI_LOD_DIST
     src/code/Rendering/Meshes/MeshImage.java   - MORPH_LOD, MORPH_LOD_DIST
     src/code/Rendering/Meshes/BoundingBox.java - FAST_CULL
     src/code/Math/MathUtils.java, Rendering/RenderObject.java - FAST_LIGHT
-    src/code/Gameplay/GameScreen.java     - POSTFX
+    src/code/Gameplay/GameScreen.java     - флаг postFx (определяется профилем,
+                                              ключ POSTFX вырезан)
     UtilsText/src/code/utils/IniFile.java - формат файла (ключ=значение, #/;)
 
 Запуск:
@@ -147,25 +148,6 @@ KEYS = [
         ],
     ),
     dict(
-        name='POSTFX',
-        values='0 | 1',
-        arm9='0', fast='1',
-        short='полноэкранные постэффекты кадра',
-        where='GameScreen.paint(): applyVignette() (виньетка), deathScr() '
-              '(экран смерти), fastbloomScr() (bloom), applySub() '
-              '(DOUBLE_BRIGHT).',
-        speed='Экономит 2-4 прохода по всему кадру - это самые дорогие эффекты '
-              'после самого рендера: каждый читает и пишет каждый пиксел '
-              'дисплейного буфера.',
-        loss='Пропадают виньетка по краям кадра, свечение (bloom), вспышка '
-             'яркости и эффект смерти. damageScr() (красная рамка при уроне) '
-             'оставлен всегда - это игровая обратная связь, а не украшение.',
-        extra=[
-            'На «быстром» профиле ключ по умолчанию равен 1, то есть все эффекты '
-            'остаются как в оригинале.',
-        ],
-    ),
-    dict(
         name='PERSPECTIVE_STEP',
         values='0 ... 256',
         arm9='32 (если ключ не задан)', fast='0',
@@ -184,31 +166,6 @@ KEYS = [
             'На профиле ARM9, если ключ в файле отсутствует, ставится 32. Явный '
             'ключ всегда важнее профиля: PERSPECTIVE_STEP=0 на ARM9 вернёт 24.',
             'Отрицательные значения обрезаются до 0, большие 256 - до 256.',
-        ],
-    ),
-    dict(
-        name='ARM9_QUALITY',
-        values='0 | 1',
-        arm9='1', fast='0',
-        short='щадящие значения настроек при первом запуске',
-        where='Main.defaultSettings(): if (DeviceProfile.tuneDefaults && '
-              '!maxQuality) { displaySize = 70; fogQ = 1; pixelsQ = 1; '
-              'setPersQ(2); }.',
-        speed='displaySize = 70 - главный выигрыш: пикселов в кадре становится на '
-              '30 % меньше, а растеризация и постэффекты платят за каждый '
-              'пиксел. fogQ = 1 и pixelsQ = 1 снижают стоимость освещения и '
-              'объём текстурной памяти/кеша.',
-        loss='Разрешение рендера 70 % (картинка растягивается на экран), туман и '
-             'освещение считаются по вершинам, текстуры берутся в два раза '
-             'меньшего размера.',
-        extra=[
-            'defaultSettings() вызывается только когда в RMS нет сохранённого '
-            'профиля - то есть при первом запуске или при повреждённой записи. '
-            'Чужие сохранённые настройки ключ никогда не перезаписывает.',
-            'Все четыре значения - обычные пункты меню настроек: игрок может '
-            'вернуть любое из них, и после сохранения в RMS ключ уже ни на что '
-            'не влияет.',
-            'При maxQuality (Symbian/десктоп) ветка не выполняется вовсе.',
         ],
     ),
     dict(
@@ -499,8 +456,8 @@ ALWAYS_ON = [
 
 PRESETS = [
     ('A. Побитово как оригинал (для сравнения скриншотов и отладки)',
-     'CPU_PROFILE=FAST\nFAST_LIGHT=0\nPOSTFX=1\nPERSPECTIVE_STEP=0\n'
-     'ARM9_QUALITY=0\nNEAR_ONLY=0\nAI_LOD=0\nMORPH_LOD=0\nFAST_CULL=0\n'
+     'CPU_PROFILE=FAST\nFAST_LIGHT=0\nPERSPECTIVE_STEP=0\n'
+     'NEAR_ONLY=0\nAI_LOD=0\nMORPH_LOD=0\nFAST_CULL=0\n'
      'QCT=0\nFAST_SETUP=0',
      'Все ускорения с потерей качества выключены, остаются только точные замены '
      '(div100, div50, isqrt, FrameClock, градиенты без idiv, развёртки циклов '
@@ -515,32 +472,31 @@ PRESETS = [
      'умолчанию, на быстром устройстве или в эмуляторе поведение останется '
      'прежним. Именно поэтому файлы оригинала продолжают работать как раньше.'),
     ('C. Максимум скорости при умеренных потерях',
-     'CPU_PROFILE=ARM9\nFAST_LIGHT=1\nPOSTFX=0\nPERSPECTIVE_STEP=48\n'
-     'ARM9_QUALITY=1\nNEAR_ONLY=1\nAI_LOD=1\nAI_LOD_DIST=8000\n'
+     'CPU_PROFILE=ARM9\nFAST_LIGHT=1\nPERSPECTIVE_STEP=48\n'
+     'NEAR_ONLY=1\nAI_LOD=1\nAI_LOD_DIST=8000\n'
      'MORPH_LOD=1\nMORPH_LOD_DIST=9000\nFAST_CULL=1\nFAST_SETUP=1',
      'Пороги LOD уменьшены, поэтому в редкий режим переходит больше объектов. '
      'Профиль задан явно - настройки применяются даже там, где автоопределение '
      'не узнало аппарат.'),
     ('D. Максимум скорости, потери заметны',
-     'CPU_PROFILE=ARM9\nFAST_LIGHT=1\nPOSTFX=0\nPERSPECTIVE_STEP=96\n'
-     'ARM9_QUALITY=1\nNEAR_ONLY=1\nAI_LOD=1\nAI_LOD_DIST=5000\n'
+     'CPU_PROFILE=ARM9\nFAST_LIGHT=1\nPERSPECTIVE_STEP=96\n'
+     'NEAR_ONLY=1\nAI_LOD=1\nAI_LOD_DIST=5000\n'
      'MORPH_LOD=1\nMORPH_LOD_DIST=6000\nFAST_CULL=1\nFAST_SETUP=1',
-     'Дополнительно можно снизить displaySize в меню настроек (ARM9_QUALITY '
-     'ставит 70 только при первом запуске): разрешение рендера - самый сильный '
-     'рычаг, потому что растеризация платит за каждый пиксел.'),
+     'Дополнительно можно снизить displaySize в меню настроек: разрешение '
+     'рендера - самый сильный рычаг, потому что растеризация платит за каждый '
+     'пиксел. Постэффекты (виньетка, bloom) на профиле ARM9 отключены '
+     'автоматически.'),
 ]
 
 LOSE_TABLE = [
     ('FAST_LIGHT=1', 'Освещение отличается на 0-4 единицы из 255 (в реальной '
                      'сцене 0-1). Заметно только при покадровом сравнении.'),
-    ('POSTFX=0', 'Нет виньетки, bloom, вспышки яркости и эффекта смерти. Рамка '
-                 'урона остаётся.'),
+    ('CPU_PROFILE=ARM9 (постэффекты)', 'Профиль отключает виньетку, bloom, '
+                 'вспышку яркости и эффект смерти (postFx = !lowEnd; ключ '
+                 'POSTFX вырезан). Рамка урона остаётся.'),
     ('PERSPECTIVE_STEP=48...96', 'Текстура на длинных наклонных сегментах '
                                  '(пол, потолок) слегка «плывёт» - коррекция '
                                  'выполняется реже.'),
-    ('ARM9_QUALITY=1', 'При первом запуске: разрешение рендера 70 %, туман и '
-                       'освещение по вершинам, текстуры вдвое меньше. Всё '
-                       'возвращается в меню настроек.'),
     ('NEAR_ONLY=1', 'Дальние объекты не обновляются: их ИИ и физика «застывают» '
                     'до приближения игрока.'),
     ('AI_LOD=1', 'Дальний NPC замечает игрока и перестраивает маршрут на один '
@@ -813,9 +769,7 @@ def build(path):
             '; --- Quantum: настройка под ARM9 (все ключи опциональны) ---\n'
         'CPU_PROFILE=AUTO\n'
         'FAST_LIGHT=1\n'
-        'POSTFX=0\n'
         'PERSPECTIVE_STEP=32\n'
-        'ARM9_QUALITY=1\n'
         'NEAR_ONLY=1\n'
         'AI_LOD=1\n'
         'AI_LOD_DIST=10000\n'
@@ -848,8 +802,9 @@ def build(path):
         '(<font face="M">CPU_AUTO</font> = 0, <font face="M">CPU_ARM9</font> = 1, '
         '<font face="M">CPU_FAST</font> = 2); флаг '
         '<font face="M">lowEnd = (cpu == CPU_ARM9)</font> и задаёт значения по '
-        'умолчанию для семи ключей: FAST_LIGHT, ARM9_QUALITY, NEAR_ONLY, AI_LOD, '
-        'MORPH_LOD, FAST_CULL (при lowEnd - 1) и POSTFX (при lowEnd - 0). '
+        'умолчанию для пяти ключей: FAST_LIGHT, NEAR_ONLY, AI_LOD, MORPH_LOD, '
+        'FAST_CULL (при lowEnd - 1). Флаг postFx (постэффекты) тоже задан '
+        'профилем напрямую: на ARM9 они выключены. '
         'PERSPECTIVE_STEP на ARM9 получает 32, если ключа нет в файле.',
         st['body']))
     rows = [[Paragraph('Профиль', st['head']), Paragraph('Когда выбирается',
@@ -962,11 +917,12 @@ def build(path):
     f.append(grid(rows, [46 * mm, 132 * mm], st))
     f.append(Spacer(1, 4))
     f.append(Paragraph(
-        'Порядок включения по убыванию выгоды: сначала ARM9_QUALITY (меньше '
-        'пикселов в кадре - главный выигрыш), затем POSTFX, затем FAST_LIGHT и '
-        'FAST_CULL, затем NEAR_ONLY и AI_LOD (они убирают работу по NPC - именно '
-        'из-за них падал FPS в сценах с большим числом персонажей), и только '
-        'потом PERSPECTIVE_STEP и MORPH_LOD.', st['body']))
+        'Порядок включения по убыванию выгоды: сначала CPU_PROFILE=ARM9 - он '
+        'отключает постэффекты и включает все щадящие ветки разом, плюс снизьте '
+        'displaySize в меню настроек (меньше пикселов в кадре - главный выигрыш), '
+        'затем FAST_LIGHT и FAST_CULL, затем NEAR_ONLY и AI_LOD (они убирают '
+        'работу по NPC - именно из-за них падал FPS в сценах с большим числом '
+        'персонажей), и только потом PERSPECTIVE_STEP и MORPH_LOD.', st['body']))
 
     # ---------------- 9. Диагностика ----------------
     f.append(Paragraph('9. Диагностика и проверка', st['h1']))

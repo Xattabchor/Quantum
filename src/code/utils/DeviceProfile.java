@@ -20,10 +20,7 @@ package code.utils;
  * Ключи setting.txt (секция без группы, все опциональны):
  *   CPU_PROFILE=AUTO|ARM9|FAST   - принудительный выбор профиля
  *   FAST_LIGHT=0|1               - целочисленное освещение вместо double
- *   POSTFX=0|1                   - bloom/виньетка (самые дорогие постэффекты)
  *   PERSPECTIVE_STEP=0..256      - шаг перспективной коррекции (0 = как раньше)
- *   ARM9_QUALITY=0|1             - применять ли щадящие настройки по умолчанию
- *                                  при первом запуске на ARM9
  *   NEAR_ONLY=0|1                - симулировать/столкновлять только объекты
  *                                  рядом с игроком (Main.updateOnlyNear*)
  *   AI_LOD=0|1                   - далёким ботам искать цель вдвое реже
@@ -37,6 +34,11 @@ package code.utils;
  *   FAST_SETUP=0|1               - подготовка полигонов без idiv: коэффициенты
  *                                  тумана через магическое умножение, +/-1 из
  *                                  255 (по умолчанию 1 на ARM9, иначе 0)
+ *
+ * Ключи POSTFX и ARM9_QUALITY вырезаны по запросу автора и безопасно
+ * игнорируются: постэффекты отключает сам профиль ARM9 (postFx = !lowEnd),
+ * а качество (displaySize/туман/текстуры/перспектива) настраивается в меню
+ * игры, дефолты первого запуска больше не меняются.
  *
  * @author Quantum engine (ARM9 optimization pack)
  */
@@ -52,12 +54,12 @@ public final class DeviceProfile {
     public static boolean lowEnd = false;
     /** Целочисленное освещение вместо double (см. MathUtils.*Fast). */
     public static boolean fastLight = false;
-    /** Разрешены ли дорогие постэффекты кадра (bloom, виньетка). */
+    /** Разрешены ли дорогие постэффекты кадра (bloom, виньетка).
+     *  Ключ POSTFX вырезан: значение определяет только профиль -
+     *  ARM9 отключает их, FAST/AUTO оставляют как в оригинале. */
     public static boolean postFx = true;
     /** >0 - переопределить Main.q (шаг перспективной коррекции в пикселах). */
     public static int perspectiveStep = 0;
-    /** Менять ли настройки качества по умолчанию при первом запуске. */
-    public static boolean tuneDefaults = false;
     /** Обновлять только объекты рядом с игроком (значения по умолчанию для
      *  UPDATE_ONLY_NEAR / UPDATE_ONLY_NEAR_PHYSICS в LevelLoader). */
     public static boolean nearOnly = false;
@@ -111,8 +113,6 @@ public final class DeviceProfile {
 
         int forced = CPU_AUTO;
         int fastLightOpt = -1;
-        int postFxOpt = -1;
-        int arm9QualityOpt = -1;
         int nearOnlyOpt = -1;
         int aiLodOpt = -1;
         int morphLodOpt = -1;
@@ -129,8 +129,6 @@ public final class DeviceProfile {
                 else forced = CPU_AUTO;
             }
             fastLightOpt = settings.getIntNoLang("FAST_LIGHT", -1);
-            postFxOpt = settings.getIntNoLang("POSTFX", -1);
-            arm9QualityOpt = settings.getIntNoLang("ARM9_QUALITY", -1);
             nearOnlyOpt = settings.getIntNoLang("NEAR_ONLY", -1);
             aiLodOpt = settings.getIntNoLang("AI_LOD", -1);
             morphLodOpt = settings.getIntNoLang("MORPH_LOD", -1);
@@ -158,8 +156,7 @@ public final class DeviceProfile {
         // отключаем самые дорогие постэффекты кадра. Явный ключ в
         // setting.txt всегда важнее.
         fastLight = fastLightOpt >= 0 ? (fastLightOpt == 1) : lowEnd;
-        postFx = postFxOpt >= 0 ? (postFxOpt == 1) : !lowEnd;
-        tuneDefaults = arm9QualityOpt >= 0 ? (arm9QualityOpt == 1) : lowEnd;
+        postFx = !lowEnd;   // ключ POSTFX вырезан: решает только профиль
         nearOnly = nearOnlyOpt >= 0 ? (nearOnlyOpt == 1) : lowEnd;
         aiLod = aiLodOpt >= 0 ? (aiLodOpt == 1) : lowEnd;
         morphLod = morphLodOpt >= 0 ? (morphLodOpt == 1) : lowEnd;

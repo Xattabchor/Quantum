@@ -439,9 +439,9 @@ public final class GameScreen extends MyCanvas {
         int screenY = (height - g3d.getHeight()) / 2;
         try {
             // damageScr оставлен всегда: это игровая обратная связь, а не украшение.
-            // Остальные полноэкранные эффекты можно отключить целиком через
-            // DeviceProfile.postFx (arm9.postfx=false) - на ARM9 это
-            // экономит 2-4 прохода по всему кадру.
+            // Остальные полноэкранные эффекты отключает профиль ARM9
+            // (DeviceProfile.postFx = !lowEnd; ключ POSTFX вырезан) -
+            // на ARM9 это экономит 2-4 прохода по всему кадру.
             if(player.isDamaged()) damageScr(g3d.getDisplay());
             if(DeviceProfile.postFx) {
                 if(playerDied) deathScr(g3d.getDisplay());
