@@ -175,6 +175,21 @@ public final class FastMath {
         return -(int) (((long) -v * 2748779070L) >> 37);
     }
 
+    /**
+     * Точный аналог {@code v / 1000} для int (усечение к нулю), но без idiv:
+     * умножение на 274877907 (ceil(2^38/1000)) и сдвиг на 38. Остаток магии
+     * e = 528 у ceil(2^37/1000) давал перелёт на k*1000-1 при v > 2.6e8;
+     * с s=38 ошибка не превышает 4.4e-4 - меньше шага дроби 1/1000, поэтому
+     * формула точна на всём диапазоне int (перебор в test_setup_math.py).
+     * Нужен анимации спрайтов: при animation_speed == 1.0f и period < 2^24
+     * значение (int)((float)t * speed / 1000) совпадает с t/1000 бит-в-бит.
+     */
+    public static final int div1000(int v) {
+        if(v >= 0) return (int) (((long) v * 274877907L) >> 38);
+        if(v == -2147483648) return v / 1000;   // -v не помещается в int
+        return -(int) (((long) -v * 274877907L) >> 38);
+    }
+
     public static final boolean isPow2(int n) {
         return n > 0 && (n & (n - 1)) == 0;
     }

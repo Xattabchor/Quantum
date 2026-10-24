@@ -43,8 +43,10 @@ cat > "$BUILD/proguard.pro" <<EOF
 -injars $CLASSES
 -outjars $PREVER
 -libraryjars $BOOT
--dontshrink
--dontoptimize
+# shrink+optimize (рефлексии нет), MIDlet-класс закреплён keep-правилом.
+-keep public class tools.qctconv.QctConvMIDlet { public *; }
+-keepattributes SourceFile,LineNumberTable
+-optimizationpasses 3
 -dontobfuscate
 -microedition
 -target 1.4

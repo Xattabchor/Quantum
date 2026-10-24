@@ -52,8 +52,12 @@ cat > "$BUILD/proguard.pro" <<EOF
 -libraryjars $T/lib/midp_2.0.jar
 -libraryjars $T/lib/jsr184_1.1.jar
 -libraryjars $T/lib/jsr075_stub.jar
--dontshrink
--dontoptimize
+# shrink+optimize включены: рефлексии в коде нет (проверено grep по
+# Class.forName/newInstance), имя MIDlet-класса закреплено keep-правилом.
+# Обфускация по-прежнему выключена: имена классов нужны для crash-логов.
+-keep public class code.utils.Main { public *; }
+-keepattributes SourceFile,LineNumberTable
+-optimizationpasses 3
 -dontobfuscate
 -microedition
 -target 1.4

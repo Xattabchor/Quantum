@@ -43,6 +43,11 @@ public class WeatherGenerator {
   public int rainSpeed; //Rain speed
   public boolean isZoom=false;
   public boolean lastUnderRoof;
+  // ARM9: new Random() на каждый вызов move*/update/createParticles (до 4
+  // аллокаций + инициализация генератора на кадр при активной погоде)
+  // заменён одним полем. Погода стохастична, последовательность не
+  // сохраняется в сейвах.
+  private final Random rand = new Random();
   
   public final int horizonLine = -5;
   //public int animationHorizonLine = 0;
@@ -93,7 +98,7 @@ public class WeatherGenerator {
   }
   
   public void createParticles() {
-      Random r = new Random();
+      Random r = this.rand;
       for(int i=0;i<coords.length/2;i++) { 
           
           if(info[i*2]==0) { // Генерируем новые партиклы
@@ -160,7 +165,7 @@ int yy=(int)((y*624L*frameTime)/2500);   // y*1.3*3/80/50 в Q8 = y*624/2500
       int zz4=(int)((z*11L*frameTime)/700);   // zz/3.5 = z*2.75*ft/50/3.5 = z*ft*11/700
       isZoom=true;
       int mz=65536+(int)((z*frameTime*8192L)/625);   // 1+0.05*z/5*ft/50 = 1+z*ft/5000, Q16
-      Random r = new Random();
+      Random r = this.rand;
       int centerY2=centerY*(90+diry*7/5)/90;
       int cx8=centerX<<8, cy8=centerY2<<8;
       for(int i=0;i<coords.length/2;i++) { 
@@ -193,7 +198,7 @@ int yy=(int)((y*624L*frameTime)/2500);   // y*1.3*3/80/50 в Q8 = y*624/2500
     public void moveB(int z,int frameTime,int diry) {
       int zz4=(int)((z*11L*frameTime)/800);   // zz/4 = z*2.75*ft/50/4 = z*ft*11/800
       int mz=65536-(int)((z*frameTime*8192L)/625);   // 1-z*ft/5000, Q16
-      Random r = new Random();
+      Random r = this.rand;
       int centerY2=centerY*(90+diry*7/5)/90;
       int cx8=centerX<<8, cy8=centerY2<<8;
       for(int i=0;i<coords.length/2;i++) { 
@@ -222,7 +227,7 @@ int yy=(int)((y*624L*frameTime)/2500);   // y*1.3*3/80/50 в Q8 = y*624/2500
   
   public void update(int frameTime,int diry, boolean underRoof) {
       
-      Random r = new Random();
+      Random r = this.rand;
       
       
       for(int i=0;i<coords.length/2;i++) { // Удаляем партиклы за экраном
@@ -300,7 +305,7 @@ int yy=(int)((y*624L*frameTime)/2500);   // y*1.3*3/80/50 в Q8 = y*624/2500
   }
   
   public void genNewLighting(Random r) {
-      if(r==null) r = new Random();
+      if(r==null) r = this.rand;
       
       nextLighting = lastLighting + r.nextInt(lightingTimes[1]-lightingTimes[0])+lightingTimes[0];
       

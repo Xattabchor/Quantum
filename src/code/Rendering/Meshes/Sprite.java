@@ -211,7 +211,12 @@ if(time>=0L && time<=2147483647L && period>0L && period<=2147483647L) {
 // берётся в int и результат тот же. t < period = len*1000/speed, поэтому
 // (float)t*animation_speed/1000 даёт ровно прежнее значение.
 int t=(int)time%(int)period;
-idx=(int)((float)t*this.animation_speed/1000);
+// При speed == 1.0f и period < 2^24 float-формула совпадает с t/1000
+// бит-в-бит: (float)t без округления, IEEE-деление корректно округлено, а
+// дробная часть истинного частного кратна 1/1000 и rounding (<= 0.00098) не
+// пересекает целую границу. Считаем без soft-float вовсе.
+if(this.animation_speed==1.0F && period<=16777216L) idx=FastMath.div1000(t);
+else idx=(int)((float)t*this.animation_speed/1000);
 } else {
 time=time%period;
 idx=(int)(time*this.animation_speed/1000);

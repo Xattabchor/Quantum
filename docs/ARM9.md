@@ -607,7 +607,7 @@ MIDlet нужен JDK и препроверщик (preverify) из Wireless Tool
 |-----|-----------|-------|
 | компиляция | ECJ (Eclipse Compiler for Java), `-source/-target 1.4` | целевой class-file version 48, как ждёт KVM |
 | bootclasspath | `cldc_1.1.jar`, `midp_2.0.jar`, `jsr184_1.1.jar`, `jsr075_stub.jar` | проверяется, что код не использует API вне CLDC/MIDP |
-| препроверка | ProGuard 7.x с `-microedition` | добавляет StackMap-атрибуты (без них MIDlet не запустится на CLDC) |
+| препроверка | ProGuard 7.x: shrink + optimize (3 прохода) + `-microedition` | удаляет мёртвый код, оптимизирует байткоды, добавляет StackMap-атрибуты (без них MIDlet не запустится на CLDC); обфускация выключена, MIDlet-класс закреплён `-keep` |
 | упаковка | `python3 -m zipfile` (в скрипте) | JAR + JAD, манифест берётся из `nbproject/project.properties` |
 
 Скрипты лежат в `docs/j2me-build/`:
@@ -620,7 +620,7 @@ T=~/tools/j2me SRC=. JAVA=java sh docs/j2me-build/build-j2me.sh # собрать
 Проверка собранного JAR встроена в скрипт: манифест должен быть первой записью,
 все классы — версии 48, атрибутов `StackMapTable` (Java 6+, KVM их не понимает)
 быть не должно, класс MIDlet обязан присутствовать, размер в JAD — совпадать.
-Фактически в собранном JAR 920 атрибутов `StackMap` на 126 классов и 0
+Фактически в собранном JAR 764 атрибута `StackMap` на 118 классов и 0
 `StackMapTable`, записей `javax/` нет (заглушка JSR-75 в архив не попала).
 
 Готовые артефакты складываются в `artifacts/` (`Quantum.jar`, `Quantum.jad`,
@@ -1006,3 +1006,43 @@ python3 docs/verify/test_setup_math.py
 (`fastSetup`, ключ `FAST_SETUP`).
 
 **Новые:** `docs/verify/TestWeather.java`, `docs/verify/test_setup_math.py`.
+
+### 11.7 Дополнение этапа 4: последние доступные резервы
+
+1. **Анимация спрайтов без soft-float** (`Sprite.updateFrame`). При
+   `animation_speed == 1.0f` (значение по умолчанию) и `period < 2^24`
+   `(int)((float)t * speed / 1000)` **бит-в-бит** равен `t/1000`: `(float)t`
+   без округления, IEEE-деление корректно округлено, дробная часть истинного
+   частного кратна 1/1000, а погрешность округления ≤ 0,00098 не пересекает
+   целую границу. Формула заменена на `FastMath.div1000(t)` - умножение на
+   `ceil(2^38/1000) = 274877907`, точное на всём int. Магия
+   `ceil(2^37/1000)` не годилась: остаток 528 давал перелёт на `k*1000-1`
+   при `v > 2,6e8` (поймано перебором до внедрения). Для прочих скоростей
+   остаётся прежний float-путь; float-эквивалентность быстрой ветки проверена
+   эмуляцией float32 с корректным округлением (150 000 точек, 0 расхождений).
+2. **Погода: один `Random` на объект.** `new Random()` создавался на каждый
+   вызов `move/moveB/update/createParticles` - до 4 аллокаций и инициализаций
+   генератора на кадр при активной погоде. Теперь одно поле; погода
+   стохастична, последовательности нигде не сохраняются.
+3. **ProGuard: shrink + optimize вместо одной препроверки.** Раньше сборка
+   гоняла ProGuard с `-dontshrink -dontoptimize` (только StackMap). Рефлексии
+   (`Class.forName`, `newInstance`, `getName`) в коде нет - проверено grep по
+   всем источникам; имя MIDlet-класса закреплено `-keep`, обфускация осталась
+   выключенной (имена классов нужны для crash-логов), добавлены
+   `-optimizationpasses 3` и `-keepattributes SourceFile,LineNumberTable`.
+   Результат: `Quantum.jar` **423 575 -> 377 890 байт (-10,8 %)**, удалено 9
+   мёртвых классов (`Line`, `M3GParser`, `NearClipper`, `RenderVertex`,
+   `SpeedTest`, `TextureCompressor`, `TexturingExperiments`, `VertexNormal` и
+   `QctEncoder` - энкодер нужен только конвертеру, в движке свой декодер в
+   `RawImage`); 764 атрибута `StackMap` на 118 классов, 0 `StackMapTable`.
+   `QctConverter.jar` 18 063 -> 17 112 байт. Оптимизация байткодов даёт и
+   скорость: на ARM9 цена исполнения ≈ число байткодов.
+
+На этом доступные без риска резервы исчерпаны. Что осталось и почему не
+делается: грязные прямоугольники и 16-битный цвет упираются в
+`g.drawRGB(int[])` (единственный гарантированный MIDP2-путь; Nokia
+DirectGraphics с `drawPixels` - только для аппаратов с `com.nokia.mid.ui`,
+нужна модель устройства и проверка на нём); ядро перспективного растеризатора
+(деление на шаг коррекции) уже управляется `PERSPECTIVE_STEP`; очередь
+`Vector` в `Dijkstra` влияет только на пересчёт маршрутов NPC, который и так
+ограничен `AI_LOD`/`AI_LOD_DIST`.

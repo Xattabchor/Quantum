@@ -116,6 +116,68 @@ def part_a():
     if bad:
         fails.append('div50 не тождественен v/50')
 
+    # --- div1000: ceil(2^37/1000) = 137438954 + float-эквивалентность
+    M1000 = -(-2**38 // 1000)
+    assert M1000 == 274877907, M1000
+
+    def div1000(v):
+        if v >= 0:
+            return (v * M1000) >> 38
+        return -((-v * M1000) >> 38)
+
+    bad = 0
+    for v in range(0, 3000000):
+        if div1000(v) != jdiv(v, 1000):
+            bad += 1
+    for k in range(0, INT_MAX // 1000 + 1, 997):
+        c = k * 1000
+        for v in (c - 1, c, c + 1):
+            if INT_MIN < v <= INT_MAX:
+                if div1000(v) != jdiv(v, 1000) or div1000(-v) != jdiv(-v, 1000):
+                    bad += 1
+    for _ in range(400000):
+        v = rnd.randint(INT_MIN + 1, INT_MAX)
+        if div1000(v) != jdiv(v, 1000):
+            bad += 1
+    print('  div1000: расхождений %d' % bad)
+    if bad:
+        fails.append('div1000 не тождественен v/1000')
+
+    # (int)((float)t*1.0f/1000) == t/1000 при 0 <= t < 2^24 (анимация
+    # спрайтов, Sprite.updateFrame): float32-эмуляция корректным округлением.
+    def f32_round(fr):
+        if fr == 0:
+            return fr
+        sign = 1 if fr > 0 else -1
+        fr = abs(fr)
+        e = fr.numerator.bit_length() - fr.denominator.bit_length()
+        while Fraction(2) ** (e + 1) <= fr:
+            e += 1
+        while Fraction(2) ** e > fr:
+            e -= 1
+        shift = e - 23
+        n = round(fr / Fraction(2) ** shift)   # half-even, как IEEE-754
+        if n == (1 << 24):
+            n = 1 << 23
+            shift += 1
+        return sign * Fraction(n) * Fraction(2) ** shift
+
+    bad = 0
+    pts = set()
+    for k in range(0, (1 << 24) // 1000 + 1):
+        c = k * 1000
+        pts.update((c - 1, c, c + 1))
+    while len(pts) < 150000:
+        pts.add(rnd.randrange(0, 1 << 24))
+    for t in pts:
+        if 0 <= t < (1 << 24):
+            if int(f32_round(Fraction(t, 1000))) != div1000(t):
+                bad += 1
+    print('  (float)t/1000 == div1000(t) при t<2^24: расхождений %d '
+          '(%d точек)' % (bad, len(pts)))
+    if bad:
+        fails.append('float-путь анимации не эквивалентен div1000')
+
     # --- градиенты: m=ceil(2^37/dy), dy>=64, |x|<2^31 -> ТОЧНО
     def grad_magic(dy):
         return -(-(2**37) // dy)

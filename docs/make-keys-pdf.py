@@ -1004,7 +1004,7 @@ def build(path):
         'test_setup_math.py (div255/div50/градиенты - 0 расхождений, туман '
         '+/-1 из 255, погода Q8 - инварианты 400 кадров).',
         'Сборка JAR и проверка препроверки: docs/j2me-build/README.md, '
-        'docs/j2me-build/build-j2me.sh, docs/j2me-build/check-jar.py (936 '
+        'docs/j2me-build/build-j2me.sh, docs/j2me-build/check-jar.py (764 '
         'атрибутов StackMap, 0 StackMapTable, version 48).',
         'Полное описание всех изменений: docs/ARM9.md (разделы 3.2, 7, 9.1-9.9).',
     ]:
