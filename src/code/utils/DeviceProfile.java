@@ -36,9 +36,11 @@ package code.utils;
  *                                  255 (по умолчанию 1 на ARM9, иначе 0)
  *
  * Ключи POSTFX и ARM9_QUALITY вырезаны по запросу автора и безопасно
- * игнорируются: постэффекты отключает сам профиль ARM9 (postFx = !lowEnd),
- * а качество (displaySize/туман/текстуры/перспектива) настраивается в меню
- * игры, дефолты первого запуска больше не меняются.
+ * игнорируются. Постэффекты управляются только родными ключами игры
+ * (BLOOM=0|1, VIGNETTE=<путь>, DOUBLE_BRIGHT=0|1 в level.ini/setting.txt) -
+ * профиль CPU на них не влияет. Качество (displaySize/туман/текстуры/
+ * перспектива) настраивается в меню игры, дефолты первого запуска не
+ * меняются.
  *
  * @author Quantum engine (ARM9 optimization pack)
  */
@@ -54,10 +56,6 @@ public final class DeviceProfile {
     public static boolean lowEnd = false;
     /** Целочисленное освещение вместо double (см. MathUtils.*Fast). */
     public static boolean fastLight = false;
-    /** Разрешены ли дорогие постэффекты кадра (bloom, виньетка).
-     *  Ключ POSTFX вырезан: значение определяет только профиль -
-     *  ARM9 отключает их, FAST/AUTO оставляют как в оригинале. */
-    public static boolean postFx = true;
     /** >0 - переопределить Main.q (шаг перспективной коррекции в пикселах). */
     public static int perspectiveStep = 0;
     /** Обновлять только объекты рядом с игроком (значения по умолчанию для
@@ -156,7 +154,6 @@ public final class DeviceProfile {
         // отключаем самые дорогие постэффекты кадра. Явный ключ в
         // setting.txt всегда важнее.
         fastLight = fastLightOpt >= 0 ? (fastLightOpt == 1) : lowEnd;
-        postFx = !lowEnd;   // ключ POSTFX вырезан: решает только профиль
         nearOnly = nearOnlyOpt >= 0 ? (nearOnlyOpt == 1) : lowEnd;
         aiLod = aiLodOpt >= 0 ? (aiLodOpt == 1) : lowEnd;
         morphLod = morphLodOpt >= 0 ? (morphLodOpt == 1) : lowEnd;
@@ -176,7 +173,6 @@ public final class DeviceProfile {
         System.out.println("DeviceProfile: cpu=" + getName()
                 + " platform=" + platform
                 + " fastLight=" + (fastLight ? 1 : 0)
-                + " postFx=" + (postFx ? 1 : 0)
                 + " nearOnly=" + (nearOnly ? 1 : 0)
                 + " aiLod=" + (aiLod ? 1 : 0)
                 + " morphLod=" + (morphLod ? 1 : 0)

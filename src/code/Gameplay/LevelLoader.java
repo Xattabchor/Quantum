@@ -481,7 +481,11 @@ public class LevelLoader {
         }
 
         str = getString("VIGNETTE", lvl, setting);
-        if(str != null) {
+        // VIGNETTE - путь к картинке эффекта (как в оригинале). Значения без
+        // пути ("0", "1", "off"...) картинкой не являются: "0" полностью
+        // отключает виньетку, остальные небезопасно передавать в createImage,
+        // поэтому они игнорируются вместо падения загрузки уровня.
+        if(str != null && (str.indexOf('/') >= 0 || str.indexOf('.') >= 0)) {
             Image img = ImageResize.createImage(str, scene.g3d.getWidth(), scene.g3d.getHeight());
             int[] vignette = new int[img.getWidth() * img.getHeight()];
             img.getRGB(vignette, 0, width, 0, 0, img.getWidth(), img.getHeight());

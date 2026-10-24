@@ -13,8 +13,8 @@ KEYS одновременно строит и сводную таблицу, и 
     src/code/Rendering/Meshes/MeshImage.java   - MORPH_LOD, MORPH_LOD_DIST
     src/code/Rendering/Meshes/BoundingBox.java - FAST_CULL
     src/code/Math/MathUtils.java, Rendering/RenderObject.java - FAST_LIGHT
-    src/code/Gameplay/GameScreen.java     - флаг postFx (определяется профилем,
-                                              ключ POSTFX вырезан)
+    src/code/Gameplay/GameScreen.java     - постэффекты через родные ключи игры
+                                              (BLOOM/VIGNETTE/DOUBLE_BRIGHT)
     UtilsText/src/code/utils/IniFile.java - формат файла (ключ=значение, #/;)
 
 Запуск:
@@ -484,16 +484,13 @@ PRESETS = [
      'MORPH_LOD=1\nMORPH_LOD_DIST=6000\nFAST_CULL=1\nFAST_SETUP=1',
      'Дополнительно можно снизить displaySize в меню настроек: разрешение '
      'рендера - самый сильный рычаг, потому что растеризация платит за каждый '
-     'пиксел. Постэффекты (виньетка, bloom) на профиле ARM9 отключены '
-     'автоматически.'),
+     'пиксел. Постэффекты от профиля не зависят: ими управляют родные ключи '
+     'игры BLOOM, VIGNETTE, DOUBLE_BRIGHT в level.ini/setting.txt.'),
 ]
 
 LOSE_TABLE = [
     ('FAST_LIGHT=1', 'Освещение отличается на 0-4 единицы из 255 (в реальной '
                      'сцене 0-1). Заметно только при покадровом сравнении.'),
-    ('CPU_PROFILE=ARM9 (постэффекты)', 'Профиль отключает виньетку, bloom, '
-                 'вспышку яркости и эффект смерти (postFx = !lowEnd; ключ '
-                 'POSTFX вырезан). Рамка урона остаётся.'),
     ('PERSPECTIVE_STEP=48...96', 'Текстура на длинных наклонных сегментах '
                                  '(пол, потолок) слегка «плывёт» - коррекция '
                                  'выполняется реже.'),
@@ -803,8 +800,8 @@ def build(path):
         '<font face="M">CPU_FAST</font> = 2); флаг '
         '<font face="M">lowEnd = (cpu == CPU_ARM9)</font> и задаёт значения по '
         'умолчанию для пяти ключей: FAST_LIGHT, NEAR_ONLY, AI_LOD, MORPH_LOD, '
-        'FAST_CULL (при lowEnd - 1). Флаг postFx (постэффекты) тоже задан '
-        'профилем напрямую: на ARM9 они выключены. '
+        'FAST_CULL (при lowEnd - 1). На постэффекты профиль не влияет: ими '
+        'управляют родные ключи игры BLOOM, VIGNETTE, DOUBLE_BRIGHT. '
         'PERSPECTIVE_STEP на ARM9 получает 32, если ключа нет в файле.',
         st['body']))
     rows = [[Paragraph('Профиль', st['head']), Paragraph('Когда выбирается',
@@ -918,11 +915,12 @@ def build(path):
     f.append(Spacer(1, 4))
     f.append(Paragraph(
         'Порядок включения по убыванию выгоды: сначала CPU_PROFILE=ARM9 - он '
-        'отключает постэффекты и включает все щадящие ветки разом, плюс снизьте '
-        'displaySize в меню настроек (меньше пикселов в кадре - главный выигрыш), '
-        'затем FAST_LIGHT и FAST_CULL, затем NEAR_ONLY и AI_LOD (они убирают '
-        'работу по NPC - именно из-за них падал FPS в сценах с большим числом '
-        'персонажей), и только потом PERSPECTIVE_STEP и MORPH_LOD.', st['body']))
+        'включает все щадящие ветки разом, плюс снизьте displaySize в меню '
+        'настроек (меньше пикселов в кадре - главный выигрыш), затем FAST_LIGHT '
+        'и FAST_CULL, затем NEAR_ONLY и AI_LOD (они убирают работу по NPC - '
+        'именно из-за них падал FPS в сценах с большим числом персонажей), и '
+        'только потом PERSPECTIVE_STEP и MORPH_LOD. Постэффекты настраиваются '
+        'отдельно родными ключами игры BLOOM/VIGNETTE/DOUBLE_BRIGHT.', st['body']))
 
     # ---------------- 9. Диагностика ----------------
     f.append(Paragraph('9. Диагностика и проверка', st['h1']))
@@ -931,7 +929,7 @@ def build(path):
         '<font face="M">System.out</font> - в эмуляторе (KEmulator, FreeJ2ME, '
         'SquirrelJME) это видно в консоли/логе:', st['body']))
     f.append(code_block(
-        'DeviceProfile: cpu=ARM9 platform=SonyEricssonK750 fastLight=1 postFx=0 '
+        'DeviceProfile: cpu=ARM9 platform=SonyEricssonK750 fastLight=1 '
         'nearOnly=1 aiLod=1 morphLod=1 fastCull=1 persStep=32', st))
     f.append(Spacer(1, 4))
     f.append(Paragraph('Как сравнивать и чем проверять', st['h2']))

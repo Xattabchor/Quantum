@@ -431,23 +431,21 @@ public final class GameScreen extends MyCanvas {
 				wg.lightingEffect(g3d, player.rotateX);
 			}
 
-            if(vignette != null && DeviceProfile.postFx) applyVignette(g3d.getDisplay()); //maybe i should remove all these vignette stuff?
+            if(vignette != null) applyVignette(g3d.getDisplay()); //maybe i should remove all these vignette stuff?
         } catch (Exception ext) {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
         }
         
         int screenY = (height - g3d.getHeight()) / 2;
         try {
-            // damageScr оставлен всегда: это игровая обратная связь, а не украшение.
-            // Остальные полноэкранные эффекты отключает профиль ARM9
-            // (DeviceProfile.postFx = !lowEnd; ключ POSTFX вырезан) -
-            // на ARM9 это экономит 2-4 прохода по всему кадру.
+            // Постэффекты управляются только родными ключами игры:
+            // BLOOM=0|1, VIGNETTE=<путь к картинке>, DOUBLE_BRIGHT=0|1
+            // (level.ini / setting.txt). Профиль CPU на них больше не
+            // влияет (по запросу автора); порядок вызовов - как в оригинале.
+            if(playerDied) deathScr(g3d.getDisplay());
             if(player.isDamaged()) damageScr(g3d.getDisplay());
-            if(DeviceProfile.postFx) {
-                if(playerDied) deathScr(g3d.getDisplay());
-                if(bloom) fastbloomScr(g3d);
-                if(doubleBright) applySub(scene.getG3D().display);
-            }
+            if(bloom) fastbloomScr(g3d);
+            if(doubleBright) applySub(scene.getG3D().display);
         } catch (Exception ext) {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
         }
