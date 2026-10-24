@@ -45,9 +45,11 @@ echo "исходников: $(wc -l < "$BUILD/sources.txt")"
     -bootclasspath "$BOOT" -d "$CLASSES" "@$BUILD/sources.txt"
 echo "скомпилировано классов: $(find "$CLASSES" -name '*.class' | wc -l)"
 
-# 3. Препроверка (preverify): ProGuard добавляет StackMap-атрибуты для CLDC.
-#    Без них KVM отказывается загружать классы. Шринк/обфускация/оптимизация
-#    выключены - имена классов и методы должны остаться как в исходниках.
+# 3. Препроверка (preverify) + shrink/optimize: ProGuard добавляет
+#    StackMap-атрибуты для CLDC (без них KVM отказывается загружать классы),
+#    вырезает мёртвый код и оптимизирует байткод (3 прохода). Обфускация
+#    выключена - имена классов нужны для crash-логов и MIDlet-1 в JAD;
+#    входная точка закреплена keep-правилом.
 cat > "$BUILD/proguard.pro" <<EOF
 -injars  $CLASSES
 -outjars $PREVER
