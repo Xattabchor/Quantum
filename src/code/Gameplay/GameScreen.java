@@ -131,7 +131,7 @@ public final class GameScreen extends MyCanvas {
             e.printStackTrace();
         }
 
-        player = new Player(scene.getG3D().getWidth(), (int) (height * (Main.getDisplaySize() / 100.0F)), scene.getStartPoint(), hudInfo);
+        player = new Player(scene.getG3D().getTargetWidth(), (int) (height * (Main.getDisplaySize() / 100.0F)), scene.getStartPoint(), hudInfo);
         if(!Main.isLastLevel(levelNumber)) {
             String st = (new IniFile(StringTools.getStringFromResource("/level" + (levelNumber+1) + ".txt"), false)).get("START");
 
@@ -171,7 +171,7 @@ public final class GameScreen extends MyCanvas {
         int y = GameScreen.height / 2;
 
         Main.drawBck(g, y - font.height() / 2, y + font.height() / 2);
-        font.drawString(g, str, g3d.getWidth() / 2, y, 3);
+        font.drawString(g, str, g3d.getTargetWidth() / 2, y, 3);
     }
 
     public void destroy() {
@@ -206,14 +206,14 @@ public final class GameScreen extends MyCanvas {
         int y = height / 2 + (height * Math.min(Main.getDisplaySize(), 80) / 100) / 2 - font.height() / 2;
 
         Main.drawBck(g, y - font.height() / 2, y + font.height() / 2);
-        font.drawString(g, str, g3d.getWidth() / 2, y, 1 | 2);
+        font.drawString(g, str, g3d.getTargetWidth() / 2, y, 1 | 2);
     }
 
     private void drawMessageCustom(Graphics g) {
         DirectX7 g3d = scene.getG3D();
         int lsize = lines.size();
         
-        int x = g3d.getWidth() / 2;
+        int x = g3d.getTargetWidth() / 2;
         int y = height / 2 + (height * Math.min(Main.getDisplaySize(), 80) / 100) / 2 
                 - font.height() / 2 - font.height() * (lsize - 1);
 
@@ -268,7 +268,7 @@ public final class GameScreen extends MyCanvas {
         DirectX7 g3d = scene.getG3D();
         
         boolean redrawInfo = changed;
-        if(!redrawInfo) g.setClip(0, height / 2 - g3d.getHeight() / 2, width, g3d.getHeight());
+        if(!redrawInfo) g.setClip(0, height / 2 - g3d.getTargetHeight() / 2, width, g3d.getTargetHeight());
         changed = false;
 
         long begintime = System.currentTimeMillis();
@@ -394,7 +394,7 @@ public final class GameScreen extends MyCanvas {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
         }
         
-        int screenY = (height - g3d.getHeight()) / 2;
+        int screenY = (height - g3d.getTargetHeight()) / 2;
         try {
             // Постэффекты управляются только родными ключами игры:
             // BLOOM=0|1, VIGNETTE=<путь к картинке> (level.ini / setting.txt).
@@ -417,10 +417,10 @@ public final class GameScreen extends MyCanvas {
         if(DeveloperMenu.drawPortals) scene.house.drawPortals(g, 0, screenY);
 
         if(wg != null) {
-            g.clipRect(0, screenY, g3d.getWidth(), g3d.getHeight());
+            g.clipRect(0, screenY, g3d.getTargetWidth(), g3d.getTargetHeight());
             wg.paint(g, screenY);
             g.clipRect(0, 0, width, height);
-            if(!redrawInfo) g.setClip(0, screenY, width, g3d.getHeight());
+            if(!redrawInfo) g.setClip(0, screenY, width, g3d.getTargetHeight());
         }
 
         if(overlay != null) {
@@ -432,20 +432,20 @@ public final class GameScreen extends MyCanvas {
         if(!Main.hideHud) {
 
             if(!playerDied && player.arsenal.current != -1) {
-                g.setClip(0, screenY, g3d.getWidth(), g3d.getHeight());
+                g.setClip(0, screenY, g3d.getTargetWidth(), g3d.getTargetHeight());
                 
-                if(player.show2D()) player.arsenal.drawWeapon(g, screenY, g3d.getWidth(), g3d.getHeight(), this);
-                player.arsenal.drawReloadAnimation(g, screenY, g3d.getWidth(), g3d.getHeight());
+                if(player.show2D()) player.arsenal.drawWeapon(g, screenY, g3d.getTargetWidth(), g3d.getTargetHeight(), this);
+                player.arsenal.drawReloadAnimation(g, screenY, g3d.getTargetWidth(), g3d.getTargetHeight());
                 
                 g.setClip(0, 0, width, height);
-                if(!redrawInfo) g.setClip(0, screenY, width, g3d.getHeight());
+                if(!redrawInfo) g.setClip(0, screenY, width, g3d.getTargetHeight());
             }
             
             if((weapon != null || !Main.hidesight) && 
                     ((weapon != null && !player.zoom) || weapon == null || (player.canAttack() && !player.show2D()))
                     ) {
                 if(imgHand == null || lookAtObj == null || !MainCanvas.pstros) {
-                    g.drawImage(imgSight, g3d.getWidth() / 2, screenY + g3d.getHeight() / 2, 3);
+                    g.drawImage(imgSight, g3d.getTargetWidth() / 2, screenY + g3d.getTargetHeight() / 2, 3);
                 }
             }
             
@@ -495,7 +495,7 @@ public final class GameScreen extends MyCanvas {
                 
                 if(Main.getDisplaySize() < 100) {
                     g.fillRect(0, 0, width, screenY);
-                    g.fillRect(0, screenY + g3d.getHeight(), width, height - (screenY + g3d.getHeight()));
+                    g.fillRect(0, screenY + g3d.getTargetHeight(), width, height - (screenY + g3d.getTargetHeight()));
                 }
                 
                 if(imgMoney != null) {
@@ -758,7 +758,7 @@ public final class GameScreen extends MyCanvas {
             scene.getG3D().lz = var4.m23;
             System.out.println(var4.m03 + "," + var4.m13 + "," + var4.m23 + ";");
 
-            RoomObject ro = scene.activateObject(true, player, height / 2 - scene.getG3D().getHeight() / 2, this);
+            RoomObject ro = scene.activateObject(true, player, height / 2 - scene.getG3D().getTargetHeight() / 2, this);
             if(ro != null) return;
         }
 
@@ -786,7 +786,7 @@ public final class GameScreen extends MyCanvas {
         }
 
         if(run) {
-            scene.activateObject(false, player, height / 2 - scene.getG3D().getHeight() / 2, this);
+            scene.activateObject(false, player, height / 2 - scene.getG3D().getTargetHeight() / 2, this);
             time += QFPS.frameTime;
             
             try {
@@ -1070,7 +1070,7 @@ public final class GameScreen extends MyCanvas {
         scene.reset();
         player.setPart(-1);
         time = 0;
-        player.set(scene.getG3D().getWidth(), scene.getG3D().getHeight(), scene.getStartPoint(), hudInfo);
+        player.set(scene.getG3D().getTargetWidth(), scene.getG3D().getTargetHeight(), scene.getStartPoint(), hudInfo);
         
         if(Main.getContinueLevel() == levelNumber) {
             Main.loadGame(player, width, height, scene);
@@ -1079,7 +1079,7 @@ public final class GameScreen extends MyCanvas {
             Main.loadObjects(player, width, height, scene, levelNumber);
         } else {
             Player.usedPoints.removeAllElements();
-            //player.set(scene.getG3D().getWidth(), scene.getG3D().getHeight(), scene.getStartPoint(), hudInfo);
+            //player.set(scene.getG3D().getTargetWidth(), scene.getG3D().getTargetHeight(), scene.getStartPoint(), hudInfo);
             Main.loadGame(player, width, height, scene);
             scene.getG3D().updateFov((int) player.fov);
             Main.loadObjects(player, width, height, scene, Main.getContinueLevel());
@@ -1108,7 +1108,7 @@ public final class GameScreen extends MyCanvas {
         
         stop();
         QFPS.miniReset();
-        Main.setCurrent(new PauseScreen(main, this, scene.getG3D().getDisplay(), musTime));
+        Main.setCurrent(new PauseScreen(main, this, scene.getG3D().getScaledDisplay(), musTime));
     }
     
     public void gameEnd() {

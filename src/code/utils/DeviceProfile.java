@@ -34,6 +34,10 @@ package code.utils;
  *   FAST_SETUP=0|1               - подготовка полигонов без idiv: коэффициенты
  *                                  тумана через магическое умножение, +/-1 из
  *                                  255 (по умолчанию 1 на ARM9, иначе 0)
+ *   RENDER_SCALE=25..100         - внутреннее разрешение рендера в процентах
+ *                                  от целевого экрана; flush() растягивает
+ *                                  nearest-ом. 100 (по умолчанию, у любого
+ *                                  профиля) = прежнее поведение бит-в-бит
  *
  * Ключи POSTFX и ARM9_QUALITY вырезаны по запросу автора и безопасно
  * игнорируются. Постэффекты управляются только родными ключами игры
@@ -72,6 +76,9 @@ public final class DeviceProfile {
     public static int morphLodDist = 12000;
     /** BoundingBox.isVisible(): сначала дешёвая проверка центра с радиусом. */
     public static boolean fastCull = false;
+    /** RENDER_SCALE: внутреннее разрешение рендера в % от целевого экрана
+     *  (25..100; 100 = прежний путь flush() бит-в-бит). */
+    public static int renderScale = 100;
     /** Загружать .qct рядом с .png, если упаковщик положил его в JAR. */
     public static boolean qct = true;
 
@@ -118,6 +125,7 @@ public final class DeviceProfile {
         int fastCullOpt = -1;
         int qctOpt = -1;
         int fastSetupOpt = -1;
+        int renderScaleOpt = -1;
 
         if(settings != null) {
             String prof = settings.getNoLang("CPU_PROFILE");
@@ -134,6 +142,7 @@ public final class DeviceProfile {
             fastCullOpt = settings.getIntNoLang("FAST_CULL", -1);
             qctOpt = settings.getIntNoLang("QCT", -1);
             fastSetupOpt = settings.getIntNoLang("FAST_SETUP", -1);
+            renderScaleOpt = settings.getIntNoLang("RENDER_SCALE", -1);
             morphLodDist = settings.getIntNoLang("MORPH_LOD_DIST", morphLodDist);
             if(morphLodDist < 0) morphLodDist = 0;
             if(morphLodDist > 1000000) morphLodDist = 1000000;   // без переполнения << 2
@@ -163,6 +172,11 @@ public final class DeviceProfile {
         qct = qctOpt >= 0 ? (qctOpt == 1) : true;
         // FAST_SETUP: градации тумана +/-1 из 255, зато подготовка без idiv.
         fastSetup = fastSetupOpt >= 0 ? (fastSetupOpt == 1) : lowEnd;
+        // RENDER_SCALE: opt-in у любого профиля - при 100 flush() бит-в-бит
+        // прежний. Значения обрезаются в 25..100.
+        renderScale = renderScaleOpt >= 0 ? renderScaleOpt : 100;
+        if(renderScale < 25) renderScale = 25;
+        if(renderScale > 100) renderScale = 100;
 
         if(lowEnd && perspectiveStep == 0 && settings != null
                 && settings.getIntNoLang("PERSPECTIVE_STEP", -1) < 0) {
@@ -179,6 +193,7 @@ public final class DeviceProfile {
                 + " morphLod=" + (morphLod ? 1 : 0)
                 + " fastSetup=" + (fastSetup ? 1 : 0)
                 + " fastCull=" + (fastCull ? 1 : 0)
+                + " renderScale=" + renderScale
                 + " persStep=" + perspectiveStep);
     }
 

@@ -364,7 +364,9 @@ int yy=(int)((y*624L*frameTime)/2500);   // y*1.3*3/80/50 в Q8 = y*624/2500
         if(animationHorizonLine>1000) return;
         if(animationHorizonLine<0) animationHorizonLine = 0;*/
         
-        int horizonY = (int) (screenHeight/2 - horizonLine*screenHeight/g3d.fovY + rotateX*screenHeight/g3d.fovY );
+        // Размеры буфера (view) при RENDER_SCALE<100 меньше экранных: градиент
+        // пишется в display, поэтому все размеры здесь - g3d.height/width.
+        int horizonY = (int) (g3d.height/2 - horizonLine*g3d.height/g3d.fovY + rotateX*g3d.height/g3d.fovY );
         horizonY = (horizonY-g3d.centreY) *g3d.distY/(11 + g3d.distY) + g3d.centreY;
         
         /*if(animationHorizonLine>0) {
@@ -375,7 +377,7 @@ int yy=(int)((y*624L*frameTime)/2500);   // y*1.3*3/80/50 в Q8 = y*624/2500
             
         int ySize = horizonSize*g3d.height/g3d.fovY;
         
-        if(horizonY>=screenHeight) return;
+        if(horizonY>=g3d.height) return;
         
         int y = horizonY;
         if(y<0) y = 0;
@@ -383,10 +385,10 @@ int yy=(int)((y*624L*frameTime)/2500);   // y*1.3*3/80/50 в Q8 = y*624/2500
         int[] scr = g3d.getDisplay();
         
         int x1, x2, col, scrcol;
-        for(;y<screenHeight;y++) {
+        for(;y<g3d.height;y++) {
             
-            x1 = y*screenWidth;
-            x2 = x1 + screenWidth;
+            x1 = y*g3d.width;
+            x2 = x1 + g3d.width;
             col = ((y-horizonY)*255/ySize);//&0xfe;
             if(col>100) col = 100; //254 is max but its too bright so i used 100 (100&0xfe=100)
             col = (col&0xfe)*0x010101;

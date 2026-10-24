@@ -489,7 +489,7 @@ public class LevelLoader {
         if(str != null && (str.indexOf('/') >= 0 || str.indexOf('.') >= 0)) {
             Image img = ImageResize.createImage(str, scene.g3d.getWidth(), scene.g3d.getHeight());
             int[] vignette = new int[img.getWidth() * img.getHeight()];
-            img.getRGB(vignette, 0, width, 0, 0, img.getWidth(), img.getHeight());
+            img.getRGB(vignette, 0, img.getWidth(), 0, 0, img.getWidth(), img.getHeight());
             gs.vignette = new byte[vignette.length];
             
             for (int i = 0; i < vignette.length; i++) {
@@ -1093,19 +1093,19 @@ public class LevelLoader {
 
                             if (scaleType.equalsIgnoreCase("PROPORTIONAL3D")) {
                                 img = ImageResize.bilinearScaleImage(img,
-                                        (float) (scene.g3d.height * scalex / img.getHeight()),
-                                        (float) (scene.g3d.height * scaley / img.getHeight()));
+                                        (float) (scene.g3d.getTargetHeight() * scalex / img.getHeight()),
+                                        (float) (scene.g3d.getTargetHeight() * scaley / img.getHeight()));
                             } else if (scaleType.equalsIgnoreCase("FULL3DSCREEN")) {
                                 img = ImageResize.bilinearScaleImage(img,
-                                        (float) (scene.g3d.width * scalex / img.getWidth()),
-                                        (float) (scene.g3d.height * scaley / img.getHeight()));
+                                        (float) (scene.g3d.getTargetWidth() * scalex / img.getWidth()),
+                                        (float) (scene.g3d.getTargetHeight() * scaley / img.getHeight()));
                             } else if (scaleType.equalsIgnoreCase("PROPORTIONAL")) {
                                 img = ImageResize.bilinearScaleImage(img,
-                                        (float) (scene.g3d.height * scalex / img.getHeight()),
-                                        (float) (scene.g3d.height * 100 / Main.displaySize * scaley / img.getHeight()));
+                                        (float) (scene.g3d.getTargetHeight() * scalex / img.getHeight()),
+                                        (float) (scene.g3d.getTargetHeight() * 100 / Main.displaySize * scaley / img.getHeight()));
                             } else if (scaleType.equalsIgnoreCase("FULLSCREEN")) {
                                 img = ImageResize.bilinearResizeImage(img,
-                                        scene.g3d.width, scene.g3d.height * 100 / Main.displaySize);
+                                        scene.g3d.getTargetWidth(), scene.g3d.getTargetHeight() * 100 / Main.displaySize);
                             } else if (scaleType.equalsIgnoreCase("ORIGINALSIZE")) {
                                 img = ImageResize.bilinearScaleImage(img, scaley, scaley);
                             }

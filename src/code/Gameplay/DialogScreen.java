@@ -83,7 +83,7 @@ public class DialogScreen extends MyCanvas {
         int h = (int) (getHeight() / 3.5f);
         if (h < font.height() * 3) h = font.height() * 3;
         
-        textView = new TextView(null, g3d.getWidth() - 20, h, font);
+        textView = new TextView(null, g3d.getTargetWidth() - 20, h, font);
         
         nextText();
     }
@@ -344,7 +344,7 @@ public class DialogScreen extends MyCanvas {
         g.translate(0, 0);
         g.fillRect(0, 0, getWidth(), getHeight());
 
-        int sy = getHeight() / 2 - g3d.getHeight() / 2;
+        int sy = getHeight() / 2 - g3d.getTargetHeight() / 2;
         g.setColor(255, 255, 255);
         g3d.flush(g, 0, sy);
         

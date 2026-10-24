@@ -3,12 +3,23 @@ package code.Rendering;
 import code.HUD.DeveloperMenu;
 import code.Rendering.Meshes.Mesh;
 import code.Math.Matrix;
+import code.utils.DeviceProfile;
 import javax.microedition.lcdui.Graphics;
 
 public final class DirectX7 {
 
    public int width, height;
    public int[] display;
+   // RENDER_SCALE (§22): width/height - ВНУТРЕННЕЕ разрешение рендера (view),
+   // targetW/targetH - целевые размеры леттербокса (что передали в resize(),
+   // уже с учётом displaySize). При renderScale=100 view == target и flush()
+   // идёт прежним путём бит-в-бит (одно int-сравнение); при <100 рендер идёт
+   // в меньший буфер, а flush() растягивает его nearest-ом через заранее
+   // посчитанные colMap/rowMap (никаких делений в пиксельном цикле).
+   public int targetW, targetH;
+   private int renderScale = 100;
+   private int[] scaleBuf;
+   private int[] colMap, rowMap;
    public boolean flushAlpha = false;
    public Matrix camera, invCamera, finalCamera;
    public int centreX, centreY;
@@ -52,15 +63,65 @@ lx=ly=lz=0;
 }
    
 public void resize(int width, int height) {
-this.width = width;
-this.height = height;
+// width/height - ЦЕЛЕВЫЕ размеры (леттербокс с учётом displaySize).
+// RENDER_SCALE уменьшает внутреннее разрешение рендера; апскейл - в flush().
+targetW = width;
+targetH = height;
+renderScale = DeviceProfile.renderScale;
+if(renderScale < 100) {
+    this.width = width * renderScale / 100;
+    this.height = height * renderScale / 100;
+    if(this.width < 1) this.width = 1;
+    if(this.height < 1) this.height = 1;
+} else {
+    this.width = width;
+    this.height = height;
+}
 
-display = new int[width * height];
+display = new int[this.width * this.height];
+scaleBuf = null;
+colMap = null;
+rowMap = null;
 
-centreX = width / 2;
-centreY = height / 2;
+centreX = this.width / 2;
+centreY = this.height / 2;
 
 updateFov(74);
+}
+
+public final int getTargetWidth() {
+    return targetW;
+}
+
+public final int getTargetHeight() {
+    return targetH;
+}
+
+/**
+ * Дисплей для снимка на экран (PauseScreen): при RENDER_SCALE<100 -
+ * растянутый до целевых размеров буфер, иначе сам display.
+ */
+public final int[] getScaledDisplay() {
+    if(renderScale >= 100) return display;
+    return scaledDisplay();
+}
+
+private final int[] scaledDisplay() {
+    if(colMap == null) {
+        colMap = new int[targetW];
+        rowMap = new int[targetH];
+        for(int tx = 0; tx < targetW; tx++) colMap[tx] = tx * width / targetW;
+        for(int ty = 0; ty < targetH; ty++) rowMap[ty] = ty * height / targetH;
+        scaleBuf = new int[targetW * targetH];
+    }
+    for(int ty = 0; ty < targetH; ty++) {
+        final int srow = rowMap[ty] * width;
+        final int drow = ty * targetW;
+        for(int tx = 0; tx < targetW; tx++) {
+            scaleBuf[drow + tx] = display[srow + colMap[tx]];
+        }
+    }
+    return scaleBuf;
 }
 
 public final void updateFov(int fov) {
@@ -215,7 +276,13 @@ this.buffer.resetTex();
            else if(c==4) display[i]=0xff0000;
            else if(c==5) display[i]=0x880000;
        }
-g.drawRGB(display, 0, width, x, y, width, height,flushAlpha );
+       // RENDER_SCALE=100 (по умолчанию): прежний путь бит-в-бит, одно
+       // int-сравнение на кадр. Иначе - nearest-апскейл view -> target.
+       if(renderScale >= 100) {
+           g.drawRGB(display, 0, width, x, y, width, height,flushAlpha );
+           return;
+       }
+       g.drawRGB(scaledDisplay(), 0, targetW, x, y, targetW, targetH, flushAlpha);
    }
 
 

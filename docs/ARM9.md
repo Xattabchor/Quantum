@@ -179,6 +179,7 @@ PDF-версия справочника по ключам (формат файл
 | `PERSPECTIVE_STEP` | `0…256` | `0` (= прежнее поведение); `32` на ARM9 | шаг перспективной коррекции `Main.q` |
 | `QCT` | `0` / `1` | `1` | подхватывать упакованные текстуры `.qct`, лежащие в JAR рядом с `.png` (см. §10) |
 | `FAST_SETUP` | `0` / `1` | `1` на ARM9, иначе `0` | подготовка полигонов без `idiv`: коэффициенты тумана умножением, ±1 из 255 (см. §11) |
+| `RENDER_SCALE` | `25…100` | `100` (= прежний рендер бит-в-бит, у любого профиля) | внутреннее разрешение рендера в % от экрана; `flush()` растягивает nearest-ом (см. §22) |
 
 Ключи `POSTFX` и `ARM9_QUALITY` **вырезаны** по запросу автора (§14) и
 безопасно игнорируются, если встречаются в старом `setting.txt`.
@@ -189,10 +190,11 @@ PDF-версия справочника по ключам (формат файл
 CPU_PROFILE=ARM9
 FAST_LIGHT=1
 PERSPECTIVE_STEP=48
+RENDER_SCALE=75
 ```
 
 Пример — поведение, побитово совпадающее с оригиналом (для сравнения
-скриншотов и отладки):
+скриншатов и отладки; `RENDER_SCALE` по умолчанию и так `100`):
 
 ```ini
 CPU_PROFILE=FAST
@@ -1707,3 +1709,112 @@ dv = ((int) (((long) vz_b << fp) / wz_b) - v) / length;
   плотнее FPq §18), накопления по сегментам нет.
 * Полная пересборка: check-jar.py зелёный, QuantumOptimize.jar 367 727 байт,
   все 13 verify-тестов PASS.
+
+## 22. RENDER_SCALE: внутреннее разрешение рендера (этап 22)
+
+Ключ `RENDER_SCALE=25…100` (только `setting.txt`; по умолчанию `100` у
+любого профиля — opt-in) уменьшает разрешение, в котором игра растеризует
+3D-кадр, а `flush()` растягивает результат nearest-ом до размеров экрана.
+Экономия пропорциональна площади: `75` → 56% пикселов, `50` → 25%. На
+аппаратах, где узкое место — fillrate растеризаторов (§6, §18), это самое
+дешёвое ускорение ценой чёткости. При `100` поведение **бит-в-бит прежнее**.
+
+### 22.1 Устройство: view-размеры против target-размеров
+
+`DirectX7.width/height` становятся ВНУТРЕННИМИ (view) размерами рендера;
+аргументы `resize()` сохраняются в новых полях `targetW/targetH` (целевой
+леттербокс, уже с учётом `displaySize`) и отдаются геттерами
+`getTargetWidth()/getTargetHeight()`. Вся внутренняя машина — culling,
+ядра растеризации, проекции, `RoomObject`/`Splinter`/`Mesh`, `Skybox`,
+постэффекты по `display` — продолжает работать в view-координатах и
+**не менялась вовсе**: view-буфер самосогласован.
+
+`resize(w,h)`: `renderScale` читается из `DeviceProfile.renderScale`
+(значение уже распарсено и обрезано в 25..100); при `<100`
+`view = target*S/100` (не меньше 1), `display = new int[view]`,
+отложенные `scaleBuf/colMap/rowMap` сбрасываются, `centreX/centreY` и
+`updateFov(74)` считаются по view. Аспект view == аспекту target, поэтому
+FOV и геометрия кадра не меняются — только плотность пикселов.
+
+### 22.2 flush(): страж бит-в-бит и отложенный апскейл
+
+```java
+if(renderScale >= 100) {                      // прежнее поведение, 1 сравнение
+    g.drawRGB(display, 0, width, x, y, width, height, flushAlpha);
+    return;
+}
+g.drawRGB(scaledDisplay(), 0, targetW, x, y, targetW, targetH, flushAlpha);
+```
+
+`scaledDisplay()` при первом вызове после `resize()` строит карты
+`colMap[tx] = tx*width/targetW`, `rowMap[ty] = ty*height/targetH` (деления
+только здесь, по разу на размер), дальше кадр — чистый двойной цикл
+`scaleBuf[ty*targetW+tx] = display[rowMap[ty]*width+colMap[tx]]` без
+умножений/делений/веток на пиксел. Recolor-цикл `DeveloperMenu`
+(`renderPolygonsOverwrite`) остаётся перед стражем и работает по
+view-буферу — как и прежде, по содержимому `display`.
+
+### 22.3 Границы: что переведено на target, что осталось на view
+
+Единственная точка, где рендер-буфер покидает view-мир, — `drawRGB` на
+физический `Graphics`. Сайты разделены так:
+
+* **target** (`getTargetWidth()/getTargetHeight()`): `screenY` леттербокса,
+  клипы и координаты HUD/оружия/прицела/полос сообщений в `GameScreen`,
+  `Player`/`Arsenal`/`createSprite`, `activateObject(...)`, нижняя чёрная
+  полоса, `TextView` и `sy` в `DialogScreen`, фон-скейлинг
+  `PROPORTIONAL/FULL3DSCREEN/FULLSCREEN` в `LevelLoader` (:1096-1108),
+  `PauseScreen` (получает `getScaledDisplay()` — при `<100` растянутый
+  массив под её страйд `getWidth()`, при `100` — тот же `display`).
+* **view (без правок, автоматически)**: `applyVignette(g3d.getDisplay())`,
+  `deathScr/damageScr` (идут по `scr.length`), `fastbloomScr`
+  (down/up-sample по `g3d.getWidth/Height`), виньетка
+  `ImageResize.createImage(str, g3d.getWidth(), g3d.getHeight())`,
+  `RoomObject/Splinter/Mesh/Skybox`.
+
+Два неочевидных перехода исправлены точечно:
+
+1. **`WeatherGenerator`** создаётся, как и прежде, с ЭКРАННЫМИ размерами
+   (`GameScreen.width × height·D/100`): частицы дождя живут в экранном
+   пространстве и рисуются на физическом `Graphics` (`paint(g, screenY)`).
+   Но `lightingEffect()` (вспышка молнии: градиент ниже горизонта, пишется
+   прямо в `display`) переведён на `g3d.height/g3d.width` — прежний страйд
+   `screenWidth` при `S<100` писал бы за пределы view-буфера. При `S=100`
+   формула `horizonY` совпадает бит-в-бит (`g3d.height == screenHeight`).
+2. **Виньетка, `LevelLoader`**: `img.getRGB(vignette, 0, width, …)` имел
+   страйд `width` (target) при том, что сам `img` создаётся view-размера;
+   заменён на `img.getWidth()` — при `S=100` это то же число, при `<100`
+   массив виньетки остаётся выровнен по `display` (постэффект идёт по
+   линейному индексу `scr[i]↔vignette[i]`).
+
+Формулы рассинхрона `GameScreen` не тронуты: `createScene(width,
+height*D/100)` (int) и `Player(..., (int)(height*(D/100.0F)), ...)`
+(float) — расхождение существовало в оригинале и сохранено как есть
+(заменён только width-аргумент `Player` на `getTargetWidth()`).
+
+### 22.4 Цена и память
+
+* `S=100` (по умолчанию): одно чтение static-поля + одно int-сравнение в
+  `flush()` на кадр; `scaleBuf/colMap/rowMap` не создаются (null).
+  `display` — прежнего размера. Изменений в пиксельных ядрах нет.
+* `S<100`: `display` = view²/S² (меньше), `scaleBuf` = target (создаётся
+  лениво, живёт до `resize()`); суммарно heap ≈ прежний + карты
+  (targetW+targetH int). Копия nearest на кадр — targetW·targetH чтений,
+  что заведомо дешевле растеризации сэкономленных пикселов.
+* `Benchmark` (`new DirectX7(256,256)`) тоже масштабируется — его результат
+  соответствует выбранному `RENDER_SCALE` (так и задумано).
+
+### 22.5 Проверки
+
+* docs/verify/test_render_scale.py: часть A — зеркала resize/парсинга
+  (opt-in 100, клампаны 25..100), карт (неубывание, границы,
+  сюръективность — каждый исходный пиксел выбирается), содержимого
+  `scaleBuf`, независимости `screenY` от S, границ `lightingEffect` и
+  getRGB-виньетки (старые индексы при S<100 воспроизводимо вылезали за
+  буфер, новые — в границах), бит-в-бит `horizonY` при S=100; часть B —
+  инварианты исходников (страж перед оригинальным `drawRGB`, fastbloom/
+  vignette/death/damage на view-буфере, `PauseScreen` через
+  `getScaledDisplay()`, WeatherGenerator на экранных размерах +
+  `lightingEffect` на g3d).
+* Полная пересборка: check-jar.py зелёный, QuantumOptimize.jar 368 380
+  байт, все 14 verify-тестов PASS.
