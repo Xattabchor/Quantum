@@ -244,6 +244,96 @@ def part_a():
     if worst > 1:
         fails.append('INV_DEPTH даёт больше 1/256 пиксела')
 
+    # --- Weapon.update: float-версия против int Q8 (анимация оружия)
+    def weapon_sim(ft, shot_time, delay, ai_f, as_int, nsteps=220):
+        anima = 29 if ai_f <= 1.0 else 17
+        ai = int(ai_f * 256) if as_int else ai_f
+        frame = -256 if as_int else -1.0
+        dx = dy = 0
+        width_shift = 2
+        dx_max = dy_max = 40
+        fire_frames = 0
+        recover_frames = 0
+        dxdy = []
+        for st in range(nsteps):
+            if st == 0:
+                frame = 0      # fire(): выстрел в первом кадре
+            is_fire = frame >= 0
+            if is_fire:
+                if as_int:
+                    frame += div50((ft << 8) + 25)
+                    if frame > (shot_time << 8):
+                        frame = -delay << 8
+                else:
+                    frame += ft / 50.0
+                    if frame > shot_time:
+                        frame = -delay
+            one = -256 if as_int else -1.0
+            if frame < one:
+                recover_frames += 1
+                if as_int:
+                    frame += (ft * 1280 + 41) // 83
+                    if frame > one:
+                        frame = one
+                else:
+                    frame += ft / 16.6
+                    if frame > one:
+                        frame = one
+            if is_fire:
+                fire_frames += 1
+                v = (abs(width_shift) << 1) * ft // anima
+                if as_int:
+                    dx += v * ai >> 8
+                    dy += v * ai >> 8
+                else:
+                    dx = int(dx + v * ai)
+                    dy = int(dy + v * ai)
+            # shake не включён: else-ветка (пружина возврата), как в Java
+            dx += jdiv(jdiv(-dx * ft, anima), 6)
+            dy += jdiv(jdiv(-dy * ft, anima), 6)
+            if dy <= 0:
+                dy = 0
+            if dy > dy_max:
+                dy = dy_max
+            if dx <= 0:
+                dx = 0
+                width_shift = -width_shift
+            if dx >= dx_max:
+                dx = dx_max
+                width_shift = -width_shift
+            dxdy.append((dx, dy))
+        return fire_frames, recover_frames, dxdy
+
+    bad_t = bad_r = 0
+    traj_equal = True
+    traj_skipped = 0
+    for ft in (16, 20, 33, 50, 66, 100):
+        for st_ in (2, 3, 6):
+            for dl in (3, 5, 10):
+                for ai_f in (1.0, 5.0):
+                    f0, r0, t0 = weapon_sim(ft, st_, dl, ai_f, False)
+                    f1, r1, t1 = weapon_sim(ft, st_, dl, ai_f, True)
+                    if abs(f0 - f1) > 1:
+                        bad_t += 1
+                    if abs(r0 - r1) > 1:
+                        bad_r += 1
+                    if f0 == f1 and r0 == r1:
+                        # фазы совпали - траектория обязана совпасть побитово
+                        if t0 != t1:
+                            traj_equal = False
+                    elif t0 != t1:
+                        # длительность фазы отличается на кадр (float-сумма
+                        # попала ровно в границу shotTime) - после сдвига фазы
+                        # траектории законно разные, это не расхождение
+                        traj_skipped += 1
+    print('  Weapon float vs int Q8: фазы расходятся >1 кадра: выстрел %d,'
+          ' откат %d; траектории dx/dy побитово равны: %s (комбинаций со'
+          ' сдвигом фазы: %d)' % (bad_t, bad_r, traj_equal, traj_skipped))
+    if bad_t or bad_r:
+        fails.append('Weapon: фазы анимации расходятся больше чем на кадр')
+    if not traj_equal:
+        fails.append('Weapon: траектории dx/dy не совпали при равных фазах')
+
     # --- рациональные константы погоды равны исходным float-формулам
     consts = [
         ('moveY  y*1.3*4/50 -> 6656/250',

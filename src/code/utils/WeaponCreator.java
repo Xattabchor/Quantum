@@ -47,7 +47,7 @@ public class WeaponCreator {
                 String tmp = obj.get("MELEEANIM");
                 if(tmp != null && tmp.equals("1")) {
                     wp.meleeAnim = true;
-                    wp.attackIntensity = 5.0F;
+                    wp.attackIntensity = 5 * 256;   // Q8, было 5.0F
                 }
                 
                 wp.ignoreSightOnDraw = obj.getInt("IGNORE_SIGHT_IMAGE", wp.ignoreSightOnDraw?1:0) == 1;

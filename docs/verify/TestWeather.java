@@ -75,19 +75,31 @@ public class TestWeather {
         check(motion > 0, "частицы не двигаются");
         check(wg.coords[0] != prevX0 || deaths > 0, "нет движения/смертей");
 
-        // снег движется вниз: y растёт у живой частицы
+        // снег падает: детерминированная проверка одной частицей.
+        // Остальные частицы погашены (info=0), underRoof=true запрещает их
+        // перерождение, глубина 10 (<40) выводит частицу из-под kill-порога -
+        // y обязан строго расти каждый кадр.
         WeatherGenerator w2 = new WeatherGenerator(W, H, 100,
                 0, 0, 0xffffff, 0xaaaaaa, false, null, 6, 8,
                 W / 2, H / 2, 3, 4);
         w2.generate = 2;
         w2.createParticles();
-        int y0 = w2.coords[1];
-        long sumY = 0;
+        for(int i = 1; i < 100; i++) w2.info[i * 2] = 0;
+        w2.info[0] = 2;
+        w2.info[1] = 10;
+        w2.coords[0] = 120 << 8;
+        w2.coords[1] = 10 << 8;
+        int yPrev = w2.coords[1];
+        boolean monotonic = true;
         for(int f = 0; f < 60; f++) {
-            w2.update(30, 0, false);
-            sumY += w2.coords[1];
+            w2.update(30, 0, true);
+            if(w2.coords[1] <= yPrev) monotonic = false;
+            yPrev = w2.coords[1];
         }
-        check(w2.coords[1] > y0 || sumY > 60L * y0, "снег не падает");
+        check(monotonic, "снег не падает: y не растёт строго каждый кадр");
+        check(yPrev > (10 << 8) + 60 * 256, "снег падает слишком медленно: "
+                + (yPrev - (10 << 8)) / 256 + " px за 60 кадров");
+        check(w2.info[0] == 2, "частица снега умерла без причины");
 
         System.out.println("fails=" + fails + " motion=" + motion
                 + " deaths=" + deaths);

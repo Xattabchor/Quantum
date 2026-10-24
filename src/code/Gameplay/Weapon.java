@@ -10,6 +10,7 @@ import code.Gameplay.Map.House;
 import code.Gameplay.Objects.GameObject;
 import code.Gameplay.Objects.MeshObject;
 import code.HUD.DeveloperMenu;
+import code.Math.FastMath;
 import code.Math.MathUtils2;
 import code.Math.Matrix;
 import code.Math.Vector3D;
@@ -34,7 +35,11 @@ public final class Weapon {
     private final short damageValue; // Урон от выстрела
     private final short delay; // Задержка между выстрелами
     private final short shotTime; // Продолжительность выстрела
-    public float frame = -1.0f; // Кол-во кадров прорисованных во время выстрела и после. Если -1, нет выстрела.
+    // Кол-во кадров прорисованных во время выстрела и после; -256 (= -1.0) -
+    // нет выстрела. ARM9: переведено в int Q8, покадровые float-сложения и
+    // сравнения исчезли; semantics прежний: 0 = старт выстрела, >0 = анимация
+    // выстрела, < -256 = откат задержки.
+    public int frame = -256;
     private final String fileWeapon, fileFire;
     public String fileSight, fileSightWeapon;
     public String filePatron, filePatronLow;
@@ -66,7 +71,7 @@ public final class Weapon {
     public String reload = null;
     public boolean canShoot = true;
     public boolean ignoreSightOnDraw = false;
-    public float attackIntensity = 1.0F;
+    public int attackIntensity = 256;   // Q8: 1.0 = 256 (было float 1.0F/5.0F)
     public boolean debugWeapon = false;
 
     public int weaponId = 1;
@@ -116,7 +121,7 @@ public final class Weapon {
             this.dy_fire = (short) ((int) ((float) imgWeapon.getHeight() * kH));
             this.dx_max = (short) (imgWeapon.getWidth() / 5);
             this.dy_max = (short) (imgWeapon.getHeight() / 5);
-            if(attackIntensity > 1.0f) {
+            if(attackIntensity > 256) {
                 dx_max = (short) (imgWeapon.getWidth() / 2);
                 dy_max = (short) (imgWeapon.getHeight() / 2);
             }
@@ -275,26 +280,31 @@ public final class Weapon {
         if (canShoot) magazine.update();
         
         int anima = 29; //wrong wrong wrong
-        if (attackIntensity > 1.0f) anima = 17;
+        if (attackIntensity > 256) anima = 17;
         
         boolean fire = (frame == 0);
         if (isFire() && canShoot) {
-            frame += 1.0F * QFPS.frameTime / 50f;
-            if (frame > shotTime) frame = (short) (-delay);
+            // было: frame += ft/50f; теперь ft*256/50 с округлением (div50)
+            frame += FastMath.div50((QFPS.frameTime << 8) + 25);
+            if (frame > shotTime << 8) frame = -delay << 8;
         }
 
-        if (frame < -1) {
-            frame += 1.0F * QFPS.frameTime / 16.6f; //wrong QFPS fix
-            if (frame > -1) frame = -1;
+        if (frame < -256) {
+            // было: frame += ft/16.6f (wrong QFPS fix); ft/16.6 = ft*5/83,
+            // в Q8 с округлением: (ft*1280 + 41)/83
+            frame += (QFPS.frameTime * 1280 + 41) / 83;
+            if (frame > -256) frame = -256;
             
         }
 
         if (isFire() && canShoot) {
-            dx = (short) (dx + (Math.abs(widthShift) << 1) * QFPS.frameTime / anima * attackIntensity);
-            dy = (short) (dy + (Math.abs(heightShift) << 1) * QFPS.frameTime / anima * attackIntensity);
+            // attackIntensity в Q8: *ai>>8; для штатных 1.0 и 5.0 произведение
+            // целое, поэтому dx/dy совпадают с float-версией бит-в-бит
+            dx = (short) (dx + ((Math.abs(widthShift) << 1) * QFPS.frameTime / anima * attackIntensity >> 8));
+            dy = (short) (dy + ((Math.abs(heightShift) << 1) * QFPS.frameTime / anima * attackIntensity >> 8));
         }
 
-        if (shake && frame >= -1) {
+        if (shake && frame >= -256) {
             if (anima != 17) {
                 dx += (byte) (widthShift * QFPS.frameTime / anima);
                 dy += (byte) (heightShift * QFPS.frameTime / anima);
@@ -416,7 +426,7 @@ public final class Weapon {
             }
         }
 
-        if (frame == -1) {
+        if (frame == -256) {
             if (magazine.rounds > 0) {
                 frame = 0;
                 if(shootLight) g3d.shootIntensity=g3d.shootLength=shotTime*90;
