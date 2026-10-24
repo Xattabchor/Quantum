@@ -995,7 +995,9 @@ def build(path):
         'test_sort.py (63 случая, 0), test_cull.py (182 187 случаев, 0 ошибочных '
         'отсечений), test_qct.py (round-trip и загрузчик движка побитово), '
         'test_setup_math.py (div255/div50/градиенты - 0 расхождений, туман '
-        '+/-1 из 255, погода Q8 - инварианты 400 кадров).',
+        '+/-1 из 255, погода Q8 - инварианты 400 кадров), '
+        'test_rms_settings.py (симметрия чтения/записи настроек RMS - '
+        'регрессия на вылет второго запуска).',
         'Сборка JAR и проверка препроверки: docs/j2me-build/README.md, '
         'docs/j2me-build/build-j2me.sh, docs/j2me-build/check-jar.py (732 '
         'атрибутов StackMap, 0 StackMapTable, version 48).',

@@ -204,8 +204,8 @@ public final class Main extends MIDlet {
                 DataInputStream var6 = new DataInputStream(var5);
                 music = var6.readInt();
                 sounds = var6.readInt();
-                var6.readInt();   // бывший footsteps: звук ходьбы вырезан,
-                                  // int из старых сейвов просто выбрасывается
+                var6.readInt();   // бывший footsteps: слот всегда присутствует
+                                  // (см. saveSettingToStore) и просто выбрасывается
                 displaySize = var6.readInt();
                 availableLevel = var6.readInt();
                 setPersQ(var6.readInt());
@@ -222,8 +222,25 @@ public final class Main extends MIDlet {
                 resizeWeapons = var6.readBoolean();
                 lastLevel = var6.readInt();
 
+                // Страж от сдвинутой/битой записи RMS: сборки, писавшие настройки
+                // без слота footsteps, оставляли запись на 4 байта короче, и все
+                // поля после sounds читались со сдвигом (мусорное codes вело к
+                // OutOfMemoryError, который не ловится catch(Exception)).
+                // Значение вне легитимного диапазона -> defaultSettings().
+                if(music < 0 || music > 100 || sounds < 0 || sounds > 100
+                        || displaySize < 50 || displaySize > 100
+                        || availableLevel < 0 || availableLevel > 1000
+                        || persQ < 0 || persQ > 4 || fogQ < 0 || fogQ > 2
+                        || pixelsQ < 0 || pixelsQ > 2
+                        || lang < -1 || lang > 32
+                        || mouseSpeed < 0 || mouseSpeed > 1000
+                        || lastLevel < 0 || lastLevel > 1000) {
+                    throw new Exception("corrupted settings record");
+                }
+
                 try {
                     int codes = var6.readInt();
+                    if(codes < 0 || codes > 64) throw new Exception("bad keycodes count");
                     GameKeyboard.keyCodes = new int[codes];
                     GameKeyboard.hasKeyCodes = new boolean[codes];
                     for(int i = 0; i < codes; i++) {
@@ -444,6 +461,12 @@ public final class Main extends MIDlet {
 
             dos.writeInt(music);
             dos.writeInt(sounds);
+            // Бывший слот footsteps: звук ходьбы вырезан, но этот int ОБЯЗАТЕЛЬНО
+            // пишется - читатель (и оригинальная игра) всегда его потребляет.
+            // Запись без слота сдвигала данные на 4 байта: следующий запуск
+            // читал мусор и падал (OOM на new int[codes]) - так проявлялся
+            // баг "первый запуск норм, второй вылетает".
+            dos.writeInt(100);
             dos.writeInt(displaySize);
             dos.writeInt(availableLevel);
             dos.writeInt(persQ);
