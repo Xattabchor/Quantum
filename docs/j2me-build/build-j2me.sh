@@ -45,11 +45,13 @@ echo "исходников: $(wc -l < "$BUILD/sources.txt")"
     -bootclasspath "$BOOT" -d "$CLASSES" "@$BUILD/sources.txt"
 echo "скомпилировано классов: $(find "$CLASSES" -name '*.class' | wc -l)"
 
-# 3. Препроверка (preverify) + shrink/optimize: ProGuard добавляет
-#    StackMap-атрибуты для CLDC (без них KVM отказывается загружать классы),
-#    вырезает мёртвый код и оптимизирует байткод (3 прохода). Обфускация
-#    выключена - имена классов нужны для crash-логов и MIDlet-1 в JAD;
-#    входная точка закреплена keep-правилом.
+# 3. Препроверка (preverify) + shrink: ProGuard добавляет StackMap-атрибуты
+#    для CLDC (без них KVM отказывается загружать классы) и вырезает мёртвый
+#    код. Оптимизация байткода ВЫКЛЮЧЕНА (-dontoptimize, этап 23): строгий
+#    верификатор IBM J9 (Nokia E65 и др. S60) отвергает оптимизированный
+#    байткод - MIDlet вылетает сразу при запуске, хотя эмуляторы его
+#    принимают. Обфускация выключена - имена классов нужны для crash-логов
+#    и MIDlet-1 в JAD; входная точка закреплена keep-правилом.
 cat > "$BUILD/proguard.pro" <<EOF
 -injars  $CLASSES
 -outjars $PREVER
@@ -57,12 +59,14 @@ cat > "$BUILD/proguard.pro" <<EOF
 -libraryjars $T/lib/midp_2.0.jar
 -libraryjars $T/lib/jsr184_1.1.jar
 -libraryjars $T/lib/jsr075_stub.jar
-# shrink+optimize включены: рефлексии в коде нет (проверено grep по
-# Class.forName/newInstance), имя MIDlet-класса закреплено keep-правилом.
+# shrink включён: рефлексии в коде нет (проверено grep по Class.forName/
+# newInstance), имя MIDlet-класса закреплено keep-правилом. -dontoptimize -
+# навсегда: оптимизации ProGuard несовместимы с IBM J9 на реальных S60
+# (см. docs/ARM9.md §23, диагностика - artifacts/diag/).
 # Обфускация по-прежнему выключена: имена классов нужны для crash-логов.
 -keep public class code.utils.Main { public *; }
 -keepattributes SourceFile,LineNumberTable
--optimizationpasses 3
+-dontoptimize
 -dontobfuscate
 -microedition
 -target 1.4
