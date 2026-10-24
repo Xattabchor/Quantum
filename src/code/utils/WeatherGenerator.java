@@ -16,7 +16,7 @@ public class WeatherGenerator {
 /*
  * 0 - Nothing 
  * 1 - Rain
- * 2 - Snow
+ * (2 - Snow: вырезан по запросу автора; SNOW-уровни остаются без частиц)
  */
   // ARM9: координаты частиц хранятся в int Q8 (1/256 пиксела) вместо float.
   // Деления на частицу заменены умножением на магические числа (INV_DEPTH,
@@ -28,18 +28,14 @@ public class WeatherGenerator {
   public int screenHeight; //Screen height
   public int rainColorNear; //ARGB color of near rain
   public int rainColorFar;//ARGB color of far rain
-  public int snowColorNear; //ARGB color of near snow
-  public int snowColorFar;//ARGB color of far snow
   public boolean lighting=false; //Lightings
   public boolean lightingTwice=false; //Gen new lighting in second
   public long lastLighting;
   public long nextLighting;
   public int[] lightingTimes;
-  public int snowSize; //Snow size
   public int rainSize; //Rain size
   public int centerX; //Screen center x
   public int centerY; //Screen center y
-  public int snowSpeed; //Snow speed
   public int rainSpeed; //Rain speed
   public boolean isZoom=false;
   public boolean lastUnderRoof;
@@ -60,11 +56,11 @@ public class WeatherGenerator {
   }
 
   public WeatherGenerator(int scrwidth,int scrheight,int quality,
-          int rcn,int rcf,int scn,int scf,
+          int rcn,int rcf,
           boolean light, int[] lightingTimes,
-          int ss,int rs,
+          int rs,
           int cenx,int ceny,
-          int sspeed,int rspeed) {
+          int rspeed) {
       
       screenWidth=scrwidth;
       screenHeight=scrheight;
@@ -77,15 +73,10 @@ public class WeatherGenerator {
       if(lightingTimes!=null) genNewLighting(null);
       rainColorNear=rcn;
       rainColorFar=rcf;
-      snowColorNear=scn;
-      snowColorFar=scf;
-      snowSize=ss*scrheight/320;
-      if(snowSize<ss) snowSize=ss;
       rainSize=rs*scrheight/320;
       if(rainSize<rs) rainSize=rs;
       centerX=cenx;
       centerY=ceny;
-      snowSpeed=sspeed*scrheight/320;
       rainSpeed=rspeed*scrheight/320;
       generate=0;
   }
@@ -263,21 +254,7 @@ int yy=(int)((y*624L*frameTime)/2500);   // y*1.3*3/80/50 в Q8 = y*624/2500
           
           }
           
-          if(info[i*2]==2) { // Двигаем снег
-              int rand=r.nextInt(3)-1;
-              
-              info[i*2+1]+=rand*snowSpeed*frameTime/200;   // /50/4 = /200
-              int depth=info[i*2+1];
-              if(depth<=0) depth=1;
-              if(depth>100) depth=100;
-              depth=100-depth;
-              if(info[i*2+1]>100) info[i*2+1]=100;
-              if(info[i*2+1]<0) info[i*2+1]=0;
-              
-              int d=(100-depth)/50+1;   // 1..3
-              coords[i*2]+=FastMath.div50((rand*snowSpeed*512/d)*frameTime)>>2;
-              coords[i*2+1]+=FastMath.div50(((snowSpeed*256+(r.nextInt(4)<<7))*(depth/40+2)>>1)*frameTime);
-          } else if(info[i*2]==1) { // Двигаем дощ
+          if(info[i*2]==1) { // Двигаем дощ (снег вырезан)
           
               int depth=info[i*2+1];
               if(depth<=0) depth=1;
@@ -325,24 +302,8 @@ int yy=(int)((y*624L*frameTime)/2500);   // y*1.3*3/80/50 в Q8 = y*624/2500
       
       boolean light = lighting && System.currentTimeMillis()-lastLighting<135;
       
-      for(int i=0;i<coords.length/2;i++) { // Рендерим партиклы
-          if(info[i*2]==2) {
-              
-              int depth=info[i*2+1];
-              int size=(snowSize*(100-depth)+depth)/100;
-              if(depth<0) size=snowSize*(100-depth)/100;
-              if(depth<0) depth=0;
-              if(depth>100) depth=100;
-              int col = mixColor(snowColorNear,snowColorFar,depth);
-              if(light) col = 0xffffff;
-              g.setColor(col);
-              int x=coords[i*2]>>8;
-              int y=coords[i*2+1]>>8;
-              
-              if(size>1)g.fillRect(x-size/2, y-size/2+xx, size-1, size-1);
-              if(size<=1 )g.drawLine(x, y+xx, x,y+xx);
-              
-          } else if(info[i*2]==1) {
+      for(int i=0;i<coords.length/2;i++) { // Рендерим партиклы (снег вырезан)
+          if(info[i*2]==1) {
               
               int depth=info[i*2+1];
               

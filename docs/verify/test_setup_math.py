@@ -348,7 +348,6 @@ def part_a():
          Fraction(8192, 625), Fraction(5, 100) / 5 / 50 * 65536),
         ('moveX  x*3/50 -> 768/50 (Q8)',
          Fraction(768, 50), Fraction(3, 1) * 256 / 50),
-        ('снег   /50/4 -> /200', Fraction(1, 200), Fraction(1, 50) / 4),
     ]
     for name, got, want in consts:
         ok = got == want

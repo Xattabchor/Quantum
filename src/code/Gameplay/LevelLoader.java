@@ -415,22 +415,21 @@ public class LevelLoader {
         if(weatherType != null) {
             int particlesCount = getInt("WEATHER_PARTICLES_COUNT", lvl, setting, 170);
             
+            // Снег вырезан: WEATHER_TYPE=SNOW в level.ini игнорируется
+            // (уровень остаётся без частиц), RAIN работает как раньше.
             boolean isRain = weatherType.equals("RAIN");
-            int[] colors = new int[4];
-            colors[0] = 0xaabbdd; // Rain near colors
-            colors[1] = 0x666666; // Rain far colors
-            colors[2] = 0xffffff; // Snow near colors
-            colors[3] = 0xcaccdf; // Snow far colors
+            int rainNear = 0xaabbdd; // Rain near color
+            int rainFar = 0x666666; // Rain far color
             
             String userClrs = getString("WEATHER_COLOR_NEAR", lvl, setting);
-            if(userClrs!=null) {
+            if(userClrs!=null && isRain) {
                 int[] tmp2 = GameIni.cutOnInts(userClrs, ',', ';');
-                colors[isRain?0:2] = (tmp2[0]<<16) | (tmp2[1]<<8) | tmp2[2];
+                rainNear = (tmp2[0]<<16) | (tmp2[1]<<8) | tmp2[2];
             }
             userClrs = getString("WEATHER_COLOR_FAR", lvl, setting);
-            if(userClrs!=null) {
+            if(userClrs!=null && isRain) {
                 int[] tmp2 = GameIni.cutOnInts(userClrs, ',', ';');
-                colors[isRain?1:3] = (tmp2[0]<<16) | (tmp2[1]<<8) | tmp2[2];
+                rainFar = (tmp2[0]<<16) | (tmp2[1]<<8) | tmp2[2];
             }
             
             
@@ -438,16 +437,16 @@ public class LevelLoader {
             userClrs = getString("WEATHER_LIGHTING", lvl, setting); //Lightings
             if(userClrs!=null) lightingTimes = GameIni.cutOnInts(userClrs, ',', ';');
             
-            int particlesSize = getInt("WEATHER_PARTICLES_SIZE", lvl, setting, isRain?22:4);
+            int particlesSize = getInt("WEATHER_PARTICLES_SIZE", lvl, setting, 22);
                     
             gs.wg = new WeatherGenerator(GameScreen.width, GameScreen.height * Main.getDisplaySize() / 100, 
                     particlesCount, 
-                    colors[0], colors[1], colors[2], colors[3], 
+                    rainNear, rainFar, 
                     lightingTimes!=null, lightingTimes,
-                    isRain?4:particlesSize, isRain?particlesSize:22,
+                    particlesSize,
                     GameScreen.width / 2, GameScreen.height / 2, 
-                    2, 10);
-            gs.wg.generate = (byte) (isRain?1:2);
+                    10);
+            gs.wg.generate = (byte) (isRain?1:0);
             gs.wg.createParticles();
         }
 
