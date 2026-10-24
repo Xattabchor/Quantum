@@ -2185,6 +2185,11 @@ static final void paintPers_glass(final DirectX7 g3d, final Texture texture, int
         final int w = g3d.width;
         int scale=64;
         scale=scale*(g3d.getHeight()+g3d.getWidth())/(240+320);
+        // ARM9: преломление через байтовые таблицы TexturingAffine -
+        // побитово эквивалентно умножениям (docs/verify/test_glass.py).
+        TexturingAffine.glassEnsure(scale, w);
+        final int[] offX = TexturingAffine.glassOffX;
+        final int[] offYW = TexturingAffine.glassOffYW;
 
         int tempI;
         long subtexel_a, subtexel_b;
@@ -2269,7 +2274,7 @@ for(;length>=sz2; length-=sz2) {
 {
 
 col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
-            coord = ((((col & 0xff0000) - 0x800000) * scale) >> 24) + ((((col & 0xff00) - 0x8000) * scale) >> 16) * w + x1;
+            coord = offX[(col >>> 16) & 0xFF] + offYW[(col >>> 8) & 0xFF] + x1;
             if(coord < 0) rgb[x1] = rgb[0];
             else if(coord > g3dlen) rgb[x1] = rgb[g3dlen];
             else rgb[x1] = rgb[coord];
@@ -2283,7 +2288,7 @@ col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
                 dv = (v_2 - v) / length;
                 for(; x1<x2;) {
 col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
-            coord = ((((col & 0xff0000) - 0x800000) * scale) >> 24) + ((((col & 0xff00) - 0x8000) * scale) >> 16) * w + x1;
+            coord = offX[(col >>> 16) & 0xFF] + offYW[(col >>> 8) & 0xFF] + x1;
             if(coord < 0) rgb[x1] = rgb[0];
             else if(coord > g3dlen) rgb[x1] = rgb[g3dlen];
             else rgb[x1] = rgb[coord];

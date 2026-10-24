@@ -2506,6 +2506,37 @@ x1++;
 
 }
 
+    /** Таблицы преломления для "стекла" (режим рисования 7): заменяют три
+     *  умножения на пиксель двумя выборками по байту:
+     *    glassOffX[R]  = ((R-128)*scale) >> 8         (смещение x, в пикселах)
+     *    glassOffYW[G] = (((G-128)*scale) >> 8) * w   (смещение y, уже * w)
+     *  Побитово эквивалентно исходному выражению
+     *    ((((col&0xff0000)-0x800000)*scale)>>24) + ((((col&0xff00)-0x8000)*scale)>>16)*w,
+     *  т.к. (R-128)*65536*scale >> 24 == (R-128)*scale >> 8 (арифметический
+     *  сдвиг = floor-деление на степень двух), и переполнение int исключено.
+     *  Доказательство: docs/verify/test_glass.py (полный перебор).
+     *  scale и w зависят только от размера экрана - таблицы строятся один
+     *  раз и кешируются; перестройка - только при смене размеров. */
+    static int[] glassOffX = null;
+    static int[] glassOffYW = null;
+    private static int glassScale = -1;
+    private static int glassW = -1;
+
+    static final void glassEnsure(int scale, int w) {
+        if(scale == glassScale && w == glassW && glassOffX != null) return;
+        int[] ox = new int[256];
+        int[] oy = new int[256];
+        for(int i = 0; i < 256; i++) {
+            int t = ((i - 128) * scale) >> 8;
+            ox[i] = t;
+            oy[i] = t * w;
+        }
+        glassOffX = ox;
+        glassOffYW = oy;
+        glassScale = scale;
+        glassW = w;
+    }
+
 static final void paint_glass(DirectX7 g3d, Texture texture,
             Vertex a, int au, int av,
             Vertex b, int bu, int bv,
@@ -2555,6 +2586,11 @@ static final void paint_glass(DirectX7 g3d, Texture texture,
         int g3dlen = rgb.length-1;
         int scale=64;
         scale=scale*(g3d.getHeight()+g3d.getWidth())/(240+320);
+        // ARM9: три умножения на пиксель заменены выборкой из таблиц -
+        // побитово эквивалентно (docs/verify/test_glass.py).
+        glassEnsure(scale, w);
+        final int[] offX = glassOffX;
+        final int[] offYW = glassOffYW;
 
         tempI = c.sy - a.sy;                        // ����������
         final int dx_start = ((c.sx - a.sx)<<fpPosition) / tempI;//
@@ -2653,7 +2689,7 @@ static final void paint_glass(DirectX7 g3d, Texture texture,
 
         for(; x1 < x2; x1++) {
             col = tex[((((v += dv) >>> fp) << widthBIT) + ((u += du) >>> fp)) & lengthBIT];
-            coord = ((((col & 0xff0000) - 0x800000) * scale) >> 24) + ((((col & 0xff00) - 0x8000) * scale) >> 16) * w + x1;
+            coord = offX[(col >>> 16) & 0xFF] + offYW[(col >>> 8) & 0xFF] + x1;
             if(coord < 0) rgb[x1] = rgb[0];
             else if(coord > g3dlen) rgb[x1] = rgb[g3dlen];
             else rgb[x1] = rgb[coord];

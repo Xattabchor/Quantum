@@ -10,5 +10,5 @@ MIDlet-Name: Quantum Optimize
 MicroEdition-Configuration: CLDC-1.1
 MicroEdition-Profile: MIDP-2.0
 MIDlet-Jar-URL: QuantumOptimize.jar
-MIDlet-Jar-Size: 364541
+MIDlet-Jar-Size: 364835
 
