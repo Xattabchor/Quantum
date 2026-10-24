@@ -37,7 +37,6 @@ public final class GameScreen extends MyCanvas {
     public WeatherGenerator wg;
     
     public static long time;
-    public boolean doubleBright = false;
 
     public static Vector lines = new Vector();
     public static String mus = "/music.mid", levelFile = "/level_1.txt";
@@ -262,47 +261,6 @@ public final class GameScreen extends MyCanvas {
         }
     }
 
-    public final void applySub(int[] scr) {
-        int l = 0xff;//(int)((time/20)%511);
-        int i = scr.length - 1;
-
-        while(i >= 5) {
-            int col = scr[i];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i] = col | ((col >> 8) & 0x010101) * 0xff; // Лимитер
-            col = scr[i - 1];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i - 1] = col | ((col >> 8) & 0x010101) * 0xff; // Лимитер
-            col = scr[i - 2];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i - 2] = col | ((col >> 8) & 0x010101) * 0xff; // Лимитер
-            col = scr[i - 3];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i - 3] = col | ((col >> 8) & 0x010101) * 0xff; // Лимитер
-            col = scr[i - 4];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i - 4] = col | ((col >> 8) & 0x010101) * 0xff; // Лимитер
-            col = scr[i - 5];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i - 5] = col | ((col >> 8) & 0x010101) * 0xff; // Лимитер
-            i -= 6;
-        }
-
-        while(i >= 0) {
-            int col = scr[i];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i] = col | ((col >> 8) & 0x010101) * 0xff;
-            i--;
-        }
-    }
-
     public final void paint(Graphics g) {
         if(paused || !run || !finishDraw) return;
         finishDraw = false;
@@ -439,13 +397,13 @@ public final class GameScreen extends MyCanvas {
         int screenY = (height - g3d.getHeight()) / 2;
         try {
             // Постэффекты управляются только родными ключами игры:
-            // BLOOM=0|1, VIGNETTE=<путь к картинке>, DOUBLE_BRIGHT=0|1
-            // (level.ini / setting.txt). Профиль CPU на них больше не
-            // влияет (по запросу автора); порядок вызовов - как в оригинале.
+            // BLOOM=0|1, VIGNETTE=<путь к картинке> (level.ini / setting.txt).
+            // Профиль CPU на них не влияет (по запросу автора).
+            // DOUBLE_BRIGHT (удвоение яркости applySub) вырезан полностью -
+            // ключ в level.ini безопасно игнорируется.
             if(playerDied) deathScr(g3d.getDisplay());
             if(player.isDamaged()) damageScr(g3d.getDisplay());
             if(bloom) fastbloomScr(g3d);
-            if(doubleBright) applySub(scene.getG3D().display);
         } catch (Exception ext) {
             if(DeveloperMenu.debugMode) ext.printStackTrace();
         }

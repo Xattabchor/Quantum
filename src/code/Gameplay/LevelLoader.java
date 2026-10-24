@@ -323,7 +323,8 @@ public class LevelLoader {
         LightMapper.bwGI = getBoolean("GI_BW", lvl, setting, LightMapper.bwGI);
         LightMapper.bwTexGI = getBoolean("GI_BW_TEX", lvl, setting, LightMapper.bwTexGI);
         LightMapper.smoothMax = (int) (8192 * getFloat("PHONG_ANGLE", lvl, setting, 29.6631f) / 90);//29.6631f
-        gs.doubleBright = getBoolean("DOUBLE_BRIGHT", lvl, setting, false);
+        // DOUBLE_BRIGHT вырезан (удвоение яркости applySub удалено из
+        // GameScreen): ключ в level.ini/setting.txt безопасно игнорируется.
         LightMapper.allRooms = getBoolean("LIGHTMAPPER_ALLROOMS", lvl, setting, LightMapper.allRooms);
         
         String rays = getString("LIGHT_RAYS", lvl, setting);

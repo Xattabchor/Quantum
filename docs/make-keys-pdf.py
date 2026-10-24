@@ -14,7 +14,8 @@ KEYS одновременно строит и сводную таблицу, и 
     src/code/Rendering/Meshes/BoundingBox.java - FAST_CULL
     src/code/Math/MathUtils.java, Rendering/RenderObject.java - FAST_LIGHT
     src/code/Gameplay/GameScreen.java     - постэффекты через родные ключи игры
-                                              (BLOOM/VIGNETTE/DOUBLE_BRIGHT)
+                                              (BLOOM/VIGNETTE; DOUBLE_BRIGHT
+                                              вырезан)
     UtilsText/src/code/utils/IniFile.java - формат файла (ключ=значение, #/;)
 
 Запуск:
@@ -485,7 +486,7 @@ PRESETS = [
      'Дополнительно можно снизить displaySize в меню настроек: разрешение '
      'рендера - самый сильный рычаг, потому что растеризация платит за каждый '
      'пиксел. Постэффекты от профиля не зависят: ими управляют родные ключи '
-     'игры BLOOM, VIGNETTE, DOUBLE_BRIGHT в level.ini/setting.txt.'),
+     'игры BLOOM, VIGNETTE в level.ini/setting.txt (DOUBLE_BRIGHT вырезан).'),
 ]
 
 LOSE_TABLE = [
@@ -801,7 +802,7 @@ def build(path):
         '<font face="M">lowEnd = (cpu == CPU_ARM9)</font> и задаёт значения по '
         'умолчанию для пяти ключей: FAST_LIGHT, NEAR_ONLY, AI_LOD, MORPH_LOD, '
         'FAST_CULL (при lowEnd - 1). На постэффекты профиль не влияет: ими '
-        'управляют родные ключи игры BLOOM, VIGNETTE, DOUBLE_BRIGHT. '
+        'управляют родные ключи игры BLOOM, VIGNETTE (DOUBLE_BRIGHT вырезан). '
         'PERSPECTIVE_STEP на ARM9 получает 32, если ключа нет в файле.',
         st['body']))
     rows = [[Paragraph('Профиль', st['head']), Paragraph('Когда выбирается',
@@ -920,7 +921,7 @@ def build(path):
         'и FAST_CULL, затем NEAR_ONLY и AI_LOD (они убирают работу по NPC - '
         'именно из-за них падал FPS в сценах с большим числом персонажей), и '
         'только потом PERSPECTIVE_STEP и MORPH_LOD. Постэффекты настраиваются '
-        'отдельно родными ключами игры BLOOM/VIGNETTE/DOUBLE_BRIGHT.', st['body']))
+        'отдельно родными ключами игры BLOOM/VIGNETTE.', st['body']))
 
     # ---------------- 9. Диагностика ----------------
     f.append(Paragraph('9. Диагностика и проверка', st['h1']))
