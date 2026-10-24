@@ -1,5 +1,6 @@
 ﻿build
 dist
+dist-diag
 nbproject/private
 Thumbs.db
 # артефакты сборки: ZIP с промежуточными классами игнорируем,
@@ -9,6 +10,8 @@ artifacts/*
 !artifacts/QuantumOptimize.jad
 !artifacts/QctConverter.jar
 !artifacts/QctConverter.jad
+# диагностические сборки (E65/J9)
+!artifacts/diag
 
 # python-артефакты от check-jar.py
 __pycache__/
