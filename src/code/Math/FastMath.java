@@ -176,6 +176,39 @@ public final class FastMath {
     }
 
     /**
+     * Точный аналог {@code x / 255} (усечение к нулю) без idiv:
+     * {@code (|x|+1+(|x|>>8))>>8} верно при 0 <= |x| < 65535 (первый сбой на
+     * 65535 = 255*257), вне диапазона - обычный idiv. Та же формула, что в
+     * приватном TexturingPers.div255; нужна режиму 9 (аффинный
+     * cameraVectorLight-путь paintAffine_9: ar*calcLightRender/255 на
+     * каждую вершину треугольника). Перебор: docs/verify/test_modes913.py.
+     */
+    public static final int div255(int x) {
+        int a = x < 0 ? -x : x;          // x == MIN_VALUE -> a < 0 -> idiv
+        if(a < 0 || a >= 65535) return x / 255;
+        int q = (a + 1 + (a >> 8)) >> 8;
+        return x < 0 ? -q : q;
+    }
+
+    /**
+     * Точный аналог {@code v / 3} (усечение к нулю) без idiv:
+     * для |v| < 131072 верно {@code (|v|*43691)>>>17} (43691 = ceil(2^17/3),
+     * ошибка |v|/393216 < 1/3 не накапливается), вне диапазона - idiv.
+     * Нужен режимам 9/13: приведение per-channel освещения к серому
+     * ((af+ag+ab)/3 на треугольник при drawmode 13 и fogQ==1).
+     * Перебор: docs/verify/test_modes913.py.
+     */
+    public static final int div3(int v) {
+        if(v >= 0) {
+            if(v < 131072) return (v * 43691) >>> 17;
+            return v / 3;
+        }
+        if(v == -2147483648) return v / 3;   // -v не помещается в int
+        if(v > -131072) return -((-v) * 43691 >>> 17);
+        return v / 3;
+    }
+
+    /**
      * Точный аналог {@code v / 1000} для int (усечение к нулю), но без idiv:
      * умножение на 274877907 (ceil(2^38/1000)) и сдвиг на 38. Остаток магии
      * e = 528 у ceil(2^37/1000) давал перелёт на k*1000-1 при v > 2.6e8;

@@ -148,7 +148,7 @@ case 13:{
                 paintAffine_0(g3d,texture,a,au,av,b,bu,bv,c,cu,cv);
             else
                 paintAffine_9(g3d,texture,a,au,av,b,bu,bv,c,cu,cv,fogc,sz2,af,bf,cf,nx,ny,nz); 
-        } else if(Main.fogQ==1) paintAffine_9(g3d,texture,a,au,av,b,bu,bv,c,cu,cv,fogc,sz2,(af+ag+ab)/3,(bf+bg+bb)/3,(cf+cg+cb)/3,nx,ny,nz); 
+        } else if(Main.fogQ==1) paintAffine_9(g3d,texture,a,au,av,b,bu,bv,c,cu,cv,fogc,sz2,FastMath.div3(af+ag+ab),FastMath.div3(bf+bg+bb),FastMath.div3(cf+cg+cb),nx,ny,nz); 
         else paintAffine_13(g3d,texture,a,au,av,b,bu,bv,c,cu,cv,fogc,sz2,af,bf,cf,ag,bg,cg,ab,bb,cb,nx,ny,nz);
     }
     else {paintAffine_0(g3d,texture,a,au,av,b,bu,bv,c,cu,cv); }
@@ -901,8 +901,16 @@ static final void paintAffine_3(DirectX7 g3d, Texture texture,
         }
         if(a.sy == c.sy) return;
 
-if(DirectX7.fDist/255!=0) {
-sz2=-max(a.rz,b.rz,c.rz)/(DirectX7.fDist/255);
+// ARM9: fDist/255 через ключ-кэш DirectX7 (тот же, что в Polygon3V):
+// fDist меняется только на загрузке уровня - два idiv на треугольник
+// превращаются в ноль в установившемся режиме.
+int fdKey = DirectX7.fDist;
+if(fdKey != DirectX7.fDist255Key) {
+    DirectX7.fDist255Key = fdKey;
+    DirectX7.fDist255 = fdKey / 255;
+}
+if(DirectX7.fDist255!=0) {
+sz2=-max(a.rz,b.rz,c.rz)/DirectX7.fDist255;
 }
 if(sz2>255) sz2=255;
 if(sz2<0) sz2=0;
@@ -1497,8 +1505,16 @@ static final void paintAffine_5(DirectX7 g3d, Texture texture,
         
 
 if(texture.getDrawMode()==6) {
-if(DirectX7.fDist/255!=0) {
-sz2=-max(a.rz,b.rz,c.rz)/(DirectX7.fDist/255);
+// ARM9: fDist/255 через ключ-кэш DirectX7 (тот же, что в Polygon3V):
+// fDist меняется только на загрузке уровня - два idiv на треугольник
+// превращаются в ноль в установившемся режиме.
+int fdKey = DirectX7.fDist;
+if(fdKey != DirectX7.fDist255Key) {
+    DirectX7.fDist255Key = fdKey;
+    DirectX7.fDist255 = fdKey / 255;
+}
+if(DirectX7.fDist255!=0) {
+sz2=-max(a.rz,b.rz,c.rz)/DirectX7.fDist255;
 }
 if(sz2>255) sz2=255;
 if(sz2<0) sz2=0;
@@ -1751,9 +1767,9 @@ static final void paintAffine_9(DirectX7 g3d, Texture texture,
         if(a.sy == c.sy) return;
 
 		if (LightMapper.cameraVectorLight && texture.drawmode == 6) {
-			ar = ar * MathUtils.calcLightRender(nx, ny, nz, a.x - g3d.getCamera().m03, a.y - g3d.getCamera().m13, a.z - g3d.getCamera().m23) / 255;
-			br = br * MathUtils.calcLightRender(nx, ny, nz, b.x - g3d.getCamera().m03, b.y - g3d.getCamera().m13, b.z - g3d.getCamera().m23) / 255;
-			cr = cr * MathUtils.calcLightRender(nx, ny, nz, c.x - g3d.getCamera().m03, c.y - g3d.getCamera().m13, c.z - g3d.getCamera().m23) / 255;
+			ar = FastMath.div255(ar * MathUtils.calcLightRender(nx, ny, nz, a.x - g3d.getCamera().m03, a.y - g3d.getCamera().m13, a.z - g3d.getCamera().m23));
+			br = FastMath.div255(br * MathUtils.calcLightRender(nx, ny, nz, b.x - g3d.getCamera().m03, b.y - g3d.getCamera().m13, b.z - g3d.getCamera().m23));
+			cr = FastMath.div255(cr * MathUtils.calcLightRender(nx, ny, nz, c.x - g3d.getCamera().m03, c.y - g3d.getCamera().m13, c.z - g3d.getCamera().m23));
 		}
 
 

@@ -271,9 +271,9 @@ x1++;
         }
         if(texture.drawmode == 13 && Main.fogQ==1) {
             colorLighting=false;
-            af = ag = ab = (af+ag+ab)/3;
-            bf = bg = bb = (bf+bg+bb)/3;
-            cf = cg = cb = (cf+cg+cb)/3;
+            af = ag = ab = FastMath.div3(af+ag+ab);
+            bf = bg = bb = FastMath.div3(bf+bg+bb);
+            cf = cg = cb = FastMath.div3(cf+cg+cb);
         }
         
         if (LightMapper.cameraVectorLight && texture.drawmode == 6) {
@@ -862,6 +862,7 @@ static final void paintMiniTrianglePers_1(final DirectX7 g3d, final Texture text
             final int dx_start, final int dwz_start, final int duz_start, final int dvz_start,
             final int dx_end, final int dwz_end, final int duz_end, final int dvz_end,
             final int dwz, final int duz, final int dvz,int fogc,int sz2,int q) {
+		final int FPq = FP / q;   // ARM9: сегментный /q -> *FPq>>fp (аналог режима 13)
     if(Main.fogQ==0) {
         paintMiniTrianglePers_0(g3d, texture, y_start, y_end,
                     x_start, wz_start, uz_start, vz_start,
@@ -954,8 +955,8 @@ y++
 
 //Paste SUb fog here
 for(;length>=q; length-=q) {
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)/q); //��������� du � dv �� ����
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)/q);
+                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)*FPq)>>fp;   // ARM9: как в режиме 13 - /q заменено на *FPq>>fp //��������� du � dv �� ����
+                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)*FPq)>>fp;
 
 
                     for(int i=x1+q;x1<i;)
@@ -1174,6 +1175,7 @@ static final void paintMiniTrianglePers_3(final DirectX7 g3d, final Texture text
 final int df_start,final int df_end,
 final int df
 ) {
+		final int FPq = FP / q;   // ARM9: сегментный /q -> *FPq>>fp (аналог режима 13)
 
     if(Main.fogQ==2 && Main.forceLQFog==false) {
     paintMiniTrianglePers_3_HQ(g3d, texture, y_start, y_end,
@@ -1216,8 +1218,16 @@ final int df
         final int dvz4=dvz*q;
         final int dwz4=dwz*q;
 int col,ca;
-if(DirectX7.fDist/255!=0) {
-sz2=-min(a.rz,b.rz,c.rz)/(DirectX7.fDist/255);
+// ARM9: fDist/255 через ключ-кэш DirectX7 (тот же, что в Polygon3V):
+// fDist меняется только на загрузке уровня - два idiv на треугольник
+// превращаются в ноль в установившемся режиме.
+int fdKey = DirectX7.fDist;
+if(fdKey != DirectX7.fDist255Key) {
+    DirectX7.fDist255Key = fdKey;
+    DirectX7.fDist255 = fdKey / 255;
+}
+if(DirectX7.fDist255!=0) {
+sz2=-min(a.rz,b.rz,c.rz)/DirectX7.fDist255;
 }
 if(sz2>255) sz2=255;
 if(sz2<0) sz2=0;
@@ -1283,8 +1293,8 @@ y++
 //Paste SUb fog here
 for(;length>=q; length-=q) {
 
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)/q); //��������� du � dv �� ����
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)/q);
+                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)*FPq)>>fp;   // ARM9: как в режиме 13 - /q заменено на *FPq>>fp //��������� du � dv �� ����
+                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)*FPq)>>fp;
 
 
                     for(int i=x1+q;x1<i;)
@@ -1338,6 +1348,7 @@ static final void paintMiniTrianglePers_3_HQ(final DirectX7 g3d, final Texture t
 final int df_start,final int df_end,
 final int df
 ) {
+		final int FPq = FP / q;   // ARM9: сегментный /q -> *FPq>>fp (аналог режима 13)
 
 if(q>999) {
         TexturingFloors.paintFloor_3_HQ(g3d, texture, y_start, y_end,
@@ -1429,8 +1440,8 @@ y++
 
 //Paste SUb fog here
 for(;length>=q; length-=q) {
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)/q); //��������� du � dv �� ����
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)/q);
+                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)*FPq)>>fp;   // ARM9: как в режиме 13 - /q заменено на *FPq>>fp //��������� du � dv �� ����
+                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)*FPq)>>fp;
 
 int i=x1+q;
 while(i-x1>=2) {
@@ -1652,6 +1663,7 @@ static final void paintMiniTrianglePers_5(final DirectX7 g3d, final Texture text
             int f_start,int f_end,
 final int df_start,final int df_end,
 final int df) {
+		final int FPq = FP / q;   // ARM9: сегментный /q -> *FPq>>fp (аналог режима 13)
     if( ((texture.drawmode==9 || texture.drawmode==13) && Main.fogQ>=1) || (Main.fogQ==2 && Main.forceLQFog==false && texture.drawmode==6)) {
     paintMiniTrianglePers_6_HQ(g3d, texture, y_start, y_end,
                     x_start, wz_start, uz_start, vz_start,
@@ -1686,8 +1698,16 @@ final int df) {
         final int dwz4=dwz*q;
 int col,ca;
 if(texture.getDrawMode()==6) {
-if(DirectX7.fDist/255!=0) {
-sz2=-min(a.rz,b.rz,c.rz)/(DirectX7.fDist/255);
+// ARM9: fDist/255 через ключ-кэш DirectX7 (тот же, что в Polygon3V):
+// fDist меняется только на загрузке уровня - два idiv на треугольник
+// превращаются в ноль в установившемся режиме.
+int fdKey = DirectX7.fDist;
+if(fdKey != DirectX7.fDist255Key) {
+    DirectX7.fDist255Key = fdKey;
+    DirectX7.fDist255 = fdKey / 255;
+}
+if(DirectX7.fDist255!=0) {
+sz2=-min(a.rz,b.rz,c.rz)/DirectX7.fDist255;
 }
 if(sz2>255) sz2=255;
 if(sz2<0) sz2=0;
@@ -1753,8 +1773,8 @@ y++
 //Paste SUb fog here
 for(;length>=q; length-=q) {
 
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)/q); //��������� du � dv �� ����
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)/q);
+                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)*FPq)>>fp;   // ARM9: как в режиме 13 - /q заменено на *FPq>>fp //��������� du � dv �� ����
+                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)*FPq)>>fp;
 
 
                     for(int i=x1+q;x1<i;)
@@ -1819,6 +1839,7 @@ static final void paintMiniTrianglePers_6_HQ(final DirectX7 g3d, final Texture t
 final int df_start,final int df_end,
 int df
 ) {
+		final int FPq = FP / q;   // ARM9: сегментный /q -> *FPq>>fp (аналог режима 13)
 
     if(q>999 && texture.drawmode==6) {
         TexturingFloors.paintFloor_6_HQ(g3d, texture, y_start, y_end,
@@ -1913,8 +1934,8 @@ y++
 
 //Paste SUb fog here
 for(;length>=q; length-=q) {
-                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)/q); //��������� du � dv �� ����
-                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)/q);
+                du = (((int) (((long) (uz_a += duz4) << fp) / (wz_a += dwz4)) - u)*FPq)>>fp;   // ARM9: как в режиме 13 - /q заменено на *FPq>>fp //��������� du � dv �� ����
+                dv = (((int) (((long) (vz_a += dvz4) << fp) / wz_a) - v)*FPq)>>fp;
 int i=x1+q;
 if(Main.s60Optimization==1) {
 while(i-x1>=3)
