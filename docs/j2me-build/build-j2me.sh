@@ -11,6 +11,9 @@
 #   proguard-ant.jar  - ProGuard 7.x: -microedition делает препроверку (preverify)
 #   cldc_1.1.jar, midp_2.0.jar, jsr184_1.1.jar - API платформы (bootclasspath)
 #   jsr075_stub.jar   - заглушка FileConnection (только для компилятора)
+#   nokia_ui_stub.jar - заглушка com.nokia.mid.ui (только для компилятора;
+#                       на устройстве NokiaBlitter грузится лишь при наличии
+#                       настоящего Nokia UI API - см. §24 ARM9.md)
 #
 # Запуск:
 #   T=~/tools/j2me SRC=. JAVA=java sh docs/j2me-build/build-j2me.sh
@@ -29,7 +32,7 @@ BUILD="$SRC/build/$CONFIG"
 CLASSES="$BUILD/compiled"
 PREVER="$BUILD/preverified"
 OUT="$SRC/dist"
-BOOT="$T/lib/cldc_1.1.jar:$T/lib/midp_2.0.jar:$T/lib/jsr184_1.1.jar:$T/lib/jsr075_stub.jar"
+BOOT="$T/lib/cldc_1.1.jar:$T/lib/midp_2.0.jar:$T/lib/jsr184_1.1.jar:$T/lib/jsr075_stub.jar:$T/lib/nokia_ui_stub.jar"
 
 rm -rf "$CLASSES" "$PREVER" "$OUT"
 mkdir -p "$CLASSES" "$PREVER" "$OUT"
@@ -59,6 +62,7 @@ cat > "$BUILD/proguard.pro" <<EOF
 -libraryjars $T/lib/midp_2.0.jar
 -libraryjars $T/lib/jsr184_1.1.jar
 -libraryjars $T/lib/jsr075_stub.jar
+-libraryjars $T/lib/nokia_ui_stub.jar
 # shrink включён: рефлексии в коде нет (проверено grep по Class.forName/
 # newInstance), имя MIDlet-класса закреплено keep-правилом. -dontoptimize -
 # навсегда: оптимизации ProGuard несовместимы с IBM J9 на реальных S60
@@ -210,7 +214,7 @@ CHECK="$(dirname "$0")/check-jar.py"
 if [ -f "$CHECK" ]; then
     LIBS=""
     for j in "$T/lib/cldc_1.1.jar" "$T/lib/midp_2.0.jar" "$T/lib/jsr184_1.1.jar" \
-             "$T/lib/jsr075_stub.jar"; do
+             "$T/lib/jsr075_stub.jar" "$T/lib/nokia_ui_stub.jar"; do
         if [ -f "$j" ]; then
             LIBS="$LIBS --lib $j"
         fi

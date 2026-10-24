@@ -147,6 +147,34 @@ z.close()
 print('  -> %s (%d байт)' % (jar, os.path.getsize(jar)))
 PY
 
+# Заглушка Nokia UI API (com.nokia.mid.ui): нужна только компилятору для
+# code/Rendering/NokiaBlitter.java (§24). Исходники стаба - в репозитории
+# (docs/j2me-build/stubsrc-nokia), значения констант сверены с официальным
+# javadoc Nokia UI API 1.1 и двумя независимыми эмуляторами. В JAR не
+# попадает (bootclasspath / -libraryjars).
+SRC=$(cd "$(dirname "$0")/../.." && pwd)
+mkdir -p "$T/stubclasses-nokia"
+"$JAVA" -cp "$T/lib/ecj.jar" org.eclipse.jdt.internal.compiler.batch.Main \
+    -source 1.4 -target 1.4 -encoding UTF-8 -warn:none \
+    -bootclasspath "$T/lib/cldc_1.1.jar:$T/lib/midp_2.0.jar" \
+    -d "$T/stubclasses-nokia" \
+    "$SRC/docs/j2me-build/stubsrc-nokia/com/nokia/mid/ui/DirectGraphics.java" \
+    "$SRC/docs/j2me-build/stubsrc-nokia/com/nokia/mid/ui/DirectUtils.java"
+
+python3 - "$T" <<'PY'
+import os, sys, zipfile
+T = sys.argv[1]
+jar = os.path.join(T, 'lib', 'nokia_ui_stub.jar')
+z = zipfile.ZipFile(jar, 'w', zipfile.ZIP_DEFLATED)
+root = os.path.join(T, 'stubclasses-nokia')
+for dirpath, dirs, files in os.walk(root):
+    for f in files:
+        p = os.path.join(dirpath, f)
+        z.write(p, os.path.relpath(p, root))
+z.close()
+print('  -> %s (%d байт)' % (jar, os.path.getsize(jar)))
+PY
+
 echo
 echo "Готово. Содержимое $T/lib:"
 ls -la "$T/lib"

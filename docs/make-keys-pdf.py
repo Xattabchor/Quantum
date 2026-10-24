@@ -13,6 +13,7 @@ KEYS одновременно строит и сводную таблицу, и 
     src/code/Rendering/Meshes/MeshImage.java   - MORPH_LOD, MORPH_LOD_DIST
     src/code/Rendering/Meshes/BoundingBox.java - FAST_CULL
     src/code/Rendering/DirectX7.java      - RENDER_SCALE (view/target, flush)
+    src/code/Rendering/NokiaBlitter.java  - NOKIA_BLIT (DirectGraphics.drawPixels)
     src/code/Math/MathUtils.java, Rendering/RenderObject.java - FAST_LIGHT
     src/code/Gameplay/GameScreen.java     - постэффекты через родные ключи игры
                                               (BLOOM/VIGNETTE; DOUBLE_BRIGHT
@@ -414,6 +415,42 @@ KEYS = [
             'исходников.',
         ],
     ),
+    dict(
+        name='NOKIA_BLIT',
+        values='0 | 1',
+        arm9='1', fast='1',
+        short='вывод кадра через Nokia DirectGraphics.drawPixels() вместо '
+              'g.drawRGB()',
+        where='DirectX7.flush(): детектор nokia(Graphics) один раз выполняет '
+              'Class.forName("com.nokia.mid.ui.DirectGraphics"); при успехе '
+              'кадр уходит в NokiaBlitter.blit() = drawPixels(pixels, alpha, '
+              '0, scanlength, x, y, w, h, 0, TYPE_INT_8888_ARGB). На аппаратах '
+              'без Nokia UI класс NokiaBlitter не загружается вовсе - '
+              'автоматический откат на g.drawRGB(). Совместим с RENDER_SCALE '
+              '(обе ветви масштаба).',
+        speed='На Nokia S60/S40 drawPixels отдаёт пикселы нативному '
+              'графическому ядру, минуя промежуточное копирование '
+              'MIDP-реализации: единственный вывод кадра за кадр становится '
+              'дешевле. Выигрыш зависит от прошивки (порядка 5-15 % времени '
+              'вывода кадра).',
+        loss='Не теряется ничего: адресация и смысл transparency у drawPixels '
+             'совпадают с drawRGB пиксел-в-пиксел (официальный javadoc Nokia '
+             'UI API 1.1). На аппаратах без com.nokia.mid.ui ключ не имеет '
+             'значения - откат автоматический.',
+        extra=[
+            'NOKIA_BLIT=0 - страховка: возвращает ровно прежний путь вывода '
+            'даже на Nokia (например, если на конкретной прошивке drawPixels '
+            'окажется медленнее drawRGB).',
+            'Компиляция идёт против стаба com.nokia.mid.ui (docs/j2me-build/'
+            'stubsrc-nokia) - в JAR он не попадает; значения констант '
+            '(TYPE_INT_8888_ARGB=8888 и др.) сверены с официальным javadoc и '
+            'двумя независимыми эмуляторами, так как ECJ инлайнит static '
+            'final int.',
+            'Проверено: docs/verify/test_nokia_blit.py - зеркала детектора и '
+            'парсинга ключа, адресация drawPixels==drawRGB, константы стаба, '
+            'инварианты исходников и содержимого JAR (docs/ARM9.md §24).',
+        ],
+    ),
 ]
 
 # Ключи оригинала, у которых изменилось только значение по умолчанию.
@@ -540,13 +577,14 @@ PRESETS = [
     ('A. Побитово как оригинал (для сравнения скриншотов и отладки)',
      'CPU_PROFILE=FAST\nFAST_LIGHT=0\nPERSPECTIVE_STEP=0\n'
      'NEAR_ONLY=0\nAI_LOD=0\nMORPH_LOD=0\nFAST_CULL=0\n'
-     'QCT=0\nFAST_SETUP=0\nRENDER_SCALE=100',
+     'QCT=0\nFAST_SETUP=0\nRENDER_SCALE=100\nNOKIA_BLIT=0',
      'Все ускорения с потерей качества выключены, остаются только точные замены '
      '(div100, div50, isqrt, FrameClock, градиенты без idiv, развёртки циклов '
      'и т. п.). AI_LOD_DIST и MORPH_LOD_DIST при выключенных AI_LOD и '
      'MORPH_LOD ни на что не влияют; QCT=0 запрещает подхватывать упакованные '
      '.qct, если они есть в JAR; FAST_SETUP=0 возвращает прежние коэффициенты '
-     'тумана; RENDER_SCALE=100 - прежнее разрешение рендера. Погода хранит '
+     'тумана; RENDER_SCALE=100 - прежнее разрешение рендера; NOKIA_BLIT=0 - '
+     'прежний вывод кадра через g.drawRGB даже на Nokia. Погода хранит '
      'координаты в int Q8 (1/256 пиксела) без ключа - единственное '
      'субпиксельное отличие набора A.'),
     ('B. Ничего не менять (рекомендуется)',
@@ -595,6 +633,10 @@ LOSE_TABLE = [
     ('RENDER_SCALE=50...75', '3D-сцена рисуется в меньшем разрешении и '
                              'растягивается nearest-ом: картинка «крупнее '
                              'зерном». HUD, прицел и тексты остаются чёткими.'),
+    ('NOKIA_BLIT=1', 'Ничего: drawPixels выводит пиксел-в-пиксел то же, что '
+                     'drawRGB (та же адресация и смысл transparency). На '
+                     'не-Nokia аппаратах автоматический откат; при сомнениях '
+                     '- NOKIA_BLIT=0.'),
 ]
 
 
@@ -867,7 +909,7 @@ def build(path):
     # ---------------- 2. Сводная таблица ----------------
     f.append(Paragraph('2. Сводная таблица ключей', st['h1']))
     f.append(Paragraph(
-        'Двенадцать новых ключей. «ARM9» и «FAST/AUTO» - значения по умолчанию '
+        'Тринадцать новых ключей. «ARM9» и «FAST/AUTO» - значения по умолчанию '
         'на соответствующем профиле; явный ключ в файле перекрывает их в обоих '
         'случаях.', st['body']))
     rows = [[Paragraph('Ключ', st['head']), Paragraph('Значения', st['head']),
