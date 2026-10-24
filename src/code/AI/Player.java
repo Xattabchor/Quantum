@@ -12,7 +12,6 @@ import code.HUD.Base.HUDInfo;
 import code.HUD.DeveloperMenu;
 import code.Math.Matrix;
 import code.Math.Vector3D;
-import code.Rendering.Camera;
 import code.Rendering.DirectX7;
 import code.utils.Asset;
 import code.utils.FrameClock;
@@ -29,10 +28,6 @@ public final class Player extends GameObject {
     
     public static Vector toAddOnStart = new Vector();
     public static Vector usedPoints = new Vector();
-    /** Общий буфер направления ходьбы: walk() вызывается каждый кадр, а
-     *  Character.moveFree() только читает вектор (speed.add) и не сохраняет
-     *  ссылку, поэтому аллокация на кадр не нужна. */
-    private static final Vector3D walkDir = new Vector3D();
     
     public int money = 0;
     public int frags = 0;
@@ -50,16 +45,13 @@ public final class Player extends GameObject {
     
     public ItemList items;
     
-    int walkFrame, attackFrame, muzzleFrame;
-    Camera cam;
-	
-	TPPose scenePose;
+    int walkFrame, attackFrame;
     
-    public Player(int wG3D, int hG3D, Vector3D pos, Object hudInfo, TPPose scenePose) {
-        set(wG3D, hG3D, pos, hudInfo, scenePose);
+    public Player(int wG3D, int hG3D, Vector3D pos, Object hudInfo) {
+        set(wG3D, hG3D, pos, hudInfo);
     }
 
-    public final void set(int wG3D, int hG3D, Vector3D pos, Object hudInfo, TPPose scenePose) {
+    public final void set(int wG3D, int hG3D, Vector3D pos, Object hudInfo) {
         name = "PLAYER";
         character.reset();
         character.getTransform().setPosition(0, 0, 0);
@@ -93,15 +85,6 @@ public final class Player extends GameObject {
         character.fly = (DeveloperMenu.fly > 0);
         walkFrame = 0;
         attackFrame = Integer.MAX_VALUE;
-        muzzleFrame = 0;
-		this.scenePose = scenePose;
-        if(currentPose() != null) {
-            cam = new Camera();
-            if(TPPose.meshPoses != null) TPPose.applyRenderModes(TPPose.meshPoses);
-            if(scenePose != null) TPPose.applyRenderModes(new TPPose[]{scenePose});
-            if(TPPose.radius != 0) setCharacterSize(TPPose.radius, TPPose.height);
-        }
-		
 		if(radiusOverwrite != -1) character.set(radiusOverwrite, character.getHeight());
 		if(heightOverwrite != -1) character.set(character.getRadius(), heightOverwrite);
     }
@@ -112,10 +95,6 @@ public final class Player extends GameObject {
 
     public final void render(DirectX7 g3d, int x1, int y1, int x2, int y2) {
         if(arsenal.currentWeapon() != null) arsenal.currentWeapon().renderSplinter(g3d);
-        
-        if(currentPose() != null) {
-            currentPose().draw(this, g3d, x1, y1, x2, y2);
-        }
     }
     
     public void nextWeapon() {
@@ -123,7 +102,6 @@ public final class Player extends GameObject {
         arsenal.next();
         if(old != arsenal.current) {
             attackFrame = Integer.MAX_VALUE;
-            muzzleFrame = 0;
         }
     }
     public void previousWeapon() {
@@ -131,7 +109,6 @@ public final class Player extends GameObject {
         arsenal.previous();
         if(old != arsenal.current) {
             attackFrame = Integer.MAX_VALUE;
-            muzzleFrame = 0;
         }
     }
 
@@ -173,117 +150,44 @@ public final class Player extends GameObject {
             }
         }
 		
-		if(cam != null) {
-            if(currentPose() != null) currentPose().update(cam, this);
-			cam.calcPart(scene.getHouse());
-			if(cam.getPart() == -1 && getPart() != -1) cam.setPart(getPart());
-		}
     }
     
-    public TPPose currentPose() {
-		if(scenePose != null) return scenePose;
-        if(TPPose.meshPoses == null) return null;
-        Weapon wp = arsenal.currentWeapon();
-        
-        if(wp == null) return TPPose.meshPoses[0];
-        return TPPose.meshPoses[wp.playerPose];
-    }
+    // Вид от третьего лица (TPPose, thirdperson.txt) вырезан полностью:
+    // методы возвращают прежние дефолты первого лица.
+    public boolean canWalk() { return true; }
     
-    public boolean canWalk() {
-        TPPose tppose = currentPose();
-        if(tppose == null) return true;
-        return tppose.canWalk(this);
-    }
+    public boolean canJump() { return true; }
     
-    public boolean canJump() {
-        TPPose tppose = currentPose();
-        if(tppose == null) return true;
-        return tppose.canJump(this);
-    }
+    public boolean canLookX() { return true; }
     
-    public boolean canLookX() {
-        TPPose tppose = currentPose();
-        if(tppose == null) return true;
-        return tppose.canLookX(this);
-    }
+    public boolean canLookY() { return true; }
     
-    public boolean canLookY() {
-        TPPose tppose = currentPose();
-        if(tppose == null) return true;
-        return tppose.canLookY(this);
-    }
+    public boolean canAttack() { return true; }
     
-    public boolean canAttack() {
-        TPPose tppose = currentPose();
-        if(tppose == null) return true;
-        return tppose.canAttack(this);
-    }
+    public boolean canAttackSight() { return true; }
     
-    public boolean canAttackSight() {
-        TPPose tppose = currentPose();
-        if(tppose == null) return true;
-        return tppose.canAttackSight;
-    }
+    public boolean canAttackNoSight() { return true; }
     
-    public boolean canAttackNoSight() {
-        TPPose tppose = currentPose();
-        if(tppose == null) return true;
-        return tppose.canAttack;
-    }
+    public boolean isSwapStrafeLook() { return false; }
     
-    public boolean isSwapStrafeLook() {
-        TPPose tppose = currentPose();
-        if(tppose == null) return false;
-        return tppose.isSwapStrafeLook(this);
-    }
+    public boolean isRotToWalkDir() { return false; }
     
-    public boolean isRotToWalkDir() {
-        TPPose tppose = currentPose();
-        if(tppose == null) return false;
-        return tppose.isRotToWalkDir(this);
-    }
+    public boolean show2D() { return true; }
     
-    public boolean show2D() {
-        TPPose tppose = currentPose();
-        if(tppose == null) return true;
-        return tppose.show2D(this);
-    }
+    public float lookSpeed() { return (zoom ? 0.71f : 1f); }
     
-    public float lookSpeed() {
-        TPPose tppose = currentPose();
-        if(tppose == null) return (zoom ? 0.71f : 1f);
-        return tppose.lookSpeed(this);
-    }
-    
-    public int walkSpeed() {
-        TPPose tppose = currentPose();
-        if(tppose == null) return walkSpeed;
-        return tppose.walkSpeed(this);
-    }
+    public int walkSpeed() { return walkSpeed; }
     
     public void setCamera(DirectX7 g3d) {
         Matrix playerMat = character.getTransform();
         int playerHeight = getEyesHeight();
-        if(cam == null) {
-            playerMat.m13 += playerHeight;
-            g3d.setCamera(playerMat);
-            playerMat.m13 -= playerHeight;
-        } else {
-            g3d.setCamera(cam.getCamera());
-        }
-    }
-    
-    public Camera getCamera() {
-        return cam;
+        playerMat.m13 += playerHeight;
+        g3d.setCamera(playerMat);
+        playerMat.m13 -= playerHeight;
     }
     
     public int getRenderPart(Scene scene) {
-        if(cam == null) {
-            return getPart();
-        } else {
-            //cam.calcPart(scene.getHouse());
-            return cam.getPart();
-        }
+        return getPart();
     }
     
     public int getEyesHeight() {
@@ -323,8 +227,6 @@ public final class Player extends GameObject {
         if(arsenal.current != -1 && canAttack()) {
             if(arsenal.currentWeapon().fire(g3d)) {
                 attackFrame = 0;
-                TPPose tp = currentPose();
-                if(tp != null) muzzleFrame = tp.muzzleFlashTimer;
             }
         }
     }
@@ -390,32 +292,11 @@ public final class Player extends GameObject {
 		int walkSpeed = walkSpeed();
 		if(character.fly) walkSpeed = walkSpeed * 7 / 3;
 		
-		if(cam != null && isRotToWalkDir()) {
-			float modelRot = cam.currentRotY;
-			if(forward < 0) modelRot += 180;
-			modelRot -= right*90/(forward!=0?(forward>0?2:-2):1);
-			
-			// ARM9: два double-вызова Math.sin/Math.cos (эмуляция FPU, сотни
-			// тактов каждый) и аллокация Vector3D на каждый кадр ходьбы
-			// заменены целочисленной таблицей Matrix.sin/cos - той самой,
-			// которой updateMatrix() строит матрицу модели, поэтому вектор
-			// движения согласован с поворотом модели (угол приводится к целым
-			// градусам так же, как это делает Matrix.rotateY()).
-			int deg = (int) modelRot;
-			walkDir.set(-Matrix.sin(deg) * walkSpeed / Matrix.FP, 0,
-			            -Matrix.cos(deg) * walkSpeed / Matrix.FP);
-			Vector3D dir = walkDir;
-			
-			if(character.fly || character.onFloor) {
-				rotateY = modelRot;
-				updateMatrix();
-				
-				character.moveFree(dir);
-			}
-		} else {
-			character.moveZ(-walkSpeed * forward);
-			character.moveX(walkSpeed * right);
-		}
+		// Ветка третьего лица (поворот модели к направлению ходьбы через
+		// cam.currentRotY) вырезана вместе с TPPose - осталось движение
+		// от первого лица.
+		character.moveZ(-walkSpeed * forward);
+		character.moveX(walkSpeed * right);
 		
 		if((forward != 0 || right != 0) && arsenal.currentWeapon() != null) arsenal.currentWeapon().enableShake();
 	}

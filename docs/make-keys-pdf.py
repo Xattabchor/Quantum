@@ -466,12 +466,6 @@ ALWAYS_ON = [
     ('Бюджетный гибрид сортировки по глубине',
      'сортировка полигонов в кадре',
      'бит-в-бит: 63 случая, 0 расхождений (docs/verify/test_sort.py)'),
-    ('Табличная тригонометрия в Player.walk()',
-     'Matrix.sin()/Matrix.cos() и общий буфер walkDir вместо Math.sin/cos над '
-     'double и new Vector3D() на каждый кадр ходьбы',
-     'направление отличается не более чем на 0,9533 градуса (шаг таблицы 1 '
-     'градус), компоненты в пределах max(1, 2 % walkSpeed + 1); 403 214 '
-     'комбинаций, 51,45 % совпадают бит-в-бит (docs/verify/test_walk.py)'),
     ('RenderObject.kind вместо instanceof',
      '13 мест в рендере и сортировке',
      'бит-в-бит: поле ставится в конструкторе после super()'),
@@ -999,14 +993,13 @@ def build(path):
         'docs/verify/test_fastmath_java.py (0 расхождений на 6 312 931 значении), '
         'test_light.py (отклонение 3 и 4 из 255), test_room_div.py (3020 пар, 0), '
         'test_sort.py (63 случая, 0), test_cull.py (182 187 случаев, 0 ошибочных '
-        'отсечений), test_walk.py (403 214 комбинаций, направление 0,9533 '
-        'градуса), test_qct.py (round-trip и загрузчик движка побитово), '
+        'отсечений), test_qct.py (round-trip и загрузчик движка побитово), '
         'test_setup_math.py (div255/div50/градиенты - 0 расхождений, туман '
         '+/-1 из 255, погода Q8 - инварианты 400 кадров).',
         'Сборка JAR и проверка препроверки: docs/j2me-build/README.md, '
-        'docs/j2me-build/build-j2me.sh, docs/j2me-build/check-jar.py (764 '
+        'docs/j2me-build/build-j2me.sh, docs/j2me-build/check-jar.py (732 '
         'атрибутов StackMap, 0 StackMapTable, version 48).',
-        'Полное описание всех изменений: docs/ARM9.md (разделы 3.2, 7, 9.1-9.9).',
+        'Полное описание всех изменений: docs/ARM9.md (разделы 3.2, 7, 9.1-9.9, 11-12).',
     ]:
         f.append(Paragraph(esc(t), st['bullet'], bulletText='-'))
 

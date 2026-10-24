@@ -20,7 +20,6 @@ import code.AI.Player;
 import code.AI.BigZombie;
 import code.AI.NPC;
 import code.AI.Bot;
-import code.AI.TPPose;
 import code.AI.Zombie;
 import code.utils.WeatherGenerator;
 import code.utils.Asset;
@@ -76,8 +75,6 @@ public class LevelLoader {
    }
 
     public static final Scene createScene(int width, int height, String file, Main main, GameScreen gs) {
-        if(!TPPose.inited) TPPose.init();
-		
         String file2 = StringTools.getStringFromResource(file);
         String oldF = file2;
         
@@ -496,9 +493,8 @@ public class LevelLoader {
             
         }
 		
-		scene.camPose = null;
-		str = getString("SCENE_CAMERA_POSE", lvl, setting);
-		if(str != null) scene.camPose = TPPose.loadPoseExternal(str);
+		// SCENE_CAMERA_POSE игнорируется: вид от третьего лица вырезан,
+		// камера всегда от первого лица (level.ini оригинала безопасен).
         
         return scene;
    }

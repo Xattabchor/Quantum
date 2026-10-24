@@ -620,7 +620,7 @@ T=~/tools/j2me SRC=. JAVA=java sh docs/j2me-build/build-j2me.sh # собрать
 Проверка собранного JAR встроена в скрипт: манифест должен быть первой записью,
 все классы — версии 48, атрибутов `StackMapTable` (Java 6+, KVM их не понимает)
 быть не должно, класс MIDlet обязан присутствовать, размер в JAD — совпадать.
-Фактически в собранном JAR 764 атрибута `StackMap` на 118 классов и 0
+Фактически в собранном JAR 732 атрибута `StackMap` на 116 классов и 0
 `StackMapTable`, записей `javax/` нет (заглушка JSR-75 в архив не попала).
 
 Готовые артефакты складываются в `artifacts/` (`Quantum.jar`, `Quantum.jad`,
@@ -694,6 +694,11 @@ the moment»), поэтому собранный JAR содержит тольк
 
 ### 9.2 Тригонометрия в `Player.walk()`
 
+> **Устарело (§12):** оптимизированная ветка выполнялась только при виде от
+> третьего лица (`cam != null && isRotToWalkDir()`) и вырезана вместе с ним;
+> `docs/verify/test_walk.py` удалён. Таблица `Matrix.sin/cos` осталась -
+> её по-прежнему использует `updateMatrix()`. Раздел сохранён как история.
+
 Было: два вызова `Math.sin`/`Math.cos` над `double` (на ARM9 — программная
 эмуляция FPU, сотни тактов на вызов) плюс `new Vector3D(...)` на **каждый кадр
 ходьбы**:
@@ -743,7 +748,6 @@ python3 docs/verify/test_light.py           # отклонение <= 3 и <= 4 
 python3 docs/verify/test_room_div.py        # 3020 пар, 0 расхождений
 python3 docs/verify/test_sort.py            # 63 случая, 0 расхождений
 python3 docs/verify/test_cull.py            # 182187 случаев, 0 ошибочных отсечений
-python3 docs/verify/test_walk.py            # направление <= 0.9533 градуса
 python3 docs/verify/test_qct.py             # QCT: round-trip + загрузчик движка
 python3 docs/verify/test_setup_math.py      # setup без idiv + погода Q8 (§11)
 ```
@@ -840,7 +844,6 @@ python3 docs/verify/test_setup_math.py      # setup без idiv + погода Q
 
 ```
 docs/verify/test_cull.py          182187 случаев, 0 ошибочных отсечений
-docs/verify/test_walk.py          403214 комбинаций, направление <= 0.9533 градуса
 docs/verify/test_fastmath_java.py 6312931 значение для div100, 0 расхождений
 ```
 
@@ -1070,3 +1073,65 @@ DirectGraphics с `drawPixels` - только для аппаратов с `com.
 (деление на шаг коррекции) уже управляется `PERSPECTIVE_STEP`; очередь
 `Vector` в `Dijkstra` влияет только на пересчёт маршрутов NPC, который и так
 ограничен `AI_LOD`/`AI_LOD_DIST`.
+
+## 12. Вид от третьего лица вырезан полностью
+
+По запросу удалён весь код позы/камеры третьего лица игрока: вид всегда от
+первого лица. На данных оригинала это ничего не отключает - поза грузилась
+только из `/thirdperson.txt`, а без этого файла `TPPose.meshPoses == null`,
+`currentPose()` возвращал `null`, и вся механика и так не работала. Вырезание
+лишь убирает мёртвые на стоке проверки из горячих методов.
+
+### 12.1 Что удалено
+
+* `src/code/AI/TPPose.java` (432 строки: поза-меш, камера от третьего лица,
+  чтение `/thirdperson.txt`, флаги canWalk/canJump/..., `muzzleFlashTimer`).
+* `Player`: поля `cam`, `scenePose`, `muzzleFrame`, `walkDir`; методы
+  `currentPose()` и `getCamera()`; параметр `TPPose scenePose` из
+  конструктора и `set()`; инициализация камеры в `set()`; отрисовка позы в
+  `render()`; обновление `cam`/`calcPart` в `update()`; TPPose-ветка в
+  `setCamera()`; TPPose-ветка ходьбы (поворот модели к направлению движения)
+  в `walk()` - остались `moveZ/moveX` первого лица; `muzzleFrame =
+  tp.muzzleFlashTimer` в `fire()`; `muzzleFrame = 0` в `set()`,
+  `nextWeapon()`, `previousWeapon()`.
+* Методы-делегаты `Player` сохранены (их вызывают `GameScreen` и ввод) и
+  возвращают прежние дефолты первого лица (поведение при
+  `currentPose() == null`): `canWalk/canJump/canLookX/canLookY/canAttack/
+  canAttackSight/canAttackNoSight` -> `true`, `isSwapStrafeLook/
+  isRotToWalkDir` -> `false`, `show2D` -> `true`, `lookSpeed` ->
+  `zoom ? 0.71f : 1f`, `walkSpeed` -> поле `walkSpeed`.
+* `Scene.camPose`; `TPPose.init()` и чтение `SCENE_CAMERA_POSE` в
+  `LevelLoader`; `Weapon.playerPose` и чтение `PLAYER_POSE` в
+  `WeaponCreator`.
+* `GameScreen`: небо и освещение погоды всегда ориентированы по
+  `player.rotateX/rotateY` (ветки `player.getCamera()` удалены);
+  `new Player(...)` и `player.set(...)` без параметра позы.
+
+Класс `code.Rendering.Camera` в источниках остался (его используют
+закомментированные авторами блоки OBSERVER/`camFollow`), но из JAR его
+теперь выбрасывает shrink - единственным живым созданием `new Camera()`
+был `Player.cam`. `NPC.muzzleFlash*` не тронуты - это собственные поля NPC.
+
+### 12.2 Совместимость с файлами оригинала
+
+* Ключи `SCENE_CAMERA_POSE` (level.ini) и `PLAYER_POSE` (описания оружия)
+  по-прежнему безопасно разбираются и игнорируются - файлы оригинала
+  правок не требуют.
+* `/thirdperson.txt` больше не читается; его наличие или отсутствие на
+  поведение не влияет.
+* Поведение игры идентично стоковому запуску без `thirdperson.txt`.
+
+### 12.3 Результат и проверки
+
+* `Quantum.jar` 376 062 -> **364 920 байт** (-3,0 %), 116 классов
+  (исчезли `TPPose` и `Camera`), 732 атрибута `StackMap`, 0 `StackMapTable`
+  - `check-jar.py` зелёный, JAD обновлён.
+* Горячие методы игрока (`update`, `walk`, `render`, `fire`, `setCamera`)
+  больше не вызывают `currentPose()` и не содержат веток на `cam != null`:
+  меньше байткодов на кадр - на ARM9 это прямой выигрыш.
+* Оптимизация 9.2 (табличная тригонометрия `walk()`) жила только в
+  TPPose-ветке и удалена вместе с ней; `docs/verify/test_walk.py` удалён.
+  Остальные 7 проверок (`test_fastmath_java`, `test_light`, `test_room_div`,
+  `test_sort`, `test_cull`, `test_qct`, `test_setup_math`) проходят;
+  `test_setup_math` компилирует весь движок и подтверждает отсутствие
+  битых ссылок.

@@ -81,8 +81,6 @@ public final class Weapon {
     
     public boolean shootLight=true;
     
-    public int playerPose = 0;
-	
 	public float ammoPriceFactor = 1 / 3f;
 	public int ammoBundled = 100, ammoInShop = 100;
 

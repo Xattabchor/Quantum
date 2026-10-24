@@ -1,6 +1,5 @@
 package code.utils;
 
-import code.AI.TPPose;
 import code.Gameplay.Weapon;
 
 public class WeaponCreator {
@@ -77,18 +76,7 @@ public class WeaponCreator {
                     wp.hasZoom = snds[2] == 1;
                 }
                 
-                str = obj.get("PLAYER_POSE");
-                if(str != null && TPPose.meshPoses != null) {
-                    TPPose[] poses = TPPose.meshPoses;
-                    
-                    for(int x=0; x<poses.length; x++) {
-                        
-                        if(poses[x].poseName.equals(str)) {
-                            wp.playerPose = x;
-                            break;
-                        }
-                    }
-                }
+                // PLAYER_POSE игнорируется: вид от третьего лица вырезан.
 				
                 str = obj.get("AMMO_PRICE_PERCENTAGE");
 				if(str != null) wp.ammoPriceFactor = StringTools.parseFloat(str) / 100f;

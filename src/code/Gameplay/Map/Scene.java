@@ -7,7 +7,6 @@ import code.AI.misc.Corpse;
 import code.AI.BigZombie;
 import code.Math.Matrix;
 import code.AI.Player;
-import code.AI.TPPose;
 import code.Gameplay.GameScreen;
 import code.Gameplay.Objects.ItemsBag;
 import code.Gameplay.Objects.NPCSpawner;
@@ -53,8 +52,6 @@ public class Scene {
    
    public Vector scriptsToExec;
    
-   public TPPose camPose;
-
     public Scene(int width, int height, House house, Respawn start, Respawn finish, Respawn[] enemies, int max_enemy_count, int frequency, Main main, int zombie_count, boolean genWays) {
         alwaysExit = false;
         random = new Random();

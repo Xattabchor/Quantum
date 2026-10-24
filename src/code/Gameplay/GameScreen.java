@@ -132,7 +132,7 @@ public final class GameScreen extends MyCanvas {
             e.printStackTrace();
         }
 
-        player = new Player(scene.getG3D().getWidth(), (int) (height * (Main.getDisplaySize() / 100.0F)), scene.getStartPoint(), hudInfo, scene.camPose);
+        player = new Player(scene.getG3D().getWidth(), (int) (height * (Main.getDisplaySize() / 100.0F)), scene.getStartPoint(), hudInfo);
         if(!Main.isLastLevel(levelNumber)) {
             String st = (new IniFile(StringTools.getStringFromResource("/level" + (levelNumber+1) + ".txt"), false)).get("START");
 
@@ -411,14 +411,10 @@ public final class GameScreen extends MyCanvas {
                     sky.lastLighting = wg.lastLighting;
                 }
 				
-				Camera cam = player.getCamera();
-				if(cam != null) {
-					sky.rotateX = cam.currentRotX;
-					sky.rotateY = cam.currentRotY;
-				} else {
-					sky.rotateX = player.rotateX;
-					sky.rotateY = player.rotateY;
-				}
+				// Небо всегда ориентировано по взгляду игрока: камера третьего
+				// лица (getCamera) вырезана вместе с TPPose.
+				sky.rotateX = player.rotateX;
+				sky.rotateY = player.rotateY;
             }
             
             if(!House.l2dRoomRendering) {
@@ -432,8 +428,7 @@ public final class GameScreen extends MyCanvas {
             if(g3d.shootIntensity < 0) g3d.shootIntensity = 0;
             
             if(lighting && !player.character.underRoof && wg != null) {
-				Camera cam = player.getCamera();
-				wg.lightingEffect(g3d, cam != null ? cam.currentRotX : player.rotateX);
+				wg.lightingEffect(g3d, player.rotateX);
 			}
 
             if(vignette != null && DeviceProfile.postFx) applyVignette(g3d.getDisplay()); //maybe i should remove all these vignette stuff?
@@ -1119,7 +1114,7 @@ public final class GameScreen extends MyCanvas {
         scene.reset();
         player.setPart(-1);
         time = 0;
-        player.set(scene.getG3D().getWidth(), scene.getG3D().getHeight(), scene.getStartPoint(), hudInfo, scene.camPose);
+        player.set(scene.getG3D().getWidth(), scene.getG3D().getHeight(), scene.getStartPoint(), hudInfo);
         
         if(Main.getContinueLevel() == levelNumber) {
             Main.loadGame(player, width, height, scene);
