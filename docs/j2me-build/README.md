@@ -5,9 +5,14 @@
 Собранный и препроверенный MIDlet сохранён в `artifacts/`, чтобы его можно было
 скачать прямо из GitHub, не собирая проект:
 
-* файл в дереве: <https://github.com/Xattabchor/Quantum/blob/arena/50252a64-quantum/artifacts/Quantum.jar>
-* прямая загрузка: <https://github.com/Xattabchor/Quantum/raw/arena/50252a64-quantum/artifacts/Quantum.jar>
-* JAD: <https://github.com/Xattabchor/Quantum/raw/arena/50252a64-quantum/artifacts/Quantum.jad>
+* файл в дереве: <https://github.com/Xattabchor/Quantum/blob/arena/50252a64-quantum/artifacts/QuantumOptimize.jar>
+* прямая загрузка: <https://github.com/Xattabchor/Quantum/raw/arena/50252a64-quantum/artifacts/QuantumOptimize.jar>
+* JAD: <https://github.com/Xattabchor/Quantum/raw/arena/50252a64-quantum/artifacts/QuantumOptimize.jad>
+
+Имя приложения в меню телефона - «Quantum Optimize» (`MIDlet-Name` и подпись
+`MIDlet-1` переписывает скрипт сборки); имена файлов без пробела -
+`QuantumOptimize.jar`/`.jad`, чтобы ссылки и OTA-установка не требовали
+экранирования.
 
 После слияния ветки в `master` те же ссылки работают с `master` вместо имени
 ветки. Рядом с JAR нужен `.jad` только для установки по HTTP; при установке
@@ -62,10 +67,10 @@ base64-содержимым в ответе contents API, большие (ProGua
 |------|-----------|
 | `build/<config>/compiled/` | классы после ECJ (class file version 48) |
 | `build/<config>/preverified/` | классы после препроверки (атрибуты `StackMap`) |
-| `dist/Quantum.jar`, `dist/Quantum.jad` | готовый MIDlet; атрибуты манифеста берутся из `nbproject/project.properties` |
+| `dist/QuantumOptimize.jar`, `dist/QuantumOptimize.jad` | готовый MIDlet; атрибуты манифеста берутся из `nbproject/project.properties` |
 
 `build/` и `dist/` уже в `.gitignore`; из `artifacts/` в репозиторий попадают
-только `Quantum.jar` и `Quantum.jad` (ZIP с промежуточными классами игнорируется).
+только `QuantumOptimize.jar` и `QuantumOptimize.jad` (ZIP с промежуточными классами игнорируется).
 Скрипт сам проверяет собранный JAR:
 манифест первой записью, все классы версии 48, нет атрибутов `StackMapTable`
 (их KVM не понимает), класс MIDlet на месте, размер в JAD совпадает.
@@ -74,7 +79,7 @@ base64-содержимым в ответе contents API, большие (ProGua
 (сверка с банками из `--lib`) и согласованность манифеста с JAD:
 
 ```sh
-python3 check-jar.py ../../dist/Quantum.jar \
+python3 check-jar.py ../../dist/QuantumOptimize.jar \
     --lib $T/lib/cldc_1.1.jar --lib $T/lib/midp_2.0.jar \
     --lib $T/lib/jsr184_1.1.jar --lib $T/lib/jsr075_stub.jar
 ```
@@ -82,7 +87,7 @@ python3 check-jar.py ../../dist/Quantum.jar \
 Препроверка настоящая, а не номинальная: в собранном JAR 732 атрибута
 `StackMap` на 116 классов и 0 атрибутов `StackMapTable`. ProGuard работает со
 shrink+optimize (рефлексии в коде нет, MIDlet-класс закреплён `-keep`,
-обфускация выключена): Quantum.jar 423 575 -> 364 920 байт (после shrink и
+обфускация выключена): JAR 423 575 -> 364 920 байт (после shrink и
 вырезанных подсистем - звука ходьбы, снега, вида от третьего лица). Сама заглушка JSR-75 в
 JAR не попадает (проверка: в архиве нет записей `javax/`).
 
@@ -99,5 +104,5 @@ JAR не попадает (проверка: в архиве нет записе
 Подробности и обоснования — в `docs/ARM9.md`, раздел 8.
 
 Готовые артефакты текущей сборки лежат в `artifacts/` (тоже в `.gitignore`):
-`Quantum.jar`, `Quantum.jad` и `preverified-classes.zip` — каталог
+`QuantumOptimize.jar`, `QuantumOptimize.jad` и `preverified-classes.zip` — каталог
 `build/<config>/preverified/` одним файлом.

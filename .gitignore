@@ -3,10 +3,10 @@ dist
 nbproject/private
 Thumbs.db
 # артефакты сборки: ZIP с промежуточными классами игнорируем,
-# но готовые Quantum.jar / Quantum.jad храним в репозитории
+# но готовые QuantumOptimize.jar / .jad храним в репозитории
 artifacts/*
-!artifacts/Quantum.jar
-!artifacts/Quantum.jad
+!artifacts/QuantumOptimize.jar
+!artifacts/QuantumOptimize.jad
 !artifacts/QctConverter.jar
 !artifacts/QctConverter.jad
 

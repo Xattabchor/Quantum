@@ -4,7 +4,7 @@
 # Цепочка та же, что в NetBeans:
 #   ECJ (-source/-target 1.4)  ->  build/<config>/compiled
 #   ProGuard -microedition     ->  build/<config>/preverified   (препроверка)
-#   упаковка                   ->  dist/Quantum.jar + dist/Quantum.jad
+#   упаковка                   ->  dist/QuantumOptimize.jar + dist/QuantumOptimize.jad
 #
 # Что нужно в $T/lib (см. get-toolchain.sh):
 #   ecj.jar           - Eclipse Compiler for Java (чистая Java, работает на JRE)
@@ -20,7 +20,10 @@ T=${T:-/home/user/tools/j2me}
 SRC=${SRC:-/home/user/Quantum}
 JAVA=${JAVA:-java}
 CONFIG=${CONFIG:-DefaultColorPhone}
-NAME=Quantum
+NAME=QuantumOptimize
+# Имя приложения в меню телефона (MIDlet-Name и подпись MIDlet-1).
+# Переписывается скриптом сборки, оригинальный nbproject не трогается.
+APPNAME='Quantum Optimize'
 
 BUILD="$SRC/build/$CONFIG"
 CLASSES="$BUILD/compiled"
@@ -67,10 +70,10 @@ EOF
 echo "классов после preverify: $(find "$PREVER" -name '*.class' | wc -l)"
 
 # 4. JAR + JAD (манифест берётся из nbproject/project.properties)
-python3 - "$SRC" "$PREVER" "$OUT" "$NAME" <<'PYEOF'
+python3 - "$SRC" "$PREVER" "$OUT" "$NAME" "$APPNAME" <<'PYEOF'
 import os, sys, zipfile
 
-SRC, PREVER, OUT, NAME = sys.argv[1:5]
+SRC, PREVER, OUT, NAME, APPNAME = sys.argv[1:6]
 props = {}
 with open(os.path.join(SRC, 'nbproject', 'project.properties'), encoding='utf-8') as f:
     for line in f:
@@ -101,12 +104,23 @@ for line in unescape(props.get('manifest.midlets', '')).split('\n'):
 for line in unescape(props.get('manifest.others', '')).split('\n'):
     add(line)
 # обязательные для MIDP атрибуты, которых в project.properties нет
-add('MIDlet-Name: Quantum')
+add('MIDlet-Name: %s' % APPNAME)
 add('MIDlet-Version: 1.0')
 add('MIDlet-Vendor: AE-MODS.RU')
 add('MicroEdition-Configuration: CLDC-1.1')
 add('MicroEdition-Profile: MIDP-2.0')
 add('MIDlet-Jar-URL: %s.jar' % NAME)
+
+# Имя сборки: переписываем MIDlet-Name и подпись MIDlet-1 на APPNAME
+# («Quantum Optimize»), не меняя nbproject/project.properties.
+for i, line in enumerate(mf):
+    if line.startswith('MIDlet-Name:'):
+        mf[i] = 'MIDlet-Name: %s' % APPNAME
+    elif line.startswith('MIDlet-1:'):
+        parts = line.split(':', 1)[1].split(',')
+        parts[0] = ' %s' % APPNAME
+        mf[i] = 'MIDlet-1:' + ','.join(parts)
+
 manifest = '\r\n'.join(mf) + '\r\n\r\n'
 
 jar = os.path.join(OUT, '%s.jar' % NAME)
@@ -170,7 +184,7 @@ print('самопроверка JAR: OK')
 PYEOF
 
 # 5. Копия в artifacts/ - именно оттуда JAR скачивается по ссылке из GitHub
-#    (build/ и dist/ в .gitignore; artifacts/Quantum.jar и .jad - нет)
+#    (build/ и dist/ в .gitignore; artifacts/QuantumOptimize.jar и .jad - нет)
 ART="$SRC/artifacts"
 mkdir -p "$ART"
 cp "$OUT/$NAME.jar" "$OUT/$NAME.jad" "$ART/"

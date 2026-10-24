@@ -614,7 +614,7 @@ MIDlet нужен JDK и препроверщик (preverify) из Wireless Tool
 
 ```sh
 T=~/tools/j2me JAVA=java sh docs/j2me-build/get-toolchain.sh   # скачать инструменты
-T=~/tools/j2me SRC=. JAVA=java sh docs/j2me-build/build-j2me.sh # собрать dist/Quantum.jar
+T=~/tools/j2me SRC=. JAVA=java sh docs/j2me-build/build-j2me.sh # собрать dist/QuantumOptimize.jar
 ```
 
 Проверка собранного JAR встроена в скрипт: манифест должен быть первой записью,
@@ -623,8 +623,8 @@ T=~/tools/j2me SRC=. JAVA=java sh docs/j2me-build/build-j2me.sh # собрать
 Фактически в собранном JAR 732 атрибута `StackMap` на 116 классов и 0
 `StackMapTable`, записей `javax/` нет (заглушка JSR-75 в архив не попала).
 
-Готовые артефакты складываются в `artifacts/` (`Quantum.jar`, `Quantum.jad`,
-`preverified-classes.zip`); `build/`, `dist/` и `artifacts/` — в `.gitignore`.
+Готовые артефакты складываются в `artifacts/` (`QuantumOptimize.jar`,
+`QuantumOptimize.jad`, `preverified-classes.zip`); `build/`, `dist/` и `artifacts/` — в `.gitignore`.
 
 `get-toolchain.sh` качает банки из публичных репозиториев GitHub через API:
 файлы меньше 1 МиБ приходят base64-содержимым в ответе contents API, большие —
@@ -1126,6 +1126,11 @@ DirectGraphics с `drawPixels` - только для аппаратов с `com.
 * `Quantum.jar` 376 062 -> **364 920 байт** (-3,0 %), 116 классов
   (исчезли `TPPose` и `Camera`), 732 атрибута `StackMap`, 0 `StackMapTable`
   - `check-jar.py` зелёный, JAD обновлён.
+* Сборка переименована: артефакты `QuantumOptimize.jar`/`.jad` (имена файлов
+  без пробела - URL/OTA без экранирования), имя приложения в меню телефона
+  - «Quantum Optimize» (`MIDlet-Name` и подпись `MIDlet-1` переписывает
+  `build-j2me.sh`; оригинальный `nbproject/project.properties` не изменён,
+  класс MIDlet и структура архива прежние).
 * Горячие методы игрока (`update`, `walk`, `render`, `fire`, `setCamera`)
   больше не вызывают `currentPose()` и не содержат веток на `cam != null`:
   меньше байткодов на кадр - на ARM9 это прямой выигрыш.
