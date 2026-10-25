@@ -22,7 +22,9 @@ this directory. The package is self-signed for legacy Symbian testing; this
 does not bypass the handset's installation policy.
 
 The host Level 41 mesh-renderer smoke path remains separate. A successful host
-render or a successful SIS build does not establish that the package installs,
-that the E65 runtime supports every import, or that the renderer performs well
-on device. Until the E65 test is reported, this candidate is not device-verified
-and does not imply support for every S60v3 model.
+render or SIS build does not establish handset runtime compatibility. The first
+E65 launch attempt for package version 1.0.0 reached the menu entry but showed
+“Feature not supported” when selected. Version 1.0.1 opens its window before
+loading/rendering and reduces temporary texture memory; it still requires a
+fresh E65 launch test. Neither version is considered device-verified, and this
+test does not imply support for every S60v3 model.

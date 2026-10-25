@@ -39,6 +39,13 @@ const TInt KMaximumTextureWidth = 256;
 const TInt KMaximumTextureHeight = 256;
 const TInt KMaximumTexturePixels = KMaximumTextureWidth * KMaximumTextureHeight;
 const TInt KMaximumTextureFileBytes = 8 + KMaximumTexturePixels * 4;
+const TInt KForestTexturePixels = 256 * 128;
+const TInt KMapTexturePixels = 256 * 256;
+const TInt KRiverTexturePixels = 32 * 32;
+const TInt KSkyTexturePixels = 256 * 256;
+const TInt KTextureStoragePixels =
+    KForestTexturePixels + KMapTexturePixels + KRiverTexturePixels +
+    KSkyTexturePixels + KRenderWidth * KRenderHeight;
 const TInt KMaximumWorldFileBytes = 60000;
 const TInt KMaximumLightmapBytes = 12000;
 const TInt KMaximumSkyboxFileBytes = 2048;
@@ -137,6 +144,7 @@ bool loadTexture(RFs& fileServer,
                  const TDesC& drive,
                  const TDesC& filename,
                  QInt32* pixels,
+                 TInt pixelCapacity,
                  TextureInfo& info)
 {
     TInt length = 0;
@@ -157,7 +165,7 @@ bool loadTexture(RFs& fileServer,
 
     const TInt pixelCount = info.width * info.height;
     const TInt expectedLength = 8 + pixelCount * 4;
-    if (length != expectedLength) return false;
+    if (pixelCount > pixelCapacity || length != expectedLength) return false;
 
     TInt pixelIndex;
     for (pixelIndex = 0; pixelIndex < pixelCount; ++pixelIndex) {
@@ -300,12 +308,17 @@ bool renderLevel41(RFs& fileServer, const TDesC& drive)
     TextureInfo river;
     TextureInfo sky;
     if (!loadTexture(fileServer, drive, _L("forest.qtx"),
-                     gForestPixels, forest) ||
-        !loadTexture(fileServer, drive, _L("map.qtx"), gMapPixels, map) ||
-        !loadTexture(fileServer, drive, _L("river.qtx"), gRiverPixels, river) ||
-        !loadTexture(fileServer, drive, _L("sky.qtx"), gSkyPixels, sky) ||
-        sky.width != KMaximumTextureWidth ||
-        sky.height != KMaximumTextureHeight) {
+                     gForestPixels, KForestTexturePixels, forest) ||
+        !loadTexture(fileServer, drive, _L("map.qtx"), gMapPixels,
+                     KMapTexturePixels, map) ||
+        !loadTexture(fileServer, drive, _L("river.qtx"), gRiverPixels,
+                     KRiverTexturePixels, river) ||
+        !loadTexture(fileServer, drive, _L("sky.qtx"), gSkyPixels,
+                     KSkyTexturePixels, sky) ||
+        forest.width != 256 || forest.height != 128 ||
+        map.width != 256 || map.height != 256 ||
+        river.width != 32 || river.height != 32 ||
+        sky.width != 256 || sky.height != 256) {
         return false;
     }
     setupWorldMaterials(forest, map, river);
@@ -369,6 +382,28 @@ bool renderLevel41(RFs& fileServer, const TDesC& drive)
     gPolygonsDrawn = stats.polygonsDrawn;
     gTrianglesDrawn = stats.trianglesDrawn;
     return true;
+}
+
+void drawStartup(CWsScreenDevice& screen, CWindowGc& gc,
+                 const TSize& size)
+{
+    gc.SetBrushStyle(CGraphicsContext::ESolidBrush);
+    gc.SetPenStyle(CGraphicsContext::ENullPen);
+    gc.SetBrushColor(TRgb(8, 12, 20));
+    gc.Clear(TRect(TPoint(0, 0), size));
+    gc.SetPenStyle(CGraphicsContext::ESolidPen);
+    gc.SetPenColor(TRgb(255, 255, 255));
+    CFont* font = 0;
+    if (screen.GetNearestFontInPixels(font, TFontSpec(_L("Series 60 Sans"), 12)) == KErrNone) {
+        gc.UseFont(font);
+        gc.DrawText(_L("QUANTUM LEVEL 41"), TPoint(8, 32));
+        gc.DrawText(_L("Starting native renderer..."), TPoint(8, 58));
+        TBuf<40> display;
+        display.Format(_L("Display %d x %d"), size.iWidth, size.iHeight);
+        gc.DrawText(display, TPoint(8, 84));
+        gc.DiscardFont();
+        screen.ReleaseFont(font);
+    }
 }
 
 void drawFailure(CWsScreenDevice& screen, CWindowGc& gc,
@@ -446,14 +481,16 @@ void drawOutput(CWsScreenDevice& screen,
     }
 }
 
-TInt runWindow(RWsSession& session,
+TInt runWindow(RFs& fileServer,
+               const TDesC& drive,
+               RWsSession& session,
                CWsScreenDevice& screen,
                CWindowGc& gc)
 {
     const TSize size = screen.SizeInPixels();
-    if (size.iWidth < KRenderWidth || size.iHeight < KRenderHeight ||
+    if (size.iWidth <= 0 || size.iHeight <= 0 ||
         size.iWidth > 8192 || size.iHeight > 8192) {
-        return KErrNotSupported;
+        return KErrArgument;
     }
 
     RWindowGroup group(session);
@@ -479,7 +516,33 @@ TInt runWindow(RWsSession& session,
     window.Invalidate();
     session.Flush();
 
-    bool running = true;
+    // Publish an active window before loading and rendering the scene. This
+    // keeps the S60 launcher responsive while the fixed view is prepared.
+    User::WaitForRequest(redraws);
+    result = redraws.Int();
+    if (result == KErrNone) {
+        TWsRedrawEvent redraw;
+        session.GetRedraw(redraw);
+        if (redraw.Handle() == 2) {
+            window.BeginRedraw(redraw.Rect());
+            gc.Activate(window);
+            drawStartup(screen, gc, size);
+            gc.Deactivate();
+            window.EndRedraw();
+        }
+        session.RedrawReady(&redraws);
+        session.Flush();
+        User::After(250000);
+
+        if (gRenderStatus == KErrNone &&
+            !renderLevel41(fileServer, drive)) {
+            gRenderStatus = KErrCorrupt;
+        }
+        window.Invalidate();
+        session.Flush();
+    }
+
+    bool running = result == KErrNone;
     while (running) {
         User::WaitForRequest(events, redraws);
         if (events != KRequestPending) {
@@ -531,35 +594,33 @@ int main()
     CTrapCleanup* cleanup = CTrapCleanup::New();
     if (cleanup == 0) return KErrNoMemory;
 
-    const TInt textureStoragePixels =
-        4 * KMaximumTexturePixels + KRenderWidth * KRenderHeight;
     const TInt textureStorageBytes =
-        textureStoragePixels * static_cast<TInt>(sizeof(QInt32));
+        KTextureStoragePixels * static_cast<TInt>(sizeof(QInt32));
     gTextureStorage = static_cast<QInt32*>(User::Alloc(textureStorageBytes));
     if (gTextureStorage == 0) {
         gRenderStatus = KErrNoMemory;
     } else {
         gForestPixels = gTextureStorage;
-        gMapPixels = gForestPixels + KMaximumTexturePixels;
-        gRiverPixels = gMapPixels + KMaximumTexturePixels;
-        gSkyPixels = gRiverPixels + KMaximumTexturePixels;
-        gFramebuffer = gSkyPixels + KMaximumTexturePixels;
+        gMapPixels = gForestPixels + KForestTexturePixels;
+        gRiverPixels = gMapPixels + KMapTexturePixels;
+        gSkyPixels = gRiverPixels + KRiverTexturePixels;
+        gFramebuffer = gSkyPixels + KSkyTexturePixels;
     }
 
     RFs fileServer;
-    if (gRenderStatus == KErrNone) gRenderStatus = fileServer.Connect();
+    bool fileServerConnected = false;
+    TBuf<2> drive;
     if (gRenderStatus == KErrNone) {
-        const TFileName executable = RProcess().FileName();
-        if (executable.Length() < 2 || executable[1] != ':') {
-            gRenderStatus = KErrNotFound;
-        } else {
-            TBuf<2> drive;
-            drive.Copy(executable.Left(2));
-            if (!renderLevel41(fileServer, drive)) {
-                gRenderStatus = KErrCorrupt;
+        gRenderStatus = fileServer.Connect();
+        if (gRenderStatus == KErrNone) {
+            fileServerConnected = true;
+            const TFileName executable = RProcess().FileName();
+            if (executable.Length() < 2 || executable[1] != ':') {
+                gRenderStatus = KErrNotFound;
+            } else {
+                drive.Copy(executable.Left(2));
             }
         }
-        fileServer.Close();
     }
 
     TInt result = KErrNone;
@@ -571,11 +632,14 @@ int main()
         if (result == KErrNone) {
             CWindowGc gc(&screen);
             result = gc.Construct();
-            if (result == KErrNone) result = runWindow(session, screen, gc);
+            if (result == KErrNone) {
+                result = runWindow(fileServer, drive, session, screen, gc);
+            }
         }
         session.Close();
     }
 
+    if (fileServerConnected) fileServer.Close();
     if (gTextureStorage != 0) User::Free(gTextureStorage);
     delete cleanup;
     return result;
