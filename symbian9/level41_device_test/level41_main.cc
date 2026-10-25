@@ -447,7 +447,7 @@ void drawOutput(CWsScreenDevice& screen,
     gc.SetBrushStyle(CGraphicsContext::ESolidBrush);
     gc.SetPenStyle(CGraphicsContext::ENullPen);
     gc.SetBrushColor(TRgb(8, 12, 20));
-    gc.Clear(TRect(TPoint(0, 0), size));
+    gc.DrawRect(TRect(TPoint(0, 0), size));
 
     TInt y;
     for (y = 0; y < KRenderHeight; ++y) {
