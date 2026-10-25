@@ -133,7 +133,6 @@ jobs:
             echo "::error title=Level 41 E32 artifact::Expected output is missing or empty: $EXE"
             exit 1
           fi
-          echo "LEVEL41_E32=$EXE" >> "$GITHUB_ENV"
           symbian inspect --format e32 "$EXE" 2>&1 | tee "$RUNNER_TEMP/level41-e32-inspect.log"
 
       - name: Surface Level 41 build diagnostics
@@ -143,7 +142,9 @@ jobs:
           for log in \
             "$RUNNER_TEMP/level41-cmake-configure.log" \
             "$RUNNER_TEMP/level41-cmake-build.log" \
-            "$RUNNER_TEMP/level41-e32-inspect.log"; do
+            "$RUNNER_TEMP/level41-e32-inspect.log" \
+            "$RUNNER_TEMP/level41-assets.log" \
+            "$RUNNER_TEMP/level41-package-inputs.log"; do
             if [ -f "$log" ]; then
               while IFS= read -r line; do
                 echo "::error title=Level 41 build diagnostics::$line"
@@ -151,18 +152,44 @@ jobs:
             fi
           done
 
-      - name: Prepare compact Level 41 textures and SIS inputs
+      - name: Prepare compact Level 41 textures
         run: |
           set -euo pipefail
           PACKAGE="$RUNNER_TEMP/quantum-level41-package"
+          LOG="$RUNNER_TEMP/level41-assets.log"
           mkdir -p "$PACKAGE"
-          python "$GITHUB_WORKSPACE/symbian9/tools/prepare_level41_device_assets.py" --output "$PACKAGE"
-          python "$GITHUB_WORKSPACE/symbian9/tools/prepare_level41_package.py" \
-            --project "$GITHUB_WORKSPACE/symbian9/level41_device_test" \
-            --artifact "$LEVEL41_E32" \
-            --output "$PACKAGE"
+          if "$RUNNER_TEMP/symbian-venv/bin/python" \
+              "$GITHUB_WORKSPACE/symbian9/tools/prepare_level41_device_assets.py" \
+              --output "$PACKAGE" > "$LOG" 2>&1; then
+            cat "$LOG"
+          else
+            STATUS=$?
+            cat "$LOG"
+            DETAILS="$(tail -n 12 "$LOG" | tr '\r\n' ' ' | cut -c1-1800)"
+            echo "::error title=Level 41 texture preparation::exit=$STATUS; $DETAILS"
+            exit "$STATUS"
+          fi
+
+      - name: Prepare Level 41 SIS inputs
+        run: |
+          set -euo pipefail
+          PACKAGE="$RUNNER_TEMP/quantum-level41-package"
+          ARTIFACT="$RUNNER_TEMP/quantum-level41-build/level41_device_test/e32/quantum_level41_device_test.exe"
+          LOG="$RUNNER_TEMP/level41-package-inputs.log"
+          if "$RUNNER_TEMP/symbian-venv/bin/python" \
+              "$GITHUB_WORKSPACE/symbian9/tools/prepare_level41_package.py" \
+              --project "$GITHUB_WORKSPACE/symbian9/level41_device_test" \
+              --artifact "$ARTIFACT" \
+              --output "$PACKAGE" > "$LOG" 2>&1; then
+            cat "$LOG"
+          else
+            STATUS=$?
+            cat "$LOG"
+            DETAILS="$(tail -n 16 "$LOG" | tr '\r\n' ' ' | cut -c1-2200)"
+            echo "::error title=Level 41 SIS input preparation::exit=$STATUS; $DETAILS"
+            exit "$STATUS"
+          fi
           test -s "$PACKAGE/quantum_level41_device_test.pkg"
-          echo "LEVEL41_PACKAGE=$PACKAGE" >> "$GITHUB_ENV"
 
       - name: Build the legacy SIS v9 packer
         run: |
@@ -199,7 +226,7 @@ jobs:
       - name: Create and verify the E65 SISX candidate
         run: |
           set -euo pipefail
-          PACKAGE="$LEVEL41_PACKAGE"
+          PACKAGE="$RUNNER_TEMP/quantum-level41-package"
           PACKER="$SIS_PACKER"
           CERT_DIR="$RUNNER_TEMP/level41-signing"
           mkdir -p "$CERT_DIR/newcerts"
@@ -256,7 +283,7 @@ jobs:
       - name: Publish the build-verified SISX candidate to the fixed branch
         run: |
           set -euo pipefail
-          cp "$LEVEL41_PACKAGE/quantum_level41_device_test-e65-candidate.sisx" \
+          cp "$RUNNER_TEMP/quantum-level41-package/quantum_level41_device_test-e65-candidate.sisx" \
             "$GITHUB_WORKSPACE/symbian9/level41_device_test/quantum_level41_device_test-e65-candidate.sisx"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
