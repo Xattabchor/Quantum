@@ -115,7 +115,9 @@ jobs:
           else
             BUILD_STATUS=$?
             cat "$BUILD_LOG"
-            echo "::error title=Level 41 E32 build::cmake --build exited with status $BUILD_STATUS (build directory: $BUILD)"
+            BUILD_LOG_BYTES="$(wc -c < "$BUILD_LOG")"
+            BUILD_LOG_TAIL="$(tail -n 12 "$BUILD_LOG" | tr '\r\n' ' ' | cut -c1-2000)"
+            echo "::error title=Level 41 E32 build::cmake --build exited with status $BUILD_STATUS, log bytes=$BUILD_LOG_BYTES; output: $BUILD_LOG_TAIL"
             exit "$BUILD_STATUS"
           fi
 
