@@ -114,7 +114,8 @@ M3G_LIT_AMBIENT=64
 M3G_LIT_DIR=0
 M3G_OMNI_BASE=0
 M3G_OMNI_FLASH=204
-M3G_OMNI_HALFX=50
+M3G_OMNI_HALFX=10
+// ultra-pinpoint: halo ~250-300 units, flashlight dot at the muzzle
 // pinpoint muzzle glow: halo ~0.5x screen step (~1.2k units)
 // minimum useful flashlight radius (visible spot ~2 half-widths)
 M3G_LIT_AMBCOL=255,255,255
@@ -144,7 +145,8 @@ M3G_LIT_DIST=200000
 // drop lit polys fully beyond this view depth, 0 = off
 M3G_LIT_FLAT=1
 // 1 = SHADE_FLAT (faster on software m3g), 0 = SHADE_SMOOTH
-M3G_LIT_DYN=1
+M3G_LIT_DYN=0
+// dyn fps culling OFF for now; static M3G_LIT_DIST applies (200000 > FAR => effectively no cull)
 // 1 = auto distance cull targeting M3G_LIT_FPS, 0 = static DIST
 M3G_LIT_FPS=20
 M3G_LIT_STATIC=1
