@@ -7,6 +7,7 @@ on:
       - arena/671096c5-quantum
     paths:
       - '.github/workflows/device-render-test.yml'
+      - 'symbian9/CMakeLists.txt'
       - 'symbian9/device_render_test/**'
       - 'symbian9/inc/quantum_integer.h'
       - 'symbian9/inc/quantum_types.h'
@@ -50,7 +51,7 @@ jobs:
           SDK="$RUNNER_TEMP/symbian-sdk"
           BUILD="$RUNNER_TEMP/quantum-render-build"
           "$SDK/bin/cmake" \
-            -S "$GITHUB_WORKSPACE/symbian9/device_render_test" \
+            -S "$GITHUB_WORKSPACE/symbian9" \
             -B "$BUILD" \
             -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE="$SDK/cmake/symbian-arm.cmake" \
