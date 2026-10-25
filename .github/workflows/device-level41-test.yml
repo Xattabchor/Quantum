@@ -83,7 +83,7 @@ jobs:
           curl --fail --location --retry 3 "$SDK_ARCHIVE_URL" --output "$RUNNER_TEMP/symbian-sdk.tar.gz"
           symbian sdk install "$RUNNER_TEMP/symbian-sdk" --archive "$RUNNER_TEMP/symbian-sdk.tar.gz"
 
-      - name: Build the Level 41 E32 application
+      - name: Configure the Level 41 CMake target
         run: |
           set -euo pipefail
           SDK="$RUNNER_TEMP/symbian-sdk"
@@ -99,21 +99,38 @@ jobs:
             -DQUANTUM_BUILD_LEVEL41_DEVICE_TEST=ON \
             -DCMAKE_MAKE_PROGRAM="$SDK/bin/ninja" \
             -DCMAKE_BUILD_TYPE=Release 2>&1 | tee "$RUNNER_TEMP/level41-cmake-configure.log"
-          "$SDK/bin/cmake" --build "$BUILD" --target quantum_level41_device_test --parallel 2 \
+          echo "LEVEL41_BUILD=$BUILD" >> "$GITHUB_ENV"
+
+      - name: Build the Level 41 E32 application
+        run: |
+          set -euo pipefail
+          SDK="$RUNNER_TEMP/symbian-sdk"
+          "$SDK/bin/cmake" --build "$LEVEL41_BUILD" \
+            --target quantum_level41_device_test --parallel 2 --verbose \
             2>&1 | tee "$RUNNER_TEMP/level41-cmake-build.log"
-          EXE="$BUILD/level41_device_test/e32/quantum_level41_device_test.exe"
-          test -s "$EXE"
-          symbian inspect --format e32 "$EXE"
+
+      - name: Verify the Level 41 E32 artifact
+        run: |
+          set -euo pipefail
+          EXE="$LEVEL41_BUILD/level41_device_test/e32/quantum_level41_device_test.exe"
+          if [ ! -s "$EXE" ]; then
+            echo "::error title=Level 41 E32 artifact::Expected output is missing or empty: $EXE"
+            exit 1
+          fi
           echo "LEVEL41_E32=$EXE" >> "$GITHUB_ENV"
+          symbian inspect --format e32 "$EXE" 2>&1 | tee "$RUNNER_TEMP/level41-e32-inspect.log"
 
       - name: Surface Level 41 build diagnostics
         if: failure()
         run: |
           set -euo pipefail
-          for log in "$RUNNER_TEMP/level41-cmake-configure.log" "$RUNNER_TEMP/level41-cmake-build.log"; do
+          for log in \
+            "$RUNNER_TEMP/level41-cmake-configure.log" \
+            "$RUNNER_TEMP/level41-cmake-build.log" \
+            "$RUNNER_TEMP/level41-e32-inspect.log"; do
             if [ -f "$log" ]; then
               while IFS= read -r line; do
-                echo "::error title=Level 41 cross-build::$line"
+                echo "::error title=Level 41 build diagnostics::$line"
               done < <(tail -n 60 "$log")
             fi
           done
