@@ -175,13 +175,11 @@ QInt32 mode3VertexFogWeight(QInt32 depthRz, QInt32 fogDistance)
 QInt32 sampleTexture(const SoftwareTextureView& texture,
                      QInt32 widthBit,
                      QUint32 pixelMask,
-                     QInt32 u,
-                     QInt32 v)
+                     QUint32 uBits,
+                     QUint32 vBits)
 {
-    const QUint32 texelRow =
-        static_cast<QUint32>(v) >> KTextureFractionBits;
-    const QUint32 texelColumn =
-        static_cast<QUint32>(u) >> KTextureFractionBits;
+    const QUint32 texelRow = vBits >> KTextureFractionBits;
+    const QUint32 texelColumn = uBits >> KTextureFractionBits;
     const QUint32 index =
         ((texelRow << static_cast<unsigned int>(widthBit)) + texelColumn) &
         pixelMask;
@@ -426,6 +424,11 @@ void drawSpan(const SoftwareRenderSurfaceView& destination,
     QInt32 x2;
     QInt32 u;
     QInt32 v;
+    QUint32 uBits;
+    QUint32 vBits;
+    /* Raw Java int bit patterns: unsigned stepping preserves wraparound. */
+    const QUint32 duBits = static_cast<QUint32>(du);
+    const QUint32 dvBits = static_cast<QUint32>(dv);
     QInt32 fog;
     QInt32 logicalIndex;
     AffineTriangleColor color;
@@ -490,6 +493,8 @@ void drawSpan(const SoftwareRenderSurfaceView& destination,
     }
     u = code::Math::javaIntSub(u, du);
     v = code::Math::javaIntSub(v, dv);
+    uBits = static_cast<QUint32>(u);
+    vBits = static_cast<QUint32>(v);
     fog = code::Math::javaIntSub(fog, df);
     if (Mode == ERasterPixelMode13 || Mode == ERasterPixelMode9) {
         if (color.redFactor < 0) color.redFactor = 0;
@@ -519,55 +524,55 @@ void drawSpan(const SoftwareRenderSurfaceView& destination,
     }
 
     while (x2 - x1 >= 6) {
-        u = code::Math::javaIntAdd(u, du);
-        v = code::Math::javaIntAdd(v, dv);
+        uBits += duBits;
+        vBits += dvBits;
         writePixel<Mode>(destination, destinationIndex,
-                   sampleTexture(texture, widthBit, textureMask, u, v),
+                   sampleTexture(texture, widthBit, textureMask, uBits, vBits),
                    parameters, fog, df, color, colorSlope, logicalIndex);
         if (Mode == ERasterPixelGlass) {
             logicalIndex = code::Math::javaIntAdd(logicalIndex, 1);
         }
 
-        u = code::Math::javaIntAdd(u, du);
-        v = code::Math::javaIntAdd(v, dv);
+        uBits += duBits;
+        vBits += dvBits;
         writePixel<Mode>(destination, destinationIndex + 1,
-                   sampleTexture(texture, widthBit, textureMask, u, v),
+                   sampleTexture(texture, widthBit, textureMask, uBits, vBits),
                    parameters, fog, df, color, colorSlope, logicalIndex);
         if (Mode == ERasterPixelGlass) {
             logicalIndex = code::Math::javaIntAdd(logicalIndex, 1);
         }
 
-        u = code::Math::javaIntAdd(u, du);
-        v = code::Math::javaIntAdd(v, dv);
+        uBits += duBits;
+        vBits += dvBits;
         writePixel<Mode>(destination, destinationIndex + 2,
-                   sampleTexture(texture, widthBit, textureMask, u, v),
+                   sampleTexture(texture, widthBit, textureMask, uBits, vBits),
                    parameters, fog, df, color, colorSlope, logicalIndex);
         if (Mode == ERasterPixelGlass) {
             logicalIndex = code::Math::javaIntAdd(logicalIndex, 1);
         }
 
-        u = code::Math::javaIntAdd(u, du);
-        v = code::Math::javaIntAdd(v, dv);
+        uBits += duBits;
+        vBits += dvBits;
         writePixel<Mode>(destination, destinationIndex + 3,
-                   sampleTexture(texture, widthBit, textureMask, u, v),
+                   sampleTexture(texture, widthBit, textureMask, uBits, vBits),
                    parameters, fog, df, color, colorSlope, logicalIndex);
         if (Mode == ERasterPixelGlass) {
             logicalIndex = code::Math::javaIntAdd(logicalIndex, 1);
         }
 
-        u = code::Math::javaIntAdd(u, du);
-        v = code::Math::javaIntAdd(v, dv);
+        uBits += duBits;
+        vBits += dvBits;
         writePixel<Mode>(destination, destinationIndex + 4,
-                   sampleTexture(texture, widthBit, textureMask, u, v),
+                   sampleTexture(texture, widthBit, textureMask, uBits, vBits),
                    parameters, fog, df, color, colorSlope, logicalIndex);
         if (Mode == ERasterPixelGlass) {
             logicalIndex = code::Math::javaIntAdd(logicalIndex, 1);
         }
 
-        u = code::Math::javaIntAdd(u, du);
-        v = code::Math::javaIntAdd(v, dv);
+        uBits += duBits;
+        vBits += dvBits;
         writePixel<Mode>(destination, destinationIndex + 5,
-                   sampleTexture(texture, widthBit, textureMask, u, v),
+                   sampleTexture(texture, widthBit, textureMask, uBits, vBits),
                    parameters, fog, df, color, colorSlope, logicalIndex);
         if (Mode == ERasterPixelGlass) {
             logicalIndex = code::Math::javaIntAdd(logicalIndex, 1);
@@ -578,10 +583,10 @@ void drawSpan(const SoftwareRenderSurfaceView& destination,
     }
 
     while (x1 < x2) {
-        u = code::Math::javaIntAdd(u, du);
-        v = code::Math::javaIntAdd(v, dv);
+        uBits += duBits;
+        vBits += dvBits;
         writePixel<Mode>(destination, destinationIndex,
-                   sampleTexture(texture, widthBit, textureMask, u, v),
+                   sampleTexture(texture, widthBit, textureMask, uBits, vBits),
                    parameters, fog, df, color, colorSlope, logicalIndex);
         if (Mode == ERasterPixelGlass) {
             logicalIndex = code::Math::javaIntAdd(logicalIndex, 1);

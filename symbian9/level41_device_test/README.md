@@ -54,9 +54,15 @@ local differential check matched framebuffer output and renderer statistics
 with and without the cache on both projection paths. The E65 then reported
 5.8 FPS and 108/109 ms mesh average/maximum for the same scene. Version 1.0.16
 adds opt-in timing for validation, transform/projection, polygon queueing,
-sorting, and drawing/rasterization, so the next device run can identify which
-mesh phase dominates. The added clock reads make this a diagnostic build; the
-phase times are approximate and its FPS may include a small profiling cost.
+sorting, and drawing/rasterization. Its E65 run reported 5.7 FPS and 108/110 ms
+mesh average/maximum, with phase averages of 5/7/17/0/79 ms respectively.
+Drawing/rasterization is the dominant measured phase (about 73% of mesh time).
+The added clock reads make this a diagnostic build; the phase times are
+approximate and its FPS may include a small profiling cost. Version 1.0.17
+keeps the Java-compatible modulo-32-bit UV stepping but performs the inner
+affine and perspective scanline increments as unsigned bit arithmetic,
+avoiding repeated wrap-helper work per sampled pixel. Host tests pass, and the
+Level 41 host framebuffer is pixel-identical before and after this optimization.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -96,5 +102,9 @@ Current E65 feedback:
   with the bitmap BitBlt presenter; counts remained unchanged.
 - The v1.0.15 E65 run reported 5.8 FPS and 108/109 ms mesh average/maximum,
   with bitmap BitBlt active; it rendered 78 polygons and 148 triangles.
-- The v1.0.16 candidate displays average times for five mesh-render phases.
-  Its phase timings are diagnostic, not a final speed result.
+- The v1.0.16 E65 run reported 5.7 FPS, 108/110 ms mesh average/maximum,
+  bitmap BitBlt, and phase averages: validation 5 ms, transform/projection
+  7 ms, cull/queue 17 ms, sort 0 ms, draw/raster 79 ms. Rasterization is the
+  largest measured phase on this benchmark.
+- The v1.0.17 candidate uses unsigned UV accumulation in affine and perspective
+  span loops; its device performance has not yet been measured.

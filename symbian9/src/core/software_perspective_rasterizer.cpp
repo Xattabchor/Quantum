@@ -311,13 +311,11 @@ bool perspectiveDivide(QInt32 numerator,
 code::Math::QInt32 sampleTexture(const SoftwareTextureView& texture,
                                  QInt32 widthBit,
                                  QUint32 pixelMask,
-                                 QInt32 u,
-                                 QInt32 v)
+                                 QUint32 uBits,
+                                 QUint32 vBits)
 {
-    const QUint32 texelRow =
-        static_cast<QUint32>(v) >> KTextureFractionBits;
-    const QUint32 texelColumn =
-        static_cast<QUint32>(u) >> KTextureFractionBits;
+    const QUint32 texelRow = vBits >> KTextureFractionBits;
+    const QUint32 texelColumn = uBits >> KTextureFractionBits;
     const QUint32 index =
         ((texelRow << static_cast<unsigned int>(widthBit)) + texelColumn) &
         pixelMask;
@@ -586,6 +584,8 @@ bool drawPerspectiveSpan(const SoftwareRenderSurfaceView& destination,
         !perspectiveDivide(left.vOverDepth, left.reciprocalDepth, v)) {
         return false;
     }
+    QUint32 uBits = static_cast<QUint32>(u);
+    QUint32 vBits = static_cast<QUint32>(v);
 
     QInt32 length = code::Math::javaIntSub(x2, x1);
     const size_t rowOffset = static_cast<size_t>(screenY) *
@@ -639,16 +639,20 @@ bool drawPerspectiveSpan(const SoftwareRenderSurfaceView& destination,
             length = 0;
         }
 
+        const QUint32 duBits = static_cast<QUint32>(du);
+        const QUint32 dvBits = static_cast<QUint32>(dv);
         while (x1 < lineEnd) {
-            u = code::Math::javaIntAdd(u, du);
-            v = code::Math::javaIntAdd(v, dv);
+            uBits += duBits;
+            vBits += dvBits;
             const QInt32 texel = sampleTexture(
-                texture, widthBit, textureMask, u, v);
+                texture, widthBit, textureMask, uBits, vBits);
             if (texel != 0) {
                 destination.pixels[rowOffset + static_cast<size_t>(x1)] = texel;
             }
             ++x1;
         }
+        u = code::Math::javaIntFromUnsigned(uBits);
+        v = code::Math::javaIntFromUnsigned(vBits);
     }
     return true;
 }
@@ -747,6 +751,8 @@ bool drawPerspectiveEffectSpan(
         return false;
     }
 
+    QUint32 uBits = static_cast<QUint32>(u);
+    QUint32 vBits = static_cast<QUint32>(v);
     QInt32 remaining = code::Math::javaIntSub(x2, x1);
     const size_t rowOffset = static_cast<size_t>(screenY) *
                              static_cast<size_t>(destination.stride);
@@ -820,12 +826,14 @@ bool drawPerspectiveEffectSpan(
             code::Math::javaIntSub(endU, u), pixelsInSegment);
         const QInt32 dv = code::Math::javaIntDiv(
             code::Math::javaIntSub(endV, v), pixelsInSegment);
+        const QUint32 duBits = static_cast<QUint32>(du);
+        const QUint32 dvBits = static_cast<QUint32>(dv);
         QInt32 i;
         for (i = 0; i < pixelsInSegment; ++i) {
-            u = code::Math::javaIntAdd(u, du);
-            v = code::Math::javaIntAdd(v, dv);
+            uBits += duBits;
+            vBits += dvBits;
             const QInt32 texel = sampleTexture(
-                texture, widthBit, textureMask, u, v);
+                texture, widthBit, textureMask, uBits, vBits);
             const size_t destinationIndex = rowOffset +
                                            static_cast<size_t>(x1);
             const QInt32 logicalIndex = code::Math::javaIntAdd(
@@ -835,6 +843,8 @@ bool drawPerspectiveEffectSpan(
                 color, colorSlope, logicalIndex);
             ++x1;
         }
+        u = code::Math::javaIntFromUnsigned(uBits);
+        v = code::Math::javaIntFromUnsigned(vBits);
         remaining = code::Math::javaIntSub(remaining, pixelsInSegment);
         if (remaining > 0 && pixelsInSegment == perspectiveStepPixels) {
             left = segmentEnd;
