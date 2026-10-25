@@ -577,9 +577,15 @@ public final class M3GLitRenderer {
         int kind, func; Texture2D tex; boolean foggy;
         short[] uvs; byte[] cols, nrms;
         if(at != null) {
-            kind = at.kind; func = at.func; tex = at.t2d; foggy = at.fogged;
+            kind = at.kind; func = at.func; foggy = at.fogged;
             uvs = at.uvc; cols = at.colc; nrms = at.nrmc;
             at.touched = frameId;
+            // Animated textures (river): CPU-side updateAnimation() swaps
+            // rImg between cached animMIP frames; the static cache must not
+            // pin frame 0 — rebind the native copy of the CURRENT frame
+            // (find-style lookup: each frame uploads once, binds are free).
+            tex = ((Texture) at.tex).animMIP != null
+                    ? litTexture(g, (Texture) at.tex, raw, kind) : at.t2d;
         } else {
             kind = mode == 2 ? M3GSceneRenderer.ADD_TEXTURE
                     : mode == 1 || mode == 11 || (mode == 4 && raw.alphaMixing)
