@@ -12,9 +12,9 @@ rasterizer and avoids depending on external game assets.
 
 The `device-render-test.yml` workflow builds an ARMv5T/EKA2 SIS using the
 public Symbian Platform 0.3.0 SDK release. It downloads the SDK at job time;
-SDK binaries and the generated SIS are not committed. The workflow artifact
-contains unsigned and self-signed SIS files. Signing does not bypass the
-phone's installation policy. Install one on the handset, launch **Quantum
+SDK binaries and generated SIS files are not committed or retained as workflow
+artifacts. A separately supplied self-signed SIS can be installed for testing.
+Signing does not bypass the phone's installation policy. Launch **Quantum
 Render Test**, inspect the affine/perspective panels, then press a key to exit.
 
 A successful cloud build proves compilation and SIS structure only. Actual
