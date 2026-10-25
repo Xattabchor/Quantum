@@ -116,7 +116,7 @@ jobs:
             BUILD_STATUS=$?
             cat "$BUILD_LOG"
             BUILD_LOG_BYTES="$(wc -c < "$BUILD_LOG")"
-            BUILD_ERRORS="$(grep -E '(^FAILED:|error:|fatal error:|undefined reference|ninja: error:)' "$BUILD_LOG" | tail -n 20 | tr '\r\n' ' ' | cut -c1-2400 || true)"
+            BUILD_ERRORS="$(grep -oE 'undefined symbol: [[:alnum:]_@.]+|undefined reference to [^[:cntrl:]]{1,180}|ld[.]lld: error: [^[:cntrl:]]{1,180}|fatal error: [^[:cntrl:]]{1,180}|error: [^[:cntrl:]]{1,180}|ninja: error: [^[:cntrl:]]{1,180}' "$BUILD_LOG" | tail -n 20 | tr '\r\n' ' ' | cut -c1-2400 || true)"
             if [ -z "$BUILD_ERRORS" ]; then
               BUILD_ERRORS="$(tail -n 4 "$BUILD_LOG" | tr '\r\n' ' ' | cut -c1-2400)"
             fi
