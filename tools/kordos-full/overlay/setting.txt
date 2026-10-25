@@ -141,7 +141,8 @@ M3G_LIT_DEBUG=0
 // 1 = white-silhouette probe, 0 = normal shaded lit pass
 M3G_LIT_CULL=0
 // 0 = CULL_NONE (double-sided, depth-sorted), 1 = CULL_BACK + normalize
-M3G_LIT_DIST=200000
+M3G_LIT_DIST=20000
+// static depth cull INSIDE the camera far (40000): hard cut of far polys before raster
 // drop lit polys fully beyond this view depth, 0 = off
 M3G_LIT_FLAT=1
 // 1 = SHADE_FLAT (faster on software m3g), 0 = SHADE_SMOOTH
