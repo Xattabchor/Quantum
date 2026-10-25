@@ -53,7 +53,7 @@ const QInt32 KEyeHeight = 1503;
 const QInt32 KFarDistance = 80000;
 const QInt32 KClipDistance = 150;
 
-QInt32 gFramebuffer[KRenderWidth * KRenderHeight];
+QInt32* gFramebuffer = 0;
 Vector3D gWorldVertices[KWorldVertexCapacity];
 SoftwareMeshPolygon gWorldPolygons[KWorldPolygonCapacity];
 SoftwareMesh3DPart gWorldParts[1];
@@ -63,10 +63,11 @@ SoftwareMesh3DPart gSkyParts[1];
 SoftwareRenderVertex gCameraVertices[KTotalVertexCapacity];
 SoftwareMeshRenderItem gRenderQueue[KTotalPolygonCapacity];
 
-QInt32 gForestPixels[KMaximumTexturePixels];
-QInt32 gMapPixels[KMaximumTexturePixels];
-QInt32 gRiverPixels[KMaximumTexturePixels];
-QInt32 gSkyPixels[KMaximumTexturePixels];
+QInt32* gTextureStorage = 0;
+QInt32* gForestPixels = 0;
+QInt32* gMapPixels = 0;
+QInt32* gRiverPixels = 0;
+QInt32* gSkyPixels = 0;
 TUint8 gWorldFile[KMaximumWorldFileBytes];
 TUint8 gLightmapFile[KMaximumLightmapBytes];
 TUint8 gSkyboxFile[KMaximumSkyboxFileBytes];
@@ -530,8 +531,23 @@ int main()
     CTrapCleanup* cleanup = CTrapCleanup::New();
     if (cleanup == 0) return KErrNoMemory;
 
+    const TInt textureStoragePixels =
+        4 * KMaximumTexturePixels + KRenderWidth * KRenderHeight;
+    const TInt textureStorageBytes =
+        textureStoragePixels * static_cast<TInt>(sizeof(QInt32));
+    gTextureStorage = static_cast<QInt32*>(User::Alloc(textureStorageBytes));
+    if (gTextureStorage == 0) {
+        gRenderStatus = KErrNoMemory;
+    } else {
+        gForestPixels = gTextureStorage;
+        gMapPixels = gForestPixels + KMaximumTexturePixels;
+        gRiverPixels = gMapPixels + KMaximumTexturePixels;
+        gSkyPixels = gRiverPixels + KMaximumTexturePixels;
+        gFramebuffer = gSkyPixels + KMaximumTexturePixels;
+    }
+
     RFs fileServer;
-    gRenderStatus = fileServer.Connect();
+    if (gRenderStatus == KErrNone) gRenderStatus = fileServer.Connect();
     if (gRenderStatus == KErrNone) {
         const TFileName executable = RProcess().FileName();
         if (executable.Length() < 2 || executable[1] != ':') {
@@ -560,6 +576,7 @@ int main()
         session.Close();
     }
 
+    if (gTextureStorage != 0) User::Free(gTextureStorage);
     delete cleanup;
     return result;
 }
