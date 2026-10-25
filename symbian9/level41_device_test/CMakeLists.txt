@@ -24,7 +24,8 @@ target_include_directories(quantum_level41_device_test PRIVATE ../inc)
 target_link_libraries(quantum_level41_device_test PRIVATE
     Symbian::WindowServer
     Symbian::Gdi
-    Symbian::FileServer)
+    Symbian::FileServer
+    Symbian::Math)
 
 target_compile_features(quantum_level41_device_test PRIVATE cxx_std_20)
 
