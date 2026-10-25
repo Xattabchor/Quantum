@@ -12,6 +12,8 @@ artifacts/*
 !artifacts/QctConverter.jad
 # диагностические сборки (E65/J9)
 !artifacts/diag
+# zip-снимок исходников (включая подмодули)
+!artifacts/Quantum-source.zip
 
 # python-артефакты от check-jar.py
 __pycache__/
