@@ -579,11 +579,9 @@ public:
         drawOutput(iScreen, *iPixmapGc, 0, iSize);
         iAccess->Gc()->BitBlt(TPoint(0, 0), iPixmap);
 
-        CFbsScreenDevice* directScreen = iAccess->ScreenDevice();
-        if (directScreen == 0) return false;
-        // SetAutoUpdate covers handset behavior; Update also helps emulators
-        // that do not flush the direct-screen blit automatically.
-        (void)directScreen->Update();
+        // SetAutoUpdate(ETrue) is configured after DSA starts. Keep the E65
+        // path on that baseline API instead of importing the optional explicit
+        // CFbsScreenDevice::Update() entry point used only by some emulators.
         return true;
     }
 

@@ -35,12 +35,15 @@ the CPU renderer draws into a full-screen `CWsBitmap` through
 `CFbsBitmapDevice`, then DSA blits that bitmap to the display in one operation.
 This reimplements the public Pixmap+DSA flow demonstrated by ESknot 1.04; it
 does not import its GLES/EGL renderer, since Level 41 remains software-rendered.
-The DSA path enables `SetAutoUpdate(ETrue)` and calls the screen update API for
-emulators, while preserving the existing WindowServer GDI fallback. Version
-1.0.5 renders at the actual display dimensions when the framebuffer fits the
-memory cap and can be allocated; it falls back to 120x160 on low-memory or
-unusually large displays. Projection is scaled uniformly to preserve the scene's
-shape. This removes the intentional nearest-neighbor enlargement on typical
-240x320 displays, at the cost of more software-rendering work. The path remains
-diagnostic: emulator output is not physical E65 verification, and this test
-does not imply support for every S60v3 model.
+The DSA path enables `SetAutoUpdate(ETrue)` and preserves the WindowServer GDI
+fallback. Version 1.0.5 renders at actual display dimensions when its framebuffer
+fits the memory cap and can be allocated; otherwise it falls back to 120x160.
+Projection is scaled uniformly to preserve the scene's shape, removing the
+intentional nearest-neighbor enlargement on typical 240x320 displays at the
+cost of more software-rendering work. Version 1.0.6 removes the explicit
+`CFbsScreenDevice::Update()` call from the E65 build: the launch-time E65 error
+occurs before a frame is shown, and this extra import is a compatibility
+suspect for the E65's older OS 9.1 baseline. The Pixmap+DSA path still uses the
+E65-reference `SetAutoUpdate(ETrue)` flow. This remains a hypothesis until
+v1.0.6 is tried on the phone; emulator output is not physical-device
+verification, and the test does not imply support for every S60v3 model.
