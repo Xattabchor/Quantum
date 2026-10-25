@@ -21,9 +21,19 @@ symbian_add_executable(quantum_level41_device_test
     ../src/core/vector3d.cpp)
 
 target_include_directories(quantum_level41_device_test PRIVATE ../inc)
+set(bitgdi_proxy "${SYMBIAN_SDK_PREFIX}/proxies/bitgdi/bitgdi.dso")
+if(NOT EXISTS "${bitgdi_proxy}")
+    message(FATAL_ERROR "The Symbian SDK is missing the bitgdi import proxy required for DSA screen updates")
+endif()
+add_library(SymbianBitGdi SHARED IMPORTED GLOBAL)
+set_target_properties(SymbianBitGdi PROPERTIES IMPORTED_LOCATION "${bitgdi_proxy}")
+add_library(Symbian::BitGdi ALIAS SymbianBitGdi)
+
 target_link_libraries(quantum_level41_device_test PRIVATE
+    Symbian::EUser
     Symbian::WindowServer
     Symbian::Gdi
+    Symbian::BitGdi
     Symbian::FileServer
     Symbian::Math)
 
