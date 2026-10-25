@@ -8,6 +8,10 @@ on:
     paths:
       - '.github/workflows/device-level41-test.yml'
       - 'symbian9/CMakeLists.txt'
+      - 'symbian9/device_render_test/CMakeLists.txt'
+      - 'symbian9/device_render_test/main.cc'
+      - 'symbian9/device_render_test/symbian.toml'
+      - 'symbian9/device_render_test/assets/**'
       - 'symbian9/level41_device_test/CMakeLists.txt'
       - 'symbian9/level41_device_test/level41_main.cc'
       - 'symbian9/level41_device_test/symbian.toml'
@@ -119,7 +123,7 @@ jobs:
               --target quantum_level41_device_test_e32 quantum_level41_launch_probe_e32 \
                 quantum_level41_no_dsa_e32 quantum_level41_service_probe_e32 \
                 quantum_level41_fs_probe_e32 quantum_level41_fs_connect_probe_e32 \
-                quantum_level41_math_probe_e32 \
+                quantum_level41_math_probe_e32 quantum_render_device_test_e32 \
               --parallel 2 --verbose > "$BUILD_LOG" 2>&1; then
             cat "$BUILD_LOG"
           else
@@ -145,6 +149,7 @@ jobs:
           FS_EXE="$BUILD/level41_service_probe/e32/quantum_level41_fs_probe.exe"
           FS_CONNECT_EXE="$BUILD/level41_service_probe/e32/quantum_level41_fs_connect_probe.exe"
           MATH_EXE="$BUILD/level41_service_probe/e32/quantum_level41_math_probe.exe"
+          RENDER_EXE="$BUILD/device_render_test/e32/quantum_render_device_test.exe"
           if [ ! -s "$EXE" ]; then
             echo "::error title=Level 41 E32 artifact::Expected output is missing or empty: $EXE"
             exit 1
@@ -173,6 +178,10 @@ jobs:
             echo "::error title=Level 41 math probe artifact::Expected output is missing or empty: $MATH_EXE"
             exit 1
           fi
+          if [ ! -s "$RENDER_EXE" ]; then
+            echo "::error title=Render probe artifact::Expected output is missing or empty: $RENDER_EXE"
+            exit 1
+          fi
           symbian inspect --format e32 "$EXE" 2>&1 | tee "$RUNNER_TEMP/level41-e32-inspect.log"
           symbian inspect --format e32 "$PROBE_EXE" 2>&1 | tee "$RUNNER_TEMP/level41-probe-e32-inspect.log"
           symbian inspect --format e32 "$NO_DSA_EXE" 2>&1 | tee "$RUNNER_TEMP/level41-no-dsa-e32-inspect.log"
@@ -180,6 +189,7 @@ jobs:
           symbian inspect --format e32 "$FS_EXE" 2>&1 | tee "$RUNNER_TEMP/level41-fs-e32-inspect.log"
           symbian inspect --format e32 "$FS_CONNECT_EXE" 2>&1 | tee "$RUNNER_TEMP/level41-fs-connect-e32-inspect.log"
           symbian inspect --format e32 "$MATH_EXE" 2>&1 | tee "$RUNNER_TEMP/level41-math-e32-inspect.log"
+          symbian inspect --format e32 "$RENDER_EXE" 2>&1 | tee "$RUNNER_TEMP/render-test-e32-inspect.log"
 
       - name: Surface Level 41 build diagnostics
         if: failure()
@@ -195,6 +205,7 @@ jobs:
             "$RUNNER_TEMP/level41-fs-e32-inspect.log" \
             "$RUNNER_TEMP/level41-fs-connect-e32-inspect.log" \
             "$RUNNER_TEMP/level41-math-e32-inspect.log" \
+            "$RUNNER_TEMP/render-test-e32-inspect.log" \
             "$RUNNER_TEMP/level41-assets.log" \
             "$RUNNER_TEMP/level41-package-inputs.log" \
             "$RUNNER_TEMP/level41-probe-package-inputs.log" \
@@ -202,7 +213,8 @@ jobs:
             "$RUNNER_TEMP/level41-service-package-inputs.log" \
             "$RUNNER_TEMP/level41-fs-package-inputs.log" \
             "$RUNNER_TEMP/level41-math-package-inputs.log" \
-            "$RUNNER_TEMP/level41-fs-connect-package-inputs.log"; do
+            "$RUNNER_TEMP/level41-fs-connect-package-inputs.log" \
+            "$RUNNER_TEMP/render-test-package-inputs.log"; do
             if [ -f "$log" ]; then
               while IFS= read -r line; do
                 echo "::error title=Level 41 build diagnostics::$line"
@@ -270,6 +282,28 @@ jobs:
             exit "$STATUS"
           fi
           test -s "$PACKAGE/quantum_level41_launch_probe.pkg"
+
+      - name: Prepare render-test SIS inputs
+        run: |
+          set -euo pipefail
+          PACKAGE="$RUNNER_TEMP/quantum-render-test-package"
+          ARTIFACT="$RUNNER_TEMP/quantum-level41-build/device_render_test/e32/quantum_render_device_test.exe"
+          LOG="$RUNNER_TEMP/render-test-package-inputs.log"
+          mkdir -p "$PACKAGE"
+          if "$RUNNER_TEMP/symbian-venv/bin/python" \
+              "$GITHUB_WORKSPACE/symbian9/tools/prepare_level41_launch_probe_package.py" \
+              --project "$GITHUB_WORKSPACE/symbian9/device_render_test" \
+              --artifact "$ARTIFACT" \
+              --output "$PACKAGE" > "$LOG" 2>&1; then
+            cat "$LOG"
+          else
+            STATUS=$?
+            cat "$LOG"
+            DETAILS="$(tail -n 16 "$LOG" | tr '\\r\\n' ' ' | cut -c1-2200)"
+            echo "::error title=Render-test SIS input preparation::exit=$STATUS; $DETAILS"
+            exit "$STATUS"
+          fi
+          test -s "$PACKAGE/quantum_render_device_test.pkg"
 
       - name: Prepare GDI-only Level 41 SIS inputs
         run: |
@@ -611,6 +645,25 @@ jobs:
           stat -c '%n %s bytes' quantum_level41_math_probe-e65-candidate.sisx
           sha256sum quantum_level41_math_probe-e65-candidate.sisx
 
+          RENDER_PACKAGE="$RUNNER_TEMP/quantum-render-test-package"
+          cd "$RENDER_PACKAGE"
+          run_logged "Trace MakeSIS render-test package creation" env \
+            ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 \
+            "$PACKER/makesis" -v \
+            quantum_render_device_test.pkg quantum_render_device_test.sis
+          run_logged "Sign render-test SIS archive" "$PACKER/signsis" \
+            quantum_render_device_test.sis \
+            quantum_render_device_test-e65-candidate.sisx \
+            "$CERT_DIR/level41.cer" "$CERT_DIR/level41.key"
+          run_logged "Verify signed render-test SISX" "$PACKER/signsis" -o \
+            quantum_render_device_test-e65-candidate.sisx
+          run_logged "Inspect render-test SISX file tree" "$PACKER/dumptree" \
+            quantum_render_device_test-e65-candidate.sisx
+          cp "$COMMAND_LOG" "$RUNNER_TEMP/render-test-sis-tree.txt"
+          test -s quantum_render_device_test-e65-candidate.sisx
+          stat -c '%n %s bytes' quantum_render_device_test-e65-candidate.sisx
+          sha256sum quantum_render_device_test-e65-candidate.sisx
+
           FS_CONNECT_PACKAGE="$RUNNER_TEMP/quantum-level41-fs-connect-package"
           cd "$FS_CONNECT_PACKAGE"
           run_logged "Trace MakeSIS RFs Connect probe package creation" env \
@@ -635,6 +688,8 @@ jobs:
           set -euo pipefail
           cp "$RUNNER_TEMP/quantum-level41-package/quantum_level41_device_test-e65-candidate.sisx" \
             "$GITHUB_WORKSPACE/symbian9/level41_device_test/quantum_level41_device_test-e65-candidate.sisx"
+          cp "$RUNNER_TEMP/quantum-render-test-package/quantum_render_device_test-e65-candidate.sisx" \
+            "$GITHUB_WORKSPACE/symbian9/device_render_test/quantum_render_device_test-e65-candidate.sisx"
           cp "$RUNNER_TEMP/quantum-level41-probe-package/quantum_level41_launch_probe-e65-candidate.sisx" \
             "$GITHUB_WORKSPACE/symbian9/level41_launch_probe/quantum_level41_launch_probe-e65-candidate.sisx"
           cp "$RUNNER_TEMP/quantum-level41-no-dsa-package/quantum_level41_no_dsa-e65-candidate.sisx" \
@@ -651,6 +706,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
             symbian9/level41_device_test/quantum_level41_device_test-e65-candidate.sisx \
+            symbian9/device_render_test/quantum_render_device_test-e65-candidate.sisx \
             symbian9/level41_launch_probe/quantum_level41_launch_probe-e65-candidate.sisx \
             symbian9/level41_no_dsa/quantum_level41_no_dsa-e65-candidate.sisx \
             symbian9/level41_service_probe/quantum_level41_service_probe-e65-candidate.sisx \
