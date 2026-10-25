@@ -51,6 +51,13 @@ struct TServiceResults {
 };
 
 #if !defined(QUANTUM_SERVICE_MATH_ONLY)
+void closeFileServerSession(RFs& fileServer)
+{
+    // RFs::Close was added for tracing and was absent from earlier OS
+    // versions; close via RHandleBase to avoid that later EFSRV import.
+    static_cast<RHandleBase&>(fileServer).Close();
+}
+
 void probeFileServer(TServiceResults& results)
 {
     RFs fileServer;
@@ -59,7 +66,7 @@ void probeFileServer(TServiceResults& results)
     if (results.fsConnect != KErrNone) return;
 #if defined(QUANTUM_SERVICE_FS_CONNECT_ONLY) || \
     defined(QUANTUM_SERVICE_FS_CONNECT_DEFERRED)
-    fileServer.Close();
+    closeFileServerSession(fileServer);
     return;
 #endif
 
@@ -77,7 +84,7 @@ void probeFileServer(TServiceResults& results)
         }
         file.Close();
     }
-    fileServer.Close();
+    closeFileServerSession(fileServer);
 }
 #endif
 
