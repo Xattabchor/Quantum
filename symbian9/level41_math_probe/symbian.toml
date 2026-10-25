@@ -1,0 +1,17 @@
+[project]
+name = "quantum_level41_math_probe"
+kind = "e32-import"
+architecture = "armv5t"
+cmake_preset = "symbian-pic"
+uid3 = 0xe000a01c
+
+[package]
+uid = 0xe000a01d
+name = "Level 41 Math Probe"
+vendor = "Quantum native port"
+executable_name = "quantum_level41_math_probe.exe"
+version = [1, 0, 0]
+
+[application]
+caption = "Level 41 Math Probe"
+short_caption = "Math Probe"

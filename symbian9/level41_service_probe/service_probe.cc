@@ -1,9 +1,18 @@
 #include <e32base.h>
-#include <e32math.h>
+#if !defined(QUANTUM_SERVICE_MATH_ONLY)
 #include <f32file.h>
-#include <gdi.h>
+#endif
+#if !defined(QUANTUM_SERVICE_FILESERVER_ONLY)
+#include <e32math.h>
 #include <math.h>
+#endif
+#include <gdi.h>
 #include <w32std.h>
+
+#if defined(QUANTUM_SERVICE_MATH_ONLY) && \
+    defined(QUANTUM_SERVICE_FILESERVER_ONLY)
+#error Select at most one service probe profile
+#endif
 
 namespace {
 
@@ -26,6 +35,7 @@ struct TServiceResults {
     }
 };
 
+#if !defined(QUANTUM_SERVICE_MATH_ONLY)
 void probeFileServer(TServiceResults& results)
 {
     RFs fileServer;
@@ -48,7 +58,9 @@ void probeFileServer(TServiceResults& results)
     }
     fileServer.Close();
 }
+#endif
 
+#if !defined(QUANTUM_SERVICE_FILESERVER_ONLY)
 void probeMath(TServiceResults& results)
 {
     TReal root = 0.0;
@@ -63,6 +75,7 @@ void probeMath(TServiceResults& results)
     results.libmSqrt =
         (libmRoot > 3.9 && libmRoot < 4.1) ? KErrNone : KErrGeneral;
 }
+#endif
 
 void drawResults(CWsScreenDevice& screen,
                  CWindowGc& gc,
@@ -83,8 +96,24 @@ void drawResults(CWsScreenDevice& screen,
     }
 
     gc.UseFont(font);
-    gc.DrawText(_L("LEVEL 41 API PROBE"), TPoint(10, 24));
     TBuf<64> line;
+#if defined(QUANTUM_SERVICE_FILESERVER_ONLY)
+    gc.DrawText(_L("FILE SERVER PROBE"), TPoint(10, 24));
+    line.Format(_L("RFs connect: %d  file open: %d"),
+                result.fsConnect, result.fileOpen);
+    gc.DrawText(line, TPoint(10, 52));
+    line.Format(_L("file size: %d  read: %d"),
+                result.fileSize, result.fileRead);
+    gc.DrawText(line, TPoint(10, 76));
+#elif defined(QUANTUM_SERVICE_MATH_ONLY)
+    gc.DrawText(_L("MATH PROBE"), TPoint(10, 24));
+    line.Format(_L("Math sqrt/sin/cos: %d/%d/%d"),
+                result.mathSqrt, result.mathSin, result.mathCos);
+    gc.DrawText(line, TPoint(10, 52));
+    line.Format(_L("libm sqrt: %d"), result.libmSqrt);
+    gc.DrawText(line, TPoint(10, 76));
+#else
+    gc.DrawText(_L("LEVEL 41 API PROBE"), TPoint(10, 24));
     line.Format(_L("RFs connect: %d  file open: %d"),
                 result.fsConnect, result.fileOpen);
     gc.DrawText(line, TPoint(10, 52));
@@ -96,6 +125,7 @@ void drawResults(CWsScreenDevice& screen,
     gc.DrawText(line, TPoint(10, 100));
     line.Format(_L("libm sqrt: %d"), result.libmSqrt);
     gc.DrawText(line, TPoint(10, 124));
+#endif
     gc.DrawText(_L("Press any key to exit"),
                 TPoint(10, size.iHeight - 12));
     gc.DiscardFont();
@@ -125,8 +155,12 @@ TInt waitForKey(RWsSession& session, TUint windowHandle)
 int main()
 {
     TServiceResults results;
+#if !defined(QUANTUM_SERVICE_MATH_ONLY)
     probeFileServer(results);
+#endif
+#if !defined(QUANTUM_SERVICE_FILESERVER_ONLY)
     probeMath(results);
+#endif
 
     RWsSession session;
     TInt result = session.Connect();

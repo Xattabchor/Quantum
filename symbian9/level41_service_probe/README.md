@@ -8,8 +8,7 @@ or rendering its scene:
   reading its size and first bytes.
 - Symbian math: `Math::Sqrt`, `Math::Sin`, and `Math::Cos`, plus `libm` `sqrt`.
 
-The screen displays the result codes and waits for a key. If this probe opens,
-those service imports can be removed from the remaining suspects; the next
-focus is Level 41 renderer initialization and its larger static/data footprint.
-If it fails with “Feature not supported”, compare these imports with the E65
-OS 9.1 baseline. This is diagnostic only, not a game or compatibility claim.
+The screen displays the result codes and waits for a key. The user reports that
+this combined probe also shows “Feature not supported”. Separate File Server
+and Math-only menu apps are now built to identify which import group triggers
+the launch failure. This is diagnostic only, not a game or compatibility claim.
