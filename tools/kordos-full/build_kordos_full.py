@@ -38,6 +38,33 @@ VILLAGE = ROOT / 'downloads/Quantum_Village_Planar.jar'
 
 KEEP_RIVER7_PREFIXES = ('bots/', 'frontrooms/', 'images/', 'languages/',
                         'player/', 'scripts/', 'shop/', 'sounds/')
+
+# World decimation (silhouette-safe): welds coincident vertices, merges
+# coplanar same-material tri pairs into quads, drops speck polys below
+# DECIMATE_MIN_AREA world area, and rewrites the baked corner lightmap
+# (DMODE=9 records) so the .vla stays in poly order. Controllable via
+# env: KORDOS_DECIMATE=0 disables, KORDOS_MIN_AREA overrides the area.
+DECIMATE_MIN_AREA = float(os.environ.get('KORDOS_MIN_AREA', '1e5'))
+DECIMATE_ENABLED = os.environ.get('KORDOS_DECIMATE', '1') == '1'
+
+
+def decimate_world(stage: dict) -> None:
+    if not DECIMATE_ENABLED:
+        return
+    if 'maps/kordos/kordos.3d' not in stage:
+        return
+    tool = ROOT / 'tools/kordos-full/decimate3d.py'
+    tmp = BUILD / 'decimate-inout'
+    tmp.mkdir(parents=True, exist_ok=True)
+    src3d = tmp / 'kordos.3d'; dst3d = tmp / 'kordos.dec.3d'
+    srcvla = tmp / 'kordod.vla'; dstvla = tmp / 'kordod.dec.vla'
+    src3d.write_bytes(stage['maps/kordos/kordos.3d'])
+    srcvla.write_bytes(stage['lightmap/kordod.vla'])
+    subprocess.run([sys.executable, str(tool), str(src3d), str(dst3d),
+                    '--scale', '6', '--min-area', repr(DECIMATE_MIN_AREA),
+                    '--vla', str(srcvla), str(dstvla)], check=True)
+    stage['maps/kordos/kordos.3d'] = dst3d.read_bytes()
+    stage['lightmap/kordod.vla'] = dstvla.read_bytes()
 KEEP_RIVER7_FILES = (
     # Menu/title-instrumental and in-level tracks used by setting/level.
     'music/Yamaoka_Akira-EndOfSmallSanctuary.mid',
@@ -66,6 +93,7 @@ def stage_resources() -> None:
         for name in jar.namelist():
             if name.startswith(VILLAGE_KEEP):
                 stage[name] = jar.read(name)
+    decimate_world(stage)
     BUILD.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(STAGE, 'w', zipfile.ZIP_DEFLATED) as jar:
         for name in sorted(stage):
