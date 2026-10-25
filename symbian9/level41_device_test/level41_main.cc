@@ -147,7 +147,8 @@ bool readPrivateAsset(RFs& fileServer,
 {
     TFileName path;
     path.Copy(drive);
-#ifdef QUANTUM_LEVEL41_NO_DSA
+#ifdef QUANTUM_LEVEL41_GDI_DIAGNOSTIC
+    // The companion package has SID e000a016; the main app keeps e000a012.
     path.Append(_L("\\private\\e000a016\\level41\\"));
 #else
     path.Append(_L("\\private\\e000a012\\level41\\"));

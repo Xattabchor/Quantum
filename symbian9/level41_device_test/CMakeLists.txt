@@ -22,30 +22,26 @@ set(QUANTUM_LEVEL41_SOURCES
 
 symbian_add_executable(quantum_level41_device_test ${QUANTUM_LEVEL41_SOURCES})
 target_include_directories(quantum_level41_device_test PRIVATE ../inc)
-set(bitgdi_proxy "${SYMBIAN_SDK_PREFIX}/proxies/bitgdi/bitgdi.dso")
-if(NOT EXISTS "${bitgdi_proxy}")
-    message(FATAL_ERROR "The Symbian SDK is missing the bitgdi import proxy required for DSA screen updates")
-endif()
-add_library(SymbianBitGdi SHARED IMPORTED GLOBAL)
-set_target_properties(SymbianBitGdi PROPERTIES IMPORTED_LOCATION "${bitgdi_proxy}")
-add_library(Symbian::BitGdi ALIAS SymbianBitGdi)
-
+# The E65 runs the software renderer through WindowServer GDI, but the DSA
+# build exits after its startup screen. Keep the tested GDI path as the main
+# S60v3 baseline until the DSA path is repaired and verified on-device.
+target_compile_definitions(quantum_level41_device_test PRIVATE
+    QUANTUM_LEVEL41_NO_DSA=1)
 target_link_libraries(quantum_level41_device_test PRIVATE
     Symbian::EUser
     Symbian::WindowServer
     Symbian::Gdi
-    Symbian::BitGdi
     Symbian::FileServer
     Symbian::Math)
 target_compile_features(quantum_level41_device_test PRIVATE cxx_std_20)
 symbian_publish_executable(quantum_level41_device_test UID3 0xe000a012)
 
-# Diagnostic build: same renderer, asset loading and WindowServer fallback, but
-# compile out all Direct Screen Access/Fbs bitmap operations and BitGdi imports.
+# Companion diagnostic uses the same tested GDI renderer under its own SID.
 symbian_add_executable(quantum_level41_no_dsa ${QUANTUM_LEVEL41_SOURCES})
 target_include_directories(quantum_level41_no_dsa PRIVATE ../inc)
 target_compile_definitions(quantum_level41_no_dsa PRIVATE
-    QUANTUM_LEVEL41_NO_DSA=1)
+    QUANTUM_LEVEL41_NO_DSA=1
+    QUANTUM_LEVEL41_GDI_DIAGNOSTIC=1)
 target_link_libraries(quantum_level41_no_dsa PRIVATE
     Symbian::EUser
     Symbian::WindowServer

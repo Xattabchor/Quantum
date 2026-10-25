@@ -11,8 +11,8 @@ EFSRV ordinal 390. It also packages all seven Level 41 assets under this
 executable's own private directory (`e000a016`). The preceding v1.0.2 package
 used a generic probe packager and omitted those assets; its `-20` screen was
 therefore not evidence of a renderer failure. CI inspection confirms ordinal
-390 is absent and the assets are included. E65 rendering still needs
-confirmation.
+390 is absent and the assets are included. The user confirms v1.0.3 works on
+the E65.
 
 The minimal `level41_launch_probe` launched on the E65, confirming that the
 shared raw E32 startup and basic WindowServer/GDI path can run there. An earlier

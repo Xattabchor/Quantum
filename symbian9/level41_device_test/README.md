@@ -13,12 +13,14 @@ handle 2. WindowServer tags `EEventKey` with the focused window group's client
 handle 1, so no key reached the exit path. Version 1.0.7 uses the group handle
 for keyboard events and the child handle only for redraws. The main executable
 also used `RFs::Close()`; unlike the deferred probe, it still imported EFSRV
-ordinal 390, an export added later for tracing. Version 1.0.8 closes through
-`RHandleBase::Close()` to avoid that import. CI inspection confirms ordinal
-390 is absent from full v1.0.9 and GDI-only v1.0.3; v1.0.9 also adds a stage
-label to asset/render failures. Both executables still import EFSRV ordinals 68
-(`RFs::Connect`) and 93, 264, 300, 257 for `RFile` operations; E65 runtime
-confirmation is still required.
+ordinal 390, an export added later for tracing. Version
+1.0.8 closes through `RHandleBase::Close()` to avoid that import. Version 1.0.9
+added a stage label to asset/render failures. After the user confirmed that the
+self-contained GDI-only v1.0.3 renders on the E65 while the DSA-enabled full
+v1.0.9 exits after startup, v1.0.10 compiles DSA out of the main app and uses
+the tested WindowServer GDI path. CI inspection confirms ordinal 390 is absent
+from v1.0.10 and GDI-only v1.0.3; the EFSRV `RFile` imports remain. The v1.0.10
+E65 result is still pending.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -41,17 +43,10 @@ Current E65 feedback:
 
 - The minimal `level41_launch_probe` starts, and the deferred RFs Connect probe
   v1.0.3 returns code 0 (`KErrNone`).
-- Full Level 41 v1.0.8 reaches its startup screen at 240x320, then exits before
-  showing the scene. The exact failing step is not yet known; DSA remains a
-  likely point to isolate.
-- GDI-only v1.0.2 shows `Asset/render error: -20`. Inspection found that this
-  package was staged by the generic probe packager without the seven scene
-  assets, and the no-DSA executable still looked in the full app's private
-  directory. This is not yet a valid test of the renderer.
-- GDI-only v1.0.3 now packages the shared assets under its own SID
-  (`e000a016`). Its failure screen reports the asset/render stage so another
-  E65 result can distinguish file packaging from parsing or rasterization.
-
-Testing the corrected GDI-only package first will isolate the shared renderer;
-comparing it with full v1.0.8 will then isolate the DSA path. Neither result is
-known until the new package is tested on the E65.
+- GDI-only v1.0.3 works on the E65, confirming the packaged assets and the
+  shared software-rendering/WindowServer GDI path.
+- DSA-enabled full v1.0.9 closes after showing its startup screen (`Starting
+  native renderer`). Since the GDI build works with the same renderer, DSA is
+  the remaining differentiating path.
+- Main v1.0.10 now uses the tested GDI path with DSA compiled out. Its E65
+  confirmation is pending.

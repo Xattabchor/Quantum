@@ -10,7 +10,7 @@ uid = 0xe000a013
 name = "Quantum Level 41 Test"
 vendor = "Quantum native port"
 executable_name = "quantum_level41_device_test.exe"
-version = [1, 0, 9]
+version = [1, 0, 10]
 
 [application]
 caption = "Quantum Level 41"
