@@ -252,6 +252,7 @@ jobs:
           PACKAGE="$RUNNER_TEMP/quantum-level41-package"
           PACKER="$SIS_PACKER"
           CERT_DIR="$RUNNER_TEMP/level41-signing"
+          COMMAND_LOG="$RUNNER_TEMP/level41-sis-command.log"
           mkdir -p "$CERT_DIR/newcerts"
           touch "$CERT_DIR/index.txt"
           printf '1000\n' > "$CERT_DIR/serial"
@@ -277,28 +278,43 @@ jobs:
           basicConstraints = critical,CA:FALSE
           keyUsage = critical,digitalSignature
           EOF
-          openssl req -new -newkey rsa:1024 -sha1 -nodes \
+          run_logged() {
+            DESCRIPTION="$1"
+            shift
+            echo "=== $DESCRIPTION ==="
+            if "$@" > "$COMMAND_LOG" 2>&1; then
+              tail -n 12 "$COMMAND_LOG"
+            else
+              STATUS=$?
+              tail -n 40 "$COMMAND_LOG"
+              DETAILS="$(tail -n 18 "$COMMAND_LOG" | tr '\r\n' ' ' | cut -c1-2200)"
+              echo "::error title=Level 41 SISX candidate::$DESCRIPTION failed exit=$STATUS; $DETAILS"
+              exit "$STATUS"
+            fi
+          }
+          run_logged "Generate device signing request" openssl req -new -newkey rsa:1024 -sha1 -nodes \
             -keyout "$CERT_DIR/level41.key" \
             -out "$CERT_DIR/level41.csr" \
-            -subj '/C=KG/O=Quantum native port/CN=Quantum Level 41 Test' \
-            > "$CERT_DIR/req.log" 2>&1
-          openssl ca -selfsign -batch -notext -preserveDN \
+            -subj '/C=KG/O=Quantum native port/CN=Quantum Level 41 Test'
+          run_logged "Self-sign E65 test certificate" openssl ca -selfsign -batch -notext -preserveDN \
             -config "$CERT_DIR/openssl.cnf" \
             -keyfile "$CERT_DIR/level41.key" \
             -in "$CERT_DIR/level41.csr" \
             -out "$CERT_DIR/level41.cer" \
             -startdate 20000101000000Z -enddate 20451231235959Z \
-            -md sha1 -extensions device_signing \
-            > "$CERT_DIR/ca.log" 2>&1
-          openssl x509 -in "$CERT_DIR/level41.cer" -noout -dates
+            -md sha1 -extensions device_signing
+          run_logged "Inspect signing certificate" openssl x509 -in "$CERT_DIR/level41.cer" -noout -dates
 
           cd "$PACKAGE"
-          "$PACKER/makesis" quantum_level41_device_test.pkg quantum_level41_device_test.sis
-          "$PACKER/signsis" quantum_level41_device_test.sis \
+          run_logged "Create uncompressed SIS archive" "$PACKER/makesis" \
+            quantum_level41_device_test.pkg quantum_level41_device_test.sis
+          run_logged "Sign SIS archive" "$PACKER/signsis" quantum_level41_device_test.sis \
             quantum_level41_device_test-e65-candidate.sisx \
             "$CERT_DIR/level41.cer" "$CERT_DIR/level41.key"
-          "$PACKER/signsis" -o quantum_level41_device_test-e65-candidate.sisx
-          "$PACKER/dumptree" quantum_level41_device_test-e65-candidate.sisx > "$RUNNER_TEMP/level41-sis-tree.txt"
+          run_logged "Verify signed SISX" "$PACKER/signsis" -o quantum_level41_device_test-e65-candidate.sisx
+          run_logged "Inspect SISX file tree" "$PACKER/dumptree" \
+            quantum_level41_device_test-e65-candidate.sisx
+          cp "$COMMAND_LOG" "$RUNNER_TEMP/level41-sis-tree.txt"
           test -s quantum_level41_device_test-e65-candidate.sisx
           stat -c '%n %s bytes' quantum_level41_device_test-e65-candidate.sisx
           sha256sum quantum_level41_device_test-e65-candidate.sisx
