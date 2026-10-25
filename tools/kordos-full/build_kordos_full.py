@@ -59,6 +59,9 @@ EXTRAS_RIVER7 = (
 # env: KORDOS_DECIMATE=0 disables, KORDOS_MIN_AREA overrides the area.
 DECIMATE_MIN_AREA = float(os.environ.get('KORDOS_MIN_AREA', '1e5'))
 DECIMATE_ENABLED = os.environ.get('KORDOS_DECIMATE', '1') == '1'
+# KORDOS_OVERLAY=0 keeps the sym9 jar's own level*/setting.txt entirely —
+# a diagnostic switch to isolate overlay-caused crashes.
+OVERLAY_ENABLED = os.environ.get('KORDOS_OVERLAY', '1') == '1'
 
 
 def decimate_world(stage: dict) -> None:
@@ -104,7 +107,8 @@ def stage_resources() -> None:
             if name.endswith(('.class',)) or name.startswith('META-INF'):
                 continue
             base = name.rsplit('/', 1)[-1]
-            if base in ('setting.txt',) or base.startswith('level') and base.endswith('.txt'):
+            if OVERLAY_ENABLED and (base in ('setting.txt',)
+                    or base.startswith('level') and base.endswith('.txt')):
                 continue  # replaced by the overlay, on purpose
             stage[name] = jar.read(name)
     # Overlay-referenced extras missing from the sym9 bundle.
@@ -113,7 +117,8 @@ def stage_resources() -> None:
             if name not in stage:
                 stage[name] = jar.read(name)
     decimate_world(stage)
-    verify_overlay_refs(stage)
+    if OVERLAY_ENABLED:
+        verify_overlay_refs(stage)
     BUILD.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(STAGE, 'w', zipfile.ZIP_DEFLATED) as jar:
         for name in sorted(stage):
@@ -132,7 +137,9 @@ def run_build(java: str) -> None:
            '--proguard-jar', str(ROOT / 'build/sdk/proguard/lib/proguard.jar'),
            '--output-dir', str(OUT),
            '--resource-archive', str(STAGE),
-           '--resource-overlay', str(ROOT / 'tools/kordos-full/overlay')]
+    ]
+    if OVERLAY_ENABLED:
+        cmd += ['--resource-overlay', str(ROOT / 'tools/kordos-full/overlay')]
     subprocess.run(cmd, check=True)
 
 
