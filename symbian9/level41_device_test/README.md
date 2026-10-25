@@ -2,11 +2,17 @@
 
 This is a separate, fixed-camera S60v3 test application for the native C++
 `SoftwareMeshRenderer`. It loads only the small Level 41 world mesh, grayscale
-lightmap, skybox mesh, and the textures required by the scene. It renders one
-static DMODE 9 view at the handset's native pixel dimensions when a bounded
-framebuffer can be allocated, with a 120x160 low-memory fallback. A key exits
-the test. It is not the Java game, does not contain gameplay or
-controls, and is not Java pixel-parity evidence.
+lightmap, skybox mesh, and the textures required by the scene. It repeatedly
+renders a fixed-camera DMODE 9 view at the handset's native pixel dimensions
+when a bounded framebuffer can be allocated, with a 120x160 low-memory
+fallback. The tested GDI build displays a 10-second end-to-end FPS average,
+plus average/maximum time spent inside `SoftwareMeshRenderer::renderScene()`.
+The FPS includes framebuffer clear, software rendering, WindowServer GDI
+presentation, and redraw scheduling; the mesh timing isolates the renderer
+call. Asset loading is done once before timing. After the sample, the final
+results remain on screen; any key exits. This is a renderer performance
+smoke-test for one Level 41 view, not a measure of the complete game or Java
+pixel-parity evidence.
 
 The raw WindowServer test originally compared key events against child window
 handle 2. WindowServer tags `EEventKey` with the focused window group's client
@@ -51,3 +57,7 @@ Current E65 feedback:
   the remaining differentiating path.
 - Main v1.0.10 uses the tested GDI path with DSA compiled out; the user
   confirms it works on the E65.
+- The v1.0.11 candidate adds a ten-second repeated-render benchmark for the
+  fixed Level 41 DMODE 9 view. It reports end-to-end device FPS and average /
+  maximum time inside `SoftwareMeshRenderer::renderScene()`. It has not yet
+  been measured on the E65; a successful CI build is not a device result.

@@ -24,6 +24,7 @@ enum PerspectivePixelMode {
     EPerspectiveAlphaBlend,
     EPerspectiveShade,
     EPerspectiveVertexShade,
+    EPerspectiveVertexShadeFloor6,
     EPerspectiveGlass,
     EPerspectiveMode13
 };
@@ -395,11 +396,20 @@ void writePerspectivePixel(
         return;
     }
 
-    if (Mode == EPerspectiveVertexShade) {
-        colorAccumulator.redFactor = code::Math::javaIntAdd(
-            colorAccumulator.redFactor, colorSlope.redFactor);
-        const QInt32 brightness = code::Math::javaShiftRightUnsigned(
-            colorAccumulator.redFactor, KTextureFractionBits);
+    if (Mode == EPerspectiveVertexShade ||
+        Mode == EPerspectiveVertexShadeFloor6) {
+        QInt32 brightness;
+        if (Mode == EPerspectiveVertexShade) {
+            colorAccumulator.redFactor = code::Math::javaIntAdd(
+                colorAccumulator.redFactor, colorSlope.redFactor);
+            brightness = code::Math::javaShiftRightUnsigned(
+                colorAccumulator.redFactor, KTextureFractionBits);
+        } else {
+            /* Java's DMODE 6 floor kernel samples one shade per scanline. */
+            brightness = code::Math::javaShiftRight(
+                colorAccumulator.redFactor, KTextureFractionBits);
+            if (brightness < 0) brightness = 0;
+        }
         const QInt32 redBlue = code::Math::javaIntMul(
             static_cast<QInt32>(texelBits & 0x00ff00ffU), brightness);
         const QInt32 green = code::Math::javaIntMul(
@@ -654,8 +664,23 @@ bool drawPerspectiveEffectSpan(
     FixedPerspectivePoint right,
     const PerspectiveSlope& horizontalSlope,
     QInt32 perspectiveStepPixels,
+    bool floorSpecial,
     const PerspectivePixelParameters& parameters)
 {
+    AffineTriangleColor colorSlope = horizontalSlope.color;
+    if (floorSpecial &&
+        (Mode == EPerspectiveVertexShade ||
+         Mode == EPerspectiveVertexShadeFloor6)) {
+        /* TexturingFloors nudges mode 6/9's shade derivative toward zero. */
+        if (colorSlope.redFactor > 0) {
+            colorSlope.redFactor = code::Math::javaIntSub(
+                colorSlope.redFactor, 1);
+        } else if (colorSlope.redFactor < 0) {
+            colorSlope.redFactor = code::Math::javaIntAdd(
+                colorSlope.redFactor, 1);
+        }
+    }
+
     const QInt32 subtexelLeft = javaRemainder(
         left.screenX, KTextureFraction);
     const QInt32 subtexelRight = javaRemainder(
@@ -689,13 +714,13 @@ bool drawPerspectiveEffectSpan(
             code::Math::javaIntMul(horizontalSlope.vOverDepth, x1));
         left.color.redFactor = code::Math::javaIntSub(
             left.color.redFactor,
-            code::Math::javaIntMul(horizontalSlope.color.redFactor, x1));
+            code::Math::javaIntMul(colorSlope.redFactor, x1));
         left.color.greenFactor = code::Math::javaIntSub(
             left.color.greenFactor,
-            code::Math::javaIntMul(horizontalSlope.color.greenFactor, x1));
+            code::Math::javaIntMul(colorSlope.greenFactor, x1));
         left.color.blueFactor = code::Math::javaIntSub(
             left.color.blueFactor,
-            code::Math::javaIntMul(horizontalSlope.color.blueFactor, x1));
+            code::Math::javaIntMul(colorSlope.blueFactor, x1));
         x1 = 0;
     }
     if (x2 > destination.width) {
@@ -726,10 +751,43 @@ bool drawPerspectiveEffectSpan(
     const size_t rowOffset = static_cast<size_t>(screenY) *
                              static_cast<size_t>(destination.stride);
     AffineTriangleColor color = left.color;
+    if (floorSpecial && Mode == EPerspectiveVertexShade) {
+        /* Mode 9 floor fog clamps a negative start/end shade to zero. */
+        if (color.redFactor < 0) color.redFactor = 0;
+        if (code::Math::javaIntAdd(
+                color.redFactor,
+                code::Math::javaIntMul(colorSlope.redFactor, remaining)) < 0) {
+            colorSlope.redFactor = code::Math::javaIntDiv(
+                code::Math::javaIntSub(0, color.redFactor), remaining);
+        }
+    } else if (floorSpecial && Mode == EPerspectiveMode13) {
+        /* The per-channel floor kernel clamps negative shade factors. */
+        if (color.redFactor < 0) color.redFactor = 0;
+        if (color.greenFactor < 0) color.greenFactor = 0;
+        if (color.blueFactor < 0) color.blueFactor = 0;
+        if (code::Math::javaIntAdd(
+                color.redFactor,
+                code::Math::javaIntMul(colorSlope.redFactor, remaining)) < 0) {
+            colorSlope.redFactor = code::Math::javaIntDiv(
+                code::Math::javaIntSub(0, color.redFactor), remaining);
+        }
+        if (code::Math::javaIntAdd(
+                color.greenFactor,
+                code::Math::javaIntMul(colorSlope.greenFactor, remaining)) < 0) {
+            colorSlope.greenFactor = code::Math::javaIntDiv(
+                code::Math::javaIntSub(0, color.greenFactor), remaining);
+        }
+        if (code::Math::javaIntAdd(
+                color.blueFactor,
+                code::Math::javaIntMul(colorSlope.blueFactor, remaining)) < 0) {
+            colorSlope.blueFactor = code::Math::javaIntDiv(
+                code::Math::javaIntSub(0, color.blueFactor), remaining);
+        }
+    }
     while (remaining > 0) {
         QInt32 pixelsInSegment;
         FixedPerspectivePoint segmentEnd;
-        if (remaining >= perspectiveStepPixels) {
+        if (!floorSpecial && remaining >= perspectiveStepPixels) {
             pixelsInSegment = perspectiveStepPixels;
             segmentEnd = left;
             segmentEnd.reciprocalDepth = code::Math::javaIntAdd(
@@ -774,7 +832,7 @@ bool drawPerspectiveEffectSpan(
                 code::Math::javaIntMul(screenY, destination.width), x1);
             writePerspectivePixel<Mode>(
                 destination, destinationIndex, texel, parameters,
-                color, horizontalSlope.color, logicalIndex);
+                color, colorSlope, logicalIndex);
             ++x1;
         }
         remaining = code::Math::javaIntSub(remaining, pixelsInSegment);
@@ -799,11 +857,17 @@ bool drawPerspectiveEffectTriangle(
 {
     if (!validSurface(destination)) return false;
     if (destination.width == 0 || destination.height == 0) return true;
-    if (!validTexture(texture) || perspectiveStepPixels <= 0 ||
-        perspectiveStepPixels > 999 || move <= 0) {
+    if (!validTexture(texture) || perspectiveStepPixels <= 0 || move <= 0) {
         return false;
     }
+    const bool floorSpecial = perspectiveStepPixels > 999 &&
+        (Mode == EPerspectiveFogBlendLow ||
+         Mode == EPerspectiveFogBlendHigh ||
+         Mode == EPerspectiveVertexShade ||
+         Mode == EPerspectiveVertexShadeFloor6 ||
+         Mode == EPerspectiveMode13);
     if ((Mode == EPerspectiveVertexShade ||
+         Mode == EPerspectiveVertexShadeFloor6 ||
          Mode == EPerspectiveFogBlendHigh ||
          Mode == EPerspectiveMode13) && vertexColors == 0) {
         return false;
@@ -909,7 +973,7 @@ bool drawPerspectiveEffectTriangle(
         if (!drawPerspectiveEffectSpan<Mode>(
                 destination, texture, widthBit, textureMask, y,
                 left, right, horizontalSlope, perspectiveStepPixels,
-                parameters)) {
+                floorSpecial, parameters)) {
             return false;
         }
     }
@@ -986,7 +1050,7 @@ bool SoftwarePerspectiveRasterizer::drawMode0Copy(
         return true;
     }
     if (!validTexture(texture) || perspectiveStepPixels <= 0 ||
-        perspectiveStepPixels > 999 || move <= 0) {
+        move <= 0) {
         return false;
     }
 
@@ -1292,9 +1356,20 @@ bool SoftwarePerspectiveRasterizer::drawMode6HQ(
         code::Math::javaIntMul(
             perspectiveDepthBrightness(third.depthRz, fogDistance),
             thirdVectorLight), 255);
-    if (allDark(firstBrightness, secondBrightness, thirdBrightness)) {
-        /* TexturingPers fills black before sampling when every factor is dark. */
+    const AffineTriangleColor colors[3] = {
+        AffineTriangleColor(firstBrightness, 0, 0),
+        AffineTriangleColor(secondBrightness, 0, 0),
+        AffineTriangleColor(thirdBrightness, 0, 0)
+    };
+    if (allDark(firstBrightness, secondBrightness, thirdBrightness) &&
+        !texture.hasTransparentTexels) {
+        /* Filling black is safe only when Java cannot skip transparent texels. */
         return fillBlackTriangle(destination, first, second, third);
+    }
+    if (perspectiveStepPixels > 999) {
+        return drawPerspectiveEffectTriangle<EPerspectiveVertexShadeFloor6>(
+            destination, texture, first, second, third,
+            PerspectivePixelParameters(), perspectiveStepPixels, move, colors);
     }
     return drawMode9Shade(
         destination, texture, first, second, third,

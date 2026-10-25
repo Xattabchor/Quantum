@@ -11,6 +11,13 @@ using code::Math::Vector3D;
 
 namespace {
 
+const QInt32 KJavaFloorPerspectiveStepPixels = 9999999;
+
+bool isFloorPolygon(const SoftwareMeshPolygon& polygon)
+{
+    return polygon.normalY > 4000 || polygon.normalY < -4000;
+}
+
 bool validTexture(const SoftwareTextureView& texture)
 {
     if (texture.pixels == 0 || texture.pixelCount <= 0 ||
@@ -761,9 +768,9 @@ bool SoftwareMeshRenderer::renderScene(
             const QInt32 drawMode = RenderModePolicy::resolveTextureDrawMode(
                 options.quality, material.hasDrawModeOverride,
                 material.drawMode);
-            const QInt32 polygonMipQuality =
-                (polygon.normalY > 4000 || polygon.normalY < -4000)
-                    ? 9999999 : options.mipQuality;
+            const bool floorPolygon = isFloorPolygon(polygon);
+            const QInt32 polygonMipQuality = floorPolygon
+                ? KJavaFloorPerspectiveStepPixels : options.mipQuality;
 
             SoftwareMeshRenderItem item;
             item.instanceIndex = instanceIndex;
@@ -842,6 +849,11 @@ bool SoftwareMeshRenderer::renderScene(
             item.drawMode == 6 && options.cameraVectorLight;
         triangleSettings.usePerspectiveCorrection =
             item.usePerspectiveCorrection;
+        if (item.usePerspectiveCorrection && isFloorPolygon(polygon)) {
+            /* Java sets q=9999999 once for the whole horizontal polygon. */
+            triangleSettings.perspectiveStepPixels =
+                KJavaFloorPerspectiveStepPixels;
+        }
         triangleSettings.hasPackedFogColor = item.hasPackedFogColor;
         triangleSettings.packedFogColor = item.packedFogColor;
         if (item.drawMode == 5) {

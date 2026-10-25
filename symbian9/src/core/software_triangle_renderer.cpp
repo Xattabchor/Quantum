@@ -329,6 +329,25 @@ bool drawPerspective(const SoftwareRenderSurfaceView& destination,
                 settings.perspectiveStepPixels, settings.perspectiveMove);
         }
         if (settings.fogQuality == 1 || colorsAreGrayscale(settings)) {
+            if (settings.perspectiveStepPixels > 999) {
+                /*
+                 * Java sends grayscale mode 13 through the generic long-q
+                 * path, not DMODE 9's dedicated floor shading adjustments.
+                 */
+                const AffineTriangleColor grayscaleColors[3] = {
+                    AffineTriangleColor(
+                        brightness[0], brightness[0], brightness[0]),
+                    AffineTriangleColor(
+                        brightness[1], brightness[1], brightness[1]),
+                    AffineTriangleColor(
+                        brightness[2], brightness[2], brightness[2])
+                };
+                return SoftwarePerspectiveRasterizer::drawMode13(
+                    destination, texture, first, second, third,
+                    grayscaleColors[0], grayscaleColors[1],
+                    grayscaleColors[2], settings.perspectiveStepPixels,
+                    settings.perspectiveMove);
+            }
             return SoftwarePerspectiveRasterizer::drawMode9Shade(
                 destination, texture, first, second, third,
                 brightness[0], brightness[1], brightness[2],

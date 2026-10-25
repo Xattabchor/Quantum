@@ -21,6 +21,7 @@ struct SoftwareTriangleRenderSettings {
     bool textureAlphaMixing;
     /* DMODE 6 HQ can multiply depth fog by Java CameraVectorLight factors. */
     bool mode6UsesVertexLight;
+    /* q: values > 999 select Java's applicable floor-special kernels. */
     code::Math::QInt32 perspectiveStepPixels;
     code::Math::QInt32 perspectiveMove;
 

@@ -16,8 +16,11 @@ namespace Rendering {
  * Modes 8 and 10–12 intentionally are not perspective kernels: Java routes
  * those modes through constant-fill or screen-space dither paths before its
  * perspective dispatcher. Call the matching affine kernels for them. The
- * floor-special paths selected when q > 999 are not included; invalid
- * views/settings or a zero perspective denominator return false.
+ * q > 999 floor paths are included for mode 3 LQ/HQ, mode 6 HQ, mode 9 HQ,
+ * and mode 13; mode 6 HQ preserves its scanline-constant floor shade. Other
+ * kernels accept a large q as a long perspective interval. Invalid views or
+ * settings, or a zero perspective denominator that Java would divide by,
+ * return false.
  */
 class SoftwarePerspectiveRasterizer {
 public:

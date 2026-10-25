@@ -88,7 +88,9 @@ enum SoftwareMeshProjectionPath {
  * triangle near clipping or DirectX7.transformAndProjectVertices with its
  * distinct denominator and already-projected polygon draw path. The triangle
  * settings carry the game's fog/dither settings; draw mode, mip level, polygon
- * shade and the shared quad perspective decision are resolved here.
+ * shade and the shared quad perspective decision are resolved here. A
+ * horizontal floor/ceiling normal selects Java's long q=9999999 interval for
+ * perspective rendering, shared by both halves of a quad.
  * The default viewport is the whole destination, using Java's inclusive
  * visibility bounds (width/height; raster kernels perform final clipping).
  */

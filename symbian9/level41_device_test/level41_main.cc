@@ -125,6 +125,15 @@ TInt gRenderStatus = KErrNone;
 TInt gRenderStage = ERenderStageNone;
 QInt32 gPolygonsDrawn = 0;
 QInt32 gTrianglesDrawn = 0;
+const TInt64 KBenchmarkDurationMicros = 10000000;
+TInt64 gBenchmarkStartMicros = 0;
+TInt64 gTotalMeshRenderMicros = 0;
+TInt64 gMaximumMeshRenderMicros = 0;
+TInt gBenchmarkFrames = 0;
+TInt gDeviceFps = 0;
+TInt gAverageMeshRenderMicros = 0;
+TInt gMaximumMeshRenderMillis = 0;
+bool gBenchmarkComplete = false;
 
 struct TextureInfo {
     TInt width;
@@ -344,7 +353,7 @@ bool loadSkyboxModel(RFs& fileServer,
     return true;
 }
 
-bool renderLevel41(RFs& fileServer, const TDesC& drive)
+bool loadLevel41(RFs& fileServer, const TDesC& drive)
 {
     TextureInfo forest;
     TextureInfo map;
@@ -385,11 +394,53 @@ bool renderLevel41(RFs& fileServer, const TDesC& drive)
 
     SoftwareMesh3DRequirements worldRequirements;
     SoftwareMesh3DRequirements skyRequirements;
-    if (!loadWorldModel(fileServer, drive, worldRequirements) ||
-        !loadSkyboxModel(fileServer, drive, skyRequirements)) {
-        return false;
+    return loadWorldModel(fileServer, drive, worldRequirements) &&
+           loadSkyboxModel(fileServer, drive, skyRequirements);
+}
+
+TInt64 currentTimeMicros()
+{
+    TTime now;
+    now.UniversalTime();
+    return static_cast<TInt64>(now.Int64());
+}
+
+void resetBenchmark()
+{
+    gBenchmarkFrames = 0;
+    gDeviceFps = 0;
+    gTotalMeshRenderMicros = 0;
+    gMaximumMeshRenderMicros = 0;
+    gAverageMeshRenderMicros = 0;
+    gMaximumMeshRenderMillis = 0;
+    gBenchmarkComplete = false;
+    gBenchmarkStartMicros = currentTimeMicros();
+}
+
+void recordBenchmarkFrame(TInt64 meshRenderMicros)
+{
+    if (meshRenderMicros < 0) meshRenderMicros = 0;
+    ++gBenchmarkFrames;
+    gTotalMeshRenderMicros += meshRenderMicros;
+    if (meshRenderMicros > gMaximumMeshRenderMicros) {
+        gMaximumMeshRenderMicros = meshRenderMicros;
     }
 
+    const TInt64 elapsedMicros = currentTimeMicros() - gBenchmarkStartMicros;
+    if (elapsedMicros <= 0) return;
+    gDeviceFps = static_cast<TInt>(
+        (static_cast<TInt64>(gBenchmarkFrames) * 1000000) / elapsedMicros);
+    gAverageMeshRenderMicros = static_cast<TInt>(
+        gTotalMeshRenderMicros / gBenchmarkFrames);
+    gMaximumMeshRenderMillis = static_cast<TInt>(
+        gMaximumMeshRenderMicros / 1000);
+    if (elapsedMicros >= KBenchmarkDurationMicros) {
+        gBenchmarkComplete = true;
+    }
+}
+
+bool renderLevel41Frame()
+{
     if (gFramebuffer == 0 || gRenderWidth <= 0 || gRenderHeight <= 0 ||
         gRenderPixelCount != gRenderWidth * gRenderHeight) {
         return false;
@@ -406,11 +457,9 @@ bool renderLevel41(RFs& fileServer, const TDesC& drive)
     Matrix skyboxToView;
     skyboxToView.setRotY(0);
 
-    SoftwareMeshView* worldView = &gWorldView;
-    SoftwareMeshView* skyView = &gSkyView;
     SoftwareMeshInstance instances[2];
-    instances[0] = SoftwareMeshInstance(skyView, &skyboxToView);
-    instances[1] = SoftwareMeshInstance(worldView, &cameraToView);
+    instances[0] = SoftwareMeshInstance(&gSkyView, &skyboxToView);
+    instances[1] = SoftwareMeshInstance(&gWorldView, &cameraToView);
 
     SoftwareMeshRenderWorkspace workspace(
         gCameraVertices, KTotalVertexCapacity,
@@ -447,16 +496,18 @@ bool renderLevel41(RFs& fileServer, const TDesC& drive)
         gRenderWidth, gRenderHeight, gRenderWidth);
     SoftwareMeshRenderStats stats;
     gRenderStage = ERenderStageRasterizer;
-    if (!SoftwareMeshRenderer::renderScene(
-            surface, instances, 2, options, workspace, stats)) {
-        return false;
-    }
+    const TInt64 renderStartMicros = currentTimeMicros();
+    const bool rendered = SoftwareMeshRenderer::renderScene(
+        surface, instances, 2, options, workspace, stats);
+    const TInt64 renderEndMicros = currentTimeMicros();
+    if (!rendered) return false;
     if (stats.polygonsDrawn <= 0) {
         gRenderStage = ERenderStageNoPolygons;
         return false;
     }
     gPolygonsDrawn = stats.polygonsDrawn;
     gTrianglesDrawn = stats.trianglesDrawn;
+    recordBenchmarkFrame(renderEndMicros - renderStartMicros);
     return true;
 }
 
@@ -591,6 +642,18 @@ void drawOutput(CWsScreenDevice& screen,
             gc.SetPenStyle(CGraphicsContext::ESolidPen);
             gc.SetPenColor(TRgb(255, 255, 255));
             gc.DrawText(_L("LEVEL 41 / DMODE 9"), TPoint(4, 14));
+            TBuf<48> benchmarkStatus;
+            if (gBenchmarkComplete) {
+                benchmarkStatus.Format(_L("10s average FPS: %d"), gDeviceFps);
+            } else {
+                benchmarkStatus.Format(_L("Live FPS: %d"), gDeviceFps);
+            }
+            gc.DrawText(benchmarkStatus, TPoint(4, 32));
+            TBuf<48> renderTime;
+            renderTime.Format(_L("Mesh avg/max: %d/%d ms"),
+                              gAverageMeshRenderMicros / 1000,
+                              gMaximumMeshRenderMillis);
+            gc.DrawText(renderTime, TPoint(4, 48));
             TBuf<48> status;
             status.Format(_L("Polygons %d  Triangles %d"),
                           gPolygonsDrawn, gTrianglesDrawn);
@@ -979,8 +1042,12 @@ TInt runWindow(RFs& fileServer,
             gRenderStatus = KErrNoMemory;
         }
         if (gRenderStatus == KErrNone &&
-            !renderLevel41(fileServer, drive)) {
+            !loadLevel41(fileServer, drive)) {
             gRenderStatus = KErrCorrupt;
+        }
+        if (gRenderStatus == KErrNone) {
+            resetBenchmark();
+            if (!renderLevel41Frame()) gRenderStatus = KErrCorrupt;
         }
 
 #ifndef QUANTUM_LEVEL41_NO_DSA
@@ -1032,6 +1099,10 @@ TInt runWindow(RFs& fileServer,
             TWsRedrawEvent redraw;
             session.GetRedraw(redraw);
             if (redraw.Handle() == KProbeWindowHandle) {
+                if (gRenderStatus == KErrNone && !gBenchmarkComplete &&
+                    !renderLevel41Frame()) {
+                    gRenderStatus = KErrCorrupt;
+                }
                 window.BeginRedraw(redraw.Rect());
                 gc.Activate(window);
                 if (gRenderStatus == KErrNone) {
@@ -1043,6 +1114,9 @@ TInt runWindow(RFs& fileServer,
                 window.EndRedraw();
             }
             session.RedrawReady(&redraws);
+            if (gRenderStatus == KErrNone && !gBenchmarkComplete) {
+                window.Invalidate();
+            }
         }
         session.Flush();
     }
