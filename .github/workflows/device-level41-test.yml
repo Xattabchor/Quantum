@@ -105,9 +105,19 @@ jobs:
           set -euo pipefail
           SDK="$RUNNER_TEMP/symbian-sdk"
           BUILD="$RUNNER_TEMP/quantum-level41-build"
-          "$SDK/bin/cmake" --build "$BUILD" \
-            --target quantum_level41_device_test --parallel 2 --verbose \
-            2>&1 | tee "$RUNNER_TEMP/level41-cmake-build.log"
+          BUILD_LOG="$RUNNER_TEMP/level41-cmake-build.log"
+          : > "$BUILD_LOG"
+          echo "Building target quantum_level41_device_test in $BUILD"
+          if "$SDK/bin/cmake" --build "$BUILD" \
+              --target quantum_level41_device_test --parallel 2 --verbose \
+              > "$BUILD_LOG" 2>&1; then
+            cat "$BUILD_LOG"
+          else
+            BUILD_STATUS=$?
+            cat "$BUILD_LOG"
+            echo "::error title=Level 41 E32 build::cmake --build exited with status $BUILD_STATUS (build directory: $BUILD)"
+            exit "$BUILD_STATUS"
+          fi
 
       - name: Verify the Level 41 E32 artifact
         run: |
