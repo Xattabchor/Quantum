@@ -88,6 +88,7 @@ Vector3D gSkyVertices[KSkyVertexCapacity];
 SoftwareMeshPolygon gSkyPolygons[KSkyPolygonCapacity];
 SoftwareMesh3DPart gSkyParts[1];
 SoftwareRenderVertex gCameraVertices[KTotalVertexCapacity];
+SoftwareRenderVertex gProjectedVertices[KTotalVertexCapacity];
 SoftwareMeshRenderItem gRenderQueue[KTotalPolygonCapacity];
 
 QInt32* gTextureStorage = 0;
@@ -469,7 +470,8 @@ bool renderLevel41Frame()
 
     SoftwareMeshRenderWorkspace workspace(
         gCameraVertices, KTotalVertexCapacity,
-        gRenderQueue, KTotalPolygonCapacity);
+        gRenderQueue, KTotalPolygonCapacity,
+        gProjectedVertices, KTotalVertexCapacity);
     SoftwareMeshRenderOptions options;
     TInt projectionScaleX =
         (gRenderWidth * KProjectionScale) / KBaseRenderWidth;

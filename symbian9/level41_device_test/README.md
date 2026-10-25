@@ -31,17 +31,24 @@ candidate until that path is repaired and verified separately.
 
 The user's E65 measurement of v1.0.12 was 0.3 end-to-end FPS, with 111/112 ms
 average/maximum inside `SoftwareMeshRenderer::renderScene()`, for 78 polygons
-and 148 triangles. The large gap points to WindowServer presentation rather
-than the mesh-render call as the dominant cost for this view. Version 1.0.13
-adds a WindowServer GDI bitmap presenter: it writes RGB565 pixels into an
-`EColor64K` `CWsBitmap` and submits the completed frame with one `BitBlt`.
-The established per-pixel GDI path remains as a fallback if bitmap setup or
-pixel access fails. The displayed presenter label shows which path was used.
-This is still a candidate presentation optimization; its E65 FPS must be
-measured on-device before treating it as a speedup. The bitmap access uses the
-legacy `LockHeap`/`UnlockHeap` API rather than the later
-`BeginDataAccess`/`EndDataAccess` calls, but that alone is not a compatibility
-claim for OS 9.1.
+and 148 triangles. This points to WindowServer presentation as the dominant
+cost in that build. Version 1.0.13 added a WindowServer GDI bitmap presenter:
+it writes RGB565 pixels into an `EColor64K` `CWsBitmap` and submits the frame
+with one `BitBlt`, while keeping the per-pixel GDI path as a fallback. The E65
+reported 5.6 FPS with `Presenter: bitmap/bitblt`; mesh time remained
+111/113 ms for the same 78 polygons and 148 triangles. The output change
+therefore produced a large measured end-to-end improvement, but this remains
+one fixed scene, not full-game FPS or renderer-path coverage. Bitmap access
+uses the legacy `LockHeap`/`UnlockHeap` API rather than the later
+`BeginDataAccess`/`EndDataAccess` calls; this is not a compatibility claim for
+OS 9.1.
+
+Version 1.0.14 adds an optional projected-vertex workspace to the native mesh
+renderer. The Level 41 benchmark supplies that scratch buffer so each shared
+mesh vertex is projected once per instance instead of reprojecting it for
+every polygon corner. Callers that omit the optional buffer retain the
+existing path. A local differential check matched framebuffer output and
+renderer statistics with and without the cache on both projection paths.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -71,11 +78,12 @@ Current E65 feedback:
   the remaining differentiating path.
 - Main v1.0.10 uses the tested GDI path with DSA compiled out; the user
   confirms it works on the E65.
-- The v1.0.12 candidate added a ten-second repeated-render benchmark for the
-  fixed Level 41 DMODE 9 view. Its E65 result was 0.3 FPS, 111/112 ms mesh
-  average/maximum, 78 polygons, and 148 triangles. This is one fixed scene,
-  not full-game FPS or full renderer-path coverage.
-- The v1.0.13 candidate adds off-screen RGB565 bitmap output with a single
-  WindowServer `BitBlt`, retaining the per-pixel GDI fallback. The on-screen
-  presenter label confirms which path is active. Its E65 speedup is not yet
-  known; CI build success is not a device result.
+- The v1.0.12 E65 baseline was 0.3 FPS, 111/112 ms mesh average/maximum,
+  78 polygons, and 148 triangles.
+- The v1.0.13 E65 run reported 5.6 FPS and 111/113 ms mesh average/maximum,
+  with `Presenter: bitmap/bitblt`; the polygon and triangle counts were
+  unchanged. This confirms a substantial output-path improvement on this
+  scene, not full-game performance.
+- The v1.0.14 candidate enables the optional projected-vertex cache in the
+  benchmark workspace to target the remaining mesh-render cost. Its E65
+  performance has not yet been measured.

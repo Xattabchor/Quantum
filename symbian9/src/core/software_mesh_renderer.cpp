@@ -618,7 +618,8 @@ SoftwareMeshRenderItem::SoftwareMeshRenderItem()
 
 SoftwareMeshRenderWorkspace::SoftwareMeshRenderWorkspace()
     : cameraVertices(0), cameraVertexCapacity(0), renderQueue(0),
-      renderQueueCapacity(0)
+      renderQueueCapacity(0), projectedVertices(0),
+      projectedVertexCapacity(0)
 {
 }
 
@@ -626,9 +627,13 @@ SoftwareMeshRenderWorkspace::SoftwareMeshRenderWorkspace(
     SoftwareRenderVertex* cameraData,
     QInt32 cameraCapacity,
     SoftwareMeshRenderItem* queueData,
-    QInt32 queueCapacity)
+    QInt32 queueCapacity,
+    SoftwareRenderVertex* projectedData,
+    QInt32 projectedCapacity)
     : cameraVertices(cameraData), cameraVertexCapacity(cameraCapacity),
-      renderQueue(queueData), renderQueueCapacity(queueCapacity)
+      renderQueue(queueData), renderQueueCapacity(queueCapacity),
+      projectedVertices(projectedData),
+      projectedVertexCapacity(projectedCapacity)
 {
 }
 
@@ -683,7 +688,13 @@ bool SoftwareMeshRenderer::renderScene(
     if (totalVertices > workspace.cameraVertexCapacity ||
         totalPolygons > workspace.renderQueueCapacity ||
         (totalVertices > 0 && workspace.cameraVertices == 0) ||
-        (totalPolygons > 0 && workspace.renderQueue == 0)) {
+        (totalPolygons > 0 && workspace.renderQueue == 0) ||
+        workspace.projectedVertexCapacity < 0 ||
+        (workspace.projectedVertices == 0 &&
+         workspace.projectedVertexCapacity != 0) ||
+        (workspace.projectedVertices != 0 &&
+         (workspace.projectedVertices == workspace.cameraVertices ||
+          totalVertices > workspace.projectedVertexCapacity))) {
         return false;
     }
 
@@ -712,6 +723,16 @@ bool SoftwareMeshRenderer::renderScene(
             SoftwareVertexPipeline::transformVertex(
                 sourceVertex, transform,
                 workspace.cameraVertices[vertexOffset + vertexIndex]);
+            if (workspace.projectedVertices != 0) {
+                workspace.projectedVertices[vertexOffset + vertexIndex] =
+                    workspace.cameraVertices[vertexOffset + vertexIndex];
+            }
+        }
+        if (workspace.projectedVertices != 0 &&
+            !projectMeshVertices(
+                workspace.projectedVertices + vertexOffset,
+                mesh.vertexCount, options)) {
+            return false;
         }
         vertexOffset += mesh.vertexCount;
     }
@@ -735,9 +756,17 @@ bool SoftwareMeshRenderer::renderScene(
             QInt32 corner;
             for (corner = 0; corner < polygon.vertexCount; ++corner) {
                 projectedPolygon[corner] = cameraPolygon[corner];
+                if (workspace.projectedVertices != 0) {
+                    const SoftwareRenderVertex& cachedProjection =
+                        workspace.projectedVertices[
+                            vertexOffset + polygon.vertexIndices[corner]];
+                    projectedPolygon[corner].x = cachedProjection.x;
+                    projectedPolygon[corner].y = cachedProjection.y;
+                }
             }
-            if (!projectMeshVertices(projectedPolygon, polygon.vertexCount,
-                                     options)) {
+            if (workspace.projectedVertices == 0 &&
+                !projectMeshVertices(projectedPolygon,
+                                     polygon.vertexCount, options)) {
                 return false;
             }
 

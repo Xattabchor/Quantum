@@ -149,12 +149,21 @@ struct SoftwareMeshRenderWorkspace {
     code::Math::QInt32 cameraVertexCapacity;
     SoftwareMeshRenderItem* renderQueue;
     code::Math::QInt32 renderQueueCapacity;
+    /*
+     * Optional cache of projected x/y for each transformed camera vertex.
+     * When supplied, it must have capacity for all scene vertices and must
+     * not overlap cameraVertices; a null pointer disables the cache.
+     */
+    SoftwareRenderVertex* projectedVertices;
+    code::Math::QInt32 projectedVertexCapacity;
 
     SoftwareMeshRenderWorkspace();
     SoftwareMeshRenderWorkspace(SoftwareRenderVertex* cameraVertices,
                                 code::Math::QInt32 cameraVertexCapacity,
                                 SoftwareMeshRenderItem* renderQueue,
-                                code::Math::QInt32 renderQueueCapacity);
+                                code::Math::QInt32 renderQueueCapacity,
+                                SoftwareRenderVertex* projectedVertices = 0,
+                                code::Math::QInt32 projectedVertexCapacity = 0);
 };
 
 struct SoftwareMeshRenderStats {
@@ -173,10 +182,11 @@ struct SoftwareMeshRenderStats {
 
 /*
  * Host-tested C++98 mesh traversal corresponding to DirectX7.addMesh/render
- * and RenderObjectBuffer. A batch transforms each shared vertex once, applies
- * Java's screen/backface/far visibility tests (plus near clipping only on the
- * NearClipper path), chooses material and mip level, and queues all instances
- * in one Java depth key and far-to-near order,
+ * and RenderObjectBuffer. A batch transforms each shared vertex once and can
+ * project it once when the optional projected-vertex workspace is supplied.
+ * It applies Java's screen/backface/far visibility tests (plus near clipping
+ * only on the NearClipper path), chooses material and mip level, and queues
+ * all instances in one Java depth key and far-to-near order,
  * resolves each original polygon's perspective policy once, computes Java
  * vertex/normal lighting, then follows the selected projection path: clipped
  * camera-space NearClipper polygons or direct screen-space DirectX7 polygons.
