@@ -85,7 +85,7 @@ jobs:
 
       - name: Build the Level 41 E32 application
         run: |
-          set -o pipefail
+          set -euo pipefail
           SDK="$RUNNER_TEMP/symbian-sdk"
           BUILD="$RUNNER_TEMP/quantum-level41-build"
           "$SDK/bin/cmake" \
@@ -96,13 +96,27 @@ jobs:
             -DSYMBIAN_SDK_PREFIX="$SDK" \
             -DSYMBIAN_TARGET_ARCH=armv5t \
             -DSYMBIAN_RUNTIME_LEGACY_EKA2=ON \
+            -DQUANTUM_BUILD_LEVEL41_DEVICE_TEST=ON \
             -DCMAKE_MAKE_PROGRAM="$SDK/bin/ninja" \
-            -DCMAKE_BUILD_TYPE=Release
-          "$SDK/bin/cmake" --build "$BUILD" --target quantum_level41_device_test --parallel 2
+            -DCMAKE_BUILD_TYPE=Release 2>&1 | tee "$RUNNER_TEMP/level41-cmake-configure.log"
+          "$SDK/bin/cmake" --build "$BUILD" --target quantum_level41_device_test --parallel 2 \
+            2>&1 | tee "$RUNNER_TEMP/level41-cmake-build.log"
           EXE="$BUILD/level41_device_test/e32/quantum_level41_device_test.exe"
           test -s "$EXE"
           symbian inspect --format e32 "$EXE"
           echo "LEVEL41_E32=$EXE" >> "$GITHUB_ENV"
+
+      - name: Surface Level 41 build diagnostics
+        if: failure()
+        run: |
+          set -euo pipefail
+          for log in "$RUNNER_TEMP/level41-cmake-configure.log" "$RUNNER_TEMP/level41-cmake-build.log"; do
+            if [ -f "$log" ]; then
+              while IFS= read -r line; do
+                echo "::error title=Level 41 cross-build::$line"
+              done < <(tail -n 60 "$log")
+            fi
+          done
 
       - name: Prepare compact Level 41 textures and SIS inputs
         run: |

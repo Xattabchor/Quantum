@@ -13,10 +13,13 @@ stored here. The host asset-preparation script converts the four PNG/JPEG
 textures to a small RGBA format; the E65 app reads those files and executes the
 native mesh traversal and rasterizer on the phone.
 
-The GitHub Actions workflow builds the ARMv5T/EKA2 executable, creates fresh
-registration resources and a standard SIS v9/SISX package, and publishes the
-resulting candidate in this directory. The package is self-signed for legacy
-Symbian testing; this does not bypass the handset's installation policy.
+The Level 41 CMake target is opt-in with
+`-DQUANTUM_BUILD_LEVEL41_DEVICE_TEST=ON`, so the earlier small renderer test
+continues to build independently. The GitHub Actions workflow enables that
+option, builds the ARMv5T/EKA2 executable, creates fresh registration resources
+and a standard SIS v9/SISX package, and publishes the resulting candidate in
+this directory. The package is self-signed for legacy Symbian testing; this
+does not bypass the handset's installation policy.
 
 The host Level 41 mesh-renderer smoke path remains separate. A successful host
 render or a successful SIS build does not establish that the package installs,
