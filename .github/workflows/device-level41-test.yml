@@ -1,0 +1,222 @@
+name: Symbian Level 41 E65 device test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - arena/671096c5-quantum
+    paths:
+      - '.github/workflows/device-level41-test.yml'
+      - 'symbian9/CMakeLists.txt'
+      - 'symbian9/level41_device_test/CMakeLists.txt'
+      - 'symbian9/level41_device_test/level41_main.cc'
+      - 'symbian9/level41_device_test/symbian.toml'
+      - 'symbian9/level41_device_test/assets/level41/**'
+      - 'symbian9/tools/prepare_level41_device_assets.py'
+      - 'symbian9/tools/prepare_level41_package.py'
+      - 'symbian9/inc/math_utils.h'
+      - 'symbian9/inc/math_utils2.h'
+      - 'symbian9/inc/matrix.h'
+      - 'symbian9/inc/qfps.h'
+      - 'symbian9/inc/quantum_integer.h'
+      - 'symbian9/inc/quantum_math.h'
+      - 'symbian9/inc/quantum_types.h'
+      - 'symbian9/inc/render_mode_policy.h'
+      - 'symbian9/inc/software_affine_rasterizer.h'
+      - 'symbian9/inc/software_mesh_3d_parser.h'
+      - 'symbian9/inc/software_mesh_renderer.h'
+      - 'symbian9/inc/software_perspective_rasterizer.h'
+      - 'symbian9/inc/software_polygon_renderer.h'
+      - 'symbian9/inc/software_triangle_renderer.h'
+      - 'symbian9/inc/software_vertex_pipeline.h'
+      - 'symbian9/inc/vector3d.h'
+      - 'symbian9/src/core/math_utils.cpp'
+      - 'symbian9/src/core/math_utils2.cpp'
+      - 'symbian9/src/core/matrix.cpp'
+      - 'symbian9/src/core/qfps.cpp'
+      - 'symbian9/src/core/quantum_math.cpp'
+      - 'symbian9/src/core/render_mode_policy.cpp'
+      - 'symbian9/src/core/software_affine_rasterizer.cpp'
+      - 'symbian9/src/core/software_mesh_3d_parser.cpp'
+      - 'symbian9/src/core/software_mesh_renderer.cpp'
+      - 'symbian9/src/core/software_perspective_rasterizer.cpp'
+      - 'symbian9/src/core/software_polygon_renderer.cpp'
+      - 'symbian9/src/core/software_triangle_renderer.cpp'
+      - 'symbian9/src/core/software_vertex_pipeline.cpp'
+      - 'symbian9/src/core/vector3d.cpp'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: level41-e65-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    if: github.ref == 'refs/heads/arena/671096c5-quantum'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out the fixed session branch
+        uses: actions/checkout@v4
+        with:
+          ref: arena/671096c5-quantum
+
+      - name: Set up Python for host tools
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install host build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes imagemagick zlib1g-dev build-essential perl curl
+          python -m venv "$RUNNER_TEMP/symbian-venv"
+          echo "$RUNNER_TEMP/symbian-venv/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/symbian-venv/bin/python" -m pip install --disable-pip-version-check symbian-platform==0.3.0
+
+      - name: Download and install the build-only Symbian SDK
+        env:
+          SDK_ARCHIVE_URL: https://github.com/hpnkv/symbian-platform/releases/download/v0.3.0/symbian-sdk-0.3.0-linux-x86_64.tar.gz
+        run: |
+          curl --fail --location --retry 3 "$SDK_ARCHIVE_URL" --output "$RUNNER_TEMP/symbian-sdk.tar.gz"
+          symbian sdk install "$RUNNER_TEMP/symbian-sdk" --archive "$RUNNER_TEMP/symbian-sdk.tar.gz"
+
+      - name: Build the Level 41 E32 application
+        run: |
+          set -o pipefail
+          SDK="$RUNNER_TEMP/symbian-sdk"
+          BUILD="$RUNNER_TEMP/quantum-level41-build"
+          "$SDK/bin/cmake" \
+            -S "$GITHUB_WORKSPACE/symbian9" \
+            -B "$BUILD" \
+            -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$SDK/cmake/symbian-arm.cmake" \
+            -DSYMBIAN_SDK_PREFIX="$SDK" \
+            -DSYMBIAN_TARGET_ARCH=armv5t \
+            -DSYMBIAN_RUNTIME_LEGACY_EKA2=ON \
+            -DCMAKE_MAKE_PROGRAM="$SDK/bin/ninja" \
+            -DCMAKE_BUILD_TYPE=Release
+          "$SDK/bin/cmake" --build "$BUILD" --target quantum_level41_device_test --parallel 2
+          EXE="$BUILD/level41_device_test/e32/quantum_level41_device_test.exe"
+          test -s "$EXE"
+          symbian inspect --format e32 "$EXE"
+          echo "LEVEL41_E32=$EXE" >> "$GITHUB_ENV"
+
+      - name: Prepare compact Level 41 textures and SIS inputs
+        run: |
+          set -euo pipefail
+          PACKAGE="$RUNNER_TEMP/quantum-level41-package"
+          mkdir -p "$PACKAGE"
+          python "$GITHUB_WORKSPACE/symbian9/tools/prepare_level41_device_assets.py" --output "$PACKAGE"
+          python "$GITHUB_WORKSPACE/symbian9/tools/prepare_level41_package.py" \
+            --project "$GITHUB_WORKSPACE/symbian9/level41_device_test" \
+            --artifact "$LEVEL41_E32" \
+            --output "$PACKAGE"
+          test -s "$PACKAGE/quantum_level41_device_test.pkg"
+          echo "LEVEL41_PACKAGE=$PACKAGE" >> "$GITHUB_ENV"
+
+      - name: Build the legacy SIS v9 packer
+        run: |
+          set -euo pipefail
+          OPENSSL_SRC="$RUNNER_TEMP/openssl-1.0.2u-src"
+          OPENSSL_PREFIX="$RUNNER_TEMP/openssl-1.0.2u"
+          PACKER_SRC="$RUNNER_TEMP/gnupoc-package"
+          curl --fail --location --retry 3 \
+            https://codeload.github.com/openssl/openssl/tar.gz/refs/tags/OpenSSL_1_0_2u \
+            --output "$RUNNER_TEMP/openssl-1.0.2u.tar.gz"
+          mkdir -p "$OPENSSL_SRC"
+          tar -xzf "$RUNNER_TEMP/openssl-1.0.2u.tar.gz" --strip-components=1 -C "$OPENSSL_SRC"
+          cd "$OPENSSL_SRC"
+          ./config no-shared no-ssl2 no-ssl3 --prefix="$OPENSSL_PREFIX"
+          make depend
+          make --jobs=2 build_libs
+          make install_sw
+
+          curl --fail --location --retry 3 \
+            https://codeload.github.com/mstorsjo/gnupoc-package/tar.gz/d3ddaf58c734ad3ab34dc60a012f9d4768a9ed3e \
+            --output "$RUNNER_TEMP/gnupoc-package.tar.gz"
+          mkdir -p "$PACKER_SRC"
+          tar -xzf "$RUNNER_TEMP/gnupoc-package.tar.gz" --strip-components=1 -C "$PACKER_SRC"
+          cd "$PACKER_SRC/tools/makesis-4/src"
+          make --jobs=2 \
+            CFLAGS="-Wall -I../include -I$OPENSSL_PREFIX/include -O2" \
+            LIBS="-L$OPENSSL_PREFIX/lib -lcrypto -lz"
+          make --jobs=2 devtools \
+            CFLAGS="-Wall -I../include -I$OPENSSL_PREFIX/include -O2" \
+            LIBS="-L$OPENSSL_PREFIX/lib -lcrypto -lz"
+          echo "SIS_PACKER=$PACKER_SRC/tools/makesis-4/src" >> "$GITHUB_ENV"
+          echo "OPENSSL_PREFIX=$OPENSSL_PREFIX" >> "$GITHUB_ENV"
+
+      - name: Create and verify the E65 SISX candidate
+        run: |
+          set -euo pipefail
+          PACKAGE="$LEVEL41_PACKAGE"
+          PACKER="$SIS_PACKER"
+          CERT_DIR="$RUNNER_TEMP/level41-signing"
+          mkdir -p "$CERT_DIR/newcerts"
+          touch "$CERT_DIR/index.txt"
+          printf '1000\n' > "$CERT_DIR/serial"
+          cat > "$CERT_DIR/openssl.cnf" <<EOF
+          [ ca ]
+          default_ca = local_ca
+          [ local_ca ]
+          database = $CERT_DIR/index.txt
+          new_certs_dir = $CERT_DIR/newcerts
+          serial = $CERT_DIR/serial
+          default_md = sha1
+          policy = policy_any
+          x509_extensions = device_signing
+          [ policy_any ]
+          countryName = optional
+          stateOrProvinceName = optional
+          localityName = optional
+          organizationName = optional
+          organizationalUnitName = optional
+          commonName = supplied
+          emailAddress = optional
+          [ device_signing ]
+          basicConstraints = critical,CA:FALSE
+          keyUsage = critical,digitalSignature
+          EOF
+          openssl req -new -newkey rsa:1024 -sha1 -nodes \
+            -keyout "$CERT_DIR/level41.key" \
+            -out "$CERT_DIR/level41.csr" \
+            -subj '/C=KG/O=Quantum native port/CN=Quantum Level 41 Test' \
+            > "$CERT_DIR/req.log" 2>&1
+          openssl ca -selfsign -batch -notext -preserveDN \
+            -config "$CERT_DIR/openssl.cnf" \
+            -keyfile "$CERT_DIR/level41.key" \
+            -in "$CERT_DIR/level41.csr" \
+            -out "$CERT_DIR/level41.cer" \
+            -startdate 20000101000000Z -enddate 20451231235959Z \
+            -md sha1 -extensions device_signing \
+            > "$CERT_DIR/ca.log" 2>&1
+          openssl x509 -in "$CERT_DIR/level41.cer" -noout -dates
+
+          cd "$PACKAGE"
+          "$PACKER/makesis" quantum_level41_device_test.pkg quantum_level41_device_test.sis
+          "$PACKER/signsis" quantum_level41_device_test.sis \
+            quantum_level41_device_test-e65-candidate.sisx \
+            "$CERT_DIR/level41.cer" "$CERT_DIR/level41.key"
+          "$PACKER/signsis" -o quantum_level41_device_test-e65-candidate.sisx
+          "$PACKER/dumptree" quantum_level41_device_test-e65-candidate.sisx > "$RUNNER_TEMP/level41-sis-tree.txt"
+          test -s quantum_level41_device_test-e65-candidate.sisx
+          stat -c '%n %s bytes' quantum_level41_device_test-e65-candidate.sisx
+          sha256sum quantum_level41_device_test-e65-candidate.sisx
+
+      - name: Publish the build-verified SISX candidate to the fixed branch
+        run: |
+          set -euo pipefail
+          cp "$LEVEL41_PACKAGE/quantum_level41_device_test-e65-candidate.sisx" \
+            "$GITHUB_WORKSPACE/symbian9/level41_device_test/quantum_level41_device_test-e65-candidate.sisx"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add symbian9/level41_device_test/quantum_level41_device_test-e65-candidate.sisx
+          if git diff --cached --quiet; then
+            echo "No SISX change to publish."
+          else
+            git commit -m "Publish Level 41 E65 SISX candidate"
+            git push origin HEAD:refs/heads/arena/671096c5-quantum
+          fi
