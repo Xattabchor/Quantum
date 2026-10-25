@@ -134,6 +134,8 @@ M3G_LIT_AMBPULSE=0
 // 0 = NO global ambient boost on muzzle (was lighting the whole forest)
 M3G_OMNI_CULL=8000
 // while flash is live: cap distance cull here (2 lamps x far polys killed the fps on sw-m3g)
+M3G_LIT_MINPX=8
+// drop lit polys whose screen bbox < 8x8 px (subpixel world detail = free cost centre)
 
 M3G_LIT_NOVCOL=0
 // 0 = baked vertex lightmap under HW lights (menu: Baked light ON/OFF)

@@ -421,6 +421,24 @@ public final class M3GLitRenderer {
                 if(vertices[i].getViewDepth() > -distLimit) { beyond = false; break; }
             if(beyond) return true;
         }
+        // Subpixel cull (M3G_LIT_MINPX): a poly whose whole screen bbox fits
+        // into MINPX x MINPX pixels costs a full light/shade round for a dot's
+        // worth of pixels — drop it before any bucket work. Guarded: ignored
+        // while any vertex sits closer than one screen step (projected coords
+        // of near-clipped polys are unreliable).
+        if(Main.m3gLitMinPx > 0) {
+            boolean cull = true;
+            int minX = vertices[0].sx, maxX = minX, minY = vertices[0].sy, maxY = minY;
+            for(int i = 0; i < count; i++) {
+                Vertex v = vertices[i];
+                if(v.getViewDepth() > -g.distX) { cull = false; break; } // near guard
+                int sx = v.sx, sy = v.sy;
+                if(sx < minX) minX = sx; else if(sx > maxX) maxX = sx;
+                if(sy < minY) minY = sy; else if(sy > maxY) maxY = sy;
+            }
+            if(cull && maxX - minX < Main.m3gLitMinPx
+                    && maxY - minY < Main.m3gLitMinPx) return true;
+        }
 
         // Static attribute cache (M3G_LIT_STATIC): world polys never change
         // texture/uv/colors/normals — only view positions move per frame.

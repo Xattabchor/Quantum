@@ -112,6 +112,7 @@ public final class Main extends MIDlet {
     public static int m3gLitFps = 20;  // dyn-dist target frames per second
     public static int m3gLitStatic = 0; // 1: cache static-poly attributes (world geometry)
     public static int m3gOmniCull = 0;  // >0: cap the distance cull here while the flash lives
+    public static int m3gLitMinPx = 0;  // >0: drop lit polys whose screen bbox is smaller
     public static int m3gScreenScale = 100; // viewport % of canvas (world pass only)
     public static boolean weaponSway = true; // melee/fire sway of the HUD gun sprite
     public static int persQ = 2;
@@ -332,6 +333,7 @@ public final class Main extends MIDlet {
         m3gLitFps = settings.getIntNoLang("M3G_LIT_FPS", 20);
         m3gLitStatic = settings.getIntNoLang("M3G_LIT_STATIC", 0);
         m3gOmniCull = settings.getIntNoLang("M3G_OMNI_CULL", 0);
+        m3gLitMinPx = settings.getIntNoLang("M3G_LIT_MINPX", 0);
         m3gScreenScale = Math.max(25, Math.min(100, settings.getIntNoLang("M3G_SCREEN_SCALE", 100)));
         weaponSway = settings.getIntNoLang("WEAPON_SWAY", 1) == 1;
         // Menu-driven hardware toggles (Setting screen) persist separately.
