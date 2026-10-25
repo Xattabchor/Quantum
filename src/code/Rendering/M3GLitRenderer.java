@@ -3,6 +3,7 @@ package code.Rendering;
 import javax.microedition.m3g.Appearance;
 import javax.microedition.m3g.Camera;
 import javax.microedition.m3g.CompositingMode;
+import javax.microedition.m3g.Fog;
 import javax.microedition.m3g.Graphics3D;
 import javax.microedition.m3g.Light;
 import javax.microedition.m3g.Material;
@@ -108,7 +109,7 @@ public final class M3GLitRenderer {
     private final Vector buckets = new Vector();
 
     private static final class LitBucket {
-        Texture2D tex; int kind; int func;
+        Texture2D tex; int kind; int func; boolean fogged;
         int verts, indexLen, stripCount;
         int[] iv = new int[0];
         short[] uva = new short[0];
@@ -298,6 +299,13 @@ public final class M3GLitRenderer {
             lastFrameTime = now;
             statsDynDist = dynDist;
         } else statsDynDist = 0;
+        // CPU modes 3/6 fog: linear fade to fogc from the eye (cpu: rz/fDist).
+        frameFogOn = Main.fogQ > 0 && DirectX7.fDist > 1;
+        if(frameFogOn) {
+            fog.setColor(DirectX7.fogc & 0xffffff);
+            fog.setNearDistance(1.0f);
+            fog.setFarDistance(Math.max(2f, DirectX7.fDist));
+        }
         float near = Main.m3gLitNear > 0 ? Main.m3gLitNear : Math.max(16, g.distX);
         float far = Main.m3gLitFar;
         camera.setPerspective(g.fovY > 0 ? g.fovY : 60,
@@ -510,6 +518,10 @@ public final class M3GLitRenderer {
         Texture2D tex = litTexture(g, texture, raw, kind);
         int func = mode == 11 ? Texture2D.FUNC_DECAL
                 : mode == 5 ? Texture2D.FUNC_BLEND : Texture2D.FUNC_MODULATE;
+        // Mode 6 (and 3) on the M3G rails: native linear Fog reproduces the
+        // CPU pass's distance fade for fogging draw modes; everything else
+        // stays unfogged. Distances are real view units, so far = fDist.
+        boolean foggy = frameFogOn && (mode == 3 || mode == 6);
 
         // Deferred batching: append into the (tex, kind, func) bucket; the
         // whole frame is emitted by flushBuckets() at the end of the native
@@ -517,11 +529,11 @@ public final class M3GLitRenderer {
         LitBucket bk = null;
         for(int i = 0; i < buckets.size(); i++) {
             LitBucket c = (LitBucket) buckets.elementAt(i);
-            if(c.tex == tex && c.kind == kind && c.func == func) { bk = c; break; }
+            if(c.tex == tex && c.kind == kind && c.func == func && c.fogged == foggy) { bk = c; break; }
         }
         if(bk == null) {
             bk = new LitBucket();
-            bk.tex = tex; bk.kind = kind; bk.func = func;
+            bk.tex = tex; bk.kind = kind; bk.func = func; bk.fogged = foggy;
             buckets.addElement(bk);
         }
         int vbase = bk.verts;
@@ -568,6 +580,8 @@ public final class M3GLitRenderer {
         return true;
     }
 
+    { fog.setMode(Fog.LINEAR); }
+
     /** Deferred draw: opaque buckets first, then blended buckets in creation
      * order. Called from M3GSceneRenderer.flushBatch (end of transaction). */
     void flushBuckets(DirectX7 g) {
@@ -587,6 +601,10 @@ public final class M3GLitRenderer {
     private int dynDist;
     private long lastFrameTime;
     private float avgDt;
+
+    /** Native Fog node for CPU modes 3/6; refreshed once per frame. */
+    private final Fog fog = new Fog();
+    private boolean frameFogOn;
 
     private void flushBucket(DirectX7 g, LitBucket bk) {
         if(bk.verts == 0) return;
@@ -643,6 +661,8 @@ public final class M3GLitRenderer {
         appearance.setTexture(0, bk.tex);
         owner.bind(g);
         graphics.setCamera(camera, identity);
+        graphics.setFog(bk.fogged ? fog : null);
         owner.renderNative(g, bk.vb, strip, appearance);
+        if(bk.fogged) graphics.setFog(null);
     }
 }
