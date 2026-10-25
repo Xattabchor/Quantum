@@ -10,7 +10,7 @@ uid = 0xe000a017
 name = "Quantum Level 41 GDI"
 vendor = "Quantum native port"
 executable_name = "quantum_level41_no_dsa.exe"
-version = [1, 0, 1]
+version = [1, 0, 2]
 
 [application]
 caption = "Quantum Level 41 GDI"

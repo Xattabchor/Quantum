@@ -41,6 +41,12 @@ using code::Rendering::SoftwareRenderVertex;
 using code::Rendering::SoftwareTextureView;
 using code::Rendering::ESoftwareMeshProjectionDirectX7;
 
+void closeFileServerSession(RFs& fileServer)
+{
+    // RFs::Close was added for tracing and is absent from earlier OS versions.
+    static_cast<RHandleBase&>(fileServer).Close();
+}
+
 const TInt KBaseRenderWidth = 120;
 const TInt KBaseRenderHeight = 160;
 const TInt KBaseProjectionDistance = 106;
@@ -1032,7 +1038,7 @@ int main()
         session.Close();
     }
 
-    if (fileServerConnected) fileServer.Close();
+    if (fileServerConnected) closeFileServerSession(fileServer);
     if (gFramebuffer != 0) User::Free(gFramebuffer);
     if (gTextureStorage != 0) User::Free(gTextureStorage);
     CActiveScheduler::Install(0);
