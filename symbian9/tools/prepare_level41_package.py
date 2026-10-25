@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and verify an unsigned native SISX with Level 41 smoke-test assets."""
+"""Stage registration resources and a GnuPoc-compatible Level 41 .pkg file."""
 
 from __future__ import annotations
 
@@ -25,9 +25,9 @@ ASSET_TARGETS = {
 }
 
 
-def normalize_target(value: str) -> str:
-    """Normalizes duplicate Windows separators for SIS metadata comparison."""
-    return value.replace("/", "\\").replace("\\\\", "\\").casefold()
+def pkg_escape_target(value: str) -> str:
+    # MakeSIS .pkg strings use literal Windows separators, not C escapes.
+    return value
 
 
 def main() -> int:
@@ -45,9 +45,7 @@ def main() -> int:
     application = manifest["application"]
     executable_name = package["executable_name"]
     data = artifact.read_bytes()
-
-    native = require_native()
-    uid3 = native.inspect_e32(data).uid3
+    uid3 = require_native().inspect_e32(data).uid3
     expected_uid3 = manifest["project"]["uid3"]
     if uid3 != expected_uid3:
         raise SystemExit(
@@ -55,20 +53,23 @@ def main() -> int:
         )
 
     output.mkdir(parents=True, exist_ok=True)
-    (output / executable_name).write_bytes(data)
+    executable = output / executable_name
+    executable.write_bytes(data)
 
-    registration_files, icon_hashes = compile_registration(
+    resources, icon_hashes = compile_registration(
         project,
         application,
         executable_name,
         uid3,
         sdk=project_sdk(project),
     )
-    sis_files: list[tuple[str, bytes]] = []
-    for target, content in registration_files:
+    resource_lines: list[str] = []
+    for target, content in resources:
         resource_name = target.replace("\\", "/").rsplit("/", 1)[-1]
         (output / resource_name).write_bytes(content)
-        sis_files.append((target, content))
+        resource_lines.append(
+            f'"{resource_name}"-"{pkg_escape_target(target)}"'
+        )
 
     for name, target in ASSET_TARGETS.items():
         # Compact QTX1 files are generated into the package directory by the
@@ -83,68 +84,35 @@ def main() -> int:
         destination = output / name
         if source != destination:
             destination.write_bytes(source.read_bytes())
-        content = destination.read_bytes()
-        sis_files.append((target, content))
+        resource_lines.append(
+            f'"{name}"-"{pkg_escape_target(target)}"'
+        )
 
-    options = {
-        "uid": package["uid"],
-        "name": package["name"],
-        "vendor": package["vendor"],
-        "executable_name": executable_name,
-        "version": package["version"],
-    }
-    unsigned = native.build_application_sis(data, sis_files, **options)
-    if unsigned != native.build_application_sis(data, sis_files, **options):
-        raise SystemExit("independent Level 41 SISX builds differ")
+    uid = package["uid"]
+    version = package["version"]
+    pkg = [
+        "&EN",
+        "",
+        f'%{{"{package["vendor"]}"}}',
+        f':"{package["vendor"]}"',
+        "",
+        f'#{{"{package["name"]}"}},(0x{uid:08X}),'
+        f"{version[0]},{version[1]},{version[2]}",
+        "",
+        f'"{executable_name}"-"!:\\sys\\bin\\{executable_name}"',
+        *resource_lines,
+        "",
+    ]
+    pkg_path = output / "quantum_level41_device_test.pkg"
+    pkg_path.write_text("\n".join(pkg), encoding="ascii")
 
-    info = native.inspect_sis(unsigned)
-    if info.signed_package:
-        raise SystemExit("native package writer unexpectedly signed the SISX")
-    if not info.application_registered:
-        raise SystemExit("Level 41 SISX has no application registration")
-    if info.options.uid != package["uid"] or info.executable_uid != uid3:
-        raise SystemExit("native SISX metadata does not match Level 41 UIDs")
-    expected_targets = {
-        normalize_target(target) for target, _ in sis_files
-    }
-    expected_targets.add(
-        normalize_target(f"!:\\sys\\bin\\{executable_name}")
-    )
-    actual_targets = {normalize_target(file.target) for file in info.files}
-    if not expected_targets.issubset(actual_targets):
-        missing = sorted(expected_targets - actual_targets)
-        raise SystemExit(f"native SISX is missing expected targets: {missing}")
-
-    sisx_name = f"{Path(executable_name).stem}-unsigned.sisx"
-    sisx_path = output / sisx_name
-    sisx_path.write_bytes(unsigned)
     report = {
-        "package_uid": f"0x{package['uid']:08X}",
+        "package_uid": f"0x{uid:08X}",
         "executable_uid3": f"0x{uid3:08X}",
         "executable": executable_name,
         "executable_sha256": hashlib.sha256(data).hexdigest(),
-        "unsigned_sisx": sisx_name,
-        "unsigned_sisx_sha256": hashlib.sha256(unsigned).hexdigest(),
         "registration_icon_source_sha256": icon_hashes,
-        "sis_metadata": {
-            "name": info.options.name,
-            "vendor": info.options.vendor,
-            "version": info.options.version,
-            "application_registered": info.application_registered,
-            "signed_package": info.signed_package,
-            "executable_target": info.target,
-            "file_count": len(info.files),
-            "files": [
-                {
-                    "target": file.target,
-                    "size": file.size,
-                    "sha1": file.sha1,
-                    "capabilities": file.capabilities,
-                }
-                for file in info.files
-            ],
-        },
-        "assets": [
+        "files": [
             {"source": name, "target": target}
             for name, target in ASSET_TARGETS.items()
         ],
@@ -152,11 +120,9 @@ def main() -> int:
     (output / "level41-package-inputs.json").write_text(
         json.dumps(report, indent=2) + "\n", encoding="utf-8"
     )
-    print(
-        f"Built {sisx_name} with {len(info.files)} files; "
-        f"registered={info.application_registered}, signed={info.signed_package}"
-    )
-    print(f"Wrote {sisx_path} ({len(unsigned)} bytes)")
+    print(f"Staged {executable_name}, {len(resources)} registration files and "
+          f"{len(ASSET_TARGETS)} Level 41 assets")
+    print(f"Wrote {pkg_path}")
     return 0
 
 
