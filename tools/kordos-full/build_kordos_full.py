@@ -95,6 +95,7 @@ def verify_overlay_refs(stage: dict) -> None:
                          + '\n  '.join(missing))
 
 
+def stage_resources() -> None:
     stage: dict[str, bytes] = {}
     # Full sym9 bundle: every non-class, non-config resource of the original
     # village build. level*.txt/setting.txt come from the overlay instead.
