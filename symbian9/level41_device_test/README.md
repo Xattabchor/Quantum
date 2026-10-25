@@ -22,9 +22,13 @@ this directory. The package is self-signed for legacy Symbian testing; this
 does not bypass the handset's installation policy.
 
 The host Level 41 mesh-renderer smoke path remains separate. A successful host
-render or SIS build does not establish handset runtime compatibility. The first
-E65 launch attempt for package version 1.0.0 reached the menu entry but showed
-“Feature not supported” when selected. Version 1.0.1 opens its window before
-loading/rendering and reduces temporary texture memory; it still requires a
-fresh E65 launch test. Neither version is considered device-verified, and this
-test does not imply support for every S60v3 model.
+render or SIS build does not establish handset runtime compatibility. Package
+version 1.0.0 reached the E65 menu entry but showed “Feature not supported”
+when selected. Version 1.0.1 opens its window before loading/rendering and
+reduces temporary texture memory; the EKA2L1 screenshot shows that only the sky
+and a narrow horizon are painted, while the lower scene remains black. Version
+1.0.2 flushes WindowServer drawing commands every eight scanlines to bound the
+large per-pixel GDI batch. This is a targeted rendering-display change, not a
+confirmed root-cause fix; EKA2L1 and physical E65 retests are still required.
+None of these versions is considered device-verified, and this test does not
+imply support for every S60v3 model.

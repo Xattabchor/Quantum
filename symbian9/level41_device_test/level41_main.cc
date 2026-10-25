@@ -431,6 +431,7 @@ void drawFailure(CWsScreenDevice& screen, CWindowGc& gc,
 
 void drawOutput(CWsScreenDevice& screen,
                 CWindowGc& gc,
+                RWsSession& session,
                 const TSize& size)
 {
     const TInt scaleX = size.iWidth / KRenderWidth;
@@ -461,6 +462,11 @@ void drawOutput(CWsScreenDevice& screen,
             gc.DrawRect(TRect(left + x * scale, top + y * scale,
                               left + (x + 1) * scale,
                               top + (y + 1) * scale));
+        }
+        if ((y & 7) == 7) {
+            // Keep the E65 WindowServer queue bounded: a full 120x160
+            // frame can issue thousands of individual GDI rectangles.
+            session.Flush();
         }
     }
 
@@ -565,7 +571,7 @@ TInt runWindow(RFs& fileServer,
                 window.BeginRedraw(redraw.Rect());
                 gc.Activate(window);
                 if (gRenderStatus == KErrNone) {
-                    drawOutput(screen, gc, size);
+                    drawOutput(screen, gc, session, size);
                 } else {
                     drawFailure(screen, gc, size, gRenderStatus);
                 }
