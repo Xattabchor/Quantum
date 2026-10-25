@@ -27,8 +27,8 @@ SAVE_NAME=QUANTUM_KORDOS_FX
 PAUSE_SCREEN_SAVE=1
       
 
-MENU_MUSIC=/music/Yamaoka_Akira-EndOfSmallSanctuary.mid
-MUSIC=/music/gaping_hole.mid
+MENU_MUSIC=/music/menu.mp3
+MUSIC=null
       
 
 WALK_SOUND=/sounds/fx_step1.wav,/sounds/fx_step2.wav,/sounds/fx_step3.wav
@@ -66,7 +66,7 @@ BAG_TEXTURE=/meshes/computer.png
 BAG_SCALE=2
    
 
-TITLE_SCREEN_MUSIC=/music/thunderforce/TF2Title.mid
+TITLE_SCREEN_MUSIC=/music/title.mp3
 
 SHOP_PROPORTIONAL=1
     

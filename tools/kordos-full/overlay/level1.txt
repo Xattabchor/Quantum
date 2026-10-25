@@ -8,7 +8,7 @@ LIGHTMAP=/lightmap/kordod.vla
 [WTEX_END]
 
 SKYBOX_MODEL=/skies/skybox5.3d
-SKYBOX_TEXTURE=/skies/skybox5.png
+SKYBOX_TEXTURE=/skies/sus.png
 
 WEATHER=RAIN
 WEATHER_PARTICLES_COUNT=8
@@ -21,7 +21,7 @@ DIST=68500
 
 DMODE=9
 
-MUSIC=/music/gaping_hole.mid
+MUSIC=/music/wth.mp3
 FALL_DAMAGE=1
 
 // Radiation pockets from the original village level (silent: no geiger wav

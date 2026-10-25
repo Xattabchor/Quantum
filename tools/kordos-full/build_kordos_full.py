@@ -2,12 +2,11 @@
 """Downloads/Quantum_Kordos_Full.jar: full game on the kordos (old sym9
 village) map with hardware (M3G) lighting and a weapon omni flash.
 
-Content sources (already published in this repository, so the pack is
+Content source (already published in this repository, so the pack is
 reproducible offline):
-  - downloads/Quantum_Level41_River7_48bd4d0.jar - complete full-game asset
-    set (UI/HUD/weapons/enemies/sounds), minus its maps and most music.
-  - downloads/Quantum_Village_Planar.jar - kordos map + WMAP lightmap
-    + village weather textures (the kordos build the user tested first).
+  - downloads/Quantum_Sym9_Mode9.jar - the FULL original sym9 village
+    bundle (kordos map + all lightmaps, skies, sounds, music, npc, props,
+    shop, images). level*/setting.txt inside are replaced by the overlay.
   - tools/kordos-full/overlay/{setting.txt,level1.txt} - kordos world
     configuration with M3G_LIT=1 and combat spawns.
 
@@ -33,11 +32,7 @@ OUT = BUILD / 'out'
 RESULT_JAR = ROOT / 'downloads/Quantum_Kordos_Full.jar'
 RESULT_JAD = ROOT / 'downloads/Quantum_Kordos_Full.jad'
 
-RIVER7 = ROOT / 'downloads/Quantum_Level41_River7_48bd4d0.jar'
-VILLAGE = ROOT / 'downloads/Quantum_Village_Planar.jar'
-
-KEEP_RIVER7_PREFIXES = ('bots/', 'frontrooms/', 'images/', 'languages/',
-                        'player/', 'scripts/', 'shop/', 'sounds/')
+SYM9 = ROOT / 'downloads/Quantum_Sym9_Mode9.jar'
 
 # World decimation (silhouette-safe): welds coincident vertices, merges
 # coplanar same-material tri pairs into quads, drops speck polys below
@@ -65,34 +60,20 @@ def decimate_world(stage: dict) -> None:
                     '--vla', str(srcvla), str(dstvla)], check=True)
     stage['maps/kordos/kordos.3d'] = dst3d.read_bytes()
     stage['lightmap/kordod.vla'] = dstvla.read_bytes()
-KEEP_RIVER7_FILES = (
-    # Menu/title-instrumental and in-level tracks used by setting/level.
-    'music/Yamaoka_Akira-EndOfSmallSanctuary.mid',
-    'music/thunderforce/TF2Title.mid',
-    'music/gaping_hole.mid',
-    # skybox referenced by the kordos level.
-    'skies/skybox5.3d', 'skies/skybox5.png',
-)
-VILLAGE_KEEP = ('maps/kordos/', 'lightmap/')
 
 
 def stage_resources() -> None:
     stage: dict[str, bytes] = {}
-    with zipfile.ZipFile(RIVER7) as jar:
+    # Full sym9 bundle: every non-class, non-config resource of the original
+    # village build. level*.txt/setting.txt come from the overlay instead.
+    with zipfile.ZipFile(SYM9) as jar:
         for name in jar.namelist():
             if name.endswith(('.class',)) or name.startswith('META-INF'):
                 continue
             base = name.rsplit('/', 1)[-1]
             if base in ('setting.txt',) or base.startswith('level') and base.endswith('.txt'):
                 continue  # replaced by the overlay, on purpose
-            if name in KEEP_RIVER7_FILES or any(name.startswith(p) for p in KEEP_RIVER7_PREFIXES):
-                stage[name] = jar.read(name)
-            elif '/' not in name:
-                stage[name] = jar.read(name)  # root fonts/lang/preview text
-    with zipfile.ZipFile(VILLAGE) as jar:
-        for name in jar.namelist():
-            if name.startswith(VILLAGE_KEEP):
-                stage[name] = jar.read(name)
+            stage[name] = jar.read(name)
     decimate_world(stage)
     BUILD.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(STAGE, 'w', zipfile.ZIP_DEFLATED) as jar:
