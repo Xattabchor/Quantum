@@ -116,8 +116,11 @@ jobs:
             BUILD_STATUS=$?
             cat "$BUILD_LOG"
             BUILD_LOG_BYTES="$(wc -c < "$BUILD_LOG")"
-            BUILD_LOG_TAIL="$(tail -n 12 "$BUILD_LOG" | tr '\r\n' ' ' | cut -c1-2000)"
-            echo "::error title=Level 41 E32 build::cmake --build exited with status $BUILD_STATUS, log bytes=$BUILD_LOG_BYTES; output: $BUILD_LOG_TAIL"
+            BUILD_ERRORS="$(grep -E '(^FAILED:|error:|fatal error:|undefined reference|ninja: error:)' "$BUILD_LOG" | tail -n 20 | tr '\r\n' ' ' | cut -c1-2400 || true)"
+            if [ -z "$BUILD_ERRORS" ]; then
+              BUILD_ERRORS="$(tail -n 4 "$BUILD_LOG" | tr '\r\n' ' ' | cut -c1-2400)"
+            fi
+            echo "::error title=Level 41 E32 build::cmake --build exited with status $BUILD_STATUS, log bytes=$BUILD_LOG_BYTES; diagnostics: $BUILD_ERRORS"
             exit "$BUILD_STATUS"
           fi
 
