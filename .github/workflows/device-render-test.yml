@@ -61,7 +61,7 @@ jobs:
             -DCMAKE_MAKE_PROGRAM="$SDK/bin/ninja" \
             -DCMAKE_BUILD_TYPE=Release 2>&1 | tee "$RUNNER_TEMP/render-cmake-configure.log"
           "$SDK/bin/cmake" --build "$BUILD" --parallel 2 2>&1 | tee "$RUNNER_TEMP/render-cmake-build.log"
-          test -s "$BUILD/e32/quantum_render_device_test.exe"
+          test -s "$BUILD/device_render_test/e32/quantum_render_device_test.exe"
 
       - name: Surface build diagnostics
         if: failure()
@@ -82,7 +82,7 @@ jobs:
           mkdir -p "$PACKAGE"
           symbian package \
             --project "$PROJECT" \
-            --artifact "$BUILD/e32/quantum_render_device_test.exe" \
+            --artifact "$BUILD/device_render_test/e32/quantum_render_device_test.exe" \
             --output "$PACKAGE"
           symbian inspect --format sis "$PACKAGE/quantum_render_device_test.sis"
           symbian signing create --identity developer --common-name "Quantum Render Test"
