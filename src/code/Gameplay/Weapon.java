@@ -163,11 +163,6 @@ public final class Weapon {
         short dxb, dxmb;
         dxb = dx;
         dxmb = dx_max;
-        // WEAPON_SWAY=0 (kordos-FX): no melee/fire sway of the gun sprite.
-        if (meleeAnim && Main.weaponSway) {
-            dx = (short) (dx_max - dx);
-            dy = (short) (dy_max - dy);
-        }
         
         int oldWidth=width;
         if (customPos) {
@@ -216,7 +211,7 @@ public final class Weapon {
                 }
             }
         }
-        if (meleeAnim && Main.weaponSway) dy = (short) (dy_max - dy);
+        // sway excised (kordos): gun sprite is pinned at dx=dy=0.
         dx_max = dxmb;
         dx = dxb;
 
@@ -233,11 +228,6 @@ public final class Weapon {
         
         if (sight == null && sightWeapon == null) return;
         
-        if (meleeAnim && Main.weaponSway) {
-            dx = (short) (dx_max - dx);
-            dy = (short) (dy_max - dy);
-        }
-        
         if (sightWeapon != null) {
             if (!twoHands) {
                 drawImage(g,images,sightWeapon, width / 2, height + y + dy, Graphics.BOTTOM | Graphics.HCENTER);
@@ -248,10 +238,6 @@ public final class Weapon {
         }
         if (sight != null) drawImage(g,images,sight, 0, y, Graphics.TOP | Graphics.LEFT);
         
-        if (meleeAnim && Main.weaponSway) {
-            dx = (short) (dx_max - dx);
-            dy = (short) (dy_max - dy);
-        }
     }
 
     private static void drawImage(Graphics g,ScreenImages images,Image image,int x,int y,int anchor) {
@@ -313,41 +299,10 @@ public final class Weapon {
             
         }
 
-        if (isFire() && canShoot) {
-            dx = (short) (dx + (Math.abs(widthShift) << 1) * QFPS.frameTime / anima * attackIntensity);
-            dy = (short) (dy + (Math.abs(heightShift) << 1) * QFPS.frameTime / anima * attackIntensity);
-        }
-
-        if (shake && frame >= -1) {
-            if (anima != 17) {
-                dx += (byte) (widthShift * QFPS.frameTime / anima);
-                dy += (byte) (heightShift * QFPS.frameTime / anima);
-            }
-            shake = false;
-        } else {
-            dx = (short) (dx + -dx * QFPS.frameTime / anima / 6);
-            dy = (short) (dy + -dy * QFPS.frameTime / anima / 6);
-        }
-
-        if (dy <= 0) {
-            dy = 0;
-            heightShift = (short) (-heightShift);
-        }
-
-        if (dy > dy_max) {
-            dy = dy_max;
-            heightShift = (short) (-heightShift);
-        }
-
-        if (dx <= 0) {
-            dx = 0;
-            widthShift = (short) (-widthShift);
-        }
-
-        if (dx >= dx_max) {
-            dx = dx_max;
-            widthShift = (short) (-widthShift);
-        }
+        // Weapon sway fully excised (walk bob + fire kick springs): the gun
+        // sprite is pinned at dx=dy=0 — no per-frame spring math at all.
+        dx = 0;
+        dy = 0;
 
         if (fire && canShoot) {
             Matrix mat = player.getCharacter().getTransform();
