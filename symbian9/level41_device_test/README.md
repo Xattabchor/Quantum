@@ -18,9 +18,10 @@ ordinal 390, an export added later for tracing. Version
 added a stage label to asset/render failures. After the user confirmed that the
 self-contained GDI-only v1.0.3 renders on the E65 while the DSA-enabled full
 v1.0.9 exits after startup, v1.0.10 compiles DSA out of the main app and uses
-the tested WindowServer GDI path. CI inspection confirms ordinal 390 is absent
-from v1.0.10 and GDI-only v1.0.3; the EFSRV `RFile` imports remain. The v1.0.10
-E65 result is still pending.
+the tested WindowServer GDI path. The user confirms v1.0.10 works on the E65.
+CI inspection confirms ordinal 390 and the `BitGdi` import are absent from
+v1.0.10; the EFSRV `RFile` imports remain. DSA stays disabled in the main
+candidate until that path is repaired and verified separately.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -48,5 +49,5 @@ Current E65 feedback:
 - DSA-enabled full v1.0.9 closes after showing its startup screen (`Starting
   native renderer`). Since the GDI build works with the same renderer, DSA is
   the remaining differentiating path.
-- Main v1.0.10 now uses the tested GDI path with DSA compiled out. Its E65
-  confirmation is pending.
+- Main v1.0.10 uses the tested GDI path with DSA compiled out; the user
+  confirms it works on the E65.

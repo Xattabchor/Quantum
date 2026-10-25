@@ -22,7 +22,8 @@ neither result isolated the renderer. Version 1.0.3 is the first self-contained
 GDI-only render test. The combined File Server/math and File Server-only probes
 previously showed “Feature not supported”, while the Math-only probe launched.
 The deferred `RFs::Connect` probe now returns 0 on the E65, confirming Connect
-itself succeeds.
+itself succeeds. The primary Level 41 v1.0.10 package now also compiles out DSA
+and uses this tested GDI path; the user confirms that build works on the E65.
 
 This is a temporary diagnostic package, not a replacement for the main Level
 41 candidate and not a general S60v3 compatibility claim. On slower devices,
