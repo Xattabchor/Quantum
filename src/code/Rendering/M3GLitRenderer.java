@@ -518,10 +518,10 @@ public final class M3GLitRenderer {
         Texture2D tex = litTexture(g, texture, raw, kind);
         int func = mode == 11 ? Texture2D.FUNC_DECAL
                 : mode == 5 ? Texture2D.FUNC_BLEND : Texture2D.FUNC_MODULATE;
-        // Mode 6 (and 3) on the M3G rails: native linear Fog reproduces the
-        // CPU pass's distance fade for fogging draw modes; everything else
-        // stays unfogged. Distances are real view units, so far = fDist.
-        boolean foggy = frameFogOn && (mode == 3 || mode == 6);
+        // Mode 6 rides the M3G rails with LIGHT only (ambient + omni) — the
+        // CPU pass's gouraud/camera-light look is the hardware lights' job;
+        // no native Fog. Mode 3 keeps the linear Fog (its only CPU meaning).
+        boolean foggy = frameFogOn && mode == 3;
 
         // Deferred batching: append into the (tex, kind, func) bucket; the
         // whole frame is emitted by flushBuckets() at the end of the native

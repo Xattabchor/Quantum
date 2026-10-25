@@ -105,10 +105,6 @@ public final class Setting extends Selectable {
         var2[i] = langGetDef(lang, "M3G_VIEWPORT", "Viewport") + ":" + Main.m3gScreenScale + "%";
         i++;
         ms[i - 1] = false;
-        var2[i] = langGetDef(lang, "M3G_HWLIGHT", "HW light") + ":"
-                + (Main.m3gWorldLighting == 0 ? lang.get("OFF")
-                : Main.m3gWorldLighting == 1 ? "FULL" : "NO OMNI");
-        i++;
 
         var2[i] = langGetDef(lang, "M3G_HWMIP", "HW mip") + ":"
                 + (Main.m3gLitMip == 1 ? lang.get("ON") : lang.get("OFF"));
@@ -270,11 +266,6 @@ public final class Setting extends Selectable {
             if(Main.m3gScreenScale < 25) Main.m3gScreenScale = 25;
         }
         id++;
-        if(var1 == id) {
-            Main.m3gWorldLighting--;
-            if(Main.m3gWorldLighting < 0) Main.m3gWorldLighting = 0;
-        }
-        id++;
         if(var1 == id) Main.m3gLitMip = 0;
         id++;
         if(var1 == id) Main.m3gLitNoVertexColors = true;
@@ -354,11 +345,6 @@ public final class Setting extends Selectable {
         if(var1 == id) {
             Main.m3gScreenScale += 25;
             if(Main.m3gScreenScale > 100) Main.m3gScreenScale = 100;
-        }
-        id++;
-        if(var1 == id) {
-            Main.m3gWorldLighting++;
-            if(Main.m3gWorldLighting > 2) Main.m3gWorldLighting = 2;
         }
         id++;
         if(var1 == id) Main.m3gLitMip = 1;

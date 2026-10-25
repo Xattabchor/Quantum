@@ -327,8 +327,8 @@ public final class Main extends MIDlet {
         // Menu-driven hardware toggles (Setting screen) persist separately.
         byte[] fx = RmsUtils.openStore("Quantum.M3GFx");
         if(fx != null && fx.length >= 4) {
-            int lit = fx[0] & 0xff; if(lit > 2) lit = 2;
-            m3gWorldLighting = lit;
+            // fx[0]/HW light: menu row removed — the level's M3G_LIT ini key
+            // is the single source now (stale RMS lit=0 must not kill light).
             m3gLitMip = (fx[1] & 0xff) != 0 ? 1 : 0;
             m3gScreenScale = Math.max(25, Math.min(100, fx[2] & 0xff));
             m3gLitNoVertexColors = (fx[3] & 0xff) == 1;
