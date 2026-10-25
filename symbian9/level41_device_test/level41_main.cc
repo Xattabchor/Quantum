@@ -31,6 +31,14 @@ using code::Rendering::SoftwareMeshMaterial;
 using code::Rendering::SoftwareMeshPolygon;
 using code::Rendering::SoftwareMeshRenderItem;
 using code::Rendering::SoftwareMeshRenderOptions;
+using code::Rendering::SoftwareMeshRenderInstrumentation;
+using code::Rendering::SoftwareMeshRenderPhase;
+using code::Rendering::ESoftwareMeshRenderPhaseValidation;
+using code::Rendering::ESoftwareMeshRenderPhaseTransformProjection;
+using code::Rendering::ESoftwareMeshRenderPhasePolygonQueue;
+using code::Rendering::ESoftwareMeshRenderPhaseSort;
+using code::Rendering::ESoftwareMeshRenderPhaseDraw;
+using code::Rendering::ESoftwareMeshRenderPhaseCount;
 using code::Rendering::SoftwareMeshRenderStats;
 using code::Rendering::SoftwareMeshRenderWorkspace;
 using code::Rendering::SoftwareMeshRenderer;
@@ -135,6 +143,9 @@ TInt gBenchmarkFrames = 0;
 TInt gDeviceFpsTenths = 0;
 TInt gAverageMeshRenderMicros = 0;
 TInt gMaximumMeshRenderMillis = 0;
+TInt64 gLastMeshPhaseMicros[ESoftwareMeshRenderPhaseCount];
+TInt64 gTotalMeshPhaseMicros[ESoftwareMeshRenderPhaseCount];
+TInt gAverageMeshPhaseMillis[ESoftwareMeshRenderPhaseCount];
 bool gBenchmarkComplete = false;
 bool gBenchmarkFinalOverlayPending = false;
 bool gBitmapGdiPresenterActive = false;
@@ -409,6 +420,25 @@ TInt64 currentTimeMicros()
     return static_cast<TInt64>(now.Int64());
 }
 
+code::Math::QInt64 meshProfileClockMicros(void* context)
+{
+    (void)context;
+    return static_cast<code::Math::QInt64>(currentTimeMicros());
+}
+
+void recordMeshProfilePhase(void* context,
+                            SoftwareMeshRenderPhase phase,
+                            code::Math::QInt64 elapsedMicros)
+{
+    const TInt phaseIndex = static_cast<TInt>(phase);
+    if (context == 0 || phaseIndex < 0 ||
+        phaseIndex >= ESoftwareMeshRenderPhaseCount || elapsedMicros < 0) {
+        return;
+    }
+    TInt64* phaseTimes = static_cast<TInt64*>(context);
+    phaseTimes[phaseIndex] = static_cast<TInt64>(elapsedMicros);
+}
+
 void resetBenchmark()
 {
     gBenchmarkFrames = 0;
@@ -420,6 +450,12 @@ void resetBenchmark()
     gMaximumMeshRenderMillis = 0;
     gBenchmarkComplete = false;
     gBenchmarkFinalOverlayPending = false;
+    TInt phase;
+    for (phase = 0; phase < ESoftwareMeshRenderPhaseCount; ++phase) {
+        gLastMeshPhaseMicros[phase] = 0;
+        gTotalMeshPhaseMicros[phase] = 0;
+        gAverageMeshPhaseMillis[phase] = 0;
+    }
     gBenchmarkStartMicros = currentTimeMicros();
 }
 
@@ -440,6 +476,12 @@ void recordBenchmarkFrame(TInt64 meshRenderMicros)
         gTotalMeshRenderMicros / gBenchmarkFrames);
     gMaximumMeshRenderMillis = static_cast<TInt>(
         gMaximumMeshRenderMicros / 1000);
+    TInt phase;
+    for (phase = 0; phase < ESoftwareMeshRenderPhaseCount; ++phase) {
+        gTotalMeshPhaseMicros[phase] += gLastMeshPhaseMicros[phase];
+        gAverageMeshPhaseMillis[phase] = static_cast<TInt>(
+            gTotalMeshPhaseMicros[phase] / gBenchmarkFrames / 1000);
+    }
     if (elapsedMicros >= KBenchmarkDurationMicros) {
         gBenchmarkComplete = true;
         gBenchmarkFinalOverlayPending = true;
@@ -503,6 +545,15 @@ bool renderLevel41Frame()
         gFramebuffer, gRenderPixelCount,
         gRenderWidth, gRenderHeight, gRenderWidth);
     SoftwareMeshRenderStats stats;
+    TInt phase;
+    for (phase = 0; phase < ESoftwareMeshRenderPhaseCount; ++phase) {
+        gLastMeshPhaseMicros[phase] = 0;
+    }
+    SoftwareMeshRenderInstrumentation instrumentation;
+    instrumentation.context = gLastMeshPhaseMicros;
+    instrumentation.clockMicros = meshProfileClockMicros;
+    instrumentation.recordPhaseMicros = recordMeshProfilePhase;
+    options.instrumentation = &instrumentation;
     gRenderStage = ERenderStageRasterizer;
     const TInt64 renderStartMicros = currentTimeMicros();
     const bool rendered = SoftwareMeshRenderer::renderScene(
@@ -632,6 +683,27 @@ void drawStatusOverlay(CWsScreenDevice& screen,
         } else {
             gc.DrawText(_L("Presenter: GDI fallback"), TPoint(4, 64));
         }
+        TBuf<48> phaseTime;
+        phaseTime.Format(_L("Validation: %d ms"),
+                         gAverageMeshPhaseMillis[
+                             ESoftwareMeshRenderPhaseValidation]);
+        gc.DrawText(phaseTime, TPoint(4, 80));
+        phaseTime.Format(_L("Transform/proj: %d ms"),
+                         gAverageMeshPhaseMillis[
+                             ESoftwareMeshRenderPhaseTransformProjection]);
+        gc.DrawText(phaseTime, TPoint(4, 96));
+        phaseTime.Format(_L("Cull/queue: %d ms"),
+                         gAverageMeshPhaseMillis[
+                             ESoftwareMeshRenderPhasePolygonQueue]);
+        gc.DrawText(phaseTime, TPoint(4, 112));
+        phaseTime.Format(_L("Sort: %d ms"),
+                         gAverageMeshPhaseMillis[
+                             ESoftwareMeshRenderPhaseSort]);
+        gc.DrawText(phaseTime, TPoint(4, 128));
+        phaseTime.Format(_L("Draw/raster: %d ms"),
+                         gAverageMeshPhaseMillis[
+                             ESoftwareMeshRenderPhaseDraw]);
+        gc.DrawText(phaseTime, TPoint(4, 144));
         TBuf<48> status;
         status.Format(_L("Polygons %d  Triangles %d"),
                       gPolygonsDrawn, gTrianglesDrawn);

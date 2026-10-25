@@ -82,6 +82,29 @@ enum SoftwareMeshProjectionPath {
     ESoftwareMeshProjectionDirectX7 = 1
 };
 
+/* renderScene timing boundaries; projection is part of transform when the
+ * optional projected-vertex cache is enabled, otherwise it is in polygon
+ * queue. Draw includes per-polygon setup and rasterization. */
+enum SoftwareMeshRenderPhase {
+    ESoftwareMeshRenderPhaseValidation = 0,
+    ESoftwareMeshRenderPhaseTransformProjection,
+    ESoftwareMeshRenderPhasePolygonQueue,
+    ESoftwareMeshRenderPhaseSort,
+    ESoftwareMeshRenderPhaseDraw,
+    ESoftwareMeshRenderPhaseCount
+};
+
+/* Optional clock and phase-duration sink for diagnostic builds. */
+struct SoftwareMeshRenderInstrumentation {
+    void* context;
+    code::Math::QInt64 (*clockMicros)(void* context);
+    void (*recordPhaseMicros)(void* context,
+                              SoftwareMeshRenderPhase phase,
+                              code::Math::QInt64 elapsedMicros);
+
+    SoftwareMeshRenderInstrumentation();
+};
+
 /*
  * Per-frame state. `modelToCamera` maps source world vertices into camera
  * coordinates. `projectionPath` selects either NearClipper.project with
@@ -123,6 +146,8 @@ struct SoftwareMeshRenderOptions {
     code::Math::QInt32 lightDirectionX;
     code::Math::QInt32 lightDirectionY;
     code::Math::QInt32 lightDirectionZ;
+    /* Null disables all timing callbacks. */
+    const SoftwareMeshRenderInstrumentation* instrumentation;
 
     SoftwareMeshRenderOptions();
 };

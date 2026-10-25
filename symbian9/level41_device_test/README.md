@@ -51,7 +51,12 @@ DirectX7 draw pass still recalculated projected positions for every polygon.
 Version 1.0.15 reuses the cached coordinates in that final draw pass as well;
 callers that omit the optional buffer retain the original projection path. A
 local differential check matched framebuffer output and renderer statistics
-with and without the cache on both projection paths.
+with and without the cache on both projection paths. The E65 then reported
+5.8 FPS and 108/109 ms mesh average/maximum for the same scene. Version 1.0.16
+adds opt-in timing for validation, transform/projection, polygon queueing,
+sorting, and drawing/rasterization, so the next device run can identify which
+mesh phase dominates. The added clock reads make this a diagnostic build; the
+phase times are approximate and its FPS may include a small profiling cost.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -89,5 +94,7 @@ Current E65 feedback:
   scene, not full-game performance.
 - The v1.0.14 E65 run reported 5.7 FPS and 108/109 ms mesh average/maximum,
   with the bitmap BitBlt presenter; counts remained unchanged.
-- The v1.0.15 candidate also reuses cached projections in the DirectX7 draw
-  pass. Its E65 performance has not yet been measured.
+- The v1.0.15 E65 run reported 5.8 FPS and 108/109 ms mesh average/maximum,
+  with bitmap BitBlt active; it rendered 78 polygons and 148 triangles.
+- The v1.0.16 candidate displays average times for five mesh-render phases.
+  Its phase timings are diagnostic, not a final speed result.

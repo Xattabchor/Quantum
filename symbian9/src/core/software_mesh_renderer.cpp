@@ -7,11 +7,40 @@ namespace code {
 namespace Rendering {
 
 using code::Math::QInt32;
+using code::Math::QInt64;
 using code::Math::Vector3D;
 
 namespace {
 
 const QInt32 KJavaFloorPerspectiveStepPixels = 9999999;
+
+bool instrumentationEnabled(const SoftwareMeshRenderOptions& options)
+{
+    return options.instrumentation != 0 &&
+           options.instrumentation->clockMicros != 0 &&
+           options.instrumentation->recordPhaseMicros != 0;
+}
+
+QInt64 startInstrumentedPhase(const SoftwareMeshRenderOptions& options)
+{
+    if (!instrumentationEnabled(options)) return 0;
+    return options.instrumentation->clockMicros(
+        options.instrumentation->context);
+}
+
+void finishInstrumentedPhase(const SoftwareMeshRenderOptions& options,
+                             SoftwareMeshRenderPhase phase,
+                             QInt64 startMicros)
+{
+    if (!instrumentationEnabled(options)) return;
+    const QInt64 endMicros = options.instrumentation->clockMicros(
+        options.instrumentation->context);
+    if (endMicros >= startMicros) {
+        options.instrumentation->recordPhaseMicros(
+            options.instrumentation->context, phase,
+            endMicros - startMicros);
+    }
+}
 
 bool isFloorPolygon(const SoftwareMeshPolygon& polygon)
 {
@@ -596,6 +625,11 @@ SoftwareMeshInstance::SoftwareMeshInstance(
 {
 }
 
+SoftwareMeshRenderInstrumentation::SoftwareMeshRenderInstrumentation()
+    : context(0), clockMicros(0), recordPhaseMicros(0)
+{
+}
+
 SoftwareMeshRenderOptions::SoftwareMeshRenderOptions()
     : modelToCamera(0), projectionPath(ESoftwareMeshProjectionNearClipper),
       clipZ(-1), useSurfaceViewport(true),
@@ -604,7 +638,7 @@ SoftwareMeshRenderOptions::SoftwareMeshRenderOptions()
       cameraWorldX(0), cameraWorldY(0), cameraWorldZ(0),
       cameraVectorLight(false), shootIntensity(0), shootLength(0),
       flashlightEnabled(false), lightDirectionX(0), lightDirectionY(0),
-      lightDirectionZ(0)
+      lightDirectionZ(0), instrumentation(0)
 {
 }
 
@@ -671,8 +705,10 @@ bool SoftwareMeshRenderer::renderScene(
         return false;
     }
 
-    code::Math::QInt64 totalVertices = 0;
-    code::Math::QInt64 totalPolygons = 0;
+    const QInt64 validationStartMicros =
+        startInstrumentedPhase(options);
+    QInt64 totalVertices = 0;
+    QInt64 totalPolygons = 0;
     QInt32 instanceIndex;
     for (instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex) {
         if (instances[instanceIndex].mesh == 0) return false;
@@ -707,7 +743,12 @@ bool SoftwareMeshRenderer::renderScene(
     const QInt32 viewportY2 = options.useSurfaceViewport
         ? destination.height : options.viewportY2;
     if (viewportX1 > viewportX2 || viewportY1 > viewportY2) return false;
+    finishInstrumentedPhase(
+        options, ESoftwareMeshRenderPhaseValidation,
+        validationStartMicros);
 
+    const QInt64 transformStartMicros =
+        startInstrumentedPhase(options);
     QInt32 vertexOffset = 0;
     for (instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex) {
         const SoftwareMeshView& mesh = *instances[instanceIndex].mesh;
@@ -736,7 +777,11 @@ bool SoftwareMeshRenderer::renderScene(
         }
         vertexOffset += mesh.vertexCount;
     }
+    finishInstrumentedPhase(
+        options, ESoftwareMeshRenderPhaseTransformProjection,
+        transformStartMicros);
 
+    const QInt64 queueStartMicros = startInstrumentedPhase(options);
     const bool fastPath = RenderModePolicy::usesFastAffinePath(options.quality);
     QInt32 queueCount = 0;
     vertexOffset = 0;
@@ -850,11 +895,18 @@ bool SoftwareMeshRenderer::renderScene(
         }
         vertexOffset += mesh.vertexCount;
     }
+    finishInstrumentedPhase(
+        options, ESoftwareMeshRenderPhasePolygonQueue,
+        queueStartMicros);
 
+    const QInt64 sortStartMicros = startInstrumentedPhase(options);
     if (queueCount > 1) {
         sortQueue(workspace.renderQueue, 0, queueCount - 1);
     }
+    finishInstrumentedPhase(
+        options, ESoftwareMeshRenderPhaseSort, sortStartMicros);
 
+    const QInt64 drawStartMicros = startInstrumentedPhase(options);
     QInt32 queueIndex;
     for (queueIndex = queueCount - 1; queueIndex >= 0; --queueIndex) {
         const SoftwareMeshRenderItem& item = workspace.renderQueue[queueIndex];
@@ -935,6 +987,8 @@ bool SoftwareMeshRenderer::renderScene(
         if (!drawn) return false;
         ++stats.polygonsDrawn;
     }
+    finishInstrumentedPhase(
+        options, ESoftwareMeshRenderPhaseDraw, drawStartMicros);
     return true;
 }
 } // namespace Rendering
