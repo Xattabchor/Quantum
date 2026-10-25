@@ -248,12 +248,15 @@ def main():
             for name, data in sorted(resources.items()):
                 jar.writestr(name, data)
 
-    # Keep every class/method/name, especially the reflection-loaded M3G backend.
+    # Keep the MIDlet entry point and the reflection-loaded M3G backend; shrink
+    # everything else that is unreachable. No obfuscation (reflection by name).
     # No -dontpreverify / -ignorewarnings: preverification failures are build failures.
     config = work / "preverify.pro"
     config.write_text("-injars Quantum-unverified.jar\n-outjars Quantum.jar\n"
                       "-libraryjars api.jar\n-microedition\n-target 1.3\n"
-                      "-dontshrink\n-dontoptimize\n-dontobfuscate\n-keepattributes *\n-verbose\n")
+                      "-dontoptimize\n-dontobfuscate\n-keepattributes *\n-verbose\n"
+                      "-keep public class * extends javax.microedition.midlet.MIDlet\n"
+                      "-keep class code.Rendering.M3GSceneRenderer { *; }\n")
     run([args.java, "-jar", str(proguard), "@" + str(config)], "preverify.log")
     restore_unicode_resources(work / "Quantum.jar", resources)
     result = audit_jar(work / "Quantum.jar")
