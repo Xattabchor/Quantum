@@ -6,6 +6,7 @@
 
 #include <e32base.h>
 #include <f32file.h>
+#include <fbs.h>
 #include <gdi.h>
 #include <w32std.h>
 
@@ -430,8 +431,8 @@ void drawFailure(CWsScreenDevice& screen, CWindowGc& gc,
 }
 
 void drawOutput(CWsScreenDevice& screen,
-                CWindowGc& gc,
-                RWsSession& session,
+                CGraphicsContext& gc,
+                RWsSession* session,
                 const TSize& size)
 {
     const TInt scaleX = size.iWidth / KRenderWidth;
@@ -463,28 +464,168 @@ void drawOutput(CWsScreenDevice& screen,
                               left + (x + 1) * scale,
                               top + (y + 1) * scale));
         }
-        if ((y & 7) == 7) {
-            // Keep the E65 WindowServer queue bounded: a full 120x160
-            // frame can issue thousands of individual GDI rectangles.
-            session.Flush();
+        if (session != 0 && (y & 7) == 7) {
+            // Keep the WindowServer fallback's GDI request queue bounded.
+            session->Flush();
         }
     }
 
-    CFont* font = 0;
-    if (screen.GetNearestFontInPixels(font, TFontSpec(_L("Series 60 Sans"), 10)) == KErrNone) {
-        gc.UseFont(font);
-        gc.SetPenStyle(CGraphicsContext::ESolidPen);
-        gc.SetPenColor(TRgb(255, 255, 255));
-        gc.DrawText(_L("LEVEL 41 / DMODE 9"), TPoint(4, 14));
-        TBuf<48> status;
-        status.Format(_L("Polygons %d  Triangles %d"),
-                      gPolygonsDrawn, gTrianglesDrawn);
-        gc.DrawText(status, TPoint(4, size.iHeight - 22));
-        gc.DrawText(_L("Press any key to exit"),
-                    TPoint(4, size.iHeight - 6));
-        gc.DiscardFont();
-        screen.ReleaseFont(font);
+    // DSA drawing must not make Window Server calls while direct access is
+    // active; keep all font and status text in the WindowServer fallback.
+    if (session != 0) {
+        CFont* font = 0;
+        if (screen.GetNearestFontInPixels(font, TFontSpec(_L("Series 60 Sans"), 10)) == KErrNone) {
+            gc.UseFont(font);
+            gc.SetPenStyle(CGraphicsContext::ESolidPen);
+            gc.SetPenColor(TRgb(255, 255, 255));
+            gc.DrawText(_L("LEVEL 41 / DMODE 9"), TPoint(4, 14));
+            TBuf<48> status;
+            status.Format(_L("Polygons %d  Triangles %d"),
+                          gPolygonsDrawn, gTrianglesDrawn);
+            gc.DrawText(status, TPoint(4, size.iHeight - 22));
+            gc.DrawText(_L("Press any key to exit"),
+                        TPoint(4, size.iHeight - 6));
+            gc.DiscardFont();
+            screen.ReleaseFont(font);
+        }
     }
+}
+
+class TLevel41DsaObserver : public MDirectScreenAccess
+{
+public:
+    TLevel41DsaObserver(CWsScreenDevice& screen, const TSize& size)
+        : iScreen(screen), iSize(size), iAccess(0)
+    {
+    }
+
+    void SetAccess(CDirectScreenAccess* access)
+    {
+        iAccess = access;
+    }
+
+    bool DrawFrame()
+    {
+        if (iAccess == 0 || iAccess->Gc() == 0) return false;
+        drawOutput(iScreen, *iAccess->Gc(), 0, iSize);
+        CFbsScreenDevice* directScreen = iAccess->ScreenDevice();
+        if (directScreen != 0) {
+            // EKA2L1 requires this explicit update after DSA drawing.
+            (void)directScreen->Update();
+        }
+        return true;
+    }
+
+    void AbortNow(RDirectScreenAccess::TTerminationReasons reason)
+    {
+        // The frame is static; stop drawing immediately and make no WSERV call.
+        (void)reason;
+    }
+
+    void Restart(RDirectScreenAccess::TTerminationReasons reason)
+    {
+        (void)reason;
+        if (iAccess == 0) return;
+        TRAPD(error, iAccess->StartL());
+        if (error == KErrNone) DrawFrame();
+    }
+
+private:
+    CWsScreenDevice& iScreen;
+    TSize iSize;
+    CDirectScreenAccess* iAccess;
+};
+
+class CWindowEventWaiter : public CActive
+{
+public:
+    CWindowEventWaiter(RWsSession& session, TUint windowHandle)
+        : CActive(CActive::EPriorityStandard),
+          iSession(session), iWindowHandle(windowHandle)
+    {
+        CActiveScheduler::Add(this);
+    }
+
+    void Start()
+    {
+        iSession.EventReady(&iStatus);
+        SetActive();
+    }
+
+private:
+    void DoCancel()
+    {
+        iSession.EventReadyCancel();
+    }
+
+    void RunL()
+    {
+        if (iStatus.Int() != KErrNone) {
+            CActiveScheduler::Stop();
+            return;
+        }
+
+        TWsEvent event;
+        iSession.GetEvent(event);
+        if (event.Handle() == iWindowHandle && event.Type() == EEventKey) {
+            CActiveScheduler::Stop();
+            return;
+        }
+
+        iSession.EventReady(&iStatus);
+        SetActive();
+    }
+
+private:
+    RWsSession& iSession;
+    TUint iWindowHandle;
+};
+
+TInt runDirectScreenAccess(RWsSession& session,
+                           CWsScreenDevice& screen,
+                           RWindow& window,
+                           TRequestStatus& redraws,
+                           const TSize& size,
+                           bool& usedDirectScreenAccess)
+{
+    usedDirectScreenAccess = false;
+
+    // Remove any pending WindowServer redraw request before taking DSA access.
+    if (redraws == KRequestPending) {
+        session.RedrawReadyCancel();
+        User::WaitForRequest(redraws);
+    } else if (redraws.Int() == KErrNone) {
+        TWsRedrawEvent pendingRedraw;
+        session.GetRedraw(pendingRedraw);
+    }
+
+    TLevel41DsaObserver observer(screen, size);
+    CDirectScreenAccess* directAccess = 0;
+    TRAPD(error,
+          directAccess = CDirectScreenAccess::NewL(
+              session, screen, window, observer);
+          observer.SetAccess(directAccess);
+          directAccess->StartL());
+    if (error != KErrNone) {
+        delete directAccess;
+        return error;
+    }
+
+    if (!observer.DrawFrame()) {
+        directAccess->Cancel();
+        delete directAccess;
+        return KErrNotSupported;
+    }
+
+    usedDirectScreenAccess = true;
+    CWindowEventWaiter eventWaiter(session, 2);
+    eventWaiter.Start();
+    CActiveScheduler::Start();
+    eventWaiter.Cancel();
+
+    directAccess->Cancel();
+    delete directAccess;
+    return KErrNone;
 }
 
 TInt runWindow(RFs& fileServer,
@@ -516,8 +657,10 @@ TInt runWindow(RFs& fileServer,
     window.Activate();
 
     TRequestStatus events;
+    events = KRequestPending;
     TRequestStatus redraws;
-    session.EventReady(&events);
+    redraws = KRequestPending;
+    bool eventRequestStarted = false;
     session.RedrawReady(&redraws);
     window.Invalidate();
     session.Flush();
@@ -544,8 +687,31 @@ TInt runWindow(RFs& fileServer,
             !renderLevel41(fileServer, drive)) {
             gRenderStatus = KErrCorrupt;
         }
+
+        if (gRenderStatus == KErrNone) {
+            bool usedDirectScreenAccess = false;
+            (void)runDirectScreenAccess(
+                session, screen, window, redraws, size,
+                usedDirectScreenAccess);
+            if (usedDirectScreenAccess) {
+                window.Close();
+                group.Close();
+                session.Flush();
+                return KErrNone;
+            }
+        }
+
+        if (redraws != KRequestPending) {
+            if (redraws.Int() == KErrNone) {
+                TWsRedrawEvent pendingRedraw;
+                session.GetRedraw(pendingRedraw);
+            }
+            session.RedrawReady(&redraws);
+        }
         window.Invalidate();
         session.Flush();
+        session.EventReady(&events);
+        eventRequestStarted = true;
     }
 
     bool running = result == KErrNone;
@@ -571,7 +737,7 @@ TInt runWindow(RFs& fileServer,
                 window.BeginRedraw(redraw.Rect());
                 gc.Activate(window);
                 if (gRenderStatus == KErrNone) {
-                    drawOutput(screen, gc, session, size);
+                    drawOutput(screen, gc, &session, size);
                 } else {
                     drawFailure(screen, gc, size, gRenderStatus);
                 }
@@ -583,7 +749,7 @@ TInt runWindow(RFs& fileServer,
         session.Flush();
     }
 
-    session.EventReadyCancel();
+    if (eventRequestStarted) session.EventReadyCancel();
     session.RedrawReadyCancel();
     if (events == KRequestPending) User::WaitForRequest(events);
     if (redraws == KRequestPending) User::WaitForRequest(redraws);
@@ -599,6 +765,14 @@ int main()
 {
     CTrapCleanup* cleanup = CTrapCleanup::New();
     if (cleanup == 0) return KErrNoMemory;
+
+    CActiveScheduler* scheduler = 0;
+    TRAPD(schedulerError, scheduler = new (ELeave) CActiveScheduler);
+    if (schedulerError != KErrNone) {
+        delete cleanup;
+        return schedulerError;
+    }
+    CActiveScheduler::Install(scheduler);
 
     const TInt textureStorageBytes =
         KTextureStoragePixels * static_cast<TInt>(sizeof(QInt32));
@@ -647,6 +821,8 @@ int main()
 
     if (fileServerConnected) fileServer.Close();
     if (gTextureStorage != 0) User::Free(gTextureStorage);
+    CActiveScheduler::Install(0);
+    delete scheduler;
     delete cleanup;
     return result;
 }
