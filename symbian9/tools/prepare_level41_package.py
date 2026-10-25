@@ -72,11 +72,18 @@ def main() -> int:
         )
 
     for name, target in ASSET_TARGETS.items():
-        source = project / "assets" / "level41" / name
+        # Compact QTX1 files are generated into the package directory by the
+        # preceding host texture step; the remaining files are source assets.
+        source = (
+            output / name
+            if name.endswith(".qtx")
+            else project / "assets" / "level41" / name
+        )
         if not source.is_file():
             raise SystemExit(f"missing staged Level 41 asset: {source}")
         destination = output / name
-        destination.write_bytes(source.read_bytes())
+        if source != destination:
+            destination.write_bytes(source.read_bytes())
         resource_lines.append(
             f'"{name}"-"{pkg_escape_target(target)}"'
         )
