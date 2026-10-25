@@ -3,7 +3,10 @@
 This is the math-only half of the Level 41 service probe. It uses the
 known-good raw E32/WindowServer/GDI launch path, then calls Symbian
 `Math::Sqrt`, `Math::Sin`, `Math::Cos` and `libm` `sqrt`. The screen shows each
-result code. It does not link File Server or the mesh renderer.
+result code. It does not link File Server or the mesh renderer. Version 1.0.1
+also includes the raw WindowServer key-event handle fix: input is matched to
+group client handle 1, not the child window handle 2. E65 confirmation is
+still required.
 
 The user reports that this probe launches on the E65. That makes Symbian
 Math/libm less likely to be the cause of the combined service-probe failure,

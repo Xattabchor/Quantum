@@ -29,6 +29,9 @@
 
 namespace {
 
+const TUint KWindowGroupClientHandle = 1;
+const TUint KProbeWindowHandle = 2;
+
 struct TServiceResults {
     TInt fsConnect;
     TInt fileOpen;
@@ -185,7 +188,7 @@ void drawResults(CWsScreenDevice& screen,
     screen.ReleaseFont(font);
 }
 
-TInt waitForKey(RWsSession& session, TUint windowHandle)
+TInt waitForKey(RWsSession& session, TUint groupClientHandle)
 {
     TRequestStatus eventStatus;
     session.EventReady(&eventStatus);
@@ -196,7 +199,8 @@ TInt waitForKey(RWsSession& session, TUint windowHandle)
 
         TWsEvent event;
         session.GetEvent(event);
-        if (event.Handle() == windowHandle && event.Type() == EEventKey) {
+        // Key events are tagged with the focused group handle, not window 2.
+        if (event.Handle() == groupClientHandle && event.Type() == EEventKey) {
             return KErrNone;
         }
         session.EventReady(&eventStatus);
@@ -218,7 +222,7 @@ TInt redrawResults(RWsSession& session,
     if (result == KErrNone) {
         TWsRedrawEvent redraw;
         session.GetRedraw(redraw);
-        if (redraw.Handle() == 2) {
+        if (redraw.Handle() == KProbeWindowHandle) {
             window.BeginRedraw(redraw.Rect());
             CWindowGc gc(&screen);
             result = gc.Construct();
@@ -268,14 +272,14 @@ int main()
     }
 
     RWindowGroup group(session);
-    result = group.Construct(1, ETrue);
+    result = group.Construct(KWindowGroupClientHandle, ETrue);
     if (result != KErrNone) {
         session.Close();
         return result;
     }
 
     RWindow window(session);
-    result = window.Construct(group, 2);
+    result = window.Construct(group, KProbeWindowHandle);
     if (result != KErrNone) {
         group.Close();
         session.Close();
@@ -291,15 +295,15 @@ int main()
 
 #if defined(QUANTUM_SERVICE_FS_CONNECT_DEFERRED)
     if (result == KErrNone) {
-        result = waitForKey(session, 2);
+        result = waitForKey(session, KWindowGroupClientHandle);
         if (result == KErrNone) {
             probeFileServer(results);
             result = redrawResults(session, screen, window, size, results);
         }
-        if (result == KErrNone) result = waitForKey(session, 2);
+        if (result == KErrNone) result = waitForKey(session, KWindowGroupClientHandle);
     }
 #else
-    if (result == KErrNone) result = waitForKey(session, 2);
+    if (result == KErrNone) result = waitForKey(session, KWindowGroupClientHandle);
 #endif
     window.Close();
     group.Close();

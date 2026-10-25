@@ -7,6 +7,9 @@
 
 namespace {
 
+const TUint KWindowGroupClientHandle = 1;
+const TUint KProbeWindowHandle = 2;
+
 using code::Math::QInt32;
 using code::Math::QUint32;
 using code::Rendering::AffineTriangleVertex;
@@ -187,13 +190,13 @@ TInt runWindow(RWsSession& session,
     }
 
     RWindowGroup group(session);
-    TInt result = group.Construct(1, ETrue);
+    TInt result = group.Construct(KWindowGroupClientHandle, ETrue);
     if (result != KErrNone) {
         return result;
     }
 
     RWindow window(session);
-    result = window.Construct(group, 2);
+    result = window.Construct(group, KProbeWindowHandle);
     if (result != KErrNone) {
         group.Close();
         return result;
@@ -221,7 +224,9 @@ TInt runWindow(RWsSession& session,
             }
             TWsEvent event;
             session.GetEvent(event);
-            if (event.Handle() == 2 && event.Type() == EEventKey) {
+            // Key events carry the focused group client handle, not window 2.
+            if (event.Handle() == KWindowGroupClientHandle &&
+                event.Type() == EEventKey) {
                 running = false;
             } else if (running) {
                 session.EventReady(&events);
@@ -234,7 +239,7 @@ TInt runWindow(RWsSession& session,
             }
             TWsRedrawEvent redraw;
             session.GetRedraw(redraw);
-            if (redraw.Handle() == 2) {
+            if (redraw.Handle() == KProbeWindowHandle) {
                 window.BeginRedraw(redraw.Rect());
                 gc.Activate(window);
                 drawOutput(screen, gc, size);

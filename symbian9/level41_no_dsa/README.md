@@ -5,6 +5,10 @@ but compiles out Direct Screen Access, `CWsBitmap`/`CFbsBitmapDevice`,
 `SetAutoUpdate`, and the BitGdi import. It uses the existing WindowServer GDI
 fallback to display the scene.
 
+Its v1.0.1 package includes the raw WindowServer input fix: key events use the
+focused window group's client handle (1), while redraws use child window handle
+2. The E65 input behavior still needs confirmation.
+
 The minimal `level41_launch_probe` launched on the E65, confirming that the
 shared raw E32 startup, registration and basic WindowServer/GDI path can run
 there. This variant was intended to isolate DSA/BitGdi from the rest of Level

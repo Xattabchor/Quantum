@@ -8,15 +8,19 @@ or rendering its scene:
   reading its size and first bytes.
 - Symbian math: `Math::Sqrt`, `Math::Sin`, and `Math::Cos`, plus `libm` `sqrt`.
 
-The screen displays the result codes and waits for a key. The user reports that
-this combined probe also shows “Feature not supported”. The Math-only app
-launches, but the File Server-only app and a pre-UI `RFs::Connect`-only app
-both show “Feature not supported”. Deferred RFs probe v1.0.1 also did not
-launch. Its E32 imports include `efsrv.dll` ordinals 68 (`RFs::Connect(int)`)
-and 390 (`RFs::Close()`) per the public ARM EABI definition. Public Symbian
-source notes that `RFs::Close()` was added for tracing and was absent from
-earlier OS versions, so a missing ordinal 390 is a strong candidate for the
-startup failure, but its absence from the E65 ROM is not confirmed. The next
-candidate v1.0.2 calls `RHandleBase::Close()` to avoid that newer EFSRV import
-and leaves `RFs::Connect` as the deferred test. This is diagnostic only, not
-a game or compatibility claim.
+The Math-only app launches on the E65. The File Server-only and combined
+profiles previously showed “Feature not supported”. Deferred RFs probe v1.0.1
+did not launch; its `efsrv.dll` imports included ordinals 68 (`RFs::Connect`)
+and 390 (`RFs::Close`). Public Symbian source says `RFs::Close()` was added
+for tracing and was absent from earlier OS versions. Version 1.0.2 replaced
+that call with `RHandleBase::Close()`; the user reports v1.0.2 now launches on
+the E65. Its import table contains only `efsrv.dll` ordinal 68, though the
+missing-export explanation remains a hypothesis until confirmed against the
+E65 ROM.
+
+A separate input bug affected every raw WindowServer test: the code matched
+`EEventKey` against the child window handle (2), while WindowServer tags a key
+event with the focused window group's client handle (1). The fix is included
+in the rebuilt packages: combined, File Server, and Math probes v1.0.1 and the
+deferred RFs probe v1.0.3. Device confirmation is still needed. This remains a
+diagnostic suite, not a game or compatibility claim.

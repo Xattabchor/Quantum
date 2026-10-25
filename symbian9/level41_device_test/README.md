@@ -8,6 +8,12 @@ framebuffer can be allocated, with a 120x160 low-memory fallback. A key exits
 the test. It is not the Java game, does not contain gameplay or
 controls, and is not Java pixel-parity evidence.
 
+The raw WindowServer test originally compared key events against child window
+handle 2. WindowServer tags `EEventKey` with the focused window group's client
+handle 1, so no key reached the exit path. Version 1.0.7 uses the group handle
+for keyboard events and the child handle only for redraws; E65 confirmation is
+still required.
+
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
 stored here. The host asset-preparation script converts the four PNG/JPEG

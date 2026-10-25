@@ -16,6 +16,9 @@
 
 namespace {
 
+const TUint KWindowGroupClientHandle = 1;
+const TUint KProbeWindowHandle = 2;
+
 using code::Math::Matrix;
 using code::Math::QInt32;
 using code::Math::QUint32;
@@ -729,9 +732,9 @@ void TLevel41DsaObserver::Restart(
 class CWindowEventWaiter : public CActive
 {
 public:
-    CWindowEventWaiter(RWsSession& session, TUint windowHandle)
+    CWindowEventWaiter(RWsSession& session, TUint groupClientHandle)
         : CActive(CActive::EPriorityStandard),
-          iSession(session), iWindowHandle(windowHandle)
+          iSession(session), iGroupClientHandle(groupClientHandle)
     {
         CActiveScheduler::Add(this);
     }
@@ -763,7 +766,8 @@ private:
 
         TWsEvent event;
         iSession.GetEvent(event);
-        if (event.Handle() == iWindowHandle && event.Type() == EEventKey) {
+        // Key events carry the focused group client handle, not the window handle.
+        if (event.Handle() == iGroupClientHandle && event.Type() == EEventKey) {
             CActiveScheduler::Stop();
             return;
         }
@@ -774,7 +778,7 @@ private:
 
 private:
     RWsSession& iSession;
-    TUint iWindowHandle;
+    TUint iGroupClientHandle;
 };
 
 TInt runDirectScreenAccess(RWsSession& session,
@@ -797,7 +801,7 @@ TInt runDirectScreenAccess(RWsSession& session,
 
     TLevel41DsaObserver observer(session, screen, size);
     CDsaStarter starter(session, screen, window, observer);
-    CWindowEventWaiter eventWaiter(session, 2);
+    CWindowEventWaiter eventWaiter(session, KWindowGroupClientHandle);
     eventWaiter.Start();
     starter.Start();
     CActiveScheduler::Start();
@@ -846,11 +850,11 @@ TInt runWindow(RFs& fileServer,
     }
 
     RWindowGroup group(session);
-    TInt result = group.Construct(1, ETrue);
+    TInt result = group.Construct(KWindowGroupClientHandle, ETrue);
     if (result != KErrNone) return result;
 
     RWindow window(session);
-    result = window.Construct(group, 2);
+    result = window.Construct(group, KProbeWindowHandle);
     if (result != KErrNone) {
         group.Close();
         return result;
@@ -877,7 +881,7 @@ TInt runWindow(RFs& fileServer,
     if (result == KErrNone) {
         TWsRedrawEvent redraw;
         session.GetRedraw(redraw);
-        if (redraw.Handle() == 2) {
+        if (redraw.Handle() == KProbeWindowHandle) {
             window.BeginRedraw(redraw.Rect());
             gc.Activate(window);
             drawStartup(screen, gc, size);
@@ -932,7 +936,8 @@ TInt runWindow(RFs& fileServer,
             if (result != KErrNone) break;
             TWsEvent event;
             session.GetEvent(event);
-            if (event.Handle() == 2 && event.Type() == EEventKey) {
+            if (event.Handle() == KWindowGroupClientHandle &&
+                event.Type() == EEventKey) {
                 running = false;
             } else if (running) {
                 session.EventReady(&events);
@@ -943,7 +948,7 @@ TInt runWindow(RFs& fileServer,
             if (result != KErrNone) break;
             TWsRedrawEvent redraw;
             session.GetRedraw(redraw);
-            if (redraw.Handle() == 2) {
+            if (redraw.Handle() == KProbeWindowHandle) {
                 window.BeginRedraw(redraw.Rect());
                 gc.Activate(window);
                 if (gRenderStatus == KErrNone) {

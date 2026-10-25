@@ -33,3 +33,6 @@ support for every S60v3 model. Do not change phone security settings just to
 force installation. If the standard installer accepts it, launch **Quantum
 Render Test**, inspect the affine/perspective panels, then press a key to exit.
 The native loader, display and performance still require real-device checks.
+Version 1.0.1 also corrects the raw WindowServer key filter: `EEventKey`
+uses the focused window group's client handle (1), not the child window handle
+(2). Input on the E65 still needs confirmation.
