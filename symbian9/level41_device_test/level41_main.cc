@@ -107,7 +107,22 @@ SoftwareMeshMaterial gSkyMaterial[1];
 SoftwareMeshView gWorldView;
 SoftwareMeshView gSkyView;
 
+enum TRenderStage {
+    ERenderStageNone = 0,
+    ERenderStageForestTexture,
+    ERenderStageMapTexture,
+    ERenderStageRiverTexture,
+    ERenderStageSkyTexture,
+    ERenderStageTextureDimensions,
+    ERenderStageWorldMesh,
+    ERenderStageLightmap,
+    ERenderStageSkyboxMesh,
+    ERenderStageRasterizer,
+    ERenderStageNoPolygons
+};
+
 TInt gRenderStatus = KErrNone;
+TInt gRenderStage = ERenderStageNone;
 QInt32 gPolygonsDrawn = 0;
 QInt32 gTrianglesDrawn = 0;
 
@@ -132,7 +147,11 @@ bool readPrivateAsset(RFs& fileServer,
 {
     TFileName path;
     path.Copy(drive);
+#ifdef QUANTUM_LEVEL41_NO_DSA
+    path.Append(_L("\\private\\e000a016\\level41\\"));
+#else
     path.Append(_L("\\private\\e000a012\\level41\\"));
+#endif
     path.Append(filename);
 
     RFile file;
@@ -251,6 +270,7 @@ bool loadWorldModel(RFs& fileServer,
                     const TDesC& drive,
                     SoftwareMesh3DRequirements& requirements)
 {
+    gRenderStage = ERenderStageWorldMesh;
     TInt length = 0;
     if (!readPrivateAsset(fileServer, drive, _L("L3D_new.3d"),
                           gWorldFile, KMaximumWorldFileBytes, length) ||
@@ -272,6 +292,7 @@ bool loadWorldModel(RFs& fileServer,
         return false;
     }
 
+    gRenderStage = ERenderStageLightmap;
     TInt lightmapLength = 0;
     if (!readPrivateAsset(fileServer, drive, _L("lightmap.vla"),
                           gLightmapFile, KMaximumLightmapBytes,
@@ -293,6 +314,7 @@ bool loadSkyboxModel(RFs& fileServer,
                      const TDesC& drive,
                      SoftwareMesh3DRequirements& requirements)
 {
+    gRenderStage = ERenderStageSkyboxMesh;
     TInt length = 0;
     if (!readPrivateAsset(fileServer, drive, _L("skybox8.3d"),
                           gSkyboxFile, KMaximumSkyboxFileBytes, length) ||
@@ -327,15 +349,28 @@ bool renderLevel41(RFs& fileServer, const TDesC& drive)
     TextureInfo map;
     TextureInfo river;
     TextureInfo sky;
+    gRenderStage = ERenderStageForestTexture;
     if (!loadTexture(fileServer, drive, _L("forest.qtx"),
-                     gForestPixels, KForestTexturePixels, forest) ||
-        !loadTexture(fileServer, drive, _L("map.qtx"), gMapPixels,
-                     KMapTexturePixels, map) ||
-        !loadTexture(fileServer, drive, _L("river.qtx"), gRiverPixels,
-                     KRiverTexturePixels, river) ||
-        !loadTexture(fileServer, drive, _L("sky.qtx"), gSkyPixels,
-                     KSkyTexturePixels, sky) ||
-        forest.width != 256 || forest.height != 128 ||
+                     gForestPixels, KForestTexturePixels, forest)) {
+        return false;
+    }
+    gRenderStage = ERenderStageMapTexture;
+    if (!loadTexture(fileServer, drive, _L("map.qtx"), gMapPixels,
+                     KMapTexturePixels, map)) {
+        return false;
+    }
+    gRenderStage = ERenderStageRiverTexture;
+    if (!loadTexture(fileServer, drive, _L("river.qtx"),
+                     gRiverPixels, KRiverTexturePixels, river)) {
+        return false;
+    }
+    gRenderStage = ERenderStageSkyTexture;
+    if (!loadTexture(fileServer, drive, _L("sky.qtx"),
+                     gSkyPixels, KSkyTexturePixels, sky)) {
+        return false;
+    }
+    gRenderStage = ERenderStageTextureDimensions;
+    if (forest.width != 256 || forest.height != 128 ||
         map.width != 256 || map.height != 256 ||
         river.width != 32 || river.height != 32 ||
         sky.width != 256 || sky.height != 256) {
@@ -410,9 +445,13 @@ bool renderLevel41(RFs& fileServer, const TDesC& drive)
         gFramebuffer, gRenderPixelCount,
         gRenderWidth, gRenderHeight, gRenderWidth);
     SoftwareMeshRenderStats stats;
+    gRenderStage = ERenderStageRasterizer;
     if (!SoftwareMeshRenderer::renderScene(
-            surface, instances, 2, options, workspace, stats) ||
-        stats.polygonsDrawn <= 0) {
+            surface, instances, 2, options, workspace, stats)) {
+        return false;
+    }
+    if (stats.polygonsDrawn <= 0) {
+        gRenderStage = ERenderStageNoPolygons;
         return false;
     }
     gPolygonsDrawn = stats.polygonsDrawn;
@@ -458,7 +497,44 @@ void drawFailure(CWsScreenDevice& screen, CWindowGc& gc,
         TBuf<48> line;
         line.Format(_L("Asset/render error: %d"), error);
         gc.DrawText(line, TPoint(8, 52));
-        gc.DrawText(_L("Check package assets and retry"), TPoint(8, 76));
+        TBuf<40> stage;
+        switch (gRenderStage) {
+        case ERenderStageForestTexture:
+            stage.Copy(_L("Failed at: forest.qtx"));
+            break;
+        case ERenderStageMapTexture:
+            stage.Copy(_L("Failed at: map.qtx"));
+            break;
+        case ERenderStageRiverTexture:
+            stage.Copy(_L("Failed at: river.qtx"));
+            break;
+        case ERenderStageSkyTexture:
+            stage.Copy(_L("Failed at: sky.qtx"));
+            break;
+        case ERenderStageTextureDimensions:
+            stage.Copy(_L("Failed at: texture size"));
+            break;
+        case ERenderStageWorldMesh:
+            stage.Copy(_L("Failed at: L3D_new.3d"));
+            break;
+        case ERenderStageLightmap:
+            stage.Copy(_L("Failed at: lightmap.vla"));
+            break;
+        case ERenderStageSkyboxMesh:
+            stage.Copy(_L("Failed at: skybox8.3d"));
+            break;
+        case ERenderStageRasterizer:
+            stage.Copy(_L("Failed at: renderer"));
+            break;
+        case ERenderStageNoPolygons:
+            stage.Copy(_L("Failed: no polygons drawn"));
+            break;
+        default:
+            stage.Copy(_L("Failed at: startup"));
+            break;
+        }
+        gc.DrawText(stage, TPoint(8, 76));
+        gc.DrawText(_L("Check package assets and retry"), TPoint(8, 100));
         gc.DrawText(_L("Press any key to exit"), TPoint(8, size.iHeight - 8));
         gc.DiscardFont();
         screen.ReleaseFont(font);

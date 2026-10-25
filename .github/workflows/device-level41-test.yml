@@ -312,9 +312,11 @@ jobs:
           ARTIFACT="$RUNNER_TEMP/quantum-level41-build/level41_device_test/e32/quantum_level41_no_dsa.exe"
           LOG="$RUNNER_TEMP/level41-no-dsa-package-inputs.log"
           mkdir -p "$PACKAGE"
+          cp "$RUNNER_TEMP/quantum-level41-package/"*.qtx "$PACKAGE/"
           if "$RUNNER_TEMP/symbian-venv/bin/python" \
-              "$GITHUB_WORKSPACE/symbian9/tools/prepare_level41_launch_probe_package.py" \
+              "$GITHUB_WORKSPACE/symbian9/tools/prepare_level41_package.py" \
               --project "$GITHUB_WORKSPACE/symbian9/level41_no_dsa" \
+              --asset-directory "$GITHUB_WORKSPACE/symbian9/level41_device_test/assets/level41" \
               --artifact "$ARTIFACT" \
               --output "$PACKAGE" > "$LOG" 2>&1; then
             cat "$LOG"

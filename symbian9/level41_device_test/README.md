@@ -14,10 +14,12 @@ handle 1, so no key reached the exit path. Version 1.0.7 uses the group handle
 for keyboard events and the child handle only for redraws. The main executable
 also used `RFs::Close()`; unlike the deferred probe, it still imported EFSRV
 ordinal 390, an export added later for tracing. Version 1.0.8 closes through
-`RHandleBase::Close()` to avoid that import. CI inspection confirms ordinal 390
-is gone from both v1.0.8 and GDI-only v1.0.2. The Level 41 executable still
-imports EFSRV ordinals 68 (`RFs::Connect`) and 93, 264, 300, 257 for `RFile`
-operations; E65 runtime confirmation is still required.
+`RHandleBase::Close()` to avoid that import. CI inspection confirmed ordinal
+390 is absent from v1.0.8; v1.0.9 retains that fix and adds a stage label to
+asset/render failures. The GDI-only v1.0.3 candidate uses the same fix. The
+Level 41 executable still imports EFSRV ordinals 68 (`RFs::Connect`) and 93,
+264, 300, 257 for `RFile` operations; E65 runtime confirmation is still
+required.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -33,37 +35,24 @@ and a standard SIS v9/SISX package, and publishes the resulting candidate in
 this directory. The package is self-signed for legacy Symbian testing; this
 does not bypass the handset's installation policy.
 
-The host Level 41 mesh-renderer smoke path remains separate. A successful host
-render or SIS build does not establish handset runtime compatibility. Package
-version 1.0.0 reached the E65 menu entry but showed “Feature not supported”
-when selected. Version 1.0.1 opens its window before loading/rendering and
-reduces temporary texture memory. In EKA2L1, the screenshot showed only the sky
-and a narrow horizon; version 1.0.2's periodic WindowServer flush did not make
-the lower scene appear. Version 1.0.3 tried Symbian Direct Screen Access
-(CDirectScreenAccess) for the static frame, with the WindowServer path retained
-as a fallback. Version 1.0.4 changes the DSA output to a bitmap-backed transfer:
-the CPU renderer draws into a full-screen `CWsBitmap` through
-`CFbsBitmapDevice`, then DSA blits that bitmap to the display in one operation.
-This reimplements the public Pixmap+DSA flow demonstrated by ESknot 1.04; it
-does not import its GLES/EGL renderer, since Level 41 remains software-rendered.
-The DSA path enables `SetAutoUpdate(ETrue)` and preserves the WindowServer GDI
-fallback. Version 1.0.5 renders at actual display dimensions when its framebuffer
-fits the memory cap and can be allocated; otherwise it falls back to 120x160.
-Projection is scaled uniformly to preserve the scene's shape, removing the
-intentional nearest-neighbor enlargement on typical 240x320 displays at the
-cost of more software-rendering work. Version 1.0.6 removed the explicit
-`CFbsScreenDevice::Update()` call while investigating the E65's OS 9.1 import
-baseline. The user then confirmed that the same “Feature not supported” message
-still appears when launching v1.0.6, so removing that call was not sufficient
-and no root cause is established. The separate `level41_launch_probe` target builds a minimal WindowServer/GDI
-menu app with the same raw E32 startup and registration. The user reports that
-this probe launches on the E65, narrowing the failure to dependencies or
-initialization specific to the Level 41 app rather than the shared basic launch
-path. The user also reports that the GDI-only Level 41 variant still fails with
-“Feature not supported”, so removing DSA and BitGdi alone was not sufficient.
-The combined File Server/math probe also fails. On the E65, the Math-only
-probe launches while the File Server-only probe still shows “Feature not
-supported”, narrowing the failure to the File Server-specific profile. A
-deferred `RFs::Connect` probe now draws its screen before the call, so the next
-E65 test can distinguish startup/import failure from the runtime call. The
-scene candidates remain unverified on the physical E65.
+The host Level 41 mesh-renderer smoke path remains separate: a successful host
+render or SIS build does not establish handset runtime compatibility.
+
+Current E65 feedback:
+
+- The minimal `level41_launch_probe` starts, and the deferred RFs Connect probe
+  v1.0.3 returns code 0 (`KErrNone`).
+- Full Level 41 v1.0.8 reaches its startup screen at 240x320, then exits before
+  showing the scene. The exact failing step is not yet known; DSA remains a
+  likely point to isolate.
+- GDI-only v1.0.2 shows `Asset/render error: -20`. Inspection found that this
+  package was staged by the generic probe packager without the seven scene
+  assets, and the no-DSA executable still looked in the full app's private
+  directory. This is not yet a valid test of the renderer.
+- GDI-only v1.0.3 now packages the shared assets under its own SID
+  (`e000a016`). Its failure screen reports the asset/render stage so another
+  E65 result can distinguish file packaging from parsing or rasterization.
+
+Testing the corrected GDI-only package first will isolate the shared renderer;
+comparing it with full v1.0.8 will then isolate the DSA path. Neither result is
+known until the new package is tested on the E65.
