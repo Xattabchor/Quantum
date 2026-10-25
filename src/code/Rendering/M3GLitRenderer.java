@@ -302,9 +302,9 @@ public final class M3GLitRenderer {
         // CPU modes 3/6 fog: linear fade to fogc from the eye (cpu: rz/fDist).
         frameFogOn = Main.fogQ > 0 && DirectX7.fDist > 1;
         if(frameFogOn) {
+            fog.setMode(Fog.LINEAR);
             fog.setColor(DirectX7.fogc & 0xffffff);
-            fog.setNearDistance(1.0f);
-            fog.setFarDistance(Math.max(2f, DirectX7.fDist));
+            fog.setLinear(1.0f, Math.max(2f, DirectX7.fDist));
         }
         float near = Main.m3gLitNear > 0 ? Main.m3gLitNear : Math.max(16, g.distX);
         float far = Main.m3gLitFar;
@@ -580,8 +580,6 @@ public final class M3GLitRenderer {
         return true;
     }
 
-    { fog.setMode(Fog.LINEAR); }
-
     /** Deferred draw: opaque buckets first, then blended buckets in creation
      * order. Called from M3GSceneRenderer.flushBatch (end of transaction). */
     void flushBuckets(DirectX7 g) {
@@ -661,8 +659,7 @@ public final class M3GLitRenderer {
         appearance.setTexture(0, bk.tex);
         owner.bind(g);
         graphics.setCamera(camera, identity);
-        graphics.setFog(bk.fogged ? fog : null);
+        appearance.setFog(bk.fogged ? fog : null);
         owner.renderNative(g, bk.vb, strip, appearance);
-        if(bk.fogged) graphics.setFog(null);
     }
 }
