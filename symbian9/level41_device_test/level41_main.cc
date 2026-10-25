@@ -730,7 +730,7 @@ public:
         iStridePixels = 0;
     }
 
-    bool DrawFrame(CGraphicsContext& gc)
+    bool DrawFrame(CWindowGc& gc)
     {
         if (iBitmap == 0 || gFramebuffer == 0 ||
             gRenderWidth <= 0 || gRenderHeight <= 0 ||
@@ -746,7 +746,7 @@ public:
         const TInt imageHeight = gRenderHeight * scale;
         const TInt left = (iSize.iWidth - imageWidth) / 2;
         const TInt top = (iSize.iHeight - imageHeight) / 2;
-        const QUint16 background = ToRgb565(0x00080c14);
+        const TUint16 background = ToRgb565(0x00080c14);
 
         iBitmap->LockHeap();
         TUint32* address = iBitmap->DataAddress();
@@ -755,13 +755,13 @@ public:
             return false;
         }
 
-        QUint16* pixels = reinterpret_cast<QUint16*>(address);
+        TUint16* pixels = reinterpret_cast<TUint16*>(address);
         TInt y;
         if (scale == 1 && left == 0 && top == 0 &&
             gRenderWidth == iSize.iWidth &&
             gRenderHeight == iSize.iHeight) {
             for (y = 0; y < iSize.iHeight; ++y) {
-                QUint16* row = pixels + y * iStridePixels;
+                TUint16* row = pixels + y * iStridePixels;
                 const QInt32* sourceRow = gFramebuffer + y * gRenderWidth;
                 TInt x;
                 for (x = 0; x < iSize.iWidth; ++x) {
@@ -770,7 +770,7 @@ public:
             }
         } else {
             for (y = 0; y < iSize.iHeight; ++y) {
-                QUint16* row = pixels + y * iStridePixels;
+                TUint16* row = pixels + y * iStridePixels;
                 const TInt imageY = y - top;
                 const bool insideImageY = imageY >= 0 && imageY < imageHeight;
                 const TInt sourceY = insideImageY ? imageY / scale : -1;
@@ -794,10 +794,10 @@ public:
     }
 
 private:
-    static QUint16 ToRgb565(QInt32 pixel)
+    static TUint16 ToRgb565(QInt32 pixel)
     {
         const QUint32 bits = static_cast<QUint32>(pixel);
-        return static_cast<QUint16>(
+        return static_cast<TUint16>(
             (((bits >> 19U) & 0x1fU) << 11U) |
             (((bits >> 10U) & 0x3fU) << 5U) |
             ((bits >> 3U) & 0x1fU));
