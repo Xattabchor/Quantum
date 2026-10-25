@@ -50,7 +50,8 @@ this probe launches on the E65, narrowing the failure to dependencies or
 initialization specific to the Level 41 app rather than the shared basic launch
 path. The user also reports that the GDI-only Level 41 variant still fails with
 “Feature not supported”, so removing DSA and BitGdi alone was not sufficient.
-The combined File Server/math probe also fails to launch, so separate
-File-Server-only and Math/libm-only menu probes are being built. The scene
-candidates remain unverified on the physical E65; emulator output does not
-establish handset compatibility.
+The combined File Server/math probe also fails. On the E65, the Math-only
+probe launches while the File Server-only probe still shows “Feature not
+supported”, narrowing the failure to the File Server-specific profile. A
+connect-only probe is being added to separate `RFs::Connect` from `RFile`
+operations. The scene candidates remain unverified on the physical E65.

@@ -5,6 +5,8 @@ known-good raw E32/WindowServer/GDI launch path, then checks `RFs::Connect` and
 `RFile::Open`/`Size`/`Read` on its own executable. The screen shows each result
 code. It does not link Symbian Math/libm or the mesh renderer.
 
-If it shows the status screen, File Server imports are not the reason the
-combined service probe failed. If it produces “Feature not supported”, the
-File Server import/runtime group is isolated as the likely source.
+On the E65, the user reports that this probe also shows “Feature not
+supported”, while the Math-only probe launches. This narrows the failure to the
+File Server-specific profile, but this probe combines `RFs::Connect` with
+`RFile` operations. A smaller RFs-connect-only probe is provided to separate
+the connection/import path from the later file operations.

@@ -9,6 +9,8 @@ or rendering its scene:
 - Symbian math: `Math::Sqrt`, `Math::Sin`, and `Math::Cos`, plus `libm` `sqrt`.
 
 The screen displays the result codes and waits for a key. The user reports that
-this combined probe also shows “Feature not supported”. Separate File Server
-and Math-only menu apps are now built to identify which import group triggers
-the launch failure. This is diagnostic only, not a game or compatibility claim.
+this combined probe also shows “Feature not supported”. The Math-only app
+launches, but the File Server-only app still fails. A smaller RFs::Connect-only
+variant is now being built to separate `RFs::Connect` from the later `RFile`
+operations. The cause is not yet established. This is diagnostic only, not a
+game or compatibility claim.

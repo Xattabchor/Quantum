@@ -2,15 +2,19 @@
 #if !defined(QUANTUM_SERVICE_MATH_ONLY)
 #include <f32file.h>
 #endif
-#if !defined(QUANTUM_SERVICE_FILESERVER_ONLY)
+#if !defined(QUANTUM_SERVICE_FILESERVER_ONLY) && \
+    !defined(QUANTUM_SERVICE_FS_CONNECT_ONLY)
 #include <e32math.h>
 #include <math.h>
 #endif
 #include <gdi.h>
 #include <w32std.h>
 
-#if defined(QUANTUM_SERVICE_MATH_ONLY) && \
-    defined(QUANTUM_SERVICE_FILESERVER_ONLY)
+#if (defined(QUANTUM_SERVICE_MATH_ONLY) && \
+     (defined(QUANTUM_SERVICE_FILESERVER_ONLY) || \
+      defined(QUANTUM_SERVICE_FS_CONNECT_ONLY))) || \
+    (defined(QUANTUM_SERVICE_FILESERVER_ONLY) && \
+     defined(QUANTUM_SERVICE_FS_CONNECT_ONLY))
 #error Select at most one service probe profile
 #endif
 
@@ -41,6 +45,10 @@ void probeFileServer(TServiceResults& results)
     RFs fileServer;
     results.fsConnect = fileServer.Connect();
     if (results.fsConnect != KErrNone) return;
+#if defined(QUANTUM_SERVICE_FS_CONNECT_ONLY)
+    fileServer.Close();
+    return;
+#endif
 
     TFileName executable;
     executable.Copy(RProcess().FileName());
@@ -60,7 +68,8 @@ void probeFileServer(TServiceResults& results)
 }
 #endif
 
-#if !defined(QUANTUM_SERVICE_FILESERVER_ONLY)
+#if !defined(QUANTUM_SERVICE_FILESERVER_ONLY) && \
+    !defined(QUANTUM_SERVICE_FS_CONNECT_ONLY)
 void probeMath(TServiceResults& results)
 {
     TReal root = 0.0;
@@ -97,7 +106,11 @@ void drawResults(CWsScreenDevice& screen,
 
     gc.UseFont(font);
     TBuf<64> line;
-#if defined(QUANTUM_SERVICE_FILESERVER_ONLY)
+#if defined(QUANTUM_SERVICE_FS_CONNECT_ONLY)
+    gc.DrawText(_L("RFs CONNECT PROBE"), TPoint(10, 24));
+    line.Format(_L("RFs connect: %d"), result.fsConnect);
+    gc.DrawText(line, TPoint(10, 52));
+#elif defined(QUANTUM_SERVICE_FILESERVER_ONLY)
     gc.DrawText(_L("FILE SERVER PROBE"), TPoint(10, 24));
     line.Format(_L("RFs connect: %d  file open: %d"),
                 result.fsConnect, result.fileOpen);
@@ -158,7 +171,8 @@ int main()
 #if !defined(QUANTUM_SERVICE_MATH_ONLY)
     probeFileServer(results);
 #endif
-#if !defined(QUANTUM_SERVICE_FILESERVER_ONLY)
+#if !defined(QUANTUM_SERVICE_FILESERVER_ONLY) && \
+    !defined(QUANTUM_SERVICE_FS_CONNECT_ONLY)
     probeMath(results);
 #endif
 

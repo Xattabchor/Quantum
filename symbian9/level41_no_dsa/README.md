@@ -10,9 +10,10 @@ shared raw E32 startup, registration and basic WindowServer/GDI path can run
 there. This variant was intended to isolate DSA/BitGdi from the rest of Level
 41. The user reports that it still shows “Feature not supported”, so DSA/BitGdi
 alone are not the cause. File Server, math/libm, renderer code and static/runtime
-requirements remain candidates. A combined File Server/math probe also fails,
-so separate File-Server-only and Math/libm-only probes now test those imports
-without loading the renderer.
+requirements remain candidates. The combined probe and File Server-only probe
+show “Feature not supported” on the E65, while the Math-only probe launches.
+An RFs-connect-only variant is being added to determine whether the failure
+starts at the File Server connection or later `RFile` operations.
 
 This is a temporary diagnostic package, not a replacement for the main Level
 41 candidate and not a general S60v3 compatibility claim. On slower devices,

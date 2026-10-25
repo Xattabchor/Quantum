@@ -16,6 +16,7 @@ on:
       - 'symbian9/level41_no_dsa/**'
       - 'symbian9/level41_service_probe/**'
       - 'symbian9/level41_fs_probe/**'
+      - 'symbian9/level41_fs_connect_probe/**'
       - 'symbian9/level41_math_probe/**'
       - 'symbian9/tools/prepare_level41_device_assets.py'
       - 'symbian9/tools/prepare_level41_package.py'
@@ -117,7 +118,8 @@ jobs:
           if "$SDK/bin/cmake" --build "$BUILD" \
               --target quantum_level41_device_test_e32 quantum_level41_launch_probe_e32 \
                 quantum_level41_no_dsa_e32 quantum_level41_service_probe_e32 \
-                quantum_level41_fs_probe_e32 quantum_level41_math_probe_e32 \
+                quantum_level41_fs_probe_e32 quantum_level41_fs_connect_probe_e32 \
+                quantum_level41_math_probe_e32 \
               --parallel 2 --verbose > "$BUILD_LOG" 2>&1; then
             cat "$BUILD_LOG"
           else
@@ -141,6 +143,7 @@ jobs:
           NO_DSA_EXE="$BUILD/level41_device_test/e32/quantum_level41_no_dsa.exe"
           SERVICE_EXE="$BUILD/level41_service_probe/e32/quantum_level41_service_probe.exe"
           FS_EXE="$BUILD/level41_service_probe/e32/quantum_level41_fs_probe.exe"
+          FS_CONNECT_EXE="$BUILD/level41_service_probe/e32/quantum_level41_fs_connect_probe.exe"
           MATH_EXE="$BUILD/level41_service_probe/e32/quantum_level41_math_probe.exe"
           if [ ! -s "$EXE" ]; then
             echo "::error title=Level 41 E32 artifact::Expected output is missing or empty: $EXE"
@@ -162,6 +165,10 @@ jobs:
             echo "::error title=Level 41 File Server probe artifact::Expected output is missing or empty: $FS_EXE"
             exit 1
           fi
+          if [ ! -s "$FS_CONNECT_EXE" ]; then
+            echo "::error title=Level 41 RFs Connect probe artifact::Expected output is missing or empty: $FS_CONNECT_EXE"
+            exit 1
+          fi
           if [ ! -s "$MATH_EXE" ]; then
             echo "::error title=Level 41 math probe artifact::Expected output is missing or empty: $MATH_EXE"
             exit 1
@@ -171,6 +178,7 @@ jobs:
           symbian inspect --format e32 "$NO_DSA_EXE" 2>&1 | tee "$RUNNER_TEMP/level41-no-dsa-e32-inspect.log"
           symbian inspect --format e32 "$SERVICE_EXE" 2>&1 | tee "$RUNNER_TEMP/level41-service-e32-inspect.log"
           symbian inspect --format e32 "$FS_EXE" 2>&1 | tee "$RUNNER_TEMP/level41-fs-e32-inspect.log"
+          symbian inspect --format e32 "$FS_CONNECT_EXE" 2>&1 | tee "$RUNNER_TEMP/level41-fs-connect-e32-inspect.log"
           symbian inspect --format e32 "$MATH_EXE" 2>&1 | tee "$RUNNER_TEMP/level41-math-e32-inspect.log"
 
       - name: Surface Level 41 build diagnostics
@@ -185,6 +193,7 @@ jobs:
             "$RUNNER_TEMP/level41-no-dsa-e32-inspect.log" \
             "$RUNNER_TEMP/level41-service-e32-inspect.log" \
             "$RUNNER_TEMP/level41-fs-e32-inspect.log" \
+            "$RUNNER_TEMP/level41-fs-connect-e32-inspect.log" \
             "$RUNNER_TEMP/level41-math-e32-inspect.log" \
             "$RUNNER_TEMP/level41-assets.log" \
             "$RUNNER_TEMP/level41-package-inputs.log" \
@@ -192,7 +201,8 @@ jobs:
             "$RUNNER_TEMP/level41-no-dsa-package-inputs.log" \
             "$RUNNER_TEMP/level41-service-package-inputs.log" \
             "$RUNNER_TEMP/level41-fs-package-inputs.log" \
-            "$RUNNER_TEMP/level41-math-package-inputs.log"; do
+            "$RUNNER_TEMP/level41-math-package-inputs.log" \
+            "$RUNNER_TEMP/level41-fs-connect-package-inputs.log"; do
             if [ -f "$log" ]; then
               while IFS= read -r line; do
                 echo "::error title=Level 41 build diagnostics::$line"
@@ -348,6 +358,28 @@ jobs:
             exit "$STATUS"
           fi
           test -s "$PACKAGE/quantum_level41_math_probe.pkg"
+
+      - name: Prepare RFs Connect-only probe SIS inputs
+        run: |
+          set -euo pipefail
+          PACKAGE="$RUNNER_TEMP/quantum-level41-fs-connect-package"
+          ARTIFACT="$RUNNER_TEMP/quantum-level41-build/level41_service_probe/e32/quantum_level41_fs_connect_probe.exe"
+          LOG="$RUNNER_TEMP/level41-fs-connect-package-inputs.log"
+          mkdir -p "$PACKAGE"
+          if "$RUNNER_TEMP/symbian-venv/bin/python" \
+              "$GITHUB_WORKSPACE/symbian9/tools/prepare_level41_launch_probe_package.py" \
+              --project "$GITHUB_WORKSPACE/symbian9/level41_fs_connect_probe" \
+              --artifact "$ARTIFACT" \
+              --output "$PACKAGE" > "$LOG" 2>&1; then
+            cat "$LOG"
+          else
+            STATUS=$?
+            cat "$LOG"
+            DETAILS="$(tail -n 16 "$LOG" | tr '\\r\\n' ' ' | cut -c1-2200)"
+            echo "::error title=Level 41 RFs Connect probe SIS input preparation::exit=$STATUS; $DETAILS"
+            exit "$STATUS"
+          fi
+          test -s "$PACKAGE/quantum_level41_fs_connect_probe.pkg"
 
       - name: Build the legacy SIS v9 packer
         run: |
@@ -579,6 +611,25 @@ jobs:
           stat -c '%n %s bytes' quantum_level41_math_probe-e65-candidate.sisx
           sha256sum quantum_level41_math_probe-e65-candidate.sisx
 
+          FS_CONNECT_PACKAGE="$RUNNER_TEMP/quantum-level41-fs-connect-package"
+          cd "$FS_CONNECT_PACKAGE"
+          run_logged "Trace MakeSIS RFs Connect probe package creation" env \
+            ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 \
+            "$PACKER/makesis" -v \
+            quantum_level41_fs_connect_probe.pkg quantum_level41_fs_connect_probe.sis
+          run_logged "Sign RFs Connect probe SIS archive" "$PACKER/signsis" \
+            quantum_level41_fs_connect_probe.sis \
+            quantum_level41_fs_connect_probe-e65-candidate.sisx \
+            "$CERT_DIR/level41.cer" "$CERT_DIR/level41.key"
+          run_logged "Verify signed RFs Connect probe SISX" "$PACKER/signsis" -o \
+            quantum_level41_fs_connect_probe-e65-candidate.sisx
+          run_logged "Inspect RFs Connect probe SISX file tree" "$PACKER/dumptree" \
+            quantum_level41_fs_connect_probe-e65-candidate.sisx
+          cp "$COMMAND_LOG" "$RUNNER_TEMP/level41-fs-connect-sis-tree.txt"
+          test -s quantum_level41_fs_connect_probe-e65-candidate.sisx
+          stat -c '%n %s bytes' quantum_level41_fs_connect_probe-e65-candidate.sisx
+          sha256sum quantum_level41_fs_connect_probe-e65-candidate.sisx
+
       - name: Publish the build-verified SISX candidate to the fixed branch
         run: |
           set -euo pipefail
@@ -592,6 +643,8 @@ jobs:
             "$GITHUB_WORKSPACE/symbian9/level41_service_probe/quantum_level41_service_probe-e65-candidate.sisx"
           cp "$RUNNER_TEMP/quantum-level41-fs-package/quantum_level41_fs_probe-e65-candidate.sisx" \
             "$GITHUB_WORKSPACE/symbian9/level41_fs_probe/quantum_level41_fs_probe-e65-candidate.sisx"
+          cp "$RUNNER_TEMP/quantum-level41-fs-connect-package/quantum_level41_fs_connect_probe-e65-candidate.sisx" \
+            "$GITHUB_WORKSPACE/symbian9/level41_fs_connect_probe/quantum_level41_fs_connect_probe-e65-candidate.sisx"
           cp "$RUNNER_TEMP/quantum-level41-math-package/quantum_level41_math_probe-e65-candidate.sisx" \
             "$GITHUB_WORKSPACE/symbian9/level41_math_probe/quantum_level41_math_probe-e65-candidate.sisx"
           git config user.name "github-actions[bot]"
@@ -602,6 +655,7 @@ jobs:
             symbian9/level41_no_dsa/quantum_level41_no_dsa-e65-candidate.sisx \
             symbian9/level41_service_probe/quantum_level41_service_probe-e65-candidate.sisx \
             symbian9/level41_fs_probe/quantum_level41_fs_probe-e65-candidate.sisx \
+            symbian9/level41_fs_connect_probe/quantum_level41_fs_connect_probe-e65-candidate.sisx \
             symbian9/level41_math_probe/quantum_level41_math_probe-e65-candidate.sisx
           if git diff --cached --quiet; then
             echo "No SISX change to publish."
