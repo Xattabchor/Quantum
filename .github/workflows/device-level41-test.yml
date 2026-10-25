@@ -99,20 +99,21 @@ jobs:
             -DQUANTUM_BUILD_LEVEL41_DEVICE_TEST=ON \
             -DCMAKE_MAKE_PROGRAM="$SDK/bin/ninja" \
             -DCMAKE_BUILD_TYPE=Release 2>&1 | tee "$RUNNER_TEMP/level41-cmake-configure.log"
-          echo "LEVEL41_BUILD=$BUILD" >> "$GITHUB_ENV"
 
       - name: Build the Level 41 E32 application
         run: |
           set -euo pipefail
           SDK="$RUNNER_TEMP/symbian-sdk"
-          "$SDK/bin/cmake" --build "$LEVEL41_BUILD" \
+          BUILD="$RUNNER_TEMP/quantum-level41-build"
+          "$SDK/bin/cmake" --build "$BUILD" \
             --target quantum_level41_device_test --parallel 2 --verbose \
             2>&1 | tee "$RUNNER_TEMP/level41-cmake-build.log"
 
       - name: Verify the Level 41 E32 artifact
         run: |
           set -euo pipefail
-          EXE="$LEVEL41_BUILD/level41_device_test/e32/quantum_level41_device_test.exe"
+          BUILD="$RUNNER_TEMP/quantum-level41-build"
+          EXE="$BUILD/level41_device_test/e32/quantum_level41_device_test.exe"
           if [ ! -s "$EXE" ]; then
             echo "::error title=Level 41 E32 artifact::Expected output is missing or empty: $EXE"
             exit 1
