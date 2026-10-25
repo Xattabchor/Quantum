@@ -130,7 +130,8 @@ M3G_OMNI_Z=-45
 M3G_LIT_FAR=40000
 // compromise: keeps close-range city, cuts distant forest; 10000 was too short
 M3G_LIT_SELFTEST=3
-M3G_LIT_AMBPULSE=64
+M3G_LIT_AMBPULSE=0
+// 0 = NO global ambient boost on muzzle (was lighting the whole forest)
 
 M3G_LIT_NOVCOL=0
 // 0 = baked vertex lightmap under HW lights (menu: Baked light ON/OFF)
