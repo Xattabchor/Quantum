@@ -1,0 +1,17 @@
+[project]
+name = "quantum_level41_launch_probe"
+kind = "e32-import"
+architecture = "armv5t"
+cmake_preset = "symbian-pic"
+uid3 = 0xe000a014
+
+[package]
+uid = 0xe000a015
+name = "Level 41 Launch Probe"
+vendor = "Quantum native port"
+executable_name = "quantum_level41_launch_probe.exe"
+version = [1, 0, 0]
+
+[application]
+caption = "Level 41 Launch Probe"
+short_caption = "Launch Probe"

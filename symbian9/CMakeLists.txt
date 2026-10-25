@@ -8,4 +8,5 @@ option(QUANTUM_BUILD_LEVEL41_DEVICE_TEST
        "Build the fixed-camera Level 41 device smoke test" OFF)
 if(QUANTUM_BUILD_LEVEL41_DEVICE_TEST)
     add_subdirectory(level41_device_test)
+    add_subdirectory(level41_launch_probe)
 endif()

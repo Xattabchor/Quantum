@@ -40,10 +40,13 @@ fallback. Version 1.0.5 renders at actual display dimensions when its framebuffe
 fits the memory cap and can be allocated; otherwise it falls back to 120x160.
 Projection is scaled uniformly to preserve the scene's shape, removing the
 intentional nearest-neighbor enlargement on typical 240x320 displays at the
-cost of more software-rendering work. Version 1.0.6 removes the explicit
-`CFbsScreenDevice::Update()` call from the E65 build: the launch-time E65 error
-occurs before a frame is shown, and this extra import is a compatibility
-suspect for the E65's older OS 9.1 baseline. The Pixmap+DSA path still uses the
-E65-reference `SetAutoUpdate(ETrue)` flow. This remains a hypothesis until
-v1.0.6 is tried on the phone; emulator output is not physical-device
-verification, and the test does not imply support for every S60v3 model.
+cost of more software-rendering work. Version 1.0.6 removed the explicit
+`CFbsScreenDevice::Update()` call while investigating the E65's OS 9.1 import
+baseline. The user then confirmed that the same “Feature not supported” message
+still appears when launching v1.0.6, so removing that call was not sufficient
+and no root cause is established. The separate `level41_launch_probe` target
+builds a minimal WindowServer/GDI menu app with the same raw E32 startup and
+registration; its SISX helps distinguish a general launch/registration issue
+from an import or runtime issue in the renderer/DSA application. Neither build
+is yet verified on the physical E65, and emulator output does not establish
+handset compatibility.

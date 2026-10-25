@@ -579,9 +579,9 @@ public:
         drawOutput(iScreen, *iPixmapGc, 0, iSize);
         iAccess->Gc()->BitBlt(TPoint(0, 0), iPixmap);
 
-        // SetAutoUpdate(ETrue) is configured after DSA starts. Keep the E65
-        // path on that baseline API instead of importing the optional explicit
-        // CFbsScreenDevice::Update() entry point used only by some emulators.
+        // SetAutoUpdate(ETrue) is configured after DSA starts. The explicit
+        // CFbsScreenDevice::Update() experiment was removed in v1.0.6; the
+        // physical E65 launch failure is still unresolved.
         return true;
     }
 

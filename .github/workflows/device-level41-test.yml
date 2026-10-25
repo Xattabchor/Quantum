@@ -12,8 +12,10 @@ on:
       - 'symbian9/level41_device_test/level41_main.cc'
       - 'symbian9/level41_device_test/symbian.toml'
       - 'symbian9/level41_device_test/assets/level41/**'
+      - 'symbian9/level41_launch_probe/**'
       - 'symbian9/tools/prepare_level41_device_assets.py'
       - 'symbian9/tools/prepare_level41_package.py'
+      - 'symbian9/tools/prepare_level41_launch_probe_package.py'
       - 'symbian9/inc/math_utils.h'
       - 'symbian9/inc/math_utils2.h'
       - 'symbian9/inc/matrix.h'
@@ -107,10 +109,10 @@ jobs:
           BUILD="$RUNNER_TEMP/quantum-level41-build"
           BUILD_LOG="$RUNNER_TEMP/level41-cmake-build.log"
           : > "$BUILD_LOG"
-          echo "Building target quantum_level41_device_test_e32 in $BUILD"
+          echo "Building Level 41 app and minimal launch probe in $BUILD"
           if "$SDK/bin/cmake" --build "$BUILD" \
-              --target quantum_level41_device_test_e32 --parallel 2 --verbose \
-              > "$BUILD_LOG" 2>&1; then
+              --target quantum_level41_device_test_e32 quantum_level41_launch_probe_e32 \
+              --parallel 2 --verbose > "$BUILD_LOG" 2>&1; then
             cat "$BUILD_LOG"
           else
             BUILD_STATUS=$?
@@ -129,11 +131,17 @@ jobs:
           set -euo pipefail
           BUILD="$RUNNER_TEMP/quantum-level41-build"
           EXE="$BUILD/level41_device_test/e32/quantum_level41_device_test.exe"
+          PROBE_EXE="$BUILD/level41_launch_probe/e32/quantum_level41_launch_probe.exe"
           if [ ! -s "$EXE" ]; then
             echo "::error title=Level 41 E32 artifact::Expected output is missing or empty: $EXE"
             exit 1
           fi
+          if [ ! -s "$PROBE_EXE" ]; then
+            echo "::error title=Level 41 launch-probe artifact::Expected output is missing or empty: $PROBE_EXE"
+            exit 1
+          fi
           symbian inspect --format e32 "$EXE" 2>&1 | tee "$RUNNER_TEMP/level41-e32-inspect.log"
+          symbian inspect --format e32 "$PROBE_EXE" 2>&1 | tee "$RUNNER_TEMP/level41-probe-e32-inspect.log"
 
       - name: Surface Level 41 build diagnostics
         if: failure()
@@ -143,8 +151,10 @@ jobs:
             "$RUNNER_TEMP/level41-cmake-configure.log" \
             "$RUNNER_TEMP/level41-cmake-build.log" \
             "$RUNNER_TEMP/level41-e32-inspect.log" \
+            "$RUNNER_TEMP/level41-probe-e32-inspect.log" \
             "$RUNNER_TEMP/level41-assets.log" \
-            "$RUNNER_TEMP/level41-package-inputs.log"; do
+            "$RUNNER_TEMP/level41-package-inputs.log" \
+            "$RUNNER_TEMP/level41-probe-package-inputs.log"; do
             if [ -f "$log" ]; then
               while IFS= read -r line; do
                 echo "::error title=Level 41 build diagnostics::$line"
@@ -190,6 +200,28 @@ jobs:
             exit "$STATUS"
           fi
           test -s "$PACKAGE/quantum_level41_device_test.pkg"
+
+      - name: Prepare minimal launch-probe SIS inputs
+        run: |
+          set -euo pipefail
+          PACKAGE="$RUNNER_TEMP/quantum-level41-probe-package"
+          ARTIFACT="$RUNNER_TEMP/quantum-level41-build/level41_launch_probe/e32/quantum_level41_launch_probe.exe"
+          LOG="$RUNNER_TEMP/level41-probe-package-inputs.log"
+          mkdir -p "$PACKAGE"
+          if "$RUNNER_TEMP/symbian-venv/bin/python" \
+              "$GITHUB_WORKSPACE/symbian9/tools/prepare_level41_launch_probe_package.py" \
+              --project "$GITHUB_WORKSPACE/symbian9/level41_launch_probe" \
+              --artifact "$ARTIFACT" \
+              --output "$PACKAGE" > "$LOG" 2>&1; then
+            cat "$LOG"
+          else
+            STATUS=$?
+            cat "$LOG"
+            DETAILS="$(tail -n 16 "$LOG" | tr '\\r\\n' ' ' | cut -c1-2200)"
+            echo "::error title=Level 41 launch-probe SIS input preparation::exit=$STATUS; $DETAILS"
+            exit "$STATUS"
+          fi
+          test -s "$PACKAGE/quantum_level41_launch_probe.pkg"
 
       - name: Build the legacy SIS v9 packer
         run: |
@@ -326,14 +358,37 @@ jobs:
           stat -c '%n %s bytes' quantum_level41_device_test-e65-candidate.sisx
           sha256sum quantum_level41_device_test-e65-candidate.sisx
 
+          PROBE_PACKAGE="$RUNNER_TEMP/quantum-level41-probe-package"
+          cd "$PROBE_PACKAGE"
+          run_logged "Trace MakeSIS launch-probe package creation" env \
+            ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 \
+            "$PACKER/makesis" -v \
+            quantum_level41_launch_probe.pkg quantum_level41_launch_probe.sis
+          run_logged "Sign launch-probe SIS archive" "$PACKER/signsis" \
+            quantum_level41_launch_probe.sis \
+            quantum_level41_launch_probe-e65-candidate.sisx \
+            "$CERT_DIR/level41.cer" "$CERT_DIR/level41.key"
+          run_logged "Verify signed launch-probe SISX" "$PACKER/signsis" -o \
+            quantum_level41_launch_probe-e65-candidate.sisx
+          run_logged "Inspect launch-probe SISX file tree" "$PACKER/dumptree" \
+            quantum_level41_launch_probe-e65-candidate.sisx
+          cp "$COMMAND_LOG" "$RUNNER_TEMP/level41-probe-sis-tree.txt"
+          test -s quantum_level41_launch_probe-e65-candidate.sisx
+          stat -c '%n %s bytes' quantum_level41_launch_probe-e65-candidate.sisx
+          sha256sum quantum_level41_launch_probe-e65-candidate.sisx
+
       - name: Publish the build-verified SISX candidate to the fixed branch
         run: |
           set -euo pipefail
           cp "$RUNNER_TEMP/quantum-level41-package/quantum_level41_device_test-e65-candidate.sisx" \
             "$GITHUB_WORKSPACE/symbian9/level41_device_test/quantum_level41_device_test-e65-candidate.sisx"
+          cp "$RUNNER_TEMP/quantum-level41-probe-package/quantum_level41_launch_probe-e65-candidate.sisx" \
+            "$GITHUB_WORKSPACE/symbian9/level41_launch_probe/quantum_level41_launch_probe-e65-candidate.sisx"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add symbian9/level41_device_test/quantum_level41_device_test-e65-candidate.sisx
+          git add \
+            symbian9/level41_device_test/quantum_level41_device_test-e65-candidate.sisx \
+            symbian9/level41_launch_probe/quantum_level41_launch_probe-e65-candidate.sisx
           if git diff --cached --quiet; then
             echo "No SISX change to publish."
           else
