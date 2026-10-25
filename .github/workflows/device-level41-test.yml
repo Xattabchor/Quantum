@@ -14,6 +14,7 @@ on:
       - 'symbian9/level41_device_test/assets/level41/**'
       - 'symbian9/tools/prepare_level41_device_assets.py'
       - 'symbian9/tools/prepare_level41_package.py'
+      - 'symbian9/tools/sign_level41_sisx.py'
       - 'symbian9/inc/math_utils.h'
       - 'symbian9/inc/math_utils2.h'
       - 'symbian9/inc/matrix.h'
@@ -71,7 +72,7 @@ jobs:
       - name: Install host build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes imagemagick zlib1g-dev build-essential perl curl
+          sudo apt-get install --yes imagemagick openssl curl
           python -m venv "$RUNNER_TEMP/symbian-venv"
           echo "$RUNNER_TEMP/symbian-venv/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/symbian-venv/bin/python" -m pip install --disable-pip-version-check symbian-platform==0.3.0
@@ -189,68 +190,12 @@ jobs:
             echo "::error title=Level 41 SIS input preparation::exit=$STATUS; $DETAILS"
             exit "$STATUS"
           fi
-          test -s "$PACKAGE/quantum_level41_device_test.pkg"
-
-      - name: Build the legacy SIS v9 packer
-        run: |
-          set -euo pipefail
-          OPENSSL_SRC="$RUNNER_TEMP/openssl-1.0.2u-src"
-          OPENSSL_PREFIX="$RUNNER_TEMP/openssl-1.0.2u"
-          PACKER_SRC="$RUNNER_TEMP/gnupoc-package"
-          LOG="$RUNNER_TEMP/level41-packer.log"
-          COMMAND_LOG="$RUNNER_TEMP/level41-packer-command.log"
-          : > "$LOG"
-          run_logged() {
-            DESCRIPTION="$1"
-            shift
-            echo "=== $DESCRIPTION ==="
-            if "$@" > "$COMMAND_LOG" 2>&1; then
-              cat "$COMMAND_LOG" >> "$LOG"
-              tail -n 12 "$COMMAND_LOG"
-            else
-              STATUS=$?
-              cat "$COMMAND_LOG" >> "$LOG"
-              tail -n 40 "$COMMAND_LOG"
-              DETAILS="$(tail -n 18 "$COMMAND_LOG" | tr '\r\n' ' ' | cut -c1-2200)"
-              echo "::error title=Level 41 SIS packer::$DESCRIPTION failed exit=$STATUS; $DETAILS"
-              exit "$STATUS"
-            fi
-          }
-
-          run_logged "Download OpenSSL 1.0.2u" curl --fail --location --retry 3 \
-            https://codeload.github.com/openssl/openssl/tar.gz/refs/tags/OpenSSL_1_0_2u \
-            --output "$RUNNER_TEMP/openssl-1.0.2u.tar.gz"
-          mkdir -p "$OPENSSL_SRC"
-          run_logged "Extract OpenSSL source" tar -xzf "$RUNNER_TEMP/openssl-1.0.2u.tar.gz" \
-            --strip-components=1 -C "$OPENSSL_SRC"
-          cd "$OPENSSL_SRC"
-          run_logged "Configure OpenSSL 1.0.2u" ./config no-shared no-ssl2 no-ssl3 \
-            --prefix="$OPENSSL_PREFIX"
-          run_logged "Generate OpenSSL dependencies" make depend
-          run_logged "Build OpenSSL libraries and utilities" make --jobs=2 build_apps
-          run_logged "Install OpenSSL libraries" make install_sw
-
-          run_logged "Download GnuPoc MakeSIS source" curl --fail --location --retry 3 \
-            https://codeload.github.com/mstorsjo/gnupoc-package/tar.gz/d3ddaf58c734ad3ab34dc60a012f9d4768a9ed3e \
-            --output "$RUNNER_TEMP/gnupoc-package.tar.gz"
-          mkdir -p "$PACKER_SRC"
-          run_logged "Extract GnuPoc MakeSIS source" tar -xzf "$RUNNER_TEMP/gnupoc-package.tar.gz" \
-            --strip-components=1 -C "$PACKER_SRC"
-          cd "$PACKER_SRC/tools/makesis-4/src"
-          run_logged "Build MakeSIS and SignSIS" make --jobs=2 \
-            CFLAGS="-Wall -I../include -I$OPENSSL_PREFIX/include -O2" \
-            LIBS="-L$OPENSSL_PREFIX/lib -lcrypto -lz"
-          run_logged "Build SIS utility tools" make --jobs=2 devtools \
-            CFLAGS="-Wall -I../include -I$OPENSSL_PREFIX/include -O2" \
-            LIBS="-L$OPENSSL_PREFIX/lib -lcrypto -lz"
-          echo "SIS_PACKER=$PACKER_SRC/tools/makesis-4/src" >> "$GITHUB_ENV"
-          echo "OPENSSL_PREFIX=$OPENSSL_PREFIX" >> "$GITHUB_ENV"
+          test -s "$PACKAGE/quantum_level41_device_test-unsigned.sisx"
 
       - name: Create and verify the E65 SISX candidate
         run: |
           set -euo pipefail
           PACKAGE="$RUNNER_TEMP/quantum-level41-package"
-          PACKER="$SIS_PACKER"
           CERT_DIR="$RUNNER_TEMP/level41-signing"
           COMMAND_LOG="$RUNNER_TEMP/level41-sis-command.log"
           mkdir -p "$CERT_DIR/newcerts"
@@ -283,7 +228,7 @@ jobs:
             shift
             echo "=== $DESCRIPTION ==="
             if "$@" > "$COMMAND_LOG" 2>&1; then
-              tail -n 12 "$COMMAND_LOG"
+              tail -n 20 "$COMMAND_LOG"
             else
               STATUS=$?
               tail -n 40 "$COMMAND_LOG"
@@ -304,20 +249,18 @@ jobs:
             -startdate 20000101000000Z -enddate 20451231235959Z \
             -md sha1 -extensions device_signing
           run_logged "Inspect signing certificate" openssl x509 -in "$CERT_DIR/level41.cer" -noout -dates
-
-          cd "$PACKAGE"
-          run_logged "Create uncompressed SIS archive" "$PACKER/makesis" \
-            quantum_level41_device_test.pkg quantum_level41_device_test.sis
-          run_logged "Sign SIS archive" "$PACKER/signsis" quantum_level41_device_test.sis \
-            quantum_level41_device_test-e65-candidate.sisx \
-            "$CERT_DIR/level41.cer" "$CERT_DIR/level41.key"
-          run_logged "Verify signed SISX" "$PACKER/signsis" -o quantum_level41_device_test-e65-candidate.sisx
-          run_logged "Inspect SISX file tree" "$PACKER/dumptree" \
-            quantum_level41_device_test-e65-candidate.sisx
-          cp "$COMMAND_LOG" "$RUNNER_TEMP/level41-sis-tree.txt"
-          test -s quantum_level41_device_test-e65-candidate.sisx
-          stat -c '%n %s bytes' quantum_level41_device_test-e65-candidate.sisx
-          sha256sum quantum_level41_device_test-e65-candidate.sisx
+          run_logged "Sign and verify native Level 41 SISX" \
+            "$RUNNER_TEMP/symbian-venv/bin/python" \
+            "$GITHUB_WORKSPACE/symbian9/tools/sign_level41_sisx.py" \
+            --input "$PACKAGE/quantum_level41_device_test-unsigned.sisx" \
+            --certificate "$CERT_DIR/level41.cer" \
+            --key "$CERT_DIR/level41.key" \
+            --output "$PACKAGE/quantum_level41_device_test-e65-candidate.sisx"
+          run_logged "Inspect final E65 SISX" symbian inspect --format sis \
+            "$PACKAGE/quantum_level41_device_test-e65-candidate.sisx"
+          cp "$COMMAND_LOG" "$RUNNER_TEMP/level41-sis-inspect.log"
+          stat -c '%n %s bytes' "$PACKAGE/quantum_level41_device_test-e65-candidate.sisx"
+          sha256sum "$PACKAGE/quantum_level41_device_test-e65-candidate.sisx"
 
       - name: Publish the build-verified SISX candidate to the fixed branch
         run: |
