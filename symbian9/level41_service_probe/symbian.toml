@@ -1,0 +1,17 @@
+[project]
+name = "quantum_level41_service_probe"
+kind = "e32-import"
+architecture = "armv5t"
+cmake_preset = "symbian-pic"
+uid3 = 0xe000a018
+
+[package]
+uid = 0xe000a019
+name = "Level 41 API Probe"
+vendor = "Quantum native port"
+executable_name = "quantum_level41_service_probe.exe"
+version = [1, 0, 0]
+
+[application]
+caption = "Level 41 API Probe"
+short_caption = "API Probe"

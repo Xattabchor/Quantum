@@ -5,11 +5,13 @@ but compiles out Direct Screen Access, `CWsBitmap`/`CFbsBitmapDevice`,
 `SetAutoUpdate`, and the BitGdi import. It uses the existing WindowServer GDI
 fallback to display the scene.
 
-The minimal `level41_launch_probe` already launched on the E65, confirming that
-the shared raw E32 startup, registration and basic WindowServer/GDI path can
-run there. Testing this variant next isolates whether the remaining launch
-failure is specific to DSA/BitGdi or comes from another Level 41 dependency
-(such as asset loading, math imports or renderer initialization).
+The minimal `level41_launch_probe` launched on the E65, confirming that the
+shared raw E32 startup, registration and basic WindowServer/GDI path can run
+there. This variant was intended to isolate DSA/BitGdi from the rest of Level
+41. The user reports that it still shows “Feature not supported”, so DSA/BitGdi
+alone are not the cause. File Server, math/libm, renderer code and static/runtime
+requirements remain candidates; a separate service-import probe tests the first
+two without loading the renderer.
 
 This is a temporary diagnostic package, not a replacement for the main Level
 41 candidate and not a general S60v3 compatibility claim. On slower devices,

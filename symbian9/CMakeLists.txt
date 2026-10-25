@@ -9,4 +9,5 @@ option(QUANTUM_BUILD_LEVEL41_DEVICE_TEST
 if(QUANTUM_BUILD_LEVEL41_DEVICE_TEST)
     add_subdirectory(level41_device_test)
     add_subdirectory(level41_launch_probe)
+    add_subdirectory(level41_service_probe)
 endif()

@@ -48,6 +48,8 @@ and no root cause is established. The separate `level41_launch_probe` target bui
 menu app with the same raw E32 startup and registration. The user reports that
 this probe launches on the E65, narrowing the failure to dependencies or
 initialization specific to the Level 41 app rather than the shared basic launch
-path. A GDI-only Level 41 variant now compiles out DSA and BitGdi to isolate that
-boundary. The scene candidates remain unverified on the physical E65; emulator
-output does not establish handset compatibility.
+path. The user also reports that the GDI-only Level 41 variant still fails with
+“Feature not supported”, so removing DSA and BitGdi alone was not sufficient.
+A service-import probe now tests File Server and Symbian/libm math separately
+from the mesh renderer. The scene candidates remain unverified on the physical
+E65; emulator output does not establish handset compatibility.
