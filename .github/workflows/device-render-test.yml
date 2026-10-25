@@ -2,6 +2,18 @@ name: Symbian device render test
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - arena/671096c5-quantum
+    paths:
+      - '.github/workflows/device-render-test.yml'
+      - 'symbian9/device_render_test/**'
+      - 'symbian9/inc/quantum_integer.h'
+      - 'symbian9/inc/quantum_types.h'
+      - 'symbian9/inc/software_affine_rasterizer.h'
+      - 'symbian9/inc/software_perspective_rasterizer.h'
+      - 'symbian9/src/core/software_affine_rasterizer.cpp'
+      - 'symbian9/src/core/software_perspective_rasterizer.cpp'
 
 permissions:
   contents: read
