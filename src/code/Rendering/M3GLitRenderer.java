@@ -319,7 +319,10 @@ public final class M3GLitRenderer {
         polygon.setWinding(Main.m3gLitFlipWinding
                 ? PolygonMode.WINDING_CCW : PolygonMode.WINDING_CW);
         ambient.setIntensity(Main.m3gLitAmbient / 255f);
+        ambient.setColor(Main.m3gLitAmbCol & 0xffffff);
         sun.setIntensity(Main.m3gLitDir / 255f);
+        sun.setColor(Main.m3gLitDirCol & 0xffffff);
+        omni.setColor(Main.m3gOmniCol & 0xffffff);
 
         float half = g.distX * Main.m3gOmniHalfDistX / 100f;
         if(half < 1f) half = 1f;

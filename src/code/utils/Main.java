@@ -89,6 +89,9 @@ public final class Main extends MIDlet {
     // every previous build/rasterizer bit-identical.
     public static int m3gWorldLighting = 0;
     public static int m3gLitAmbient = 32;     // 0..255 ambient lamp strength (dark by default)
+    public static int m3gLitAmbCol = 0xffffff; // ambient lamp RGB (M3G_LIT_AMBCOL=R,G,B)
+    public static int m3gLitDirCol = 0xffffff; // directional RGB (M3G_LIT_DIRCOL)
+    public static int m3gOmniCol = 0xffffff;   // omni flash RGB (M3G_OMNI_COL)
     public static int m3gLitDir = 150;        // 0..255 directional strength
     public static int m3gOmniBase = 0;        // idle omni floor (0..255->I)
     public static int m3gOmniFlash = 204;     // muzzle-flash peak (0..255->I)
@@ -301,6 +304,9 @@ public final class Main extends MIDlet {
         m3gPerspective = settings.getIntNoLang("M3G_PERSPECTIVE",1)!=0;
         m3gWorldLighting = Math.min(2, Math.max(0, settings.getIntNoLang("M3G_LIT", 0)));
         m3gLitAmbient = settings.getIntNoLang("M3G_LIT_AMBIENT", 32);
+        m3gLitAmbCol = readRgb(settings, "M3G_LIT_AMBCOL", 0xffffff);
+        m3gLitDirCol = readRgb(settings, "M3G_LIT_DIRCOL", 0xffffff);
+        m3gOmniCol = readRgb(settings, "M3G_OMNI_COL", 0xffffff);
         m3gLitDir = settings.getIntNoLang("M3G_LIT_DIR", 150);
         m3gOmniBase = settings.getIntNoLang("M3G_OMNI_BASE", 0);
         m3gOmniFlash = settings.getIntNoLang("M3G_OMNI_FLASH", 204);
@@ -337,6 +343,20 @@ public final class Main extends MIDlet {
         if(perspectiveSetting!=null && perspectiveSetting.length==1
                 && (perspectiveSetting[0]==0 || perspectiveSetting[0]==1))
             m3gPerspective=perspectiveSetting[0]==1;
+    }
+
+    /** "R,G,B" triple from the level ini (M3G light tint keys), else def. */
+    private static int readRgb(GameIni ini, String key, int def) {
+        String s = ini.get(key);
+        if(s == null) return def;
+        try {
+            int[] c = StringTools.cutOnInts(s, ',');
+            if(c == null || c.length < 3) return def;
+            int r = Math.max(0, Math.min(255, c[0]));
+            int gch = Math.max(0, Math.min(255, c[1]));
+            int b = Math.max(0, Math.min(255, c[2]));
+            return (r << 16) | (gch << 8) | b;
+        } catch(Exception e) { return def; }
     }
 
     private static void defaultSettings() {
