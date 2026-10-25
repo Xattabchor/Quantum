@@ -114,7 +114,8 @@ M3G_LIT_AMBIENT=64
 M3G_LIT_DIR=0
 M3G_OMNI_BASE=0
 M3G_OMNI_FLASH=204
-M3G_OMNI_HALFX=200
+M3G_OMNI_HALFX=50
+// pinpoint muzzle glow: halo ~0.5x screen step (~1.2k units)
 // minimum useful flashlight radius (visible spot ~2 half-widths)
 M3G_LIT_AMBCOL=255,255,255
 // ambient lamp R,G,B (whole-world base tint)
