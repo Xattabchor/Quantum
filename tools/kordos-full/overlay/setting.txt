@@ -147,7 +147,7 @@ M3G_LIT_DIST=20000
 M3G_LIT_FLAT=1
 // 1 = SHADE_FLAT (faster on software m3g), 0 = SHADE_SMOOTH
 M3G_LIT_DYN=0
-// dyn fps culling OFF for now; static M3G_LIT_DIST applies (200000 > FAR => effectively no cull)
+// dyn fps culling OFF for now; static M3G_LIT_DIST=20000 applies (inside camera FAR=40000)
 // 1 = auto distance cull targeting M3G_LIT_FPS, 0 = static DIST
 M3G_LIT_FPS=20
 M3G_LIT_STATIC=1
