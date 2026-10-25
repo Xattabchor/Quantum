@@ -6,10 +6,10 @@
 
 #include <e32base.h>
 #include <f32file.h>
-#ifndef QUANTUM_LEVEL41_NO_DSA
-#include <bitdev.h>
 #include <bitstd.h>
 #include <fbs.h>
+#ifndef QUANTUM_LEVEL41_NO_DSA
+#include <bitdev.h>
 #endif
 #include <gdi.h>
 #include <w32std.h>
@@ -136,6 +136,7 @@ TInt gAverageMeshRenderMicros = 0;
 TInt gMaximumMeshRenderMillis = 0;
 bool gBenchmarkComplete = false;
 bool gBenchmarkFinalOverlayPending = false;
+bool gBitmapGdiPresenterActive = false;
 
 struct TextureInfo {
     TInt width;
@@ -598,6 +599,48 @@ void drawFailure(CWsScreenDevice& screen, CWindowGc& gc,
     }
 }
 
+void drawStatusOverlay(CWsScreenDevice& screen,
+                       CGraphicsContext& gc,
+                       const TSize& size)
+{
+    CFont* font = 0;
+    if (screen.GetNearestFontInPixels(font, TFontSpec(_L("Series 60 Sans"), 10)) == KErrNone) {
+        gc.UseFont(font);
+        gc.SetPenStyle(CGraphicsContext::ESolidPen);
+        gc.SetPenColor(TRgb(255, 255, 255));
+        gc.DrawText(_L("LEVEL 41 / DMODE 9"), TPoint(4, 14));
+        TBuf<48> benchmarkStatus;
+        if (gBenchmarkComplete) {
+            benchmarkStatus.Format(
+                _L("10s average FPS: %d.%d"),
+                gDeviceFpsTenths / 10, gDeviceFpsTenths % 10);
+        } else {
+            benchmarkStatus.Format(
+                _L("Live FPS: %d.%d"),
+                gDeviceFpsTenths / 10, gDeviceFpsTenths % 10);
+        }
+        gc.DrawText(benchmarkStatus, TPoint(4, 32));
+        TBuf<48> renderTime;
+        renderTime.Format(_L("Mesh avg/max: %d/%d ms"),
+                          gAverageMeshRenderMicros / 1000,
+                          gMaximumMeshRenderMillis);
+        gc.DrawText(renderTime, TPoint(4, 48));
+        if (gBitmapGdiPresenterActive) {
+            gc.DrawText(_L("Presenter: bitmap BitBlt"), TPoint(4, 64));
+        } else {
+            gc.DrawText(_L("Presenter: GDI fallback"), TPoint(4, 64));
+        }
+        TBuf<48> status;
+        status.Format(_L("Polygons %d  Triangles %d"),
+                      gPolygonsDrawn, gTrianglesDrawn);
+        gc.DrawText(status, TPoint(4, size.iHeight - 22));
+        gc.DrawText(_L("Press any key to exit"),
+                    TPoint(4, size.iHeight - 6));
+        gc.DiscardFont();
+        screen.ReleaseFont(font);
+    }
+}
+
 void drawOutput(CWsScreenDevice& screen,
                 CGraphicsContext& gc,
                 RWsSession* session,
@@ -638,42 +681,133 @@ void drawOutput(CWsScreenDevice& screen,
         }
     }
 
-    // DSA drawing must not make Window Server calls while direct access is
-    // active; keep all font and status text in the WindowServer fallback.
-    if (session != 0) {
-        CFont* font = 0;
-        if (screen.GetNearestFontInPixels(font, TFontSpec(_L("Series 60 Sans"), 10)) == KErrNone) {
-            gc.UseFont(font);
-            gc.SetPenStyle(CGraphicsContext::ESolidPen);
-            gc.SetPenColor(TRgb(255, 255, 255));
-            gc.DrawText(_L("LEVEL 41 / DMODE 9"), TPoint(4, 14));
-            TBuf<48> benchmarkStatus;
-            if (gBenchmarkComplete) {
-                benchmarkStatus.Format(
-                    _L("10s average FPS: %d.%d"),
-                    gDeviceFpsTenths / 10, gDeviceFpsTenths % 10);
-            } else {
-                benchmarkStatus.Format(
-                    _L("Live FPS: %d.%d"),
-                    gDeviceFpsTenths / 10, gDeviceFpsTenths % 10);
-            }
-            gc.DrawText(benchmarkStatus, TPoint(4, 32));
-            TBuf<48> renderTime;
-            renderTime.Format(_L("Mesh avg/max: %d/%d ms"),
-                              gAverageMeshRenderMicros / 1000,
-                              gMaximumMeshRenderMillis);
-            gc.DrawText(renderTime, TPoint(4, 48));
-            TBuf<48> status;
-            status.Format(_L("Polygons %d  Triangles %d"),
-                          gPolygonsDrawn, gTrianglesDrawn);
-            gc.DrawText(status, TPoint(4, size.iHeight - 22));
-            gc.DrawText(_L("Press any key to exit"),
-                        TPoint(4, size.iHeight - 6));
-            gc.DiscardFont();
-            screen.ReleaseFont(font);
-        }
-    }
+    if (session != 0) drawStatusOverlay(screen, gc, size);
 }
+
+class TLevel41BitmapGdiPresenter
+{
+public:
+    TLevel41BitmapGdiPresenter()
+        : iBitmap(0), iSize(0, 0), iStridePixels(0)
+    {
+    }
+
+    ~TLevel41BitmapGdiPresenter()
+    {
+        Close();
+    }
+
+    bool Create(RWsSession& session, const TSize& size)
+    {
+        Close();
+        if (size.iWidth <= 0 || size.iHeight <= 0) return false;
+
+        iBitmap = new CWsBitmap(session);
+        if (iBitmap == 0) return false;
+        if (iBitmap->Create(size, EColor64K) != KErrNone) {
+            Close();
+            return false;
+        }
+
+        const TInt scanLineBytes =
+            CFbsBitmap::ScanLineLength(size.iWidth, EColor64K);
+        if (scanLineBytes <= 0 || (scanLineBytes & 1) != 0 ||
+            scanLineBytes / 2 < size.iWidth) {
+            Close();
+            return false;
+        }
+
+        iSize = size;
+        iStridePixels = scanLineBytes / 2;
+        return true;
+    }
+
+    void Close()
+    {
+        delete iBitmap;
+        iBitmap = 0;
+        iSize = TSize(0, 0);
+        iStridePixels = 0;
+    }
+
+    bool DrawFrame(CGraphicsContext& gc)
+    {
+        if (iBitmap == 0 || gFramebuffer == 0 ||
+            gRenderWidth <= 0 || gRenderHeight <= 0 ||
+            iStridePixels < iSize.iWidth) {
+            return false;
+        }
+
+        TInt scaleX = iSize.iWidth / gRenderWidth;
+        TInt scaleY = iSize.iHeight / gRenderHeight;
+        TInt scale = scaleX < scaleY ? scaleX : scaleY;
+        if (scale < 1) scale = 1;
+        const TInt imageWidth = gRenderWidth * scale;
+        const TInt imageHeight = gRenderHeight * scale;
+        const TInt left = (iSize.iWidth - imageWidth) / 2;
+        const TInt top = (iSize.iHeight - imageHeight) / 2;
+        const QUint16 background = ToRgb565(0x00080c14);
+
+        iBitmap->LockHeap();
+        TUint32* address = iBitmap->DataAddress();
+        if (address == 0) {
+            iBitmap->UnlockHeap();
+            return false;
+        }
+
+        QUint16* pixels = reinterpret_cast<QUint16*>(address);
+        TInt y;
+        if (scale == 1 && left == 0 && top == 0 &&
+            gRenderWidth == iSize.iWidth &&
+            gRenderHeight == iSize.iHeight) {
+            for (y = 0; y < iSize.iHeight; ++y) {
+                QUint16* row = pixels + y * iStridePixels;
+                const QInt32* sourceRow = gFramebuffer + y * gRenderWidth;
+                TInt x;
+                for (x = 0; x < iSize.iWidth; ++x) {
+                    row[x] = ToRgb565(sourceRow[x]);
+                }
+            }
+        } else {
+            for (y = 0; y < iSize.iHeight; ++y) {
+                QUint16* row = pixels + y * iStridePixels;
+                const TInt imageY = y - top;
+                const bool insideImageY = imageY >= 0 && imageY < imageHeight;
+                const TInt sourceY = insideImageY ? imageY / scale : -1;
+                TInt x;
+                for (x = 0; x < iSize.iWidth; ++x) {
+                    const TInt imageX = x - left;
+                    if (insideImageY && imageX >= 0 && imageX < imageWidth) {
+                        const TInt sourceX = imageX / scale;
+                        row[x] = ToRgb565(
+                            gFramebuffer[sourceY * gRenderWidth + sourceX]);
+                    } else {
+                        row[x] = background;
+                    }
+                }
+            }
+        }
+        iBitmap->UnlockHeap();
+
+        gc.BitBlt(TPoint(0, 0), iBitmap);
+        return true;
+    }
+
+private:
+    static QUint16 ToRgb565(QInt32 pixel)
+    {
+        const QUint32 bits = static_cast<QUint32>(pixel);
+        return static_cast<QUint16>(
+            (((bits >> 19U) & 0x1fU) << 11U) |
+            (((bits >> 10U) & 0x3fU) << 5U) |
+            ((bits >> 3U) & 0x1fU));
+    }
+
+private:
+    CWsBitmap* iBitmap;
+    TSize iSize;
+    TInt iStridePixels;
+};
 
 #ifndef QUANTUM_LEVEL41_NO_DSA
 class CDsaStarter;
@@ -1004,6 +1138,7 @@ TInt runWindow(RFs& fileServer,
         return KErrArgument;
     }
 
+    TLevel41BitmapGdiPresenter bitmapPresenter;
     RWindowGroup group(session);
     TInt result = group.Construct(KWindowGroupClientHandle, ETrue);
     if (result != KErrNone) return result;
@@ -1058,6 +1193,9 @@ TInt runWindow(RFs& fileServer,
             if (!renderLevel41Frame()) {
                 gRenderStatus = KErrCorrupt;
             } else {
+#ifdef QUANTUM_LEVEL41_NO_DSA
+                gBitmapGdiPresenterActive = bitmapPresenter.Create(session, size);
+#endif
                 resetBenchmark();
             }
         }
@@ -1122,7 +1260,16 @@ TInt runWindow(RFs& fileServer,
                 window.BeginRedraw(redraw.Rect());
                 gc.Activate(window);
                 if (gRenderStatus == KErrNone) {
-                    drawOutput(screen, gc, &session, size);
+                    if (gBitmapGdiPresenterActive &&
+                        bitmapPresenter.DrawFrame(gc)) {
+                        drawStatusOverlay(screen, gc, size);
+                    } else {
+                        if (gBitmapGdiPresenterActive) {
+                            bitmapPresenter.Close();
+                            gBitmapGdiPresenterActive = false;
+                        }
+                        drawOutput(screen, gc, &session, size);
+                    }
                 } else {
                     drawFailure(screen, gc, size, gRenderStatus);
                 }

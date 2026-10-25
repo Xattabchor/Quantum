@@ -27,10 +27,32 @@ target_include_directories(quantum_level41_device_test PRIVATE ../inc)
 # S60v3 baseline until the DSA path is repaired and verified on-device.
 target_compile_definitions(quantum_level41_device_test PRIVATE
     QUANTUM_LEVEL41_NO_DSA=1)
+set(bitgdi_proxy "${SYMBIAN_SDK_PREFIX}/proxies/bitgdi/bitgdi.dso")
+if(NOT EXISTS "${bitgdi_proxy}")
+    message(FATAL_ERROR "The Symbian SDK is missing the BitGdi import proxy required for bitmap presentation")
+endif()
+if(NOT TARGET Symbian::BitGdi)
+    add_library(SymbianBitGdi SHARED IMPORTED GLOBAL)
+    set_target_properties(SymbianBitGdi PROPERTIES
+        IMPORTED_LOCATION "${bitgdi_proxy}")
+    add_library(Symbian::BitGdi ALIAS SymbianBitGdi)
+endif()
+set(fbscli_proxy "${SYMBIAN_SDK_PREFIX}/proxies/fbscli/fbscli.dso")
+if(NOT EXISTS "${fbscli_proxy}")
+    message(FATAL_ERROR "The Symbian SDK is missing the FBS client import proxy required for bitmap access")
+endif()
+if(NOT TARGET Symbian::Fbs)
+    add_library(SymbianFbs SHARED IMPORTED GLOBAL)
+    set_target_properties(SymbianFbs PROPERTIES
+        IMPORTED_LOCATION "${fbscli_proxy}")
+    add_library(Symbian::Fbs ALIAS SymbianFbs)
+endif()
 target_link_libraries(quantum_level41_device_test PRIVATE
     Symbian::EUser
     Symbian::WindowServer
     Symbian::Gdi
+    Symbian::BitGdi
+    Symbian::Fbs
     Symbian::FileServer
     Symbian::Math)
 target_compile_features(quantum_level41_device_test PRIVATE cxx_std_20)
@@ -46,6 +68,8 @@ target_link_libraries(quantum_level41_no_dsa PRIVATE
     Symbian::EUser
     Symbian::WindowServer
     Symbian::Gdi
+    Symbian::BitGdi
+    Symbian::Fbs
     Symbian::FileServer
     Symbian::Math)
 target_compile_features(quantum_level41_no_dsa PRIVATE cxx_std_20)
