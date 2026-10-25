@@ -892,8 +892,20 @@ bool SoftwareMeshRenderer::renderScene(
         QInt32 triangles = 0;
         bool drawn;
         if (options.projectionPath == ESoftwareMeshProjectionDirectX7) {
-            if (!SoftwareVertexPipeline::projectDirectX7(
-                    drawVertices, polygon.vertexCount, options.projection)) {
+            // Projection changes only x/y; keep per-corner shading and UVs.
+            if (workspace.projectedVertices != 0) {
+                QInt32 corner;
+                for (corner = 0; corner < polygon.vertexCount; ++corner) {
+                    const SoftwareRenderVertex& cachedProjection =
+                        workspace.projectedVertices[
+                            item.vertexOffset +
+                            polygon.vertexIndices[corner]];
+                    drawVertices[corner].x = cachedProjection.x;
+                    drawVertices[corner].y = cachedProjection.y;
+                }
+            } else if (!SoftwareVertexPipeline::projectDirectX7(
+                           drawVertices, polygon.vertexCount,
+                           options.projection)) {
                 return false;
             }
             if (polygon.vertexCount == 3) {

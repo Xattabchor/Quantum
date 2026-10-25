@@ -44,11 +44,14 @@ uses the legacy `LockHeap`/`UnlockHeap` API rather than the later
 OS 9.1.
 
 Version 1.0.14 adds an optional projected-vertex workspace to the native mesh
-renderer. The Level 41 benchmark supplies that scratch buffer so each shared
-mesh vertex is projected once per instance instead of reprojecting it for
-every polygon corner. Callers that omit the optional buffer retain the
-existing path. A local differential check matched framebuffer output and
-renderer statistics with and without the cache on both projection paths.
+renderer. The Level 41 benchmark supplies that scratch buffer for the
+visibility/queue pass. The E65 reported 5.7 FPS and 108/109 ms mesh
+average/maximum, with bitmap BitBlt still active. Review then found that the
+DirectX7 draw pass still recalculated projected positions for every polygon.
+Version 1.0.15 reuses the cached coordinates in that final draw pass as well;
+callers that omit the optional buffer retain the original projection path. A
+local differential check matched framebuffer output and renderer statistics
+with and without the cache on both projection paths.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -84,6 +87,7 @@ Current E65 feedback:
   with `Presenter: bitmap/bitblt`; the polygon and triangle counts were
   unchanged. This confirms a substantial output-path improvement on this
   scene, not full-game performance.
-- The v1.0.14 candidate enables the optional projected-vertex cache in the
-  benchmark workspace to target the remaining mesh-render cost. Its E65
-  performance has not yet been measured.
+- The v1.0.14 E65 run reported 5.7 FPS and 108/109 ms mesh average/maximum,
+  with the bitmap BitBlt presenter; counts remained unchanged.
+- The v1.0.15 candidate also reuses cached projections in the DirectX7 draw
+  pass. Its E65 performance has not yet been measured.
