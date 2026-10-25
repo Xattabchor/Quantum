@@ -15,13 +15,11 @@ The `device-render-test.yml` workflow still packages through Symbian Platform
 `quantum_render_device_test-signed.sis`, was rejected by a Nokia E65 with
 `file corrupted`; treat that file as obsolete and do not install it.
 
-A replacement candidate is available as
-`quantum_render_device_test-e65-candidate.sisx` (32,940 bytes; SHA-256
-`7f21a2048f181d685985c24fcaf728913646ee963f7f1e0a7740ab5c89be0b5e`). It was
-repackaged from the same four payloads using GnuPoc MakeSIS 4 and SignSIS, the
-SIS v9 toolchain for Symbian OS 9. The four embedded payload SHA-1 hashes match
-the original files. The packer's 19 SIS and one signed-SISX regression fixtures
-passed, and its parser can read the generated controller and signature. The
+The refreshed E65 candidate is
+`quantum_render_device_test-e65-candidate.sisx` (32,948 bytes; SHA-256
+`cd6d0ca92d8a92ceb8951b6ed3230bae4c0244313c0ff73d7744b57edf83a417`). It is
+repackaged with GnuPoc MakeSIS 4 and SignSIS, the SIS v9 toolchain for Symbian
+OS 9. The workflow verifies the signed SISX and inspects its file tree. The
 Symbian Platform inspector cannot inspect this packer's compressed SIS streams,
 so that tool provides no additional verdict on this candidate.
 
