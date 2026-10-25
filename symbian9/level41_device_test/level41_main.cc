@@ -533,8 +533,7 @@ int main()
     RFs fileServer;
     gRenderStatus = fileServer.Connect();
     if (gRenderStatus == KErrNone) {
-        TFileName executable;
-        RProcess().FileName(executable);
+        const TFileName executable = RProcess().FileName();
         if (executable.Length() < 2 || executable[1] != ':') {
             gRenderStatus = KErrNotFound;
         } else {
