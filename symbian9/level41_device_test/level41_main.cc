@@ -6,9 +6,11 @@
 
 #include <e32base.h>
 #include <f32file.h>
+#ifndef QUANTUM_LEVEL41_NO_DSA
 #include <bitdev.h>
 #include <bitstd.h>
 #include <fbs.h>
+#endif
 #include <gdi.h>
 #include <w32std.h>
 
@@ -515,6 +517,7 @@ void drawOutput(CWsScreenDevice& screen,
     }
 }
 
+#ifndef QUANTUM_LEVEL41_NO_DSA
 class CDsaStarter;
 
 class TLevel41DsaObserver : public MDirectScreenAccess
@@ -804,6 +807,7 @@ TInt runDirectScreenAccess(RWsSession& session,
     usedDirectScreenAccess = (result == KErrNone);
     return result;
 }
+#endif // QUANTUM_LEVEL41_NO_DSA
 
 bool allocateRenderBuffer(const TSize& size)
 {
@@ -892,6 +896,7 @@ TInt runWindow(RFs& fileServer,
             gRenderStatus = KErrCorrupt;
         }
 
+#ifndef QUANTUM_LEVEL41_NO_DSA
         if (gRenderStatus == KErrNone) {
             bool usedDirectScreenAccess = false;
             (void)runDirectScreenAccess(
@@ -904,6 +909,7 @@ TInt runWindow(RFs& fileServer,
                 return KErrNone;
             }
         }
+#endif
 
         if (redraws != KRequestPending) {
             if (redraws.Int() == KErrNone) {

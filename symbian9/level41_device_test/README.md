@@ -44,9 +44,10 @@ cost of more software-rendering work. Version 1.0.6 removed the explicit
 `CFbsScreenDevice::Update()` call while investigating the E65's OS 9.1 import
 baseline. The user then confirmed that the same “Feature not supported” message
 still appears when launching v1.0.6, so removing that call was not sufficient
-and no root cause is established. The separate `level41_launch_probe` target
-builds a minimal WindowServer/GDI menu app with the same raw E32 startup and
-registration; its SISX helps distinguish a general launch/registration issue
-from an import or runtime issue in the renderer/DSA application. Neither build
-is yet verified on the physical E65, and emulator output does not establish
-handset compatibility.
+and no root cause is established. The separate `level41_launch_probe` target builds a minimal WindowServer/GDI
+menu app with the same raw E32 startup and registration. The user reports that
+this probe launches on the E65, narrowing the failure to dependencies or
+initialization specific to the Level 41 app rather than the shared basic launch
+path. A GDI-only Level 41 variant now compiles out DSA and BitGdi to isolate that
+boundary. The scene candidates remain unverified on the physical E65; emulator
+output does not establish handset compatibility.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage a minimal WindowServer launch-probe E32 app for SIS packaging."""
+"""Stage a registered standalone E32 app and SIS inputs."""
 
 from __future__ import annotations
 
@@ -69,7 +69,8 @@ def main() -> int:
         *resource_lines,
         "",
     ]
-    pkg_path = output / "quantum_level41_launch_probe.pkg"
+    project_name = project_info["name"]
+    pkg_path = output / f"{project_name}.pkg"
     pkg_path.write_text("\n".join(pkg), encoding="ascii")
 
     report = {
@@ -79,7 +80,7 @@ def main() -> int:
         "executable_sha256": hashlib.sha256(data).hexdigest(),
         "registration_icon_source_sha256": icon_hashes,
     }
-    (output / "level41-launch-probe-inputs.json").write_text(
+    (output / f"{project_name}-package-inputs.json").write_text(
         json.dumps(report, indent=2) + "\n", encoding="utf-8"
     )
     print(f"Staged {executable_name} and {len(resources)} registration files")
