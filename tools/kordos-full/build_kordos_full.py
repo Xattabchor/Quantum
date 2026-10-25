@@ -59,6 +59,10 @@ EXTRAS_RIVER7 = (
 # env: KORDOS_DECIMATE=0 disables, KORDOS_MIN_AREA overrides the area.
 DECIMATE_MIN_AREA = float(os.environ.get('KORDOS_MIN_AREA', '1e5'))
 DECIMATE_ENABLED = os.environ.get('KORDOS_DECIMATE', '1') == '1'
+# The sym9 map references 5 WTEX slots: 2/3 are the duplicate std ground
+# layers the user intentionally cut, 4 is the animated river (slot 2 in the
+# user's 3-line layout). Remap: 2,3 -> ground, 4 -> river slot.
+DECIMATE_MAT_MAP = os.environ.get('KORDOS_MAT_MAP', '2:1,3:1,4:2')
 # KORDOS_OVERLAY=0 keeps the sym9 jar's own level*/setting.txt entirely —
 # a diagnostic switch to isolate overlay-caused crashes.
 OVERLAY_ENABLED = os.environ.get('KORDOS_OVERLAY', '1') == '1'
@@ -78,6 +82,7 @@ def decimate_world(stage: dict) -> None:
     srcvla.write_bytes(stage['lightmap/kordod.vla'])
     subprocess.run([sys.executable, str(tool), str(src3d), str(dst3d),
                     '--scale', '6', '--min-area', repr(DECIMATE_MIN_AREA),
+                    '--mat-map', DECIMATE_MAT_MAP,
                     '--vla', str(srcvla), str(dstvla)], check=True)
     stage['maps/kordos/kordos.3d'] = dst3d.read_bytes()
     stage['lightmap/kordod.vla'] = dstvla.read_bytes()

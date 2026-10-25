@@ -4,8 +4,6 @@ LIGHTMAP=/lightmap/kordod.vla
 [WTEX_BEGIN]
 /maps/kordos/forestOrigy.png,std,-20000
 /maps/kordos/map-selo1.png
-/maps/kordos/map-selo1.png,std,-3500
-/maps/kordos/map-selo1.png,std,-7000
 6:/maps/kordos/river0.bmp:/maps/kordos/river1.bmp:/maps/kordos/river2.bmp:/maps/kordos/river3.bmp,7
 [WTEX_END]
 

@@ -52,11 +52,18 @@ def plane_key(verts, idx, mat, eps_deg=2.0):
     dp = (nx*v0[0] + ny*v0[1] + nz*v0[2]) / l
     return (mat, qn, round(dp / 4.0))  # 4 raw units shift tolerance
 
-def decimate(meshes, scale, min_area, do_merge, vla=None):
+def decimate(meshes, scale, min_area, do_merge, vla=None, mat_map=None):
     out_meshes = []
     stats = defaultdict(int)
     new_vla = bytearray()
     for verts, tris, quads in meshes:
+        if mat_map:
+            # Remap material slots to a shortened WTEX list (e.g. the sym9
+            # map references slots 2/3 (std ground layers, intentionally cut
+            # by the user) and 4 (animated river) -> user layout 0..2).
+            tris = [(mat_map.get(m, m), ix, uv) for m, ix, uv in tris]
+            quads = [(mat_map.get(m, m), ix, uv) for m, ix, uv in quads]
+            # no reordering: polygon order must stay stable for the .vla sync
         # per-poly baked light corner values (DMODE=9: 3 bytes/tri, 4/quad)
         tri_lm = qua_lm = None
         if vla is not None:
@@ -216,13 +223,18 @@ def main():
     scale = float(sys.argv[sys.argv.index('--scale') + 1]) if '--scale' in sys.argv else 6.0
     min_area = float(sys.argv[sys.argv.index('--min-area') + 1]) if '--min-area' in sys.argv else 1e5
     do_merge = '--no-merge' not in sys.argv
+    mat_map = None
+    if '--mat-map' in sys.argv:
+        mat_map = dict((int(a), int(b)) for a, b in
+                       (p.split(':') for p in
+                        sys.argv[sys.argv.index('--mat-map') + 1].split(',')))
     meshes = read3d(src)
     total0 = sum(len(t) + len(q) for _, t, q in meshes)
     verts0 = sum(len(v) for v, _, _ in meshes)
     vla = None
     if '--vla' in sys.argv:
         vla = open(sys.argv[sys.argv.index('--vla') + 1], 'rb').read()
-    out, stats, new_vla = decimate(meshes, scale, min_area, do_merge, vla)
+    out, stats, new_vla = decimate(meshes, scale, min_area, do_merge, vla, mat_map)
     write3d(dst, out)
     if '--vla' in sys.argv:
         open(sys.argv[sys.argv.index('--vla') + 2], 'wb').write(new_vla)
