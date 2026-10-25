@@ -227,7 +227,7 @@ jobs:
           run_logged "Configure OpenSSL 1.0.2u" ./config no-shared no-ssl2 no-ssl3 \
             --prefix="$OPENSSL_PREFIX"
           run_logged "Generate OpenSSL dependencies" make depend
-          run_logged "Build OpenSSL libraries" make --jobs=2 build_libs
+          run_logged "Build OpenSSL libraries and utilities" make --jobs=2 build_apps
           run_logged "Install OpenSSL libraries" make install_sw
 
           run_logged "Download GnuPoc MakeSIS source" curl --fail --location --retry 3 \
