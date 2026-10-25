@@ -114,8 +114,8 @@ M3G_LIT_AMBIENT=64
 M3G_LIT_DIR=0
 M3G_OMNI_BASE=0
 M3G_OMNI_FLASH=204
-M3G_OMNI_HALFX=100
-// half = 1x screen step: halo ~1.5x player height around the muzzle, clearly visible
+M3G_OMNI_HALFX=400
+// half = 4x screen step: visible far flashlight circle
 // pinpoint muzzle glow: halo ~0.5x screen step (~1.2k units)
 // minimum useful flashlight radius (visible spot ~2 half-widths)
 M3G_LIT_AMBCOL=255,255,255
@@ -132,6 +132,8 @@ M3G_LIT_FAR=40000
 M3G_LIT_SELFTEST=3
 M3G_LIT_AMBPULSE=0
 // 0 = NO global ambient boost on muzzle (was lighting the whole forest)
+M3G_OMNI_CULL=8000
+// while flash is live: cap distance cull here (2 lamps x far polys killed the fps on sw-m3g)
 
 M3G_LIT_NOVCOL=0
 // 0 = baked vertex lightmap under HW lights (menu: Baked light ON/OFF)

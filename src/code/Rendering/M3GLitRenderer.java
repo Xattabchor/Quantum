@@ -409,6 +409,12 @@ public final class M3GLitRenderer {
         // polys entirely beyond the cutoff. Consumed-without-draw keeps the
         // counter honest: L shows survivors.
         int distLimit = Main.m3gLitDyn == 1 ? dynDist : Main.m3gLitDist;
+        // Flash-time cap (M3G_OMNI_CULL): two live lamps double per-vertex
+        // lighting cost on software m3g; while the omni is on, don't feed it
+        // geometry it can't visibly light anyway.
+        if(flashActive && Main.m3gOmniCull > 0
+                && (distLimit <= 0 || distLimit > Main.m3gOmniCull))
+            distLimit = Main.m3gOmniCull;
         if(distLimit > 0) {
             boolean beyond = true;
             for(int i = 0; i < count; i++)
