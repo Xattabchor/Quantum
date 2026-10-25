@@ -110,7 +110,7 @@ public final class M3GLitRenderer {
 
     private static final class LitBucket {
         Texture2D tex; int kind; int func; boolean fogged;
-        int verts, indexLen, stripCount;
+        int verts, indexLen, stripCount, maxAbs = 1;
         int[] iv = new int[0];
         short[] uva = new short[0];
         byte[] cola = new byte[0];
@@ -273,7 +273,7 @@ public final class M3GLitRenderer {
         frameLit = 0; frameFail = 0; frameReason = 0;
         for(int i = 0; i < buckets.size(); i++) {
             LitBucket bk = (LitBucket) buckets.elementAt(i);
-            bk.verts = 0; bk.indexLen = 0; bk.stripCount = 0;
+            bk.verts = 0; bk.indexLen = 0; bk.stripCount = 0; bk.maxAbs = 1;
         }
         // Dynamic distance cull (M3G_LIT_DYN=1): track the frame-time moving
         // average and shrink/relax the cutoff toward the target FPS.
@@ -544,21 +544,23 @@ public final class M3GLitRenderer {
         bk.uva = growS(bk.uva, (vbase + count) * 2);
         bk.cola = growB(bk.cola, (vbase + count) * 4);
         bk.nrma = growB(bk.nrma, (vbase + count) * 3);
+        int maxAbs = bk.maxAbs;
         for(int i = 0; i < count; i++) {
             Vertex v = vertices[i];
-            bk.iv[(vbase + i) * 3] = v.getViewX();
-            bk.iv[(vbase + i) * 3 + 1] = v.getViewY();
-            bk.iv[(vbase + i) * 3 + 2] = v.getViewDepth();
-            bk.uva[(vbase + i) * 2] = uv[i * 2];
-            bk.uva[(vbase + i) * 2 + 1] = uv[i * 2 + 1];
-            bk.cola[(vbase + i) * 4] = rgba[i * 4];
-            bk.cola[(vbase + i) * 4 + 1] = rgba[i * 4 + 1];
-            bk.cola[(vbase + i) * 4 + 2] = rgba[i * 4 + 2];
-            bk.cola[(vbase + i) * 4 + 3] = rgba[i * 4 + 3];
-            bk.nrma[(vbase + i) * 3] = (byte) bxN;
-            bk.nrma[(vbase + i) * 3 + 1] = (byte) byN;
-            bk.nrma[(vbase + i) * 3 + 2] = (byte) bzN;
+            int x = v.getViewX(), y = v.getViewY(), z = v.getViewDepth();
+            bk.iv[(vbase + i) * 3] = x;
+            bk.iv[(vbase + i) * 3 + 1] = y;
+            bk.iv[(vbase + i) * 3 + 2] = z;
+            if(x < 0) x = -x; if(y < 0) y = -y; if(z < 0) z = -z;
+            if(x > maxAbs) maxAbs = x;
+            if(y > maxAbs) maxAbs = y;
+            if(z > maxAbs) maxAbs = z;
         }
+        bk.maxAbs = maxAbs;
+        // Bulk copies instead of per-field stores — nothing else to compute here.
+        System.arraycopy(uv, 0, bk.uva, vbase * 2, count * 2);
+        System.arraycopy(rgba, 0, bk.cola, vbase * 4, count * 4);
+        System.arraycopy(nrm, 0, bk.nrma, vbase * 3, count * 3);
         bk.verts += count;
         if(count == 3) {
             bk.indices = grow(bk.indices, bk.indexLen + 3);
@@ -609,16 +611,13 @@ public final class M3GLitRenderer {
 
     private void flushBucket(DirectX7 g, LitBucket bk) {
         if(bk.verts == 0) return;
-        int maxAbs = 1;
-        for(int i = 0; i < bk.verts * 3; i++) {
-            int c = bk.iv[i]; if(c < 0) c = -c;
-            if(c > maxAbs) maxAbs = c;
-        }
-        float scale = maxAbs / 30000f;
+        // maxAbs was accumulated at append time: one float op total here.
+        float scale = bk.maxAbs / 30000f;
         if(scale < 0.001f) scale = 0.001f;
+        float inv = 1f / scale; // multiply beats divide per coordinate
         bk.xyz = growS(bk.xyz, bk.verts * 3);
         for(int i = 0; i < bk.verts * 3; i++) {
-            float f = bk.iv[i] / scale;
+            float f = bk.iv[i] * inv;
             bk.xyz[i] = (short) (int) (f + (f >= 0 ? 0.5f : -0.5f));
         }
         if(bk.vb == null || bk.posA.getVertexCount() < bk.verts) {
