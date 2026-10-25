@@ -129,11 +129,13 @@ const TInt64 KBenchmarkDurationMicros = 10000000;
 TInt64 gBenchmarkStartMicros = 0;
 TInt64 gTotalMeshRenderMicros = 0;
 TInt64 gMaximumMeshRenderMicros = 0;
+TInt64 gLastMeshRenderMicros = 0;
 TInt gBenchmarkFrames = 0;
-TInt gDeviceFps = 0;
+TInt gDeviceFpsTenths = 0;
 TInt gAverageMeshRenderMicros = 0;
 TInt gMaximumMeshRenderMillis = 0;
 bool gBenchmarkComplete = false;
+bool gBenchmarkFinalOverlayPending = false;
 
 struct TextureInfo {
     TInt width;
@@ -408,12 +410,14 @@ TInt64 currentTimeMicros()
 void resetBenchmark()
 {
     gBenchmarkFrames = 0;
-    gDeviceFps = 0;
+    gDeviceFpsTenths = 0;
     gTotalMeshRenderMicros = 0;
     gMaximumMeshRenderMicros = 0;
+    gLastMeshRenderMicros = 0;
     gAverageMeshRenderMicros = 0;
     gMaximumMeshRenderMillis = 0;
     gBenchmarkComplete = false;
+    gBenchmarkFinalOverlayPending = false;
     gBenchmarkStartMicros = currentTimeMicros();
 }
 
@@ -428,14 +432,15 @@ void recordBenchmarkFrame(TInt64 meshRenderMicros)
 
     const TInt64 elapsedMicros = currentTimeMicros() - gBenchmarkStartMicros;
     if (elapsedMicros <= 0) return;
-    gDeviceFps = static_cast<TInt>(
-        (static_cast<TInt64>(gBenchmarkFrames) * 1000000) / elapsedMicros);
+    gDeviceFpsTenths = static_cast<TInt>(
+        (static_cast<TInt64>(gBenchmarkFrames) * 10000000) / elapsedMicros);
     gAverageMeshRenderMicros = static_cast<TInt>(
         gTotalMeshRenderMicros / gBenchmarkFrames);
     gMaximumMeshRenderMillis = static_cast<TInt>(
         gMaximumMeshRenderMicros / 1000);
     if (elapsedMicros >= KBenchmarkDurationMicros) {
         gBenchmarkComplete = true;
+        gBenchmarkFinalOverlayPending = true;
     }
 }
 
@@ -507,7 +512,7 @@ bool renderLevel41Frame()
     }
     gPolygonsDrawn = stats.polygonsDrawn;
     gTrianglesDrawn = stats.trianglesDrawn;
-    recordBenchmarkFrame(renderEndMicros - renderStartMicros);
+    gLastMeshRenderMicros = renderEndMicros - renderStartMicros;
     return true;
 }
 
@@ -644,9 +649,13 @@ void drawOutput(CWsScreenDevice& screen,
             gc.DrawText(_L("LEVEL 41 / DMODE 9"), TPoint(4, 14));
             TBuf<48> benchmarkStatus;
             if (gBenchmarkComplete) {
-                benchmarkStatus.Format(_L("10s average FPS: %d"), gDeviceFps);
+                benchmarkStatus.Format(
+                    _L("10s average FPS: %d.%d"),
+                    gDeviceFpsTenths / 10, gDeviceFpsTenths % 10);
             } else {
-                benchmarkStatus.Format(_L("Live FPS: %d"), gDeviceFps);
+                benchmarkStatus.Format(
+                    _L("Live FPS: %d.%d"),
+                    gDeviceFpsTenths / 10, gDeviceFpsTenths % 10);
             }
             gc.DrawText(benchmarkStatus, TPoint(4, 32));
             TBuf<48> renderTime;
@@ -1046,8 +1055,11 @@ TInt runWindow(RFs& fileServer,
             gRenderStatus = KErrCorrupt;
         }
         if (gRenderStatus == KErrNone) {
-            resetBenchmark();
-            if (!renderLevel41Frame()) gRenderStatus = KErrCorrupt;
+            if (!renderLevel41Frame()) {
+                gRenderStatus = KErrCorrupt;
+            } else {
+                resetBenchmark();
+            }
         }
 
 #ifndef QUANTUM_LEVEL41_NO_DSA
@@ -1098,10 +1110,14 @@ TInt runWindow(RFs& fileServer,
             if (result != KErrNone) break;
             TWsRedrawEvent redraw;
             session.GetRedraw(redraw);
+            bool renderedFrame = false;
             if (redraw.Handle() == KProbeWindowHandle) {
-                if (gRenderStatus == KErrNone && !gBenchmarkComplete &&
-                    !renderLevel41Frame()) {
-                    gRenderStatus = KErrCorrupt;
+                if (gRenderStatus == KErrNone && !gBenchmarkComplete) {
+                    if (renderLevel41Frame()) {
+                        renderedFrame = true;
+                    } else {
+                        gRenderStatus = KErrCorrupt;
+                    }
                 }
                 window.BeginRedraw(redraw.Rect());
                 gc.Activate(window);
@@ -1114,7 +1130,13 @@ TInt runWindow(RFs& fileServer,
                 window.EndRedraw();
             }
             session.RedrawReady(&redraws);
-            if (gRenderStatus == KErrNone && !gBenchmarkComplete) {
+            session.Flush();
+            if (gRenderStatus == KErrNone && renderedFrame) {
+                recordBenchmarkFrame(gLastMeshRenderMicros);
+            }
+            if (gRenderStatus == KErrNone &&
+                (!gBenchmarkComplete || gBenchmarkFinalOverlayPending)) {
+                gBenchmarkFinalOverlayPending = false;
                 window.Invalidate();
             }
         }

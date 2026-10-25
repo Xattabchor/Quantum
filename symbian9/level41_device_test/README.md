@@ -57,7 +57,8 @@ Current E65 feedback:
   the remaining differentiating path.
 - Main v1.0.10 uses the tested GDI path with DSA compiled out; the user
   confirms it works on the E65.
-- The v1.0.11 candidate adds a ten-second repeated-render benchmark for the
-  fixed Level 41 DMODE 9 view. It reports end-to-end device FPS and average /
-  maximum time inside `SoftwareMeshRenderer::renderScene()`. It has not yet
+- The v1.0.12 candidate adds a ten-second repeated-render benchmark for the
+  fixed Level 41 DMODE 9 view. It reports end-to-end device FPS to one decimal
+  place and average / maximum time inside `SoftwareMeshRenderer::renderScene()`.
+  The FPS count is recorded after each GDI frame is submitted. It has not yet
   been measured on the E65; a successful CI build is not a device result.
