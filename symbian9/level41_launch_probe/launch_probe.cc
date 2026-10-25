@@ -96,7 +96,7 @@ int main()
     if (result == KErrNone) {
         TWsRedrawEvent redraw;
         session.GetRedraw(redraw);
-        if (redraw.Handle() == window.Handle()) {
+        if (redraw.Handle() == 2) {
             window.BeginRedraw(redraw.Rect());
             CWindowGc gc(&screen);
             result = gc.Construct();
@@ -111,7 +111,7 @@ int main()
     session.RedrawReadyCancel();
     session.Flush();
 
-    if (result == KErrNone) result = waitForKey(session, window.Handle());
+    if (result == KErrNone) result = waitForKey(session, 2);
     window.Close();
     group.Close();
     session.Flush();
