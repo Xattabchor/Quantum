@@ -544,7 +544,7 @@ public final class M3GLitRenderer {
         bk.uva = growS(bk.uva, (vbase + count) * 2);
         bk.cola = growB(bk.cola, (vbase + count) * 4);
         bk.nrma = growB(bk.nrma, (vbase + count) * 3);
-        int maxAbs = bk.maxAbs;
+        int mxq = bk.maxAbs;
         for(int i = 0; i < count; i++) {
             Vertex v = vertices[i];
             int x = v.getViewX(), y = v.getViewY(), z = v.getViewDepth();
@@ -552,11 +552,11 @@ public final class M3GLitRenderer {
             bk.iv[(vbase + i) * 3 + 1] = y;
             bk.iv[(vbase + i) * 3 + 2] = z;
             if(x < 0) x = -x; if(y < 0) y = -y; if(z < 0) z = -z;
-            if(x > maxAbs) maxAbs = x;
-            if(y > maxAbs) maxAbs = y;
-            if(z > maxAbs) maxAbs = z;
+            if(x > mxq) mxq = x;
+            if(y > mxq) mxq = y;
+            if(z > mxq) mxq = z;
         }
-        bk.maxAbs = maxAbs;
+        bk.maxAbs = mxq;
         // Bulk copies instead of per-field stores — nothing else to compute here.
         System.arraycopy(uv, 0, bk.uva, vbase * 2, count * 2);
         System.arraycopy(rgba, 0, bk.cola, vbase * 4, count * 4);
