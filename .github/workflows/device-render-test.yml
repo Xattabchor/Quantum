@@ -1,0 +1,77 @@
+name: Symbian device render test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-armv5t-sis:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out the current branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python for the SDK host tools
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Symbian Platform host tools
+        run: |
+          python -m venv "$RUNNER_TEMP/symbian-venv"
+          echo "$RUNNER_TEMP/symbian-venv/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/symbian-venv/bin/python" -m pip install --disable-pip-version-check symbian-platform==0.3.0
+
+      - name: Download and install the public native SDK
+        env:
+          SDK_ARCHIVE_URL: https://github.com/hpnkv/symbian-platform/releases/download/v0.3.0/symbian-sdk-0.3.0-linux-x86_64.tar.gz
+        run: |
+          curl --fail --location --retry 3 "$SDK_ARCHIVE_URL" --output "$RUNNER_TEMP/symbian-sdk.tar.gz"
+          symbian sdk install "$RUNNER_TEMP/symbian-sdk" --archive "$RUNNER_TEMP/symbian-sdk.tar.gz"
+
+      - name: Build ARMv5T E32 executable
+        run: |
+          SDK="$RUNNER_TEMP/symbian-sdk"
+          BUILD="$RUNNER_TEMP/quantum-render-build"
+          "$SDK/bin/cmake" \
+            -S "$GITHUB_WORKSPACE/symbian9/device_render_test" \
+            -B "$BUILD" \
+            -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$SDK/cmake/symbian-arm.cmake" \
+            -DSYMBIAN_SDK_PREFIX="$SDK" \
+            -DSYMBIAN_TARGET_ARCH=armv5t \
+            -DSYMBIAN_RUNTIME_LEGACY_EKA2=ON \
+            -DCMAKE_MAKE_PROGRAM="$SDK/bin/ninja" \
+            -DCMAKE_BUILD_TYPE=Release
+          "$SDK/bin/cmake" --build "$BUILD" --parallel 2
+          test -s "$BUILD/e32/quantum_render_device_test.exe"
+
+      - name: Package, sign and inspect SIS files
+        run: |
+          PROJECT="$GITHUB_WORKSPACE/symbian9/device_render_test"
+          BUILD="$RUNNER_TEMP/quantum-render-build"
+          PACKAGE="$RUNNER_TEMP/quantum-render-package"
+          mkdir -p "$PACKAGE"
+          symbian package \
+            --project "$PROJECT" \
+            --artifact "$BUILD/e32/quantum_render_device_test.exe" \
+            --output "$PACKAGE"
+          symbian inspect --format sis "$PACKAGE/quantum_render_device_test.sis"
+          symbian signing create --identity developer --common-name "Quantum Render Test"
+          symbian signing sign "$PACKAGE/quantum_render_device_test.sis" \
+            --identity developer \
+            --destination "$PACKAGE/quantum_render_device_test-signed.sis"
+          symbian inspect --format sis "$PACKAGE/quantum_render_device_test-signed.sis"
+
+      - name: Upload short-lived handset-test packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: quantum-render-test-sis
+          path: |
+            ${{ runner.temp }}/quantum-render-package/quantum_render_device_test.sis
+            ${{ runner.temp }}/quantum-render-package/quantum_render_device_test-signed.sis
+          if-no-files-found: error
+          retention-days: 1
