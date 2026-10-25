@@ -10,7 +10,8 @@ or rendering its scene:
 
 The screen displays the result codes and waits for a key. The user reports that
 this combined probe also shows “Feature not supported”. The Math-only app
-launches, but the File Server-only app still fails. A smaller RFs::Connect-only
-variant is now being built to separate `RFs::Connect` from the later `RFile`
-operations. The cause is not yet established. This is diagnostic only, not a
-game or compatibility claim.
+launches, but the File Server-only app and a pre-UI `RFs::Connect`-only app
+both show “Feature not supported”. Version 1.0.1 draws its screen before calling
+`RFs::Connect`, to distinguish an import/startup failure from the runtime call.
+The exact cause is not yet established. This is diagnostic only, not a game or
+compatibility claim.

@@ -1,12 +1,18 @@
-# Level 41 RFs::Connect-only probe
+# Level 41 deferred RFs::Connect probe
 
-The full File Server-only probe fails on the E65 while the Math-only probe
-launches. This smaller variant calls only `RFs::Connect()` and closes the
-session before displaying its result; it does not call `RProcess::FileName()` or
-any `RFile` method.
+Version 1.0.1 deliberately draws its status screen before calling any File
+Server API. The E32 executable still contains the `RFs::Connect` reference, so
+an import/startup failure should happen before the screen. Press any key on the
+initial screen to call `RFs::Connect`; if it returns, the result code is shown
+on a second screen.
 
-If this launches, the File Server failure is later in the executable-path or
-`RFile` operations. If it still shows “Feature not supported”, the failure is
-narrowed to the `RFs` connection/import path or another startup dependency
-shared by that profile. The on-device result is still required to distinguish
-those cases.
+Interpretation on the E65:
+
+- No initial screen: points to import resolution or another startup issue in
+the File Server-linked executable.
+- Initial screen, then failure after the key: points to the runtime connection
+call or its interaction with the running app.
+- Second screen with a result code: the call returned; report the numeric code.
+
+This narrows the failure but is not by itself a general Symbian compatibility
+claim.

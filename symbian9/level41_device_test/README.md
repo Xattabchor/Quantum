@@ -53,5 +53,6 @@ path. The user also reports that the GDI-only Level 41 variant still fails with
 The combined File Server/math probe also fails. On the E65, the Math-only
 probe launches while the File Server-only probe still shows “Feature not
 supported”, narrowing the failure to the File Server-specific profile. A
-connect-only probe is being added to separate `RFs::Connect` from `RFile`
-operations. The scene candidates remain unverified on the physical E65.
+deferred `RFs::Connect` probe now draws its screen before the call, so the next
+E65 test can distinguish startup/import failure from the runtime call. The
+scene candidates remain unverified on the physical E65.

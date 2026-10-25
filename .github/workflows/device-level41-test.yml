@@ -359,7 +359,7 @@ jobs:
           fi
           test -s "$PACKAGE/quantum_level41_math_probe.pkg"
 
-      - name: Prepare RFs Connect-only probe SIS inputs
+      - name: Prepare deferred RFs Connect probe SIS inputs
         run: |
           set -euo pipefail
           PACKAGE="$RUNNER_TEMP/quantum-level41-fs-connect-package"

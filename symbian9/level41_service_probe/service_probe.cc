@@ -3,18 +3,27 @@
 #include <f32file.h>
 #endif
 #if !defined(QUANTUM_SERVICE_FILESERVER_ONLY) && \
-    !defined(QUANTUM_SERVICE_FS_CONNECT_ONLY)
+    !defined(QUANTUM_SERVICE_FS_CONNECT_ONLY) && \
+    !defined(QUANTUM_SERVICE_FS_CONNECT_DEFERRED)
 #include <e32math.h>
 #include <math.h>
 #endif
 #include <gdi.h>
 #include <w32std.h>
 
-#if (defined(QUANTUM_SERVICE_MATH_ONLY) && \
-     (defined(QUANTUM_SERVICE_FILESERVER_ONLY) || \
-      defined(QUANTUM_SERVICE_FS_CONNECT_ONLY))) || \
-    (defined(QUANTUM_SERVICE_FILESERVER_ONLY) && \
-     defined(QUANTUM_SERVICE_FS_CONNECT_ONLY))
+#if defined(QUANTUM_SERVICE_MATH_ONLY) && \
+    (defined(QUANTUM_SERVICE_FILESERVER_ONLY) || \
+     defined(QUANTUM_SERVICE_FS_CONNECT_ONLY) || \
+     defined(QUANTUM_SERVICE_FS_CONNECT_DEFERRED))
+#error Select at most one service probe profile
+#endif
+#if defined(QUANTUM_SERVICE_FILESERVER_ONLY) && \
+    (defined(QUANTUM_SERVICE_FS_CONNECT_ONLY) || \
+     defined(QUANTUM_SERVICE_FS_CONNECT_DEFERRED))
+#error Select at most one service probe profile
+#endif
+#if defined(QUANTUM_SERVICE_FS_CONNECT_ONLY) && \
+    defined(QUANTUM_SERVICE_FS_CONNECT_DEFERRED)
 #error Select at most one service probe profile
 #endif
 
@@ -25,6 +34,7 @@ struct TServiceResults {
     TInt fileOpen;
     TInt fileSize;
     TInt fileRead;
+    TBool fsConnectAttempted;
     TInt mathSqrt;
     TInt mathSin;
     TInt mathCos;
@@ -33,7 +43,8 @@ struct TServiceResults {
     TServiceResults()
         : fsConnect(KErrNotReady), fileOpen(KErrNotReady),
           fileSize(KErrNotReady), fileRead(KErrNotReady),
-          mathSqrt(KErrNotReady), mathSin(KErrNotReady),
+          fsConnectAttempted(EFalse), mathSqrt(KErrNotReady),
+          mathSin(KErrNotReady),
           mathCos(KErrNotReady), libmSqrt(KErrNotReady)
     {
     }
@@ -43,9 +54,11 @@ struct TServiceResults {
 void probeFileServer(TServiceResults& results)
 {
     RFs fileServer;
+    results.fsConnectAttempted = ETrue;
     results.fsConnect = fileServer.Connect();
     if (results.fsConnect != KErrNone) return;
-#if defined(QUANTUM_SERVICE_FS_CONNECT_ONLY)
+#if defined(QUANTUM_SERVICE_FS_CONNECT_ONLY) || \
+    defined(QUANTUM_SERVICE_FS_CONNECT_DEFERRED)
     fileServer.Close();
     return;
 #endif
@@ -69,7 +82,8 @@ void probeFileServer(TServiceResults& results)
 #endif
 
 #if !defined(QUANTUM_SERVICE_FILESERVER_ONLY) && \
-    !defined(QUANTUM_SERVICE_FS_CONNECT_ONLY)
+    !defined(QUANTUM_SERVICE_FS_CONNECT_ONLY) && \
+    !defined(QUANTUM_SERVICE_FS_CONNECT_DEFERRED)
 void probeMath(TServiceResults& results)
 {
     TReal root = 0.0;
@@ -106,7 +120,16 @@ void drawResults(CWsScreenDevice& screen,
 
     gc.UseFont(font);
     TBuf<64> line;
-#if defined(QUANTUM_SERVICE_FS_CONNECT_ONLY)
+#if defined(QUANTUM_SERVICE_FS_CONNECT_DEFERRED)
+    gc.DrawText(_L("RFs DEFERRED PROBE"), TPoint(10, 24));
+    if (result.fsConnectAttempted) {
+        line.Format(_L("RFs connect: %d"), result.fsConnect);
+        gc.DrawText(line, TPoint(10, 52));
+    } else {
+        gc.DrawText(_L("Press key to call RFs::Connect"),
+                    TPoint(10, 52));
+    }
+#elif defined(QUANTUM_SERVICE_FS_CONNECT_ONLY)
     gc.DrawText(_L("RFs CONNECT PROBE"), TPoint(10, 24));
     line.Format(_L("RFs connect: %d"), result.fsConnect);
     gc.DrawText(line, TPoint(10, 52));
@@ -139,8 +162,18 @@ void drawResults(CWsScreenDevice& screen,
     line.Format(_L("libm sqrt: %d"), result.libmSqrt);
     gc.DrawText(line, TPoint(10, 124));
 #endif
+#if defined(QUANTUM_SERVICE_FS_CONNECT_DEFERRED)
+    if (result.fsConnectAttempted) {
+        gc.DrawText(_L("Press any key to exit"),
+                    TPoint(10, size.iHeight - 12));
+    } else {
+        gc.DrawText(_L("Press any key to run test"),
+                    TPoint(10, size.iHeight - 12));
+    }
+#else
     gc.DrawText(_L("Press any key to exit"),
                 TPoint(10, size.iHeight - 12));
+#endif
     gc.DiscardFont();
     screen.ReleaseFont(font);
 }
@@ -163,16 +196,50 @@ TInt waitForKey(RWsSession& session, TUint windowHandle)
     }
 }
 
+TInt redrawResults(RWsSession& session,
+                   CWsScreenDevice& screen,
+                   RWindow& window,
+                   const TSize& size,
+                   const TServiceResults& results)
+{
+    TRequestStatus redrawStatus;
+    session.RedrawReady(&redrawStatus);
+    window.Invalidate();
+    session.Flush();
+    User::WaitForRequest(redrawStatus);
+    TInt result = redrawStatus.Int();
+    if (result == KErrNone) {
+        TWsRedrawEvent redraw;
+        session.GetRedraw(redraw);
+        if (redraw.Handle() == 2) {
+            window.BeginRedraw(redraw.Rect());
+            CWindowGc gc(&screen);
+            result = gc.Construct();
+            if (result == KErrNone) {
+                gc.Activate(window);
+                drawResults(screen, gc, size, results);
+                gc.Deactivate();
+                window.EndRedraw();
+            }
+        }
+    }
+    session.RedrawReadyCancel();
+    session.Flush();
+    return result;
+}
+
 } // namespace
 
 int main()
 {
     TServiceResults results;
-#if !defined(QUANTUM_SERVICE_MATH_ONLY)
+#if !defined(QUANTUM_SERVICE_MATH_ONLY) && \
+    !defined(QUANTUM_SERVICE_FS_CONNECT_DEFERRED)
     probeFileServer(results);
 #endif
 #if !defined(QUANTUM_SERVICE_FILESERVER_ONLY) && \
-    !defined(QUANTUM_SERVICE_FS_CONNECT_ONLY)
+    !defined(QUANTUM_SERVICE_FS_CONNECT_ONLY) && \
+    !defined(QUANTUM_SERVICE_FS_CONNECT_DEFERRED)
     probeMath(results);
 #endif
 
@@ -213,31 +280,20 @@ int main()
     window.SetVisible(ETrue);
     window.Activate();
 
-    TRequestStatus redrawStatus;
-    session.RedrawReady(&redrawStatus);
-    window.Invalidate();
-    session.Flush();
-    User::WaitForRequest(redrawStatus);
-    result = redrawStatus.Int();
-    if (result == KErrNone) {
-        TWsRedrawEvent redraw;
-        session.GetRedraw(redraw);
-        if (redraw.Handle() == 2) {
-            window.BeginRedraw(redraw.Rect());
-            CWindowGc gc(&screen);
-            result = gc.Construct();
-            if (result == KErrNone) {
-                gc.Activate(window);
-                drawResults(screen, gc, size, results);
-                gc.Deactivate();
-                window.EndRedraw();
-            }
-        }
-    }
-    session.RedrawReadyCancel();
-    session.Flush();
+    result = redrawResults(session, screen, window, size, results);
 
+#if defined(QUANTUM_SERVICE_FS_CONNECT_DEFERRED)
+    if (result == KErrNone) {
+        result = waitForKey(session, 2);
+        if (result == KErrNone) {
+            probeFileServer(results);
+            result = redrawResults(session, screen, window, size, results);
+        }
+        if (result == KErrNone) result = waitForKey(session, 2);
+    }
+#else
     if (result == KErrNone) result = waitForKey(session, 2);
+#endif
     window.Close();
     group.Close();
     session.Flush();

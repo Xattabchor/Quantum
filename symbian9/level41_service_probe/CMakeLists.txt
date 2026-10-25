@@ -40,7 +40,7 @@ symbian_publish_executable(quantum_level41_math_probe UID3 0xe000a01c)
 # Narrow the failing File Server profile to RFs::Connect alone.
 symbian_add_executable(quantum_level41_fs_connect_probe service_probe.cc)
 target_compile_definitions(quantum_level41_fs_connect_probe PRIVATE
-    QUANTUM_SERVICE_FS_CONNECT_ONLY=1)
+    QUANTUM_SERVICE_FS_CONNECT_DEFERRED=1)
 target_link_libraries(quantum_level41_fs_connect_probe PRIVATE
     Symbian::EUser
     Symbian::WindowServer

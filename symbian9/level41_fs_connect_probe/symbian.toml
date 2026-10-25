@@ -10,7 +10,7 @@ uid = 0xe000a01f
 name = "Level 41 FS Connect Probe"
 vendor = "Quantum native port"
 executable_name = "quantum_level41_fs_connect_probe.exe"
-version = [1, 0, 0]
+version = [1, 0, 1]
 
 [application]
 caption = "Level 41 FS Connect"
