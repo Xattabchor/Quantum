@@ -36,8 +36,11 @@ using code::Rendering::SoftwareRenderVertex;
 using code::Rendering::SoftwareTextureView;
 using code::Rendering::ESoftwareMeshProjectionDirectX7;
 
-const TInt KRenderWidth = 120;
-const TInt KRenderHeight = 160;
+const TInt KBaseRenderWidth = 120;
+const TInt KBaseRenderHeight = 160;
+const TInt KBaseProjectionDistance = 106;
+const TInt KProjectionScale = 1000;
+const TInt KMaximumRenderPixels = 512 * 1024;
 const TInt KMaximumTextureWidth = 256;
 const TInt KMaximumTextureHeight = 256;
 const TInt KMaximumTexturePixels = KMaximumTextureWidth * KMaximumTextureHeight;
@@ -48,7 +51,7 @@ const TInt KRiverTexturePixels = 32 * 32;
 const TInt KSkyTexturePixels = 256 * 256;
 const TInt KTextureStoragePixels =
     KForestTexturePixels + KMapTexturePixels + KRiverTexturePixels +
-    KSkyTexturePixels + KRenderWidth * KRenderHeight;
+    KSkyTexturePixels;
 const TInt KMaximumWorldFileBytes = 60000;
 const TInt KMaximumLightmapBytes = 12000;
 const TInt KMaximumSkyboxFileBytes = 2048;
@@ -64,6 +67,9 @@ const QInt32 KFarDistance = 80000;
 const QInt32 KClipDistance = 150;
 
 QInt32* gFramebuffer = 0;
+TInt gRenderWidth = 0;
+TInt gRenderHeight = 0;
+TInt gRenderPixelCount = 0;
 Vector3D gWorldVertices[KWorldVertexCapacity];
 SoftwareMeshPolygon gWorldPolygons[KWorldPolygonCapacity];
 SoftwareMesh3DPart gWorldParts[1];
@@ -337,9 +343,13 @@ bool renderLevel41(RFs& fileServer, const TDesC& drive)
         return false;
     }
 
+    if (gFramebuffer == 0 || gRenderWidth <= 0 || gRenderHeight <= 0 ||
+        gRenderPixelCount != gRenderWidth * gRenderHeight) {
+        return false;
+    }
+
     TInt pixelIndex;
-    for (pixelIndex = 0; pixelIndex < KRenderWidth * KRenderHeight;
-         ++pixelIndex) {
+    for (pixelIndex = 0; pixelIndex < gRenderPixelCount; ++pixelIndex) {
         gFramebuffer[pixelIndex] = KBackground;
     }
 
@@ -359,7 +369,19 @@ bool renderLevel41(RFs& fileServer, const TDesC& drive)
         gCameraVertices, KTotalVertexCapacity,
         gRenderQueue, KTotalPolygonCapacity);
     SoftwareMeshRenderOptions options;
-    options.projection = SoftwareProjectionParameters(60, 80, 106, 106);
+    TInt projectionScaleX =
+        (gRenderWidth * KProjectionScale) / KBaseRenderWidth;
+    TInt projectionScaleY =
+        (gRenderHeight * KProjectionScale) / KBaseRenderHeight;
+    TInt projectionScale = projectionScaleX < projectionScaleY
+        ? projectionScaleX : projectionScaleY;
+    TInt projectionDistance =
+        (KBaseProjectionDistance * projectionScale + KProjectionScale / 2) /
+        KProjectionScale;
+    if (projectionDistance < 1) projectionDistance = 1;
+    options.projection = SoftwareProjectionParameters(
+        gRenderWidth / 2, gRenderHeight / 2,
+        projectionDistance, projectionDistance);
     options.projectionPath = ESoftwareMeshProjectionDirectX7;
     options.cameraWorldY = KEyeHeight;
     options.quality.setStandardDrawMode(9);
@@ -374,8 +396,8 @@ bool renderLevel41(RFs& fileServer, const TDesC& drive)
     options.mipQuality = 24;
 
     const SoftwareRenderSurfaceView surface(
-        gFramebuffer, KRenderWidth * KRenderHeight,
-        KRenderWidth, KRenderHeight, KRenderWidth);
+        gFramebuffer, gRenderPixelCount,
+        gRenderWidth, gRenderHeight, gRenderWidth);
     SoftwareMeshRenderStats stats;
     if (!SoftwareMeshRenderer::renderScene(
             surface, instances, 2, options, workspace, stats) ||
@@ -437,12 +459,12 @@ void drawOutput(CWsScreenDevice& screen,
                 RWsSession* session,
                 const TSize& size)
 {
-    const TInt scaleX = size.iWidth / KRenderWidth;
-    const TInt scaleY = size.iHeight / KRenderHeight;
+    const TInt scaleX = size.iWidth / gRenderWidth;
+    const TInt scaleY = size.iHeight / gRenderHeight;
     TInt scale = scaleX < scaleY ? scaleX : scaleY;
     if (scale < 1) scale = 1;
-    const TInt imageWidth = KRenderWidth * scale;
-    const TInt imageHeight = KRenderHeight * scale;
+    const TInt imageWidth = gRenderWidth * scale;
+    const TInt imageHeight = gRenderHeight * scale;
     const TInt left = (size.iWidth - imageWidth) / 2;
     const TInt top = (size.iHeight - imageHeight) / 2;
 
@@ -452,10 +474,10 @@ void drawOutput(CWsScreenDevice& screen,
     gc.DrawRect(TRect(TPoint(0, 0), size));
 
     TInt y;
-    for (y = 0; y < KRenderHeight; ++y) {
+    for (y = 0; y < gRenderHeight; ++y) {
         TInt x;
-        for (x = 0; x < KRenderWidth; ++x) {
-            const QInt32 pixel = gFramebuffer[y * KRenderWidth + x];
+        for (x = 0; x < gRenderWidth; ++x) {
+            const QInt32 pixel = gFramebuffer[y * gRenderWidth + x];
             if (pixel == KBackground) continue;
             const QUint32 bits = static_cast<QUint32>(pixel);
             gc.SetBrushColor(TRgb(
@@ -785,6 +807,30 @@ TInt runDirectScreenAccess(RWsSession& session,
     return result;
 }
 
+bool allocateRenderBuffer(const TSize& size)
+{
+    const TInt nativePixelCount = size.iWidth * size.iHeight;
+    if (nativePixelCount <= KMaximumRenderPixels) {
+        gFramebuffer = static_cast<QInt32*>(User::Alloc(
+            nativePixelCount * static_cast<TInt>(sizeof(QInt32))));
+        if (gFramebuffer != 0) {
+            gRenderWidth = size.iWidth;
+            gRenderHeight = size.iHeight;
+            gRenderPixelCount = nativePixelCount;
+            return true;
+        }
+    }
+
+    // Keep the earlier low-memory path available on devices that cannot hold
+    // a native-resolution framebuffer.
+    gRenderWidth = KBaseRenderWidth;
+    gRenderHeight = KBaseRenderHeight;
+    gRenderPixelCount = KBaseRenderWidth * KBaseRenderHeight;
+    gFramebuffer = static_cast<QInt32*>(User::Alloc(
+        gRenderPixelCount * static_cast<TInt>(sizeof(QInt32))));
+    return gFramebuffer != 0;
+}
+
 TInt runWindow(RFs& fileServer,
                const TDesC& drive,
                RWsSession& session,
@@ -840,6 +886,9 @@ TInt runWindow(RFs& fileServer,
         session.Flush();
         User::After(250000);
 
+        if (gRenderStatus == KErrNone && !allocateRenderBuffer(size)) {
+            gRenderStatus = KErrNoMemory;
+        }
         if (gRenderStatus == KErrNone &&
             !renderLevel41(fileServer, drive)) {
             gRenderStatus = KErrCorrupt;
@@ -940,7 +989,6 @@ int main()
         gMapPixels = gForestPixels + KForestTexturePixels;
         gRiverPixels = gMapPixels + KMapTexturePixels;
         gSkyPixels = gRiverPixels + KRiverTexturePixels;
-        gFramebuffer = gSkyPixels + KSkyTexturePixels;
     }
 
     RFs fileServer;
@@ -976,6 +1024,7 @@ int main()
     }
 
     if (fileServerConnected) fileServer.Close();
+    if (gFramebuffer != 0) User::Free(gFramebuffer);
     if (gTextureStorage != 0) User::Free(gTextureStorage);
     CActiveScheduler::Install(0);
     delete scheduler;

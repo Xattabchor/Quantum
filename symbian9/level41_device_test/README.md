@@ -3,8 +3,9 @@
 This is a separate, fixed-camera S60v3 test application for the native C++
 `SoftwareMeshRenderer`. It loads only the small Level 41 world mesh, grayscale
 lightmap, skybox mesh, and the textures required by the scene. It renders one
-static DMODE 9 view at 120x160, then scales the result to the handset display.
-A key exits the test. It is not the Java game, does not contain gameplay or
+static DMODE 9 view at the handset's native pixel dimensions when a bounded
+framebuffer can be allocated, with a 120x160 low-memory fallback. A key exits
+the test. It is not the Java game, does not contain gameplay or
 controls, and is not Java pixel-parity evidence.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
@@ -35,7 +36,11 @@ the CPU renderer draws into a full-screen `CWsBitmap` through
 This reimplements the public Pixmap+DSA flow demonstrated by ESknot 1.04; it
 does not import its GLES/EGL renderer, since Level 41 remains software-rendered.
 The DSA path enables `SetAutoUpdate(ETrue)` and calls the screen update API for
-emulators, while preserving the existing WindowServer GDI fallback. It is a
-diagnostic display-path change, not a confirmed root-cause fix. EKA2L1 and
-physical E65 retests are still required; no Level 41 version is considered
-device-verified, and this test does not imply support for every S60v3 model.
+emulators, while preserving the existing WindowServer GDI fallback. Version
+1.0.5 renders at the actual display dimensions when the framebuffer fits the
+memory cap and can be allocated; it falls back to 120x160 on low-memory or
+unusually large displays. Projection is scaled uniformly to preserve the scene's
+shape. This removes the intentional nearest-neighbor enlargement on typical
+240x320 displays, at the cost of more software-rendering work. The path remains
+diagnostic: emulator output is not physical E65 verification, and this test
+does not imply support for every S60v3 model.
