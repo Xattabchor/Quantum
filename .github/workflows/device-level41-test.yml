@@ -107,9 +107,9 @@ jobs:
           BUILD="$RUNNER_TEMP/quantum-level41-build"
           BUILD_LOG="$RUNNER_TEMP/level41-cmake-build.log"
           : > "$BUILD_LOG"
-          echo "Building target quantum_level41_device_test in $BUILD"
+          echo "Building target quantum_level41_device_test_e32 in $BUILD"
           if "$SDK/bin/cmake" --build "$BUILD" \
-              --target quantum_level41_device_test --parallel 2 --verbose \
+              --target quantum_level41_device_test_e32 --parallel 2 --verbose \
               > "$BUILD_LOG" 2>&1; then
             cat "$BUILD_LOG"
           else
