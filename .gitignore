@@ -10,6 +10,8 @@ artifacts/*
 !artifacts/QuantumOptimize.jad
 !artifacts/QctConverter.jar
 !artifacts/QctConverter.jad
+!artifacts/ObjConverter.jar
+!artifacts/ObjConverter.jad
 # диагностические сборки (E65/J9)
 !artifacts/diag
 # zip-снимок исходников (включая подмодули)
