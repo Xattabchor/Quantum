@@ -38,10 +38,6 @@ package code.utils;
  *                                  от целевого экрана; flush() растягивает
  *                                  nearest-ом. 100 (по умолчанию, у любого
  *                                  профиля) = прежнее поведение бит-в-бит
- *   NOKIA_BLIT=0|1               - вывод кадра через Nokia DirectGraphics
- *                                  drawPixels() (по умолчанию 1; на аппаратах
- *                                  без com.nokia.mid.ui автоматический
- *                                  откат на g.drawRGB, см. §24)
  *
  * Ключи POSTFX и ARM9_QUALITY вырезаны по запросу автора и безопасно
  * игнорируются. Постэффекты управляются только родными ключами игры
@@ -83,9 +79,6 @@ public final class DeviceProfile {
     /** RENDER_SCALE: внутреннее разрешение рендера в % от целевого экрана
      *  (25..100; 100 = прежний путь flush() бит-в-бит). */
     public static int renderScale = 100;
-    /** NOKIA_BLIT: blit кадра через Nokia DirectGraphics.drawPixels()
-     *  (default 1; без com.nokia.mid.ui на аппарате - откат на drawRGB). */
-    public static boolean nokiaBlit = true;
     /** Загружать .qct рядом с .png, если упаковщик положил его в JAR. */
     public static boolean qct = true;
 
@@ -133,7 +126,6 @@ public final class DeviceProfile {
         int qctOpt = -1;
         int fastSetupOpt = -1;
         int renderScaleOpt = -1;
-        int nokiaBlitOpt = -1;
 
         if(settings != null) {
             String prof = settings.getNoLang("CPU_PROFILE");
@@ -151,7 +143,6 @@ public final class DeviceProfile {
             qctOpt = settings.getIntNoLang("QCT", -1);
             fastSetupOpt = settings.getIntNoLang("FAST_SETUP", -1);
             renderScaleOpt = settings.getIntNoLang("RENDER_SCALE", -1);
-            nokiaBlitOpt = settings.getIntNoLang("NOKIA_BLIT", -1);
             morphLodDist = settings.getIntNoLang("MORPH_LOD_DIST", morphLodDist);
             if(morphLodDist < 0) morphLodDist = 0;
             if(morphLodDist > 1000000) morphLodDist = 1000000;   // без переполнения << 2
@@ -186,9 +177,6 @@ public final class DeviceProfile {
         renderScale = renderScaleOpt >= 0 ? renderScaleOpt : 100;
         if(renderScale < 25) renderScale = 25;
         if(renderScale > 100) renderScale = 100;
-        // NOKIA_BLIT: opt-out. На аппаратах без com.nokia.mid.ui значение не
-        // важно - DirectX7.nokia() всё равно откатится на g.drawRGB().
-        nokiaBlit = nokiaBlitOpt >= 0 ? (nokiaBlitOpt == 1) : true;
 
         if(lowEnd && perspectiveStep == 0 && settings != null
                 && settings.getIntNoLang("PERSPECTIVE_STEP", -1) < 0) {
@@ -206,7 +194,6 @@ public final class DeviceProfile {
                 + " fastSetup=" + (fastSetup ? 1 : 0)
                 + " fastCull=" + (fastCull ? 1 : 0)
                 + " renderScale=" + renderScale
-                + " nokiaBlit=" + (nokiaBlit ? 1 : 0)
                 + " persStep=" + perspectiveStep);
     }
 

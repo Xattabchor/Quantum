@@ -190,22 +190,13 @@ def read(rel):
 
 def part_b():
     dx = read('src/code/Rendering/DirectX7.java')
-    # страж S>=100 идёт ПЕРЕД оригинальным drawRGB(display, ... width ...);
-    # с этапа 24 внутри обеих ветвей стоит NokiaBlitter с drawRGB-fallback.
+    # страж S>=100 идёт ПЕРЕД оригинальным drawRGB(display, ... width ...).
     m = re.search(r'if\(renderScale >= 100\) \{\s*'
-                  r'if\(nb != null\) \{\s*'
-                  r'nb\.blit\(display, width, x, y, width, height, flushAlpha\);\s*'
-                  r'\} else \{\s*'
                   r'g\.drawRGB\(display, 0, width, x, y, width, height,\s*flushAlpha \);\s*'
-                  r'\}\s*'
                   r'return;\s*\}', dx)
     check(m is not None, 'B: страж renderScale>=100 с оригинальным drawRGB не найден')
-    check(re.search(r'int\[\] buf = scaledDisplay\(\);\s*'
-                    r'if\(nb != null\) \{\s*'
-                    r'nb\.blit\(buf, targetW, x, y, targetW, targetH, flushAlpha\);\s*'
-                    r'\} else \{\s*'
-                    r'g\.drawRGB\(buf, 0, targetW, x, y, targetW, targetH, flushAlpha\);\s*'
-                    r'\}', dx) is not None,
+    check(re.search(r'g\.drawRGB\(scaledDisplay\(\), 0, targetW, x, y, targetW, targetH, flushAlpha\);',
+                    dx) is not None,
           'B: scaled-ветвь flush() не найдена')
     check('scaleBuf = null;' in dx and 'colMap = null;' in dx and 'rowMap = null;' in dx,
           'B: resize() не инвалидирует отложенные буферы')

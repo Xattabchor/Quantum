@@ -30,7 +30,7 @@ WORK = os.path.join('/tmp', 'setuptest')
 ECJ = ['org.eclipse.jdt.internal.compiler.batch.Main']
 BOOT = os.pathsep.join([os.path.join(T, 'lib', n) for n in
                         ('cldc_1.1.jar', 'midp_2.0.jar', 'jsr184_1.1.jar',
-                         'jsr075_stub.jar', 'nokia_ui_stub.jar')])
+                         'jsr075_stub.jar')])
 
 INT_MIN = -2147483648
 INT_MAX = 2147483647

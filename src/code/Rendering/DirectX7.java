@@ -266,36 +266,6 @@ this.buffer.resetTex();
        
    }
 
-   // Nokia DirectGraphics (§24): blit кадра через drawPixels() на аппаратах
-   // с com.nokia.mid.ui. Проверка Class.forName выполняется один раз; на
-   // прочих аппаратах класс NokiaBlitter не загружается вовсе и flush()
-   // остаётся на прежнем g.drawRGB(). NOKIA_BLIT=0 выключает путь даже на
-   // Nokia (бит-в-бит прежний вывод).
-   private static boolean nokiaTried;
-   private static NokiaBlitter nokiaBlitter;
-   private static Graphics nokiaGraphics;
-
-   static final NokiaBlitter nokia(Graphics g) {
-       if(!DeviceProfile.nokiaBlit) return null;
-       if(nokiaBlitter == null) {
-           if(nokiaTried) return null;      // API нет (или create() не удался)
-           nokiaTried = true;
-           try {
-               Class.forName("com.nokia.mid.ui.DirectGraphics");
-           } catch (Throwable t) {
-               return null;
-           }
-           nokiaBlitter = NokiaBlitter.create(g);
-           nokiaGraphics = g;
-           return nokiaBlitter;
-       }
-       if(nokiaGraphics != g) {             // Graphics сменился - перевзять peer
-           nokiaBlitter = NokiaBlitter.create(g);
-           nokiaGraphics = g;
-       }
-       return nokiaBlitter;
-   }
-
    public final void flush(Graphics g, int x, int y) {
        if(DeveloperMenu.renderPolygonsOverwrite) for(int i=display.length-1;i>=0;i--) {
            int c=display[i];
@@ -308,21 +278,11 @@ this.buffer.resetTex();
        }
        // RENDER_SCALE=100 (по умолчанию): прежний путь бит-в-бит, одно
        // int-сравнение на кадр. Иначе - nearest-апскейл view -> target.
-       NokiaBlitter nb = nokia(g);
        if(renderScale >= 100) {
-           if(nb != null) {
-               nb.blit(display, width, x, y, width, height, flushAlpha);
-           } else {
-               g.drawRGB(display, 0, width, x, y, width, height,flushAlpha );
-           }
+           g.drawRGB(display, 0, width, x, y, width, height,flushAlpha );
            return;
        }
-       int[] buf = scaledDisplay();
-       if(nb != null) {
-           nb.blit(buf, targetW, x, y, targetW, targetH, flushAlpha);
-       } else {
-           g.drawRGB(buf, 0, targetW, x, y, targetW, targetH, flushAlpha);
-       }
+       g.drawRGB(scaledDisplay(), 0, targetW, x, y, targetW, targetH, flushAlpha);
    }
 
 

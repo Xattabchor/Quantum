@@ -180,7 +180,6 @@ PDF-версия справочника по ключам (формат файл
 | `QCT` | `0` / `1` | `1` | подхватывать упакованные текстуры `.qct`, лежащие в JAR рядом с `.png` (см. §10) |
 | `FAST_SETUP` | `0` / `1` | `1` на ARM9, иначе `0` | подготовка полигонов без `idiv`: коэффициенты тумана умножением, ±1 из 255 (см. §11) |
 | `RENDER_SCALE` | `25…100` | `100` (= прежний рендер бит-в-бит, у любого профиля) | внутреннее разрешение рендера в % от экрана; `flush()` растягивает nearest-ом (см. §22) |
-| `NOKIA_BLIT` | `0` / `1` | `1` (не зависит от профиля; на аппаратах без `com.nokia.mid.ui` автооткат на `drawRGB`) | вывод кадра через Nokia `DirectGraphics.drawPixels()` вместо `g.drawRGB()` (см. §24) |
 
 Ключи `POSTFX` и `ARM9_QUALITY` **вырезаны** по запросу автора (§14) и
 безопасно игнорируются, если встречаются в старом `setting.txt`.
@@ -1081,8 +1080,9 @@ python3 docs/verify/test_setup_math.py
 На этом доступные без риска резервы исчерпаны. Что осталось и почему не
 делается: грязные прямоугольники и 16-битный цвет упираются в
 `g.drawRGB(int[])` (единственный гарантированный MIDP2-путь; Nokia
-DirectGraphics с `drawPixels` - только для аппаратов с `com.nokia.mid.ui`,
-нужна модель устройства и проверка на нём); ядро перспективного растеризатора
+DirectGraphics с `drawPixels` - только для аппаратов с `com.nokia.mid.ui`;
+был внедрён на этапе 24 и затем вырезан по запросу автора - см. §24); ядро
+перспективного растеризатора
 (деление на шаг коррекции) уже управляется `PERSPECTIVE_STEP`; очередь
 `Vector` в `Dijkstra` влияет только на пересчёт маршрутов NPC, который и так
 ограничен `AI_LOD`/`AI_LOD_DIST`.
@@ -1878,80 +1878,32 @@ height*D/100)` (int) и `Player(..., (int)(height*(D/100.0F)), ...)`
 подозрительным, пока он не проверен на реальном устройстве с J9** —
 эмулятор StackMap не проверяет и ложно «зелёный».
 
-## 24. Nokia DirectGraphics: нативный blit кадра
+## 24. Nokia DirectGraphics: внедрён и затем вырезан
 
-Последний пункт дорожной карты, откладывавшийся потому, что «нужна модель
-устройства и проверка на нём» (§9): на аппаратах Nokia (S60/S40) есть
-vendor-API `com.nokia.mid.ui`, чей `DirectGraphics.drawPixels()` выводит
-кадр нативным путём — как правило быстрее гарантированного MIDP2
-`g.drawRGB(int[])`. Устройство для проверки теперь есть (E65, §23).
+На этапе 24 (`d155e0f`) вывод кадра был переведён на vendor-API
+`com.nokia.mid.ui`: изолированный класс `NokiaBlitter`
+(`DirectUtils.getDirectGraphics(g)` + `drawPixels(pixels, alpha, 0,
+scanlength, x, y, w, h, 0, TYPE_INT_8888_ARGB)`), одноразовый детектор
+`DirectX7.nokia(Graphics)` со стражем
+`Class.forName("com.nokia.mid.ui.DirectGraphics")` в `try/catch(Throwable)`
+(на не-Nokia аппаратах класс не загружался вовсе - автоматический откат на
+`g.drawRGB()`), ключ `NOKIA_BLIT=0|1` (default 1, opt-out) и compile-time
+стаб `docs/j2me-build/stubsrc-nokia` (значения констант были сверены с
+официальным javadoc Nokia UI API 1.1 и двумя независимыми эмуляторами:
+`TYPE_INT_8888_ARGB=8888` и т.д.). Адресация `drawPixels` совпадает с
+`drawRGB` пиксел-в-пиксел, так что вывод не менялся - только потенциальная
+скорость нативного blit на Nokia S60/S40.
 
-### 24.1 Устройство
+**Вырезано по запросу автора.** Удалены: `NokiaBlitter.java`, стаб и его
+сборка в `get-toolchain.sh`, детектор и поля в `DirectX7`, ключ и его
+парсинг в `DeviceProfile`, тест `test_nokia_blit.py`; bootclasspath ECJ и
+`-libraryjars` ProGuard вернулись к четырём банкам (cldc, midp, jsr184,
+jsr075-стаб). `flush()` снова содержит единственный путь
+`g.drawRGB(int[])` - бит-в-бит как на этапе 22, в обеих ветвях
+RENDER_SCALE. Ключ `NOKIA_BLIT`, оставшийся в чьём-то `setting.txt`,
+безопасно игнорируется (неизвестные ключи не вызывают исключений).
+Рефлексии (`Class.forName`) в коде снова нет ни одной - shrink ProGuard
+остаётся безопасным без дополнительных keep-правил.
 
-* **`code.Rendering.NokiaBlitter`** — изолированный класс-обёртка:
-  `DirectUtils.getDirectGraphics(g)` в приватном конструкторе,
-  `create(g)` с `catch(Throwable) -> null`, и один метод
-  `blit(pixels, scanlength, x, y, w, h, alpha)` =
-  `dg.drawPixels(pixels, alpha, 0, scanlength, x, y, w, h, 0, TYPE_INT_8888_ARGB)`.
-* **`DirectX7.nokia(Graphics)`** — статический детектор:
-  1. `DeviceProfile.nokiaBlit == false` (ключ `NOKIA_BLIT=0`) -> всегда null;
-  2. один раз `Class.forName("com.nokia.mid.ui.DirectGraphics")` в
-     `try/catch(Throwable)`; неудача -> null навсегда, и **класс NokiaBlitter
-     на этом аппарате не загружается вовсе** (никакого NoClassDefFoundError
-     на не-Nokia);
-  3. `DirectGraphics` привязан к экземпляру `Graphics`: при смене `g` peer
-     перевзят (`nokiaGraphics != g`).
-* **`flush()`**: `nb != null` -> `nb.blit(...)`, иначе оригинальный
-  `g.drawRGB(...)`. Обе ветви RENDER_SCALE (§22) сохраняют drawRGB-fallback
-  без изменений; детектор вызывается один раз на кадр до стража масштаба.
-
-### 24.2 Семантика: drawPixels == drawRGB
-
-Официальный javadoc Nokia UI API 1.1: адресация
-`P(x1,y1) = pixels[offset + (x1-x) + (y1-y)*scanlength]` — та же формула,
-что у `Graphics.drawRGB`; `transparency=false` игнорирует альфу (аналог
-`processAlpha=false`); `TYPE_INT_8888_ARGB` — те же `0xAARRGGBB` int, что в
-`display`. `manipulation=0` — без поворотов/отражений (константы `FLIP_NONE`
-в API нет). Вывод пиксел-в-пиксел тот же; отличаться может только скорость.
-
-### 24.3 Компиляция без Nokia SDK: стаб
-
-`docs/j2me-build/stubsrc-nokia/com/nokia/mid/ui/{DirectGraphics,DirectUtils}.java`
-— compile-time-заглушка (по образцу `jsr075_stub`): только используемые
-члены, собирается `get-toolchain.sh` в `$T/lib/nokia_ui_stub.jar`, входит в
-bootclasspath ECJ и `-libraryjars` ProGuard, **в JAR не попадает** (проверка
-теста: в архиве нет записей `com/nokia/`). Значения констант сверены с
-официальным javadoc Nokia UI API 1.1 и двумя независимыми эмуляторами
-(J2ME-Loader, KEmulator): `TYPE_INT_8888_ARGB=8888`, `TYPE_INT_888_RGB=888`,
-`FLIP_HORIZONTAL=8192`, `FLIP_VERTICAL=16384`, `ROTATE_90/180/270=90/180/270`.
-ECJ инлайнит `static final int` — ошибись значение, цвета на устройстве
-исказились бы молча.
-
-`Class.forName` — первая рефлексия в проекте (до сих пор её не было, §8):
-shrink ProGuard не вырезает `NokiaBlitter`, потому что тот статически
-вызывается из `DirectX7.nokia()`; `-ignorewarnings` на com.nokia.* не нужен —
-стаб подключён как `-libraryjars`.
-
-### 24.4 Ключ NOKIA_BLIT
-
-`NOKIA_BLIT=0|1`, по умолчанию `1` у любого профиля (opt-out). На не-Nokia
-аппаратах значение не важно (автооткат). `NOKIA_BLIT=0` возвращает побитово
-прежний путь вывода — страховка на случай, если на конкретной прошивке
-`drawPixels` окажется медленнее или поведёт себя иначе.
-
-### 24.5 Проверки
-
-* docs/verify/test_nokia_blit.py: зеркала детектора (ключ глушит путь до
-  forName; неудача forName/create запоминается навсегда; смена Graphics ->
-  ровно одно перевзятие), парсинга NOKIA_BLIT (opt-out, не-1 -> выкл),
-  адресации drawPixels==drawRGB пиксел-в-пиксел для обеих ветвей
-  RENDER_SCALE; константы стаба против javadoc; точный текст вызова
-  drawPixels (символьная константа, offset=0, manipulation=0); инварианты
-  flush/fallback; артефакт: NokiaBlitter.class в JAR, sipush 8888 инлайнено,
-  com/nokia и javax в JAR отсутствуют.
-* Полная пересборка: check-jar.py зелёный (117 классов, 827 StackMap,
-  0 StackMapTable), QuantumOptimize.jar 388 775 байт, все 15 verify-тестов
-  PASS.
-* **На реальном E65: ожидается подтверждение** — выигрыш (или его отсутствие)
-  измеряется на глаз/по fps; при любых артефактах вывода `NOKIA_BLIT=0`
-  мгновенно возвращает прежний путь.
+Проверки: полная пересборка (check-jar.py зелёный), все 14 verify-тестов
+PASS; справочник PDF перегенерирован без этого ключа (осталось 12 ключей).
