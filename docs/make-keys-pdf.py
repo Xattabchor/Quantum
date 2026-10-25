@@ -13,6 +13,7 @@ KEYS одновременно строит и сводную таблицу, и 
     src/code/Rendering/Meshes/MeshImage.java   - MORPH_LOD, MORPH_LOD_DIST
     src/code/Rendering/Meshes/BoundingBox.java - FAST_CULL
     src/code/Rendering/DirectX7.java      - RENDER_SCALE (view/target, flush)
+    src/code/HUD/TitleScreen.java         - TITLE_IMAGE (фон титров)
     src/code/Math/MathUtils.java, Rendering/RenderObject.java - FAST_LIGHT
     src/code/Gameplay/GameScreen.java     - постэффекты через родные ключи игры
                                               (BLOOM/VIGNETTE; DOUBLE_BRIGHT
@@ -414,6 +415,34 @@ KEYS = [
             'исходников.',
         ],
     ),
+    dict(
+        name='TITLE_IMAGE',
+        values='путь к картинке (PNG)',
+        arm9='нет', fast='нет',
+        short='своя картинка-фон титульного экрана (экран скроллящихся '
+              'титров после игры)',
+        where='Конструктор TitleScreen: Main.settings.getNoLang("TITLE_IMAGE"); '
+              'картинка растягивается на экран ImageResize.createImage(путь, w, h) '
+              'и в paint() рисуется вместо чёрного fillRect; белый скроллящийся '
+              'текст TITLE_SCREEN_TEXT - поверх, как прежде. Без ключа или при '
+              'неудачной загрузке файла экран бит-в-бит прежний (чёрный).',
+        speed='Не ускоряет и не замедляет (контентный ключ): загрузка один раз '
+              'при создании экрана, в кадре - один drawImage вместо fillRect.',
+        loss='Ничего: без ключа поведение бит-в-бит прежнее. С ключом чёрный фон '
+             'заменяется вашей картинкой; читаемость белого текста поверх - на '
+             'стороне картинки.',
+        extra=[
+            'Путь в том же стиле, что у BACKGROUND/BACKGROUND_LOGO: от корня JAR '
+            '(/title.png). Ключ читается getNoLang и не локализуется; от профиля '
+            'устройства не зависит (DeviceProfile его не разбирает).',
+            'Файл не найден или битый - ImageResize.createImage возвращает null '
+            '(внутренний catch), экран остаётся чёрным: без крашей.',
+            'Image освобождается до перехода в меню (background = null в '
+            'onRightSoftKey()) - heap не течёт на слабых аппаратах.',
+            'Проверено: docs/verify/test_title_image.py - инварианты исходников, '
+            'контракт null у ImageResize, ветвление paint() (docs/ARM9.md §25).',
+        ],
+    ),
 ]
 
 # Ключи оригинала, у которых изменилось только значение по умолчанию.
@@ -596,6 +625,9 @@ LOSE_TABLE = [
     ('RENDER_SCALE=50...75', '3D-сцена рисуется в меньшем разрешении и '
                              'растягивается nearest-ом: картинка «крупнее '
                              'зерном». HUD, прицел и тексты остаются чёткими.'),
+    ('TITLE_IMAGE=<путь>', 'Ничего: без ключа титульный экран прежний (чёрный); '
+                           'с ключом фоном становится ваша картинка. Файл битый - '
+                           'автоматически прежний чёрный экран.'),
 ]
 
 
@@ -868,7 +900,7 @@ def build(path):
     # ---------------- 2. Сводная таблица ----------------
     f.append(Paragraph('2. Сводная таблица ключей', st['h1']))
     f.append(Paragraph(
-        'Двенадцать новых ключей. «ARM9» и «FAST/AUTO» - значения по умолчанию '
+        'Тринадцать новых ключей. «ARM9» и «FAST/AUTO» - значения по умолчанию '
         'на соответствующем профиле; явный ключ в файле перекрывает их в обоих '
         'случаях.', st['body']))
     rows = [[Paragraph('Ключ', st['head']), Paragraph('Значения', st['head']),
