@@ -2044,3 +2044,37 @@ int32  meshCount
 * Основная игра не затронута: `build-j2me.sh` без изменений, 15 прежних
   тестов PASS, `QuantumOptimize.jar` 387 792 Б (как до §26).
 
+
+## 27. Конвертер лайтмап `lightmap.vla` 13 (цвет) -> 9 (серый) для телефона (VlaConverter)
+
+### 27.1 Задача
+
+DMODE 13 хранит лайтмапу в цвете (`ColorLightedPolygon3V/4V`: по 3 байта `R,G,B` на вершину, сжатый формат `colored==false` если уже серый). DMODE 9 - серый (`LightedPolygon3V/4V`: по 1 байту `L`). Готовые `vla` уровня, запечённые в 13, нужно перегнать в 9 оттенками серого без перезапекания (на слабых аппаратах запекание недоступно).
+
+### 27.2 Что сделано
+
+* **Кодек `tools.vlaconv.VlaCodec`** - чистая логика `byte[]/DataInputStream` без MIDP, на оригинальном формате `LightMapper.saveLightMap/loadLightMap` (байт `v-128`, `boolean colored`). `colorToGray` читает цветной `vla` и пишет серый `L=(R+G+B)/3` как в конструкторе `LightedPolygon(ColorLightedPolygon)` и в `TexturingPers` при `fogQ==1`. `grayToColor` - обратная дорога для теста (серый->цвет сжато `r==g==b`, `colored==false`, рендерится как серый и в 13).
+* **Парсинг `.3d` для топологии** - `vla` без заголовков: порядок полигонов = порядок в `Mesh[]` (сначала все 3V, затем 4V). Кодек парсит `.3d` (int meshCount, per mesh: short vCount + vertices, short p3Count + записи, short p4Count) и получает `int[mesh][2] {p3,p4}` чтобы правильно прочитать переменную длину цветного `vla` (3+1+6 vs 4+1+8). Без меша разбор невозможен.
+* **MIDlet `VlaConvMIDlet`** - как `ObjConverter/QctConverter`: главное меню "VLA 13->9 : цвет в серый" / "VLA 9->13 : серый в цвет" + самопроверка, настройки, журнал 200 строк, справка. Браузер JSR-75 с отметкой нескольких `.vla`, фоновый поток, `Gauge`+`callSerially`. Меш ищется автоматически любой `.3d` в папке с `.vla` или указывается вручную "Выбрать .3d". Выход `*_9.vla` / `*_13.vla` рядом с исходником (перезапись опциональна).
+* **Сборка `docs/j2me-build/build-vlaconv.sh`** - ECJ 1.4 -> ProGuard `-microedition -dontoptimize` (shrink безопасен, optimize ломает IBM J9 см. §23) -> JAR/JAD -> `artifacts/VlaConverter.*` -> `check-jar.py` (4 класса, 38 StackMap, 0 StackMapTable). Стабы JSR-75 compile-only.
+* **Тесты `docs/verify/TestVla.java` + `test_vla.py`** - синтетика 2 меши 2+1 полигонов, серый->цвет->серый round-trip, цветной->серый (сжатый и несжатый), уже серый в цветном, случайные 5+5 полигонов, ошибки обрыв/лишние байты; сборка VlaConverter тем же скриптом что на устройстве.
+
+### 27.3 Формат `vla` (оригинал, big-endian)
+
+```
+для каждой меши по порядку, внутри: сначала p3 3V-полигонов, затем p4 4V:
+ 9 серый:  3V: byte la-128, lb-128, lc-128 (la=(ar+ag+ab)/3)
+          4V: byte la,lb,lc,ld
+13 цвет:  3V: byte ar,br,cr + boolean colored + если true 6 байт ag,ab,bg,bb,cg,cb
+          4V: byte ar,br,cr,dr + boolean + если true 8 байт ag,ab,bg,bb,cg,cb,dg,db
+ если colored==false : ag==ab==ar и т.д., пишется только 3/4 байта (уже серый).
+```
+
+### 27.4 Управление на телефоне
+
+Главное меню: "VLA 13->9" / "VLA 9->13" / "Самопроверка" (синтетика 3V+4V, `colorToGray`/`grayToColor` round-trip) / "Настройки" (выход с суффиксом `_9/_13` vs перезапись) / "Журнал" / "Справка". В браузере: OK - войти/отметить `.vla`, софт-1 "Конвертировать", "Выбрать .3d" - привязать меш, софт-2 Назад. Конвертация фоном с Gauge.
+
+### 27.5 Проверки
+
+* `docs/verify/test_vla.py`: часть 1 `TestVla` 9 кейсов (`gray-rt`, `gray-color-size`, `color-gray`, `cross-*`, `rnd-rt`, `err-*`) - все OK, `ALL OK`; часть 2 сборка VlaConverter тем же `build-vlaconv.sh` (4 класса после preverify, `check-jar.py` зелёный).
+* Основная игра не затронута: `build-j2me.sh` без изменений, 16 прежних тестов PASS, `QuantumOptimize.jar` 387 792 Б.

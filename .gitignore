@@ -12,6 +12,8 @@ artifacts/*
 !artifacts/QctConverter.jad
 !artifacts/ObjConverter.jar
 !artifacts/ObjConverter.jad
+!artifacts/VlaConverter.jar
+!artifacts/VlaConverter.jad
 # диагностические сборки (E65/J9)
 !artifacts/diag
 # zip-снимок исходников (включая подмодули)
