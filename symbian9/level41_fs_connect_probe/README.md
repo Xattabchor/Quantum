@@ -2,7 +2,8 @@
 
 Version 1.0.3 draws its status screen before calling any File Server API. It
 then calls `RFs::Connect` after a keypress and displays the result code if the
-call returns. The user reports that v1.0.2 launches on the E65.
+call returns. The user reports that v1.0.2 launches and v1.0.3 returns RFs
+result code 0 (`KErrNone`) on the E65, confirming that `RFs::Connect` works.
 
 The earlier v1.0.1 executable imported `efsrv.dll` ordinals 68 and 390. The
 public ARM EABI export definition maps those to `RFs::Connect(int)` and

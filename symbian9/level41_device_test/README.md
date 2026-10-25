@@ -14,8 +14,10 @@ handle 1, so no key reached the exit path. Version 1.0.7 uses the group handle
 for keyboard events and the child handle only for redraws. The main executable
 also used `RFs::Close()`; unlike the deferred probe, it still imported EFSRV
 ordinal 390, an export added later for tracing. Version 1.0.8 closes through
-`RHandleBase::Close()` to avoid that import. CI import inspection and E65
-confirmation are still required.
+`RHandleBase::Close()` to avoid that import. CI inspection confirms ordinal 390
+is gone from both v1.0.8 and GDI-only v1.0.2. The Level 41 executable still
+imports EFSRV ordinals 68 (`RFs::Connect`) and 93, 264, 300, 257 for `RFile`
+operations; E65 runtime confirmation is still required.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is

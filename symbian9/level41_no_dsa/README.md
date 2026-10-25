@@ -8,8 +8,10 @@ fallback to display the scene.
 Its v1.0.2 package includes the raw WindowServer input fix: key events use the
 focused window group's client handle (1), while redraws use child window handle
 2. It also closes the File Server session through `RHandleBase::Close()` to
-avoid importing the later `RFs::Close()` EFSRV ordinal 390. The E65 behavior
-still needs confirmation.
+avoid importing the later `RFs::Close()` EFSRV ordinal 390. CI inspection
+confirms ordinal 390 is absent from v1.0.2; the remaining EFSRV imports are
+`RFs::Connect` and `RFile` operations. E65 runtime behavior still needs
+confirmation.
 
 The minimal `level41_launch_probe` launched on the E65, confirming that the
 shared raw E32 startup, registration and basic WindowServer/GDI path can run

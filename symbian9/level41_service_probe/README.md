@@ -22,5 +22,12 @@ A separate input bug affected every raw WindowServer test: the code matched
 `EEventKey` against the child window handle (2), while WindowServer tags a key
 event with the focused window group's client handle (1). The fix is included
 in the rebuilt packages: combined, File Server, and Math probes v1.0.1 and the
-deferred RFs probe v1.0.3. Device confirmation is still needed. This remains a
-diagnostic suite, not a game or compatibility claim.
+deferred RFs probe v1.0.3. The user reports the deferred probe returns RFs code
+0 (`KErrNone`).
+
+The Level 41 full and GDI-only executables still had a separate direct
+`RFs::Close()` reference, importing EFSRV ordinal 390 even though the deferred
+probe avoided it. Version 1.0.8 (full) and 1.0.2 (GDI-only) now close through
+`RHandleBase::Close()`; E32 inspection confirms ordinal 390 is gone. The EFSRV
+`RFile` imports remain to be tested on the E65. This remains diagnostic only,
+not a game or compatibility claim.
