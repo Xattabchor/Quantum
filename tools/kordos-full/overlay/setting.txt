@@ -146,6 +146,8 @@ M3G_LIT_FLAT=1
 M3G_LIT_DYN=1
 // 1 = auto distance cull targeting M3G_LIT_FPS, 0 = static DIST
 M3G_LIT_FPS=20
+M3G_LIT_STATIC=1
+// 1 = cache static-poly attributes (world uv/colors/normals never change per frame)
 // 1 = lit fronts are CCW in NDC (geometry was fully back-face culled)
 M3G_SCREEN_SCALE=100
 WEAPON_SWAY=0

@@ -18,6 +18,8 @@ import javax.microedition.m3g.Transform;
 import code.Rendering.Meshes.Polygon3V;
 import code.Rendering.Meshes.Polygon4V;
 import code.utils.Main;
+import java.util.Enumeration;
+import java.util.Hashtable;
 import java.util.Vector;
 import javax.microedition.lcdui.Image;
 import javax.microedition.m3g.Image2D;
@@ -268,6 +270,16 @@ public final class M3GLitRenderer {
     public void beginFrame(DirectX7 g) {
         frameId++;
         depthCleared = false;
+        flashActive = false;
+        // Sweep untouched cache entries every ~10s (deleted polys / level
+        // transitions can't leak forever).
+        if((frameId % 600) == 599 && staticAttr.size() > 0) {
+            for(Enumeration e = staticAttr.keys(); e.hasMoreElements();) {
+                Object k = e.nextElement();
+                if(frameId - ((Attr) staticAttr.get(k)).touched > 600)
+                    staticAttr.remove(k);
+            }
+        }
         if(frameLit > statsLit) statsLit = frameLit;
         if(frameFail > statsFail) { statsFail = frameFail; statsReason = frameReason; }
         frameLit = 0; frameFail = 0; frameReason = 0;
@@ -362,6 +374,7 @@ public final class M3GLitRenderer {
         graphics.addLight(ambient, identity);
         if(Main.m3gLitDir > 0) graphics.addLight(sun, sunTransform);
         if(Main.m3gWorldLighting == 1 && pulse > 0f) {
+            flashActive = true; // cache bypass while dynamic light is live
             float flash = Main.m3gOmniBase / 255f + Main.m3gOmniFlash / 255f * pulse;
             omni.setIntensity(flash * 2.2f);
             graphics.addLight(omni, omniTransform);
@@ -403,6 +416,24 @@ public final class M3GLitRenderer {
             if(beyond) return true;
         }
 
+        // Static attribute cache (M3G_LIT_STATIC): world polys never change
+        // texture/uv/colors/normals — only view positions move per frame.
+        // Skipped while the omni flash is live so its baked colors can't
+        // freeze mid-update, and in debug shapes entirely.
+        Attr at = null;
+        boolean useStatic = Main.m3gLitStatic == 1 && Main.m3gLitDebug == 0
+                && !Main.m3gLitNormalViz && !flashActive;
+        if(useStatic) {
+            Vertex v0 = vertices[0];
+            at = (Attr) staticAttr.get(object);
+            if(at != null && (at.tex != texture || at.mode != mode
+                    || at.count != count || at.x != v0.x || at.y != v0.y
+                    || at.z != v0.z || at.fogged != (frameFogOn && mode == 3))) at = null;
+        }
+
+        // Immediate-path buffer is only consumed by the white probe below —
+        // batched rendering never touches posArray.
+        if(Main.m3gLitDebug == 1) {
         float scale = maxAbs / 30000f;
         if(scale < 0.001f) scale = 0.001f;
         for(int i = 0; i < count; i++) {
@@ -417,6 +448,7 @@ public final class M3GLitRenderer {
         if(posScale != scale) {
             buffer.setPositions(posArray, scale, null);
             posScale = scale;
+        }
         }
 
         if(Main.m3gLitDebug == 1) {
@@ -433,6 +465,8 @@ public final class M3GLitRenderer {
 
         // Flats: cross((b-a),(c-a)) in view space, auto-oriented toward the eye,
         // replicated for every corner (smooth shading interpolates to flat).
+        // Skipped entirely on static-cache hits — nrm/uv/rgba come from Attr.
+        if(at == null) {
         long ax = (long) vertices[1].getViewX() - vertices[0].getViewX();
         long ay = (long) vertices[1].getViewY() - vertices[0].getViewY();
         long az = (long) vertices[1].getViewDepth() - vertices[0].getViewDepth();
@@ -514,17 +548,41 @@ public final class M3GLitRenderer {
             System.arraycopy(owner.colors, 0, rgba, 0, count * 4);
         }
         colorArray.set(0, count, rgba);
+        }
 
-        int kind = mode == 2 ? M3GSceneRenderer.ADD_TEXTURE
-                : mode == 1 || mode == 11 || (mode == 4 && raw.alphaMixing)
-                ? M3GSceneRenderer.ALPHA_TEXTURE : M3GSceneRenderer.OPAQUE_TEXTURE;
-        Texture2D tex = litTexture(g, texture, raw, kind);
-        int func = mode == 11 ? Texture2D.FUNC_DECAL
-                : mode == 5 ? Texture2D.FUNC_BLEND : Texture2D.FUNC_MODULATE;
-        // Mode 6 rides the M3G rails with LIGHT only (ambient + omni) — the
-        // CPU pass's gouraud/camera-light look is the hardware lights' job;
-        // no native Fog. Mode 3 keeps the linear Fog (its only CPU meaning).
-        boolean foggy = frameFogOn && mode == 3;
+        int kind, func; Texture2D tex; boolean foggy;
+        short[] uvs; byte[] cols, nrms;
+        if(at != null) {
+            kind = at.kind; func = at.func; tex = at.t2d; foggy = at.fogged;
+            uvs = at.uvc; cols = at.colc; nrms = at.nrmc;
+            at.touched = frameId;
+        } else {
+            kind = mode == 2 ? M3GSceneRenderer.ADD_TEXTURE
+                    : mode == 1 || mode == 11 || (mode == 4 && raw.alphaMixing)
+                    ? M3GSceneRenderer.ALPHA_TEXTURE : M3GSceneRenderer.OPAQUE_TEXTURE;
+            tex = litTexture(g, texture, raw, kind);
+            func = mode == 11 ? Texture2D.FUNC_DECAL
+                    : mode == 5 ? Texture2D.FUNC_BLEND : Texture2D.FUNC_MODULATE;
+            // Mode 6 rides the M3G rails with LIGHT only (ambient + omni) — the
+            // CPU pass's gouraud/camera-light look is the hardware lights' job;
+            // no native Fog. Mode 3 keeps the linear Fog (its only CPU meaning).
+            foggy = frameFogOn && mode == 3;
+            uvs = uv; cols = rgba; nrms = nrm;
+            if(useStatic) {
+                at = new Attr();
+                at.tex = texture; at.t2d = tex; at.mode = mode; at.count = count;
+                at.x = vertices[0].x; at.y = vertices[0].y; at.z = vertices[0].z;
+                at.kind = kind; at.func = func; at.fogged = foggy;
+                at.uvc = new short[count * 2];
+                System.arraycopy(uv, 0, at.uvc, 0, count * 2);
+                at.colc = new byte[count * 4];
+                System.arraycopy(rgba, 0, at.colc, 0, count * 4);
+                at.nrmc = new byte[count * 3];
+                System.arraycopy(nrm, 0, at.nrmc, 0, count * 3);
+                at.touched = frameId;
+                staticAttr.put(object, at);
+            }
+        }
 
         // Deferred batching: append into the (tex, kind, func) bucket; the
         // whole frame is emitted by flushBuckets() at the end of the native
@@ -558,9 +616,9 @@ public final class M3GLitRenderer {
         }
         bk.maxAbs = mxq;
         // Bulk copies instead of per-field stores — nothing else to compute here.
-        System.arraycopy(uv, 0, bk.uva, vbase * 2, count * 2);
-        System.arraycopy(rgba, 0, bk.cola, vbase * 4, count * 4);
-        System.arraycopy(nrm, 0, bk.nrma, vbase * 3, count * 3);
+        System.arraycopy(uvs, 0, bk.uva, vbase * 2, count * 2);
+        System.arraycopy(cols, 0, bk.cola, vbase * 4, count * 4);
+        System.arraycopy(nrms, 0, bk.nrma, vbase * 3, count * 3);
         bk.verts += count;
         if(count == 3) {
             bk.indices = grow(bk.indices, bk.indexLen + 3);
@@ -604,6 +662,19 @@ public final class M3GLitRenderer {
     private int dynDist;
     private long lastFrameTime;
     private float avgDt;
+
+    /** M3G_LIT_STATIC=1: per-poly attribute cache — world polys keep texture,
+     * uv, colors and normals forever; only view positions move per frame. */
+    private final Hashtable staticAttr = new Hashtable();
+    private boolean flashActive; // omni live this frame (cache bypassed)
+
+    private static final class Attr {
+        Object tex; Texture2D t2d;
+        int mode, kind, func, count, x, y, z;
+        boolean fogged;
+        short[] uvc; byte[] colc; byte[] nrmc;
+        long touched;
+    }
 
     /** Native Fog node for CPU modes 3/6; refreshed once per frame. */
     private final Fog fog = new Fog();
