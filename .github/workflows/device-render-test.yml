@@ -46,6 +46,7 @@ jobs:
 
       - name: Build ARMv5T E32 executable
         run: |
+          set -o pipefail
           SDK="$RUNNER_TEMP/symbian-sdk"
           BUILD="$RUNNER_TEMP/quantum-render-build"
           "$SDK/bin/cmake" \
@@ -57,9 +58,20 @@ jobs:
             -DSYMBIAN_TARGET_ARCH=armv5t \
             -DSYMBIAN_RUNTIME_LEGACY_EKA2=ON \
             -DCMAKE_MAKE_PROGRAM="$SDK/bin/ninja" \
-            -DCMAKE_BUILD_TYPE=Release
-          "$SDK/bin/cmake" --build "$BUILD" --parallel 2
+            -DCMAKE_BUILD_TYPE=Release 2>&1 | tee "$RUNNER_TEMP/render-cmake-configure.log"
+          "$SDK/bin/cmake" --build "$BUILD" --parallel 2 2>&1 | tee "$RUNNER_TEMP/render-cmake-build.log"
           test -s "$BUILD/e32/quantum_render_device_test.exe"
+
+      - name: Surface build diagnostics
+        if: failure()
+        run: |
+          for log in "$RUNNER_TEMP/render-cmake-configure.log" "$RUNNER_TEMP/render-cmake-build.log"; do
+            if [ -f "$log" ]; then
+              while IFS= read -r line; do
+                echo "::error title=Symbian render build::$line"
+              done < <(tail -n 30 "$log")
+            fi
+          done
 
       - name: Package, sign and inspect SIS files
         run: |
