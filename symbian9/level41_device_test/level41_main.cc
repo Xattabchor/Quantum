@@ -6,6 +6,8 @@
 
 #include <e32base.h>
 #include <f32file.h>
+#include <bitdev.h>
+#include <bitstd.h>
 #include <fbs.h>
 #include <gdi.h>
 #include <w32std.h>
@@ -496,9 +498,17 @@ class CDsaStarter;
 class TLevel41DsaObserver : public MDirectScreenAccess
 {
 public:
-    TLevel41DsaObserver(CWsScreenDevice& screen, const TSize& size)
-        : iScreen(screen), iSize(size), iAccess(0), iStarter(0)
+    TLevel41DsaObserver(RWsSession& session,
+                        CWsScreenDevice& screen,
+                        const TSize& size)
+        : iSession(session), iScreen(screen), iSize(size), iAccess(0),
+          iStarter(0), iPixmap(0), iPixmapDevice(0), iPixmapGc(0)
     {
+    }
+
+    ~TLevel41DsaObserver()
+    {
+        CleanupPixmap();
     }
 
     void SetAccess(CDirectScreenAccess* access)
@@ -511,15 +521,47 @@ public:
         iStarter = starter;
     }
 
+    void PreparePixmapL()
+    {
+        if (iPixmap != 0 && iPixmapDevice != 0 && iPixmapGc != 0) return;
+        CleanupPixmap();
+
+        iPixmap = new(ELeave) CWsBitmap(iSession);
+        TDisplayMode mode = iScreen.DisplayMode();
+#ifdef EKA2
+        if (mode == EColor16MA) mode = EColor16MU;
+#endif
+        User::LeaveIfError(iPixmap->Create(iSize, mode));
+        iPixmapDevice = CFbsBitmapDevice::NewL(iPixmap);
+        User::LeaveIfError(iPixmapDevice->CreateContext(iPixmapGc));
+    }
+
+    void CleanupPixmap()
+    {
+        delete iPixmapGc;
+        iPixmapGc = 0;
+        delete iPixmapDevice;
+        iPixmapDevice = 0;
+        delete iPixmap;
+        iPixmap = 0;
+    }
+
     bool DrawFrame()
     {
-        if (iAccess == 0 || iAccess->Gc() == 0) return false;
-        drawOutput(iScreen, *iAccess->Gc(), 0, iSize);
+        if (iAccess == 0 || iAccess->Gc() == 0 ||
+            iPixmap == 0 || iPixmapGc == 0) return false;
+
+        // Render the software frame into an FBS bitmap first, then transfer it
+        // to the display with one DSA blit instead of thousands of screen GDI
+        // drawing requests.
+        drawOutput(iScreen, *iPixmapGc, 0, iSize);
+        iAccess->Gc()->BitBlt(TPoint(0, 0), iPixmap);
+
         CFbsScreenDevice* directScreen = iAccess->ScreenDevice();
-        if (directScreen != 0) {
-            // EKA2L1 requires this explicit update after DSA drawing.
-            (void)directScreen->Update();
-        }
+        if (directScreen == 0) return false;
+        // SetAutoUpdate covers handset behavior; Update also helps emulators
+        // that do not flush the direct-screen blit automatically.
+        (void)directScreen->Update();
         return true;
     }
 
@@ -532,10 +574,14 @@ public:
     void Restart(RDirectScreenAccess::TTerminationReasons reason);
 
 private:
+    RWsSession& iSession;
     CWsScreenDevice& iScreen;
     TSize iSize;
     CDirectScreenAccess* iAccess;
     CDsaStarter* iStarter;
+    CWsBitmap* iPixmap;
+    CFbsBitmapDevice* iPixmapDevice;
+    CFbsBitGc* iPixmapGc;
 };
 
 // Run leave-capable DSA setup from an active object so RunError can turn a
@@ -596,12 +642,22 @@ private:
 
     void RunL()
     {
+        iObserver.PreparePixmapL();
         if (iAccess == 0) {
             iAccess = CDirectScreenAccess::NewL(
                 iSession, iScreen, iWindow, iObserver);
             iObserver.SetAccess(iAccess);
         }
+        iSession.Flush();
         iAccess->StartL();
+        CFbsScreenDevice* directScreen = iAccess->ScreenDevice();
+        if (directScreen == 0) {
+            iResult = KErrNotSupported;
+            StopAccess();
+            CActiveScheduler::Stop();
+            return;
+        }
+        directScreen->SetAutoUpdate(ETrue);
         if (!iObserver.DrawFrame()) {
             iResult = KErrNotSupported;
             StopAccess();
@@ -627,6 +683,7 @@ private:
             delete iAccess;
             iAccess = 0;
         }
+        iObserver.CleanupPixmap();
     }
 
 private:
@@ -715,7 +772,7 @@ TInt runDirectScreenAccess(RWsSession& session,
         session.GetRedraw(pendingRedraw);
     }
 
-    TLevel41DsaObserver observer(screen, size);
+    TLevel41DsaObserver observer(session, screen, size);
     CDsaStarter starter(session, screen, window, observer);
     CWindowEventWaiter eventWaiter(session, 2);
     eventWaiter.Start();

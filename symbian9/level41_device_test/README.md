@@ -27,9 +27,15 @@ version 1.0.0 reached the E65 menu entry but showed “Feature not supported”
 when selected. Version 1.0.1 opens its window before loading/rendering and
 reduces temporary texture memory. In EKA2L1, the screenshot showed only the sky
 and a narrow horizon; version 1.0.2's periodic WindowServer flush did not make
-the lower scene appear. Version 1.0.3 therefore tries Symbian Direct Screen
-Access (CDirectScreenAccess) for the static frame, with the WindowServer path
-retained as a fallback if DSA is unavailable. This is a new diagnostic display
-path, not a confirmed root-cause fix; EKA2L1 and physical E65 retests are still
-required. None of these versions is considered device-verified, and this test
-does not imply support for every S60v3 model.
+the lower scene appear. Version 1.0.3 tried Symbian Direct Screen Access
+(CDirectScreenAccess) for the static frame, with the WindowServer path retained
+as a fallback. Version 1.0.4 changes the DSA output to a bitmap-backed transfer:
+the CPU renderer draws into a full-screen `CWsBitmap` through
+`CFbsBitmapDevice`, then DSA blits that bitmap to the display in one operation.
+This reimplements the public Pixmap+DSA flow demonstrated by ESknot 1.04; it
+does not import its GLES/EGL renderer, since Level 41 remains software-rendered.
+The DSA path enables `SetAutoUpdate(ETrue)` and calls the screen update API for
+emulators, while preserving the existing WindowServer GDI fallback. It is a
+diagnostic display-path change, not a confirmed root-cause fix. EKA2L1 and
+physical E65 retests are still required; no Level 41 version is considered
+device-verified, and this test does not imply support for every S60v3 model.
