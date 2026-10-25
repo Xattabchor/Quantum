@@ -491,17 +491,24 @@ void drawOutput(CWsScreenDevice& screen,
     }
 }
 
+class CDsaStarter;
+
 class TLevel41DsaObserver : public MDirectScreenAccess
 {
 public:
     TLevel41DsaObserver(CWsScreenDevice& screen, const TSize& size)
-        : iScreen(screen), iSize(size), iAccess(0)
+        : iScreen(screen), iSize(size), iAccess(0), iStarter(0)
     {
     }
 
     void SetAccess(CDirectScreenAccess* access)
     {
         iAccess = access;
+    }
+
+    void SetStarter(CDsaStarter* starter)
+    {
+        iStarter = starter;
     }
 
     bool DrawFrame()
@@ -522,19 +529,122 @@ public:
         (void)reason;
     }
 
-    void Restart(RDirectScreenAccess::TTerminationReasons reason)
-    {
-        (void)reason;
-        if (iAccess == 0) return;
-        TRAPD(error, iAccess->StartL());
-        if (error == KErrNone) DrawFrame();
-    }
+    void Restart(RDirectScreenAccess::TTerminationReasons reason);
 
 private:
     CWsScreenDevice& iScreen;
     TSize iSize;
     CDirectScreenAccess* iAccess;
+    CDsaStarter* iStarter;
 };
+
+// Run leave-capable DSA setup from an active object so RunError can turn a
+// failed NewL/StartL into the existing WindowServer fallback without a direct
+// TTrap import in the E32 image.
+class CDsaStarter : public CActive
+{
+public:
+    CDsaStarter(RWsSession& session,
+                CWsScreenDevice& screen,
+                RWindow& window,
+                TLevel41DsaObserver& observer)
+        : CActive(CActive::EPriorityStandard),
+          iSession(session), iScreen(screen), iWindow(window),
+          iObserver(observer), iAccess(0), iResult(KErrNotReady),
+          iStartRequested(false)
+    {
+        CActiveScheduler::Add(this);
+        iObserver.SetStarter(this);
+    }
+
+    ~CDsaStarter()
+    {
+        Stop();
+        iObserver.SetStarter(0);
+    }
+
+    void Start()
+    {
+        ScheduleStart();
+    }
+
+    void Stop()
+    {
+        Cancel();
+        StopAccess();
+    }
+
+    TInt Result() const
+    {
+        return iResult;
+    }
+
+    void ScheduleStart()
+    {
+        if (IsActive() || (iStartRequested && iResult != KErrNone)) return;
+        iStartRequested = true;
+        iStatus = KRequestPending;
+        TRequestStatus* status = &iStatus;
+        User::RequestComplete(status, KErrNone);
+        SetActive();
+    }
+
+private:
+    void DoCancel()
+    {
+    }
+
+    void RunL()
+    {
+        if (iAccess == 0) {
+            iAccess = CDirectScreenAccess::NewL(
+                iSession, iScreen, iWindow, iObserver);
+            iObserver.SetAccess(iAccess);
+        }
+        iAccess->StartL();
+        if (!iObserver.DrawFrame()) {
+            iResult = KErrNotSupported;
+            StopAccess();
+            CActiveScheduler::Stop();
+            return;
+        }
+        iResult = KErrNone;
+    }
+
+    TInt RunError(TInt error)
+    {
+        iResult = error;
+        StopAccess();
+        CActiveScheduler::Stop();
+        return KErrNone;
+    }
+
+    void StopAccess()
+    {
+        if (iAccess != 0) {
+            iObserver.SetAccess(0);
+            iAccess->Cancel();
+            delete iAccess;
+            iAccess = 0;
+        }
+    }
+
+private:
+    RWsSession& iSession;
+    CWsScreenDevice& iScreen;
+    RWindow& iWindow;
+    TLevel41DsaObserver& iObserver;
+    CDirectScreenAccess* iAccess;
+    TInt iResult;
+    bool iStartRequested;
+};
+
+void TLevel41DsaObserver::Restart(
+    RDirectScreenAccess::TTerminationReasons reason)
+{
+    (void)reason;
+    if (iStarter != 0) iStarter->ScheduleStart();
+}
 
 class CWindowEventWaiter : public CActive
 {
@@ -550,6 +660,12 @@ public:
     {
         iSession.EventReady(&iStatus);
         SetActive();
+    }
+
+    void Stop()
+    {
+        Cancel();
+        if (iStatus == KRequestPending) User::WaitForRequest(iStatus);
     }
 
 private:
@@ -600,32 +716,16 @@ TInt runDirectScreenAccess(RWsSession& session,
     }
 
     TLevel41DsaObserver observer(screen, size);
-    CDirectScreenAccess* directAccess = 0;
-    TRAPD(error,
-          directAccess = CDirectScreenAccess::NewL(
-              session, screen, window, observer);
-          observer.SetAccess(directAccess);
-          directAccess->StartL());
-    if (error != KErrNone) {
-        delete directAccess;
-        return error;
-    }
-
-    if (!observer.DrawFrame()) {
-        directAccess->Cancel();
-        delete directAccess;
-        return KErrNotSupported;
-    }
-
-    usedDirectScreenAccess = true;
+    CDsaStarter starter(session, screen, window, observer);
     CWindowEventWaiter eventWaiter(session, 2);
     eventWaiter.Start();
+    starter.Start();
     CActiveScheduler::Start();
-    eventWaiter.Cancel();
-
-    directAccess->Cancel();
-    delete directAccess;
-    return KErrNone;
+    const TInt result = starter.Result();
+    eventWaiter.Stop();
+    starter.Stop();
+    usedDirectScreenAccess = (result == KErrNone);
+    return result;
 }
 
 TInt runWindow(RFs& fileServer,
@@ -766,11 +866,10 @@ int main()
     CTrapCleanup* cleanup = CTrapCleanup::New();
     if (cleanup == 0) return KErrNoMemory;
 
-    CActiveScheduler* scheduler = 0;
-    TRAPD(schedulerError, scheduler = new (ELeave) CActiveScheduler);
-    if (schedulerError != KErrNone) {
+    CActiveScheduler* scheduler = new CActiveScheduler;
+    if (scheduler == 0) {
         delete cleanup;
-        return schedulerError;
+        return KErrNoMemory;
     }
     CActiveScheduler::Install(scheduler);
 
