@@ -43,10 +43,13 @@ cat > "$BUILD/proguard.pro" <<EOF
 -injars $CLASSES
 -outjars $PREVER
 -libraryjars $BOOT
-# shrink+optimize (рефлексии нет), MIDlet-класс закреплён keep-правилом.
+-libraryjars $STUB
+# shrink безопасен (проверен на E65), optimize - НЕТ (docs/ARM9.md §23:
+# IBM J9 молча вылетает на оптимизированном байткоде) - рефлексии нет,
+# MIDlet-класс закреплён keep-правилом.
 -keep public class tools.qctconv.QctConvMIDlet { public *; }
 -keepattributes SourceFile,LineNumberTable
--optimizationpasses 3
+-dontoptimize
 -dontobfuscate
 -microedition
 -target 1.4
