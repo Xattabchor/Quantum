@@ -5,4 +5,4 @@ MIDlet-1: Quantum Kordos FX,,code.utils.Main
 MicroEdition-Configuration: CLDC-1.1
 MicroEdition-Profile: MIDP-2.0
 MIDlet-Jar-URL: Quantum_code.jar
-MIDlet-Jar-Size: 442851
+MIDlet-Jar-Size: 434974

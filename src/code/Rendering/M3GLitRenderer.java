@@ -489,6 +489,7 @@ public final class M3GLitRenderer {
             owner.flushBatch(g);
             owner.bind(g);
             graphics.setCamera(camera, identity);
+            owner.cameraDirty(); // replaced the world camera on the shared target
             owner.renderNative(g, buffer, count == 3 ? triStrip : quadStrip, debugAppearance);
             frameLit++;
             return true;
@@ -781,6 +782,7 @@ public final class M3GLitRenderer {
         appearance.setTexture(0, bk.tex);
         owner.bind(g);
         graphics.setCamera(camera, identity);
+        owner.cameraDirty(); // replaced the world camera on the shared target
         appearance.setFog(bk.fogged ? fog : null);
         owner.renderNative(g, bk.vb, strip, appearance);
     }

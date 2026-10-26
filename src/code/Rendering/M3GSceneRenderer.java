@@ -30,6 +30,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private int projectionWidth,projectionHeight,projectionX,projectionY;
     private boolean projectionReady;
     private boolean batchable;
+    // Set once bind()/restoreCamera() installs the packed world camera;
+    // dirtied by every foreign camera (sky/lit/HUD passes) and by target
+    // release. Lets restoreCamera() skip repeated setViewport+setCamera
+    // between polygon-batch flushes (saves two JNI calls per flush).
+    private boolean cameraInstalled;
     private float buffersScale;
     private static final int[] TRI={0,1,2}, QUAD={0,1,3,1,2,3}, ALT_QUAD={0,1,2,0,2,3},
             ABD={0,1,3}, BCD={1,2,3}, ACD={0,2,3};
@@ -195,15 +200,21 @@ public final class M3GSceneRenderer implements SceneRenderer {
         graphics.clear(depthClearBg);
         graphics.setViewport(0, 0, surface.getWidth(), surface.getHeight());
         graphics.setCamera(camera, null);
+        cameraInstalled = true;
         graphics.resetLights();
         if(litRenderer != null) litRenderer.applyLights(g);
     }
 
     void restoreCamera(DirectX7 g) {
-        if(!bound) return;
+        if(!bound || cameraInstalled) return;
         graphics.setViewport(0,0,g.width,g.height);
         graphics.setCamera(camera,null);
+        cameraInstalled = true;
     }
+
+    /** Foreign passes (sky/lit/HUD) replace the camera on the shared target;
+     * they must call this so the next world flush re-installs ours. */
+    void cameraDirty() { cameraInstalled = false; }
 
     boolean supportsTexture(RawImage raw) {
         return raw != null && powerOfTwo(raw.w) && powerOfTwo(raw.h)
@@ -231,8 +242,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(litRenderer!=null) litRenderer.flushBuckets(g); // deferred lit buckets
     }
 
-    void bindCanvasTarget(javax.microedition.lcdui.Graphics target) {graphics.bindTarget(target,false,0);}
-    void releaseCanvasTarget() {graphics.releaseTarget();}
+    void bindCanvasTarget(javax.microedition.lcdui.Graphics target) {graphics.bindTarget(target,false,0);cameraInstalled=false;}
+    void releaseCanvasTarget() {graphics.releaseTarget();cameraInstalled=false;}
 
     /** A separate target pass AFTER scene presentation, in original HUD order. */
     public void drawCanvasImages(DirectX7 g,ScreenImages images,javax.microedition.lcdui.Graphics target) {
@@ -301,6 +312,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         // finishImage also fills g.display directly when the viewport is scaled
         // (centered native-resolution blit with black bars, no upscale).
         Image result=finishImage(g);
+        cameraInstalled = false;
         if(result!=null && targetScale()>=100) result.getRGB(g.display,0,g.width,0,0,g.width,g.height);
     }
 
@@ -312,7 +324,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         flushBatch(g);
         if(!bound) return null;
         try { graphics.releaseTarget(); }
-        finally { bound = false; }
+        finally { bound = false; cameraInstalled = false; }
         int scale=targetScale();
         if(scale >= 100) {
             // keep g.display in sync for direct display readers (pause snapshot, etc.)
@@ -351,6 +363,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             if(bound) graphics.releaseTarget();
         } finally {
             bound = false;
+            cameraInstalled = false;
             surface = null;projectionReady=false;
             positionScales[0]=positionScales[1]=Float.NaN;
             skyRenderer = null;
@@ -497,21 +510,22 @@ public final class M3GSceneRenderer implements SceneRenderer {
             if(fillBase == null) return false;
             int first = fillColor(raw, fillBase, 0, perspective);
             int second = count == 4 ? fillColor(raw, fillBase, 1, perspective) : first;
-            batchable=first==second;
-            if(!batchable) flushBatch(g);
+            // Split-color quads stay batchable: both halves share one
+            // Appearance (REPLACE, no texture, no fog) and batch.add() copies
+            // the arrays per call, so the per-triangle color rewrite below is
+            // captured correctly. Unfogged per-triangle scale cancels in
+            // projection, so the halves merge into the running world batch
+            // instead of costing one graphics.render() each.
+            batchable=true;
             int fillSlot = count - 3;
-            if(!batchable) posArrays[fillSlot].set(0, count, positions);
-            if(!batchable) setPositionScale(fillSlot,scale);
             setFog(null);
             setTexture(null);
             setBlend(CompositingMode.REPLACE);
             setThreshold(0);
             uniformColors(count, first, 255);
-            if(!batchable) colorArrays[fillSlot].set(0, count, colors);
             render(g, fillSlot, first == second ? indices[fillSlot] : quadTriangles[0]);
             if(first != second) {
                 uniformColors(count, second, 255);
-                if(!batchable) colorArrays[fillSlot].set(0, count, colors);
                 render(g, fillSlot, quadTriangles[1]);
             }
             return true;

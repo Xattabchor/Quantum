@@ -194,6 +194,7 @@ final class M3GSkyRenderer {
         if(clear) owner.clearSky(g,backgroundColor);
         else owner.bind(g);
         graphics.setCamera(camera,null);
+        owner.cameraDirty(); // replaced the world camera on the shared target
         owner.renderNative(g,buffer,indices[slot],appearance);
     }
 
