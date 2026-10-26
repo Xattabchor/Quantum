@@ -85,7 +85,6 @@ public final class Menu extends Selectable {
         
         
         if(DeveloperMenu.debugMode) {
-            newList.addElement("Benchmark");
             newList.addElement("AE-Mods");
             newList.addElement("Developer menu");
         }
@@ -133,8 +132,6 @@ public final class Menu extends Selectable {
             Main.setCurrent(new Setting(main, this, background));
         } else if(index == exitIndex) {
             main.notifyDestroyed();
-        } else if(index == list.getItems().length-3 && DeveloperMenu.debugMode) {
-            Main.setCurrent(new Benchmark(main, this));
         } else if(index == list.getItems().length-2 && DeveloperMenu.debugMode) {
             try {
                 main.platformRequest("http://ae-mods.ru");
