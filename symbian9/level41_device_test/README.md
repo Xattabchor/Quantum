@@ -224,3 +224,8 @@ Current E65 feedback:
   bitmap BitBlt, and phases of 0/7/8/0/56 ms. Versus v1.0.25, FPS was unchanged;
   mesh average/maximum and draw/raster each fell by 1 ms. Host output remains
   byte-identical after the exact-quotient fast paths.
+- The v1.0.27 candidate replaces each fractional-division iteration's
+  complement subtraction with an unsigned remainder doubling and conditional
+  subtraction. A differential harness passed edge cases and 10 million random
+  signed divisions; the host Level 41 framebuffer remains byte-identical.
+  E65 performance measurement is pending.

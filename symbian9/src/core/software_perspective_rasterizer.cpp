@@ -320,8 +320,9 @@ bool perspectiveDivide(QInt32 numerator,
      * Java evaluates ((long) numerator << 12) / denominator, then narrows.
      * Split the quotient into its integer and 12-bit fractional parts so the
      * ARMv5 path needs only a 32-bit divide. Extend a nonzero remainder one
-     * bit at a time; compare with (divisor - remainder) to avoid unsigned
-     * overflow. Exact integer quotients need no fractional-bit loop.
+     * bit at a time. Since remainder < denominator magnitude <= 2^31, doubling
+     * the remainder fits in 32 unsigned bits. Exact integer quotients need no
+     * fractional-bit loop.
      */
     const QUint32 numeratorBits = static_cast<QUint32>(numerator);
     const QUint32 denominatorBits = static_cast<QUint32>(denominator);
@@ -339,12 +340,10 @@ bool perspectiveDivide(QInt32 numerator,
         unsigned int bit;
         for (bit = 0; bit < KTextureFractionBits; ++bit) {
             fractional <<= 1U;
-            const QUint32 complement = denominatorMagnitude - remainder;
-            if (remainder >= complement) {
-                remainder -= complement;
+            remainder += remainder;
+            if (remainder >= denominatorMagnitude) {
+                remainder -= denominatorMagnitude;
                 fractional |= 1U;
-            } else {
-                remainder += remainder;
             }
         }
     }
