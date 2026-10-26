@@ -1,6 +1,7 @@
 package code.HUD;
 
 import code.HUD.Base.Selectable;
+import code.Rendering.DirectX7;
 import code.utils.IniFile;
 import code.utils.Main;
 import code.utils.canvas.MyCanvas;
@@ -57,7 +58,7 @@ public final class DeveloperMenu extends Selectable {
       items[i] = "Show shoot collision: "+showShootCollision;i++;
       items[i] = "Render Pixels Overwrite: "+renderPolygonsOverwrite;i++;
       items[i] = "Fly: "+(fly==0?"Off":fly==1?"Fly":"Noclip");i++;
-      items[i] = "Play video!!! :D";
+      items[i] = "Run M3G SpeedTest";
 
    }
 
@@ -175,8 +176,13 @@ public final class DeveloperMenu extends Selectable {
       id++; if(var1 == id-1) showShootCollision^=true;
       id++; if(var1 == id-1) renderPolygonsOverwrite^=true;
       id++; if(var1 == id-1) setFly(fly==0?1:fly==1?2:0);
-      id++; if(var1 == id-1) {repaint=false;VideoPlayer vp=new VideoPlayer(main,"/video.3gp",this);}
-      
+      id++; if(var1 == id-1) {
+          if(DirectX7.current != null) {
+              DirectX7.current.runSpeedTest(200);
+          }
+          repaint = true;
+      }
+     
       this.setItems();
       if(repaint)this.repaint();
     }

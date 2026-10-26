@@ -25,6 +25,12 @@ public final class DirectX7 {
    private String statsText;
    private boolean statsNative;
 
+   /** Live instance for diagnostics/benchmark access from HUD menus. */
+   public static DirectX7 current;
+
+   /** Render-mode benchmark (lazily created). Null until first run. */
+   public SpeedTest speedTest = null;
+
    /** Call once before sky/world preparation, NOT once per native segment. */
    public void beginFrameStats() {frameDrawCalls=frameCpuBarriers=frameTextureUploads=0;}
    public int getM3GDrawCalls() {return frameDrawCalls;}
@@ -45,6 +51,13 @@ public final class DirectX7 {
                    +(M3GLitRenderer.statsErr.length()>0
                        ?" "+M3GLitRenderer.statsErr.length()+":"+M3GLitRenderer.statsErr.substring(0,Math.min(28,M3GLitRenderer.statsErr.length()))
                        :"");
+           if(speedTest != null && speedTest.ranOk) {
+               statsText += " | ST:";
+               for(int m = 0; m <= 13; m++) {
+                   statsText += speedTest.resultsMs[m];
+                   if(m < 13) statsText += ',';
+               }
+           }
            peakDraws=peakBarriers=peakUploads=0;statsNext=now+250;statsNative=active;
            M3GLitRenderer.resetLitStats();
        }
@@ -80,6 +93,8 @@ public final class DirectX7 {
 
 this.width = width;
 this.height = height;
+
+current = this;
 
 camera = new Matrix();
 invCamera = new Matrix();
@@ -260,6 +275,13 @@ this.buffer.resetTex();
    /** Exposes the live M3GSceneRenderer for benchmark/diagnostic paths that
     * need to submit raw textured triangles through the hardware pipe. */
    public SceneRenderer getSceneRenderer() { return sceneRenderer; }
+
+   /** Run the M3G render-mode benchmark (all modes 0..13) and store results
+    * in {@link #speedTest}. Call from a native render pass. */
+   public void runSpeedTest(int iterations) {
+       if(speedTest == null) speedTest = new SpeedTest();
+       speedTest.runBenchmark(this, iterations);
+   }
 
    /** Also call after modifying a texture's public pixel array in place. */
    public void releaseRenderer() {
