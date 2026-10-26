@@ -116,6 +116,11 @@ def stage_resources() -> None:
                     or base.startswith('level') and base.endswith('.txt')):
                 continue  # replaced by the overlay, on purpose
             stage[name] = jar.read(name)
+    # River flipbook frames 1..3 became dead weight after the wat-scroll —
+    # only river0.bmp is referenced now (single base frame, native UV flow).
+    for dead in ('maps/kordos/river1.bmp', 'maps/kordos/river2.bmp',
+                 'maps/kordos/river3.bmp'):
+        stage.pop(dead, None)
     # Overlay-referenced extras missing from the sym9 bundle.
     with zipfile.ZipFile(RIVER7) as jar:
         for name in EXTRAS_RIVER7:

@@ -4,7 +4,7 @@ LIGHTMAP=/lightmap/kordod.vla
 [WTEX_BEGIN]
 /maps/kordos/forestOrigy.png,std,-20000
 /maps/kordos/map-selo1.png
-6:/maps/kordos/river0.bmp:/maps/kordos/river1.bmp:/maps/kordos/river2.bmp:/maps/kordos/river3.bmp,7,wat0.75
+/maps/kordos/river0.bmp,7,wat0.75
 [WTEX_END]
 
 SKYBOX_MODEL=/skies/skybox5.3d

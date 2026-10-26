@@ -392,10 +392,11 @@ public final class M3GLitRenderer {
         // Keep exotic fill/fog modes on their certified CPU-equivalent path.
         if(mode == 8 || mode == 10 || mode == 12) { frameFail++; frameReason = 1; return false; }
         RawImage raw = texture.rImg;
-        // Water UV-scroll: pin the base frame and scroll its UV transform
-        // natively (one resident texture, zero per-frame rebinding logic).
-        if(texture.uvScroll != 0 && texture.animMIP != null)
-            raw = texture.animMIP[0].rImg;
+        // Water UV-scroll: pin the base frame (or the sole static texture) and
+        // scroll its UV transform natively — one resident texture.
+        if(texture.uvScroll != 0) {
+            if(texture.animMIP != null) raw = texture.animMIP[0].rImg;
+        }
         else if(texture.mip != null && texture.mip.length > 0) raw = texture.mip[0];
         if(raw == null || !owner.supportsTexture(raw)) { frameFail++; frameReason = 2; return false; }
 
