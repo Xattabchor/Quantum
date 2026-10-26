@@ -129,8 +129,11 @@ initial fixed-point calculation at the clipped start, each row advances edge
 coordinates, reciprocal depth, UV-over-depth, and color by wrapped integer
 addition instead of recalculating slope times row offset. The lower edge still
 restarts at vertex B on the split scanline. This is algebraically identical in
-Java 32-bit arithmetic. Host Level 41 output is byte-identical; E65 performance
-measurement is pending.
+Java 32-bit arithmetic. Host Level 41 output is byte-identical. On the E65,
+v1.0.24 measured 7.1 FPS and 73/74 ms mesh average/maximum, with bitmap BitBlt
+and phase averages of 0/7/8/0/57 ms. Compared with v1.0.22, FPS rose by 0.1 and
+mesh average/maximum and draw/raster each fell by 1 ms; draw/raster remains the
+largest phase.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -202,6 +205,7 @@ Current E65 feedback:
   bitmap BitBlt, and phases of 0/7/8/0/60 ms. Versus v1.0.22, FPS was unchanged;
   average mesh and draw/raster were each 2 ms higher, so the shared-reciprocal
   experiment had no measurable benefit.
-- The v1.0.24 candidate uses incremental fixed-point edge stepping in both
-  perspective triangle paths. The host Level 41 frame is byte-identical; E65
-  performance measurement is pending.
+- The v1.0.24 E65 run reported 7.1 FPS, 73/74 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/57 ms. Versus v1.0.22, FPS rose by 0.1
+  and mesh average/maximum and draw/raster each fell by 1 ms. The incremental
+  edge-stepping path produces a host frame byte-identical to the previous one.
