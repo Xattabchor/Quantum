@@ -147,30 +147,14 @@ bool projectMeshVertices(SoftwareRenderVertex* vertices,
         vertices, vertexCount, options.projection);
 }
 
-QInt32 minimumDepth(const SoftwareRenderVertex vertices[4], QInt32 count)
+QInt32 minimumDepth(const QInt32 depths[4], QInt32 count)
 {
-    QInt32 minimum = vertices[0].z;
+    QInt32 minimum = depths[0];
     QInt32 i;
     for (i = 1; i < count; ++i) {
-        if (vertices[i].z < minimum) minimum = vertices[i].z;
+        if (depths[i] < minimum) minimum = depths[i];
     }
     return minimum;
-}
-
-void span(const SoftwareRenderVertex vertices[4],
-          QInt32 count,
-          bool horizontal,
-          QInt32& result)
-{
-    QInt32 minimum = horizontal ? vertices[0].x : vertices[0].y;
-    QInt32 maximum = minimum;
-    QInt32 i;
-    for (i = 1; i < count; ++i) {
-        const QInt32 value = horizontal ? vertices[i].x : vertices[i].y;
-        if (value < minimum) minimum = value;
-        if (value > maximum) maximum = value;
-    }
-    result = code::Math::javaIntSub(maximum, minimum);
 }
 
 QInt32 coordinateSpan(const QInt32 values[4], QInt32 count)
@@ -185,7 +169,8 @@ QInt32 coordinateSpan(const QInt32 values[4], QInt32 count)
     return code::Math::javaIntSub(maximum, minimum);
 }
 
-bool outsideViewport(const SoftwareRenderVertex vertices[4],
+bool outsideViewport(const QInt32 x[4],
+                     const QInt32 y[4],
                      QInt32 count,
                      QInt32 x1,
                      QInt32 y1,
@@ -198,68 +183,55 @@ bool outsideViewport(const SoftwareRenderVertex vertices[4],
     bool allBelow = true;
     QInt32 i;
     for (i = 0; i < count; ++i) {
-        if (vertices[i].x >= x1) allLeft = false;
-        if (vertices[i].x <= x2) allRight = false;
-        if (vertices[i].y >= y1) allAbove = false;
-        if (vertices[i].y <= y2) allBelow = false;
+        if (x[i] >= x1) allLeft = false;
+        if (x[i] <= x2) allRight = false;
+        if (y[i] >= y1) allAbove = false;
+        if (y[i] <= y2) allBelow = false;
     }
     return allLeft || allRight || allAbove || allBelow;
 }
 
-bool backfaceCulled(const SoftwareRenderVertex vertices[4], QInt32 count)
+bool backfaceCulled(const QInt32 x[4], const QInt32 y[4], QInt32 count)
 {
-    const QInt32 leftX = code::Math::javaIntSub(vertices[0].x,
-                                                vertices[1].x);
-    const QInt32 leftY = code::Math::javaIntSub(vertices[0].y,
-                                                vertices[1].y);
+    const QInt32 leftX = code::Math::javaIntSub(x[0], x[1]);
+    const QInt32 leftY = code::Math::javaIntSub(y[0], y[1]);
     if (count == 3) {
-        const QInt32 edgeY = code::Math::javaIntSub(vertices[1].y,
-                                                    vertices[2].y);
-        const QInt32 edgeX = code::Math::javaIntSub(vertices[1].x,
-                                                    vertices[2].x);
-        const QInt32 lhs = code::Math::javaIntMul(
-            leftX, edgeY);
-        const QInt32 rhs = code::Math::javaIntMul(
-            leftY, edgeX);
+        const QInt32 edgeY = code::Math::javaIntSub(y[1], y[2]);
+        const QInt32 edgeX = code::Math::javaIntSub(x[1], x[2]);
+        const QInt32 lhs = code::Math::javaIntMul(leftX, edgeY);
+        const QInt32 rhs = code::Math::javaIntMul(leftY, edgeX);
         return lhs <= rhs;
     }
 
-    const QInt32 firstEdgeY = code::Math::javaIntSub(vertices[1].y,
-                                                     vertices[3].y);
-    const QInt32 firstEdgeX = code::Math::javaIntSub(vertices[1].x,
-                                                     vertices[3].x);
+    const QInt32 firstEdgeY = code::Math::javaIntSub(y[1], y[3]);
+    const QInt32 firstEdgeX = code::Math::javaIntSub(x[1], x[3]);
     const QInt32 firstLhs = code::Math::javaIntMul(leftX, firstEdgeY);
     const QInt32 firstRhs = code::Math::javaIntMul(leftY, firstEdgeX);
 
-    const QInt32 secondX = code::Math::javaIntSub(vertices[2].x,
-                                                  vertices[3].x);
-    const QInt32 secondY = code::Math::javaIntSub(vertices[2].y,
-                                                  vertices[3].y);
-    const QInt32 reverseEdgeY = code::Math::javaIntSub(vertices[3].y,
-                                                       vertices[1].y);
-    const QInt32 reverseEdgeX = code::Math::javaIntSub(vertices[3].x,
-                                                       vertices[1].x);
+    const QInt32 secondX = code::Math::javaIntSub(x[2], x[3]);
+    const QInt32 secondY = code::Math::javaIntSub(y[2], y[3]);
+    const QInt32 reverseEdgeY = code::Math::javaIntSub(y[3], y[1]);
+    const QInt32 reverseEdgeX = code::Math::javaIntSub(x[3], x[1]);
     const QInt32 secondLhs = code::Math::javaIntMul(secondX, reverseEdgeY);
     const QInt32 secondRhs = code::Math::javaIntMul(secondY, reverseEdgeX);
     return firstLhs <= firstRhs && secondLhs <= secondRhs;
 }
 
 QInt32 depthSortKey(const SoftwareMeshPolygon& polygon,
-                    const SoftwareRenderVertex cameraVertices[4],
+                    const QInt32 cameraDepths[4],
                     const SoftwareMeshMaterial& material,
                     const SoftwareMeshRenderOptions& options)
 {
     QInt32 depth;
     if (polygon.vertexCount == 3) {
-        QInt32 sum = code::Math::javaIntAdd(cameraVertices[0].z,
-                                            cameraVertices[1].z);
-        sum = code::Math::javaIntAdd(sum, cameraVertices[2].z);
+        QInt32 sum = code::Math::javaIntAdd(cameraDepths[0], cameraDepths[1]);
+        sum = code::Math::javaIntAdd(sum, cameraDepths[2]);
         depth = code::Math::javaIntDiv(code::Math::javaIntMul(sum, 4), 3);
     } else {
-        depth = cameraVertices[0].z;
-        depth = code::Math::javaIntAdd(depth, cameraVertices[1].z);
-        depth = code::Math::javaIntAdd(depth, cameraVertices[2].z);
-        depth = code::Math::javaIntAdd(depth, cameraVertices[3].z);
+        depth = cameraDepths[0];
+        depth = code::Math::javaIntAdd(depth, cameraDepths[1]);
+        depth = code::Math::javaIntAdd(depth, cameraDepths[2]);
+        depth = code::Math::javaIntAdd(depth, cameraDepths[3]);
     }
 
     if (polygon.normalY > 4000 || polygon.normalY < -4000) {
@@ -795,6 +767,7 @@ bool SoftwareMeshRenderer::renderScene(
     const QInt64 queueStartMicros = startInstrumentedPhase(options);
     const bool fastPath = RenderModePolicy::usesFastAffinePath(options.quality);
     QInt32 queueCount = 0;
+    const bool hasProjectedVertexCache = workspace.projectedVertices != 0;
     vertexOffset = 0;
     for (instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex) {
         const SoftwareMeshView& mesh = *instances[instanceIndex].mesh;
@@ -805,40 +778,55 @@ bool SoftwareMeshRenderer::renderScene(
             const SoftwareMeshPolygon& polygon = mesh.polygons[polygonIndex];
             const SoftwareMeshMaterial& material =
                 mesh.materials[polygon.textureIndex];
-            SoftwareRenderVertex cameraPolygon[4];
-            SoftwareRenderVertex projectedPolygon[4];
-            prepareCameraPolygon(polygon, vertexOffset, workspace,
-                                 cameraPolygon);
+            QInt32 cameraDepth[4];
+            QInt32 projectedX[4];
+            QInt32 projectedY[4];
             QInt32 corner;
-            for (corner = 0; corner < polygon.vertexCount; ++corner) {
-                projectedPolygon[corner] = cameraPolygon[corner];
-                if (workspace.projectedVertices != 0) {
-                    const SoftwareRenderVertex& cachedProjection =
-                        workspace.projectedVertices[
-                            vertexOffset + polygon.vertexIndices[corner]];
-                    projectedPolygon[corner].x = cachedProjection.x;
-                    projectedPolygon[corner].y = cachedProjection.y;
+            if (hasProjectedVertexCache) {
+                /* Gather only the x/y/z fields needed by the queue pass. */
+                for (corner = 0; corner < polygon.vertexCount; ++corner) {
+                    const QInt32 vertexIndex =
+                        vertexOffset + polygon.vertexIndices[corner];
+                    const SoftwareRenderVertex& cameraVertex =
+                        workspace.cameraVertices[vertexIndex];
+                    const SoftwareRenderVertex& projectedVertex =
+                        workspace.projectedVertices[vertexIndex];
+                    cameraDepth[corner] = cameraVertex.z;
+                    projectedX[corner] = projectedVertex.x;
+                    projectedY[corner] = projectedVertex.y;
+                }
+            } else {
+                SoftwareRenderVertex cameraPolygon[4];
+                SoftwareRenderVertex projectedPolygon[4];
+                prepareCameraPolygon(polygon, vertexOffset, workspace,
+                                     cameraPolygon);
+                for (corner = 0; corner < polygon.vertexCount; ++corner) {
+                    projectedPolygon[corner] = cameraPolygon[corner];
+                }
+                if (!projectMeshVertices(projectedPolygon,
+                                         polygon.vertexCount, options)) {
+                    return false;
+                }
+                for (corner = 0; corner < polygon.vertexCount; ++corner) {
+                    cameraDepth[corner] = cameraPolygon[corner].z;
+                    projectedX[corner] = projectedPolygon[corner].x;
+                    projectedY[corner] = projectedPolygon[corner].y;
                 }
             }
-            if (workspace.projectedVertices == 0 &&
-                !projectMeshVertices(projectedPolygon,
-                                     polygon.vertexCount, options)) {
-                return false;
-            }
 
-            if (outsideViewport(projectedPolygon, polygon.vertexCount,
-                                viewportX1, viewportY1,
+            if (outsideViewport(projectedX, projectedY,
+                                polygon.vertexCount, viewportX1, viewportY1,
                                 viewportX2, viewportY2)) {
                 ++stats.viewportCulled;
                 continue;
             }
-            if (backfaceCulled(projectedPolygon, polygon.vertexCount)) {
+            if (backfaceCulled(projectedX, projectedY, polygon.vertexCount)) {
                 ++stats.backfaceCulled;
                 continue;
             }
 
             const QInt32 nearestDepth =
-                minimumDepth(cameraPolygon, polygon.vertexCount);
+                minimumDepth(cameraDepth, polygon.vertexCount);
             if (nearestDepth > 0 ||
                 code::Math::javaIntSub(0, nearestDepth) >
                     options.farDistance) {
@@ -846,10 +834,10 @@ bool SoftwareMeshRenderer::renderScene(
                 continue;
             }
 
-            QInt32 projectedWidth = 0;
-            QInt32 projectedHeight = 0;
-            span(projectedPolygon, polygon.vertexCount, true, projectedWidth);
-            span(projectedPolygon, polygon.vertexCount, false, projectedHeight);
+            const QInt32 projectedWidth =
+                coordinateSpan(projectedX, polygon.vertexCount);
+            const QInt32 projectedHeight =
+                coordinateSpan(projectedY, polygon.vertexCount);
             const QInt32 drawMode = RenderModePolicy::resolveTextureDrawMode(
                 options.quality, material.hasDrawModeOverride,
                 material.drawMode);
@@ -862,7 +850,7 @@ bool SoftwareMeshRenderer::renderScene(
             item.vertexOffset = vertexOffset;
             item.polygonIndex = polygonIndex;
             item.sortDepth = depthSortKey(
-                polygon, cameraPolygon, material, options);
+                polygon, cameraDepth, material, options);
             item.drawMode = drawMode;
             item.mipLevel = chooseMipLevel(
                 polygon, material, projectedWidth, projectedHeight, drawMode,
@@ -891,8 +879,8 @@ bool SoftwareMeshRenderer::renderScene(
                 (drawMode == 3 || drawMode == 6) &&
                 options.quality.fogQuality != 0) {
                 const QInt32 nearestAC =
-                    cameraPolygon[0].z < cameraPolygon[2].z
-                        ? cameraPolygon[0].z : cameraPolygon[2].z;
+                    cameraDepth[0] < cameraDepth[2]
+                        ? cameraDepth[0] : cameraDepth[2];
                 if (nearestDepth != nearestAC) item.splitQuadAlongAC = true;
             }
 

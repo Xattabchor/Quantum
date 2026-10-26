@@ -92,7 +92,17 @@ view guarantees that no texel equals the transparent-zero key. The mode-9
 shading arithmetic is unchanged; texture views with the conservative default
 still perform the key test. A Level 41 host differential render using the
 opaque-texture guarantees is byte-identical to the conservative render.
-Device performance for v1.0.20 is pending.
+The E65 reported v1.0.20 at 5.9 FPS and 100/103 ms mesh average/maximum,
+with bitmap BitBlt and phase averages of 0/7/17/0/76 ms. This is no measurable
+change in FPS, average mesh time, or phase breakdown versus v1.0.19.
+
+Version 1.0.21 uses the projected-vertex workspace cache without constructing
+full temporary camera/projected vertices for every polygon in the cull/queue
+pass. The cached path gathers only camera depth and projected x/y coordinates
+needed for culling, sorting, and mip selection; callers without the optional
+cache retain the previous projection path. The 720x960 Level 41 host render
+with the cached path is byte-identical to the previous render. Device
+performance is pending.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -149,7 +159,9 @@ Current E65 feedback:
   7 ms, cull/queue 17 ms, sort 0 ms, draw/raster 76 ms. Validation fell from
   5 ms to 0 ms and average mesh time fell by 6 ms versus v1.0.18; raster time
   remained unchanged.
-- The v1.0.20 candidate additionally removes per-pixel zero-key checks from
-  mode-9 affine/perspective shading only for texture views proven not to contain
-  the transparent-zero key. Host Level 41 framebuffers are byte-identical;
-  device performance is pending.
+- The v1.0.20 E65 run reported 5.9 FPS, 100/103 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/17/0/76 ms. This is no measurable change
+  versus v1.0.19 despite skipping mode-9 zero-key checks on opaque textures.
+- The v1.0.21 candidate reduces per-polygon temporary vertex copying in the
+  cull/queue pass when the optional projected-vertex cache is supplied. Host
+  output is byte-identical; device performance is pending.
