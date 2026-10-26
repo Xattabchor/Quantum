@@ -371,10 +371,8 @@ float yy=y*1.3f*3*frameTime/80/50;
   /** Snapshot geometry only: no bind, readback, drawing or simulation update. */
   public ScreenLines prepareM3G(DirectX7 g) {
       setRenderer(g.getRenderer());
-      if(!g.canRenderM3G() || code.HUD.DeveloperMenu.drawPortals) {
-          if(g.isM3GRequired()) throw new IllegalStateException("native weather unavailable");
-          return null;
-      }
+      if(code.HUD.DeveloperMenu.drawPortals)
+          throw new IllegalStateException("native weather unavailable");
       try {
           if(nativeParticles==null) nativeParticles=new ScreenLines();
           nativeParticles.clear();
@@ -407,8 +405,7 @@ float yy=y*1.3f*3*frameTime/80/50;
           }
           return nativeParticles;
       } catch(OutOfMemoryError ex) {
-          if(g.isM3GRequired()) throw ex;
-          return null; // Legacy callers retain LCDUI fallback.
+          throw ex; // No LCDUI fallback remains in the M3G-only build.
       }
   }
 
@@ -416,8 +413,7 @@ float yy=y*1.3f*3*frameTime/80/50;
   public void paintAfterScene(Graphics g,int xx,int renderer,boolean nativeWeather) {
       setRenderer(renderer);
       if(nativeWeather) {g.setColor(0xffffff);return;}
-      if(renderer != DirectX7.M3G) {paint(g,xx);return;}
-      paint(g,xx,false); // Original snow fallback, bounded cheap rain fallback.
+      paint(g,xx,false); // Bounded cheap fallback for empty native weather.
       paintCheapRain(g,xx);
   }
 

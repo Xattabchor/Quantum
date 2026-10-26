@@ -18,11 +18,7 @@ public final class PanoramaSky extends RenderObject {
     }
     public boolean isVisible(int x1,int y1,int x2,int y2) {return true;}
     public void renderFast(DirectX7 g,Texture t) {render(g,t);}
-    public void render(DirectX7 g,Texture t) {
-        // Replay the original sampler, including its fixed-point rounding.
-        int ax=owner.x1,ay=owner.y1,bx=owner.x2,by=owner.y2;
-        owner.x1=x1;owner.y1=y1;owner.x2=x2;owner.y2=y2;
-        try {owner.render2D(g,uStart,startY,endY,du,dv);}
-        finally {owner.x1=ax;owner.y1=ay;owner.x2=bx;owner.y2=by;}
+    public void render(DirectX7 g,Texture t) { 
+        /* CPU fallback removed - native M3G path owns this object (kordos). */
     }
 }

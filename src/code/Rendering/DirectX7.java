@@ -9,16 +9,13 @@ import javax.microedition.lcdui.Image;
 
 public final class DirectX7 {
 
-   public static final int SOFTWARE = 0, M3G = 1;
-   private int rendererMode = SOFTWARE;
+   public static final int M3G = 1;
    private SceneRenderer sceneRenderer;
    private boolean rendererFailed, nativePass;
    private boolean m3gRequired;
    private boolean staticLightmapPass, expFogPass;
-   private int[] frameBackup;
    private String rendererError;
    private FrameEffects frameEffects;
-   private Mode11Decal decalFallback;
    private Image frameImage;
    private int[] frameImageBuffer;
    private boolean imagePresentationFailed;
@@ -56,7 +53,6 @@ public final class DirectX7 {
 
    public int width, height;
    public int[] display;
-   public boolean flushAlpha = false;
    public Matrix camera, invCamera, finalCamera;
    public int centreX, centreY;
    public int distX, distY;
@@ -212,23 +208,9 @@ this.buffer.resetTex();
     }
 
 
-   /** Changing the requested mode also permits a fresh attempt after a failure. */
-   public void setRenderer(int mode) {
-       if(mode != SOFTWARE && mode != M3G) throw new IllegalArgumentException("renderer");
-       if(m3gRequired && mode!=M3G) throw new IllegalArgumentException("M3G is required");
-       if(mode == rendererMode) return;
-       releaseRenderer();
-       rendererMode = mode;
-       rendererFailed = false;
-       rendererError = null;
-   }
-
-   /** Gameplay migration latch. Legacy tools/tests retain the dual-renderer API,
-    * but a required scene can never switch back to CPU rasterization. */
+   /** Gameplay migration latch: the scene transaction is M3G-only. There is no
+    * CPU rasterizer in this build at all - the flag simply turns on strict checks. */
    public void requireM3G() {
-       if(m3gRequired) return;
-       setRenderer(M3G);
-       frameBackup=null;
        m3gRequired=true;
    }
 
@@ -258,16 +240,12 @@ this.buffer.resetTex();
            catch(OutOfMemoryError ex) { }
        }
        sceneRenderer=null;
-       frameBackup=null;
        return new IllegalStateException("M3G required: "+rendererError);
    }
 
    private void checkRequiredState(boolean allowM3G) {
        if(rendererFailed) throw requiredFailure(rendererError);
-       if(!allowM3G || rendererMode!=M3G) throw requiredFailure("CPU rasterization disabled");
-       if(flushAlpha) throw requiredFailure("flushAlpha is not supported by the M3G Image target");
-       if(DeveloperMenu.renderPolygonsOverwrite)
-           throw requiredFailure("CPU overdraw visualization is not supported");
+       if(!allowM3G) throw requiredFailure("CPU rasterization disabled");
    }
 
    private void ensureNativeRenderer() throws Exception {
@@ -275,7 +253,7 @@ this.buffer.resetTex();
                Class.forName("code.Rendering.M3GSceneRenderer").newInstance();
    }
 
-   public int getRenderer() { return rendererMode; }
+   public int getRenderer() { return M3G; }
    public String getRendererError() { return rendererError; }
    public boolean isM3GActive() { return sceneRenderer != null && !rendererFailed; }
 
@@ -290,16 +268,7 @@ this.buffer.resetTex();
            catch(NoClassDefFoundError ex) { }
        }
        sceneRenderer = null;
-       frameBackup = null;
        frameEffects = null;
-       decalFallback = null;
-   }
-
-   private void failRenderer(String message) {
-       releaseRenderer();
-       rendererFailed = true;
-       rendererError = message;
-       System.out.println("M3G disabled: " + message);
    }
 
    /** Native material numbers: 11 DECAL, 12 EXP fog. */
@@ -368,42 +337,10 @@ this.buffer.resetTex();
                return;
            }
            if(sceneRenderer.draw(this, object, texture, fast)) return;
-           if(m3gRequired) throw requiredFailure("unsupported object "+object.getClass().getName()
+           throw requiredFailure("unsupported object "+object.getClass().getName()
                    +" material="+(texture==null?"none":String.valueOf(texture.drawmode)));
-           // Legacy CPU materials must see all prior M3G pixels.
-           sceneRenderer.barrier(this);
        }
-       if(m3gRequired) throw requiredFailure("draw outside native frame: "+object.getClass().getName());
-       drawSoftwareObject(object,texture,fast);
-   }
-
-   /** CPU-only dispatch for a whole-mesh fallback; never re-enter native sky
-    * rendering after its atomic material/geometry validation has rejected it. */
-   public void drawSoftwareObject(RenderObject object,Texture texture,boolean fast) {
-       if(m3gRequired) throw requiredFailure("CPU dispatch disabled: "+object.getClass().getName());
-       if(frameImage!=null) syncFrameImage();
-       if(rendererMode==M3G && texture!=null && texture.drawmode==11) {
-           if(decalFallback==null) decalFallback=new Mode11Decal();
-           texture=decalFallback.texture(texture);
-       }
-       byte originalMode = texture == null ? 0 : texture.drawmode;
-       boolean exp=rendererMode==M3G && originalMode==12;
-       byte cpuMode=exp?(byte)(code.utils.Main.fogQ>0 && Mode12Fog.density()>0?3:0):m3gDrawMode(originalMode);
-       boolean alias=rendererMode==M3G && texture!=null && cpuMode!=originalMode;
-       if(alias) texture.drawmode=cpuMode;
-       boolean previousExp=expFogPass;
-       expFogPass=exp && cpuMode==3;
-       boolean previous = staticLightmapPass;
-       staticLightmapPass = rendererMode == M3G && texture != null
-               && (texture.drawmode == 9 || texture.drawmode == 13);
-       try {
-           if(fast) object.renderFast(this, texture);
-           else object.render(this, texture);
-       } finally {
-           staticLightmapPass = previous;
-           expFogPass=previousExp;
-           if(alias) texture.drawmode = originalMode;
-       }
+       throw requiredFailure("draw outside native frame: "+object.getClass().getName());
    }
 
    public boolean isExpFogPass() {return expFogPass;}
@@ -461,35 +398,12 @@ this.buffer.resetTex();
    }
 
    public final void render() {
-       render(true);
+       render(true,null,null,false);
    }
 
-   /** Original rasterizer for a complete pass, without changing backend/cache. */
-   public final void renderSoftware() {
-       render(false);
-   }
-
-   /** Game frame effects run after world geometry but BEFORE its final readback.
-    * Software callers retain their original GameScreen postprocessing. */
-   public void renderWithEffects(byte[] vignette, boolean dead, boolean damaged) {
-       if(rendererMode!=M3G) {render();return;}
-       render(true,prepareFrameEffects(vignette,dead,damaged),null);
-   }
-
-   /** Ordered game transaction: sky/world -> effects -> weather.
-    * True suppresses LCDUI weather ONLY after the final readback succeeds. */
-   public boolean renderGameFrame(byte[] vignette,boolean dead,boolean damaged,
-           code.Gameplay.Map.House house,int part,ScreenLines weather) {
-       if(rendererMode!=M3G) {render();return false;}
-       return render(true,prepareFrameEffects(vignette,dead,damaged),weather);
-   }
-
-   /** GameScreen opt-in: CPU pixels are lazy until getDisplay()/a CPU transition.
-    * Legacy renderGameFrame/render/renderWithEffects retain eager pixel output.
-    * Direct writes to public display must first synchronize through getDisplay(). */
+   /** Game frame as an LCDUI Image; pixels stay lazy until getDisplay(). */
    public boolean renderGameFrameImage(byte[] vignette,boolean dead,boolean damaged,
            code.Gameplay.Map.House house,int part,ScreenLines weather) {
-       if(rendererMode!=M3G) {render();return false;}
        return render(true,prepareFrameEffects(vignette,dead,damaged),weather,!imagePresentationFailed);
    }
 
@@ -515,79 +429,8 @@ this.buffer.resetTex();
        return frameEffects.active()?frameEffects:null;
    }
 
-   private void render(boolean allowM3G) {render(allowM3G,null,null);}
-
-   private boolean render(boolean allowM3G,FrameEffects effects,ScreenLines weather) {
-       return render(allowM3G,effects,weather,false);
-   }
-
    private boolean render(boolean allowM3G,FrameEffects effects,ScreenLines weather,boolean imageOutput) {
-       if(m3gRequired) return renderRequired(allowM3G,effects,weather,imageOutput);
-       lx = camera.m03;
-       ly = camera.m13;
-       lz = camera.m23;
-       buffer.sort(0, buffer.getSize() - 1);
-       if(backgroundPending) backgroundBuffer.sort(0,backgroundBuffer.getSize()-1);
-       // Mutable LCDUI Images do not preserve framebuffer alpha. Keep these
-       // paths entirely on the original rasterizer rather than change semantics.
-       boolean useM3G = allowM3G && rendererMode == M3G && !rendererFailed && !flushAlpha
-               && !DeveloperMenu.renderPolygonsOverwrite && (buffer.getSize()>0 || backgroundPending || effects!=null
-                       || (weather!=null && weather.count>0));
-       // Reusing the single Image must not destroy the only valid pre-frame
-       // pixels. Complete sky frames can replay from any old CPU backup; partial
-       // and no-sky frames must materialize the previous image before reuse.
-       try {
-           if(DeveloperMenu.renderPolygonsOverwrite) {syncFrameImage();clearDisplay(0);}
-           else if(useM3G && imageOutput && opaqueFrameBackground()) discardFrameImage();
-           else syncFrameImage();
-           if(useM3G) {
-               boolean saved = false;
-               try {
-                   if(sceneRenderer == null) sceneRenderer = (SceneRenderer)
-                           Class.forName("code.Rendering.M3GSceneRenderer").newInstance();
-                   if(frameBackup == null || frameBackup.length != display.length)
-                       frameBackup = new int[display.length];
-                   System.arraycopy(display, 0, frameBackup, 0, display.length);
-                   saved = true;
-                   if(effects!=null) sceneRenderer.prepareEffects(this,effects);
-                   if(weather!=null) sceneRenderer.prepareWeather(this,weather);
-                   if(sceneRenderer instanceof M3GSceneRenderer)
-                       ((M3GSceneRenderer)sceneRenderer).beginFrame(this);
-                   nativePass = true;
-                   drawBuffer();
-                   if(effects!=null) drawRenderObject(effects,null,false);
-                   // Weather has an explicit LCDUI fallback after native failure.
-                   boolean nativeWeather=weather!=null && (weather.count==0
-                           || sceneRenderer.draw(this,weather,null,false));
-                   if(imageOutput) {
-                       frameImage=sceneRenderer.finishImage(this);
-                       frameImageBuffer=frameImage==null?null:display;
-                   } else sceneRenderer.finish(this);
-                   return nativeWeather;
-               } catch(Exception ex) {
-                   // Includes missing optional class and unsupported native targets.
-                   rendererError = ex.toString();
-               } catch(NoClassDefFoundError ex) {
-                   rendererError = ex.toString();
-               } catch(OutOfMemoryError ex) {
-                   rendererError = "not enough memory for M3G";
-               } finally {
-                   nativePass = false;
-               }
-               // A failed batch can include both CPU and M3G objects. Restore
-               // the pre-pass pixels and replay the complete sorted queue once.
-               if(saved) System.arraycopy(frameBackup, 0, display, 0, display.length);
-               failRenderer(rendererError);
-           }
-           drawBuffer();
-           if(effects!=null) effects.render(this,null);
-           // Empty weather needs no native submission, but a failed native
-           // frame must return false so no stale success suppresses fallback.
-           return weather!=null && weather.count==0 && canRenderM3G();
-       } finally {
-           nativePass = false;
-           resetQueues();
-       }
+       return renderRequired(allowM3G,effects,weather,imageOutput);
    }
 
    /** Required gameplay transaction: no backup, CPU dispatch, or whole-frame
@@ -648,50 +491,21 @@ this.buffer.resetTex();
        }
    }
 
-   public boolean canRenderM3G() {
-       return rendererMode == M3G && !rendererFailed && !flushAlpha
-               && !DeveloperMenu.renderPolygonsOverwrite;
-   }
+   public boolean canRenderM3G() { return !rendererFailed; }
 
    /** Post-effect overlay before LCDUI flush. False means use original LCDUI
     * weather; this method never consumes/replays the scene's object queue. */
    public boolean renderScreenLines(ScreenLines lines) {
-       if(m3gRequired) {
-           checkRequiredState(true);
-           if(nativePass) throw requiredFailure("nested native weather");
-       }
-       if(!canRenderM3G() || nativePass) return false;
+       checkRequiredState(true);
+       if(nativePass) throw requiredFailure("nested native weather");
+       if(!canRenderM3G()) return false;
        if(lines.count == 0) return true;
-       return renderOverlay(lines);
+       return renderRequiredOverlay(lines);
    }
 
-   /** Best-effort native overlay; no CPU replay and no scene-queue consumption. */
+   /** Native overlay; no CPU replay. Screenshots keep their own copy path. */
    public boolean renderOverlay(RenderObject effect) {
-       if(m3gRequired) return renderRequiredOverlay(effect);
-       if(!canRenderM3G() || nativePass) return false;
-       syncFrameImage();
-       boolean saved = false;
-       try {
-           if(sceneRenderer == null) sceneRenderer = (SceneRenderer)
-                   Class.forName("code.Rendering.M3GSceneRenderer").newInstance();
-           if(frameBackup == null || frameBackup.length != display.length)
-               frameBackup = new int[display.length];
-           System.arraycopy(display,0,frameBackup,0,display.length);
-           saved = true;
-           boolean drawn = sceneRenderer.draw(this,effect,null,false);
-           sceneRenderer.finish(this);
-           if(!drawn) System.arraycopy(frameBackup,0,display,0,display.length);
-           return drawn;
-       } catch(Exception ex) {
-           rendererError = ex.toString();
-       } catch(NoClassDefFoundError ex) {
-           rendererError = ex.toString();
-       } catch(OutOfMemoryError ex) {
-           rendererError = "not enough memory for M3G effects";
-       }
-       if(saved) System.arraycopy(frameBackup,0,display,0,display.length);
-       failRenderer(rendererError);
-       return false;
+       return renderRequiredOverlay(effect);
    }
 
    /** Canvas-only foreground: never materialize/replay the world Image. */
@@ -779,8 +593,7 @@ this.buffer.resetTex();
 
    private void flushFrame(Graphics g,int x,int y) {
        if(m3gRequired && rendererFailed) throw requiredFailure(rendererError);
-       if(frameImage!=null && frameImageBuffer==display && rendererMode==M3G
-               && !imagePresentationFailed && !flushAlpha && !DeveloperMenu.renderPolygonsOverwrite) {
+       if(frameImage!=null && frameImageBuffer==display && !imagePresentationFailed) {
            try {g.drawImage(frameImage,x,y,Graphics.TOP|Graphics.LEFT);return;}
            catch(RuntimeException ex) {imagePresentationFailed=true;}
            catch(OutOfMemoryError ex) {imagePresentationFailed=true;}
@@ -797,7 +610,7 @@ this.buffer.resetTex();
            else if(c==4) display[i]=0xff0000;
            else if(c==5) display[i]=0x880000;
        }
-g.drawRGB(display, 0, width, x, y, width, height, flushAlpha);
+g.drawRGB(display, 0, width, x, y, width, height, false);
    }
 
 
@@ -1032,7 +845,7 @@ if(m21!=0) rz+= (y * m21 >> fp);
 if(m22!=0) rz+= (z * m22 >> fp);
 
 //int rz2=MathUtils.pLength(sx*100/centreX,sy*100/centreY,0);
-if(rendererMode==M3G) ver.recordView(sx,-sy,rz);
+ver.recordView(sx,-sy,rz);
 if(rz<0) {
 sx = sx *distX /(-rz/*+rz2*/ + distX) ;
 sy = sy *distY /(-rz/*+rz2*/ + distY) ;
@@ -1110,7 +923,7 @@ if(m20!=0) rz+= (x * m20 >> fp);
 if(m21!=0) rz+= (y * m21 >> fp);
 if(m22!=0) rz+= (z * m22 >> fp);
 
-if(rendererMode==M3G) ver.recordView(sx,-sy,rz);
+ver.recordView(sx,-sy,rz);
 if(rz<0) {
 sx = sx *distX /(-rz + distX) ;
 sy = sy *distY /(-rz + distY) ;

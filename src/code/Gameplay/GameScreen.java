@@ -230,83 +230,6 @@ public final class GameScreen extends MyCanvas {
 
     }
 
-    private void applyVignette(int[] scr) {
-        int size = Math.min(scr.length, vignette.length);
-        int i = 0;
-        int d, c;
-        while(size - i >= 8) {
-            d = vignette[i] + 128;
-            c = scr[i];
-            scr[i] = ((((c & 0xff00ff) * d) & 0xff00ff00) | (((c & 0xff00) * d) & 0xff0000)) >>> 8;
-            c = scr[i+1];
-            scr[i+1] = ((((c & 0xff00ff) * d) & 0xff00ff00) | (((c & 0xff00) * d) & 0xff0000)) >>> 8;
-            d = vignette[i+2] + 128;
-            c = scr[i+2];
-            scr[i+2] = ((((c & 0xff00ff) * d) & 0xff00ff00) | (((c & 0xff00) * d) & 0xff0000)) >>> 8;
-            c = scr[i+3];
-            scr[i+3] = ((((c & 0xff00ff) * d) & 0xff00ff00) | (((c & 0xff00) * d) & 0xff0000)) >>> 8;
-            d = vignette[i+4] + 128;
-            c = scr[i+4];
-            scr[i+4] = ((((c & 0xff00ff) * d) & 0xff00ff00) | (((c & 0xff00) * d) & 0xff0000)) >>> 8;
-            c = scr[i+5];
-            scr[i+5] = ((((c & 0xff00ff) * d) & 0xff00ff00) | (((c & 0xff00) * d) & 0xff0000)) >>> 8;
-            d = vignette[i + 6] + 128;
-            c = scr[i+6];
-            scr[i+6] = ((((c & 0xff00ff) * d) & 0xff00ff00) | (((c & 0xff00) * d) & 0xff0000)) >>> 8;
-            c = scr[i+7];
-            scr[i+7] = ((((c & 0xff00ff) * d) & 0xff00ff00) | (((c & 0xff00) * d) & 0xff0000)) >>> 8;
-            i += 8;
-        }
-        
-        while(i < size) {
-            d = vignette[i] + 128;
-            c = scr[i];
-            scr[i] = ((((c & 0xff00ff) * d) & 0xff00ff00) | (((c & 0xff00) * d) & 0xff0000)) >>> 8;
-            i++;
-        }
-    }
-
-    public final void applySub(int[] scr) {
-        int l = 0xff;//(int)((time/20)%511);
-        int i = scr.length - 1;
-
-        while(i >= 5) {
-            int col = scr[i];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i] = col | ((col >> 8) & 0x010101) * 0xff; // Лимитер
-            col = scr[i - 1];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i - 1] = col | ((col >> 8) & 0x010101) * 0xff; // Лимитер
-            col = scr[i - 2];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i - 2] = col | ((col >> 8) & 0x010101) * 0xff; // Лимитер
-            col = scr[i - 3];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i - 3] = col | ((col >> 8) & 0x010101) * 0xff; // Лимитер
-            col = scr[i - 4];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i - 4] = col | ((col >> 8) & 0x010101) * 0xff; // Лимитер
-            col = scr[i - 5];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i - 5] = col | ((col >> 8) & 0x010101) * 0xff; // Лимитер
-            i -= 6;
-        }
-
-        while(i >= 0) {
-            int col = scr[i];
-            col = ((((col & 0xFF00FF) * l) & 0xFE00FE00)
-                    | (((col & 0xFF00) * l) & 0xFE0000)) >>> 7;
-            scr[i] = col | ((col >> 8) & 0x010101) * 0xff;
-            i--;
-        }
-    }
-
     public final void paint(Graphics g) {
         if(paused || !run || !finishDraw) return;
         finishDraw = false;
@@ -435,21 +358,13 @@ public final class GameScreen extends MyCanvas {
                 scene.render(g, partsMass, player);
             } else scene.render(g, renderFrom, player);
 
-            if(g3d.getRenderer()==DirectX7.M3G)
-                nativeWeather=g3d.renderGameFrameImage(vignette,playerDied,player.isDamaged(),
-                        scene.getHouse(),renderFrom,wg==null?null:wg.prepareM3G(g3d));
-            else g3d.render();
+            nativeWeather=g3d.renderGameFrameImage(vignette,playerDied,player.isDamaged(),
+                    scene.getHouse(),renderFrom,wg==null?null:wg.prepareM3G(g3d));
             if(wg!=null && !nativeWeather)
                 throw new IllegalStateException("native weather was not submitted");
             g3d.shootIntensity -= QFPS.frameTime;
             if(g3d.shootIntensity < 0) g3d.shootIntensity = 0;
             
-            if(lighting && !player.character.underRoof && wg != null && g3d.getRenderer() != DirectX7.M3G) {
-				Camera cam = player.getCamera();
-				wg.lightingEffect(g3d, cam != null ? cam.currentRotX : player.rotateX);
-			}
-
-            if(vignette != null && g3d.getRenderer()==DirectX7.SOFTWARE) applyVignette(g3d.getDisplay());
         } catch (Exception ext) {
             showRendererFailure(ext.toString());
             return;
@@ -464,16 +379,6 @@ public final class GameScreen extends MyCanvas {
         int vScale = Main.m3gScreenScale;
         int vW = g3d.getWidth() * vScale / 100, vH = g3d.getHeight() * vScale / 100;
         int vX = (g3d.getWidth() - vW) / 2, vY = screenY + (g3d.getHeight() - vH) / 2;
-        try {
-            if(g3d.getRenderer()==DirectX7.SOFTWARE) {
-                if(playerDied) deathScr(g3d.getDisplay());
-                if(player.isDamaged()) damageScr(g3d.getDisplay());
-            }
-            if(bloom && g3d.getRenderer()==DirectX7.SOFTWARE) fastbloomScr(g3d);
-            if(doubleBright && g3d.getRenderer()==DirectX7.SOFTWARE) applySub(scene.getG3D().display);
-        } catch (Exception ext) {
-            if(DeveloperMenu.debugMode) ext.printStackTrace();
-        }
         
         try {
             scene.flush(g, 0, screenY);
@@ -763,44 +668,7 @@ public final class GameScreen extends MyCanvas {
 		changed = true;
     }
     
-    private void fastbloomScr(DirectX7 g3d) {
-        int scr[] = g3d.getDisplay();
-
-        int rgb2[] = new int[g3d.getHeight() / 10 * g3d.getWidth() / 10];
-        ImageResize.bilinearResizeRGBnA_toLow(scr, rgb2, g3d.getWidth(), g3d.getHeight(), g3d.getWidth() / 10, g3d.getHeight() / 10);
-        for(int i = 0; i < rgb2.length; i++) {
-            int col = rgb2[i];
-            rgb2[i] = ((((col & 0xFF00FF) * (127) + (0xff000000 & 0xFF00FF) * 128) & 0xFF00FF00) | (((col & 0x00FF00) * (127) + (0xff000000 & 0x00FF00) * 128) & 0x00FF0000)) >>> 8;
-        }
-
-        int rgb3[] = new int[scr.length];
-        ImageResize.bilinearResizeRGBnA(rgb2, rgb3, g3d.getWidth() / 10, g3d.getHeight() / 10, g3d.getWidth(), g3d.getHeight());
-        rgb2 = null;
-
-        for(int i = 0; i < scr.length; i++) {
-            int col = (scr[i] & 0xFEFEFE) + (rgb3[i] & 0xFEFEFE);  //add color
-            scr[i] = col | (((col >> 8) & 0x010101) * 0xFF);  //clamp color to 0 - 255
-        }
-        rgb3 = null;
-    }
     
-    private void damageScr(int[] scr) {
-        for(int i = 0; i < scr.length; i++) {
-            scr[i] = scr[i] & 0xffff0000;
-        }
-    }
-
-    private void deathScr(int[] scr) {
-        for(int i = 0; i < scr.length; ++i) {
-            int col = scr[i];
-            int r = (col) >> 16 & 0xff;
-            int g = col >> 8 & 0xff;
-            col &= 255;
-            col = (r + g + col) / 3;
-            scr[i] = col << 16 | col << 8 | col;
-        }
-    }
-
     protected final void pointerDragged(int x, int y) {
         if(paused || MainCanvas.pstros) return;
         dirX += (x - pointerX) * 200;

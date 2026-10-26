@@ -32,20 +32,6 @@ public final class SkyMesh extends RenderObject {
     public void renderFast(DirectX7 g, Texture unused) { render(g, unused); }
 
     public void render(DirectX7 g, Texture unused) {
-        // Only selected-M3G recovery gets the same hidden base as native.
-        // Original Software and open/transparent/cropped skies are unchanged.
-        if(g.getRenderer()==DirectX7.M3G && clearsBackground(g)) g.clearDisplay(backgroundColor());
-        // Whole-mesh fallback only: never mix native and CPU sky faces.
-        g.transformAndProjectVertices(mesh, matrix);
-        try {
-            fallback.addRenderObjects(mesh.getPolygons(), mesh.getTexture(), x1, y1, x2, y2);
-            fallback.sort(0, fallback.getSize() - 1);
-            TMPElement[] items = fallback.getBuffer();
-            for(int i = fallback.getSize() - 1; i >= 0; i--)
-                g.drawSoftwareObject(items[i].obj,items[i].tex,false);
-        } finally {
-            fallback.resetTex();
-            fallback.reset();
-        }
+        /* CPU whole-mesh fallback removed - M3G sky renderer owns SkyMesh. */
     }
 }

@@ -30,12 +30,7 @@ public final class ScreenLines extends RenderObject {
     }
     public boolean isVisible(int x1,int y1,int x2,int y2) { return count > 0; }
     public void renderFast(DirectX7 g,Texture t) { render(g,t); }
-    public void render(DirectX7 g,Texture t) {
-        // Queued lightning replays the exact old rasterizer on native failure.
-        // Weather uses an explicit LCDUI fallback, never this queue path.
-        for(int i=0;i<count;i++)
-            if(get(i,6) != LEGACY_LINE) throw new IllegalStateException("weather needs LCDUI fallback");
-        for(int i=0;i<count;i++)
-            g.drawLine(get(i,0),get(i,1),get(i,2),get(i,3),get(i,4),get(i,5));
+    public void render(DirectX7 g,Texture t) { 
+        /* CPU fallback removed - native M3G path owns this object (kordos). */
     }
 }

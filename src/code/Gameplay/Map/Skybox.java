@@ -147,49 +147,32 @@ public class Skybox {
 		}
 
 		if(lighting) {
-            if(g3d.getRenderer() == DirectX7.M3G) {
-                // Cheapest storm: replace the sky only, no bolts or world glow.
-                if(skyFlash == null) skyFlash = new SkyFlash();
-                g3d.addRenderObjectDT(skyFlash,null);
-                lighting = false;
-                return;
-            }
-			if(skyLighting == null) g3d.clearDisplay(0xe5e5e5);
-			else if(mode == 3) renderGradient(g3d, skyLighting, lowestDegree, horizonScale, horizonOffset);
-			else renderGradient(g3d, skyLighting, -91, 1, 0);
-
-			if(lighting) drawLighting(g3d);
-			lighting = false;
-			
+            // M3G-only: cheapest storm - replace the sky, no CPU bolts or glow.
+            if(skyFlash == null) skyFlash = new SkyFlash();
+            g3d.addRenderObjectDT(skyFlash,null);
+            lighting = false;
+            return;
 		} else if(mode == 0) {
 			matrix.setIdentity();
 			matrix.setPosition(g3d.getCamera().m03, g3d.getCamera().m13, g3d.getCamera().m23);
 			Matrix fm = g3d.computeFinalMatrix(matrix);
 			
 			mesh.getTexture().updateAnimation();
-            if(g3d.getRenderer() == DirectX7.M3G) {
-                if(nativeMesh == null) nativeMesh = new SkyMesh(mesh);
-                nativeMesh.set(fm, x1, y1, x2, y2);
-                g3d.addRenderObjectDT(nativeMesh, null);
-            } else {
-                g3d.transformAndProjectVertices(mesh, fm);
-                g3d.addMesh(mesh, x1, y1, x2, y2);
-            }
+            if(nativeMesh == null) nativeMesh = new SkyMesh(mesh);
+            nativeMesh.set(fm, x1, y1, x2, y2);
+            g3d.addRenderObjectDT(nativeMesh, null);
 			
 		} else if(mode == 1) {
-            if(g3d.getRenderer() == DirectX7.M3G) renderSolid(g3d,color);
-            else g3d.clearDisplay(color);
+            renderSolid(g3d,color);
 			
 		} else if(mode == 2) {
 			render2DSkybox(g3d);
 
 		} else if(mode == 3) {
-            if(g3d.getRenderer() == DirectX7.M3G) {
+            {
                 if(x2<=x1 || y2<=y1) return;
-                // Replace gradient sampling with the existing full-frame solid
-                // background. Read one source color, never upload its texture.
                 renderSolid(g3d,tex.rImg.img[0]&0xffffff);
-            } else renderGradient(g3d, tex, lowestDegree, horizonScale, horizonOffset);
+            }
 		}
     }
 
@@ -201,125 +184,7 @@ public class Skybox {
         g3d.addRenderObjectDT(nativeSolidSky,null);
     }
     
-    void renderGradient(DirectX7 g3d, Texture texs, 
-			int lowestDegree, float horizonScale, float horizonOffset) {
-        if (x2 - x1 == 0 || y2 - y1 == 0) return;
-            
-        int horizonY = (int) (g3d.height/2 + rotateX*g3d.height/g3d.fovY);
-        horizonY = (horizonY-g3d.centreY) *g3d.distY /(11 + g3d.distY) + g3d.centreY;
-		horizonY -= horizonOffset * g3d.height / g3d.fovY;
-            
-        int ySize = (int) (float) (90*horizonScale*g3d.height/g3d.fovY);
-        
-        int rx1 = y1*g3d.width;
-        int yy2 = y2;
-        
-        if(lowestDegree!=-91) {
-            int horCrop = (int) (g3d.height/2 - lowestDegree*g3d.height/g3d.fovY  + rotateX*g3d.height/g3d.fovY);
-            horCrop = (horCrop-g3d.centreY) *g3d.distY / (11 + g3d.distY) + g3d.centreY;
-            if(y2>horCrop) y2=horCrop;
-        }
-        
-        int rx2 = y2*g3d.width;
-        
-        final int rgb[] = g3d.display;
-        final int tex[] = texs.rImg.img;
-        int step = ySize / texs.rImg.h;
-        if(step==0) step=1;
-
-        int yp,yp2,col,mix;
-        
-        int gradientBegin = horizonY - ySize;
-        if(gradientBegin>=g3d.height) return;
-        
-        if(gradientBegin > 0 && gradientBegin<y2) {
-            int rx3 = gradientBegin * g3d.width;
-            col =   (
-                    (  ( (tex[0]&0xFF00FF)*255)  &0xFF00FF00  )| 
-                    (  ( (tex[0]&0x00FF00)*255)  &0x00FF0000  )   
-                    ) >>>8;
-            
-            while( rx3 - rx1 >= 6 ) {
-                rgb[rx1]=rgb[rx1+1]=rgb[rx1+2]=rgb[rx1+3]=rgb[rx1+4]=rgb[rx1+5]=col;
-                rx1+=6;
-            }
-            
-            while( rx1 < rx3 ) {
-                rgb[rx1]=col;
-                rx1++;
-            }
-        }
-        
-        gradientBegin = horizonY + ySize;
-        
-        if(gradientBegin > 0 && gradientBegin<y2) {
-            rx2 = gradientBegin * g3d.width;
-        }
-        
-        while (rx1 < rx2) {
-            int yy = rx1/g3d.width;
-            
-            int mix2 = (yy-horizonY);
-            if(mix2<0) mix2=-mix2;
-            yp = texs.rImg.h - mix2/step;
-            yp2 = yp-1;
-            
-            if(yp>=texs.rImg.h) yp=texs.rImg.h-1;
-            if(yp2>=texs.rImg.h) yp2=yp;
-            if(yp<0) yp=0;
-            if(yp2<0) yp2=0;
-            
-            mix2 = (mix2%step)*255/step;
-            
-            col = tex[yp];
-            int col2 = tex[yp2];
-
-            col =   (
-                    (  ( (col&0xFF00FF)*(mix = 255-mix2) + (col2&0xFF00FF)*mix2)  &0xFF00FF00  )| 
-                    (  ( (col&0x00FF00)*mix + (col2&0x00FF00)*mix2)  &0x00FF0000  )   
-                    ) >>>8;
-            
-            int rx3 = rx1+g3d.width;
-            
-            
-            while( rx3 - rx1 >= 6 ) {
-                rgb[rx1]=col;
-                rgb[rx1+1]=col;
-                rgb[rx1+2]=col;
-                rgb[rx1+3]=col;
-                rgb[rx1+4]=col;
-                rgb[rx1+5]=col;
-                rx1+=6;
-            }
-            
-            while( rx1 < rx3 ) {
-                rgb[rx1]=col;
-                rx1++;
-            }
-            
-        }
-        
-        if(gradientBegin > 0 && gradientBegin<y2) {
-            rx2 = y2*g3d.width;
-            col =   (
-                    (  ( (tex[0]&0xFF00FF)*255)  &0xFF00FF00  )| 
-                    (  ( (tex[0]&0x00FF00)*255)  &0x00FF0000  )   
-                    ) >>>8;
-            
-            while( rx2 - rx1 >= 6 ) {
-                rgb[rx1]=rgb[rx1+1]=rgb[rx1+2]=rgb[rx1+3]=rgb[rx1+4]=rgb[rx1+5]=col;
-                rx1+=6;
-            }
-            
-            while( rx1 < rx2 ) {
-                rgb[rx1]=col;
-                rx1++;
-            }
-        }
-
-    }
-
-    void render2DSkybox(DirectX7 g3d) {
+void render2DSkybox(DirectX7 g3d) {
 		if(x2 - x1 == 0 || y2 - y1 == 0) return;
 			
 		int beginx = (int) ((360 - rotateY - g3d.fovX / 2) * tex.rImg.w * repeatX / 360);
@@ -349,146 +214,16 @@ public class Skybox {
 
         final int xstep = ((endx << fp) - sx) / width;
         final int ystep = (int) ((tex.rImg.h << fp) * repeatY) / (endy - beginy);
-        if(g3d.getRenderer()==DirectX7.M3G) {
-            if(nativePanorama==null) nativePanorama=new PanoramaSky(this,tex,color,groundColor);
-            nativePanorama.set(x1,y1,x2,y2,sx,beginy,endy,xstep,ystep);
-            g3d.addRenderObjectDT(nativePanorama,null);
-        } else render2D(g3d, sx, beginy, endy, xstep, ystep);
+        if(nativePanorama==null) nativePanorama=new PanoramaSky(this,tex,color,groundColor);
+        nativePanorama.set(x1,y1,x2,y2,sx,beginy,endy,xstep,ystep);
+        g3d.addRenderObjectDT(nativePanorama,null);
     }
 
-    public void render2D(DirectX7 g3d, int uStart, int startY, int endY, int du, int dv) {
-
-        final int rgb[] = g3d.display;
-        final int width = g3d.width;
-        final int fp = 12;
-		
-        final int texRgb[] = tex.rImg.img;
-		
-        final int texW = tex.rImg.w;
-        final int texWlen = tex.rImg.w - 1;
-		final int texWBits = tex.rImg.widthBIT;
-        final int texH = tex.rImg.h;
-		
-        while (uStart < 0) uStart += texW << fp;
-
-		int texStartY = Math.max(y1, Math.min(y2, startY));
-		int texEndY = Math.max(y1, Math.min(y2, endY));
-		
-		for(int y=y1; y<texStartY; y++) {
-			int yy = y * width;
-			fillLine(rgb, x1 + yy, x2 + yy, color);
-		}
-		
-		int v = dv * (texStartY - startY);
-        for (int y = texStartY; y < texEndY; y++) {
-			
-            int u = uStart - du;
-            int rx1 = y * width;
-            int rx2 = rx1 + width;
-			
-            if (x1 > 0) {
-                rx1 += x1;
-                u += du * x1;
-            }
-            if (x2 < width) rx2 -= width - x2;
-			
-            int ysa = ((v >>> fp) % texH) << texWBits;
-
-            while (rx2 - rx1 >= 4) {
-                rgb[rx1] = texRgb[(((u += du) >>> fp) & texWlen) + ysa];
-                rgb[rx1 + 1] = texRgb[(((u += du) >>> fp) & texWlen) + ysa];
-                rgb[rx1 + 2] = texRgb[(((u += du) >>> fp) & texWlen) + ysa];
-                rgb[rx1 + 3] = texRgb[(((u += du) >>> fp) & texWlen) + ysa];
-                rx1 += 4;
-            }
-            while (rx1 < rx2) {
-                rgb[rx1] = texRgb[(((u += du) >>> fp) & texWlen) + ysa];
-                rx1 += 1;
-            }
-			
-            v += dv;
-        }
-		
-		for(int y=texEndY; y<y2; y++) {
-			int yy = y * width;
-			fillLine(rgb, x1 + yy, x2 + yy, groundColor);
-		}
-
-    }
-	
-	private void fillLine(int[] rgb, int x1, int x2, int col) {
-		while(x2 - x1 >= 6) {
-			rgb[x1] = col;
-			rgb[x1 + 1] = col;
-			rgb[x1 + 2] = col;
-			rgb[x1 + 3] = col;
-			rgb[x1 + 4] = col;
-			rgb[x1 + 5] = col;
-			x1 += 6;
-		}
-
-		while(x1 < x2) {
-			rgb[x1] = col;
-			x1++;
-		}
-	}
-
-    public Mesh getMesh() {
+public Mesh getMesh() {
         return mesh;
     }
     
-    public void drawLighting(DirectX7 g3d) {
-        if(g3d.getRenderer() == DirectX7.M3G) return;
-        try { drawLighting(g3d,g3d.canRenderM3G()); }
-        catch(OutOfMemoryError ex) { drawLighting(g3d,false); }
-    }
-
-    private void drawLighting(DirectX7 g3d,boolean nativeLines) {
-        MathUtils.randomCall = 0;
-        
-        if(MathUtils.preudoRandom(lastLighting,8)==0) return;
-        
-        if(nativeLines) {
-            if(lightningLines == null) lightningLines = new ScreenLines();
-            lightningLines.clear();
-        }
-        int horizonY = (int) (g3d.height/2 + rotateX*g3d.height/g3d.fovY );
-        horizonY = (horizonY-g3d.centreY) *g3d.distY/(11 + g3d.distY) + g3d.centreY;
-            
-        int ySize = 90*g3d.height/g3d.fovY;
-        
-        int fat = 3*74/g3d.fovY;
-        if(fat<1) fat=1;
-        
-        int by = horizonY-ySize;
-        int bx = MathUtils.preudoRandom(lastLighting,g3d.width);
-        int deg20 = g3d.width*20/g3d.fovX;
-        int mx = bx + (MathUtils.preudoRandom(lastLighting,100) - 50)*deg20/100;
-        int my = horizonY - ySize/3 + MathUtils.preudoRandom(lastLighting,100)*g3d.height*10/g3d.fovY/100;
-        
-        lightningLine(g3d, nativeLines, bx, by, mx, my, fat, 0xffffff);
-        if(MathUtils.preudoRandom(lastLighting,4)==0) {
-            int rnd = (MathUtils.preudoRandom(lastLighting,100) - 50)*deg20/25;
-            lightningLine(g3d, nativeLines, mx/2+bx/2, my/2+by/2, mx+rnd, horizonY, fat, 0xffffff); //Additional spark idk
-        }
-        
-        int sparksCount = 2 + MathUtils.preudoRandom(lastLighting,3); //Lightings count
-        int fat2 = fat-1;
-        if(fat2<1) fat2=1;
-        for(int i=0;i<sparksCount;i++) {
-            int rnd = (MathUtils.preudoRandom(lastLighting,100) - 50)*deg20/50; //Lighting direction
-            if(MathUtils.preudoRandom(lastLighting,4)==0) { //Subdiv lighting
-                int rnd2 = (MathUtils.preudoRandom(lastLighting,100) - 50)*deg20/150; //Small lightings direction
-                lightningLine(g3d, nativeLines, mx,my,mx+rnd/2,horizonY/2+my/2,fat2,0xfdfdfd);
-                
-                lightningLine(g3d, nativeLines, mx+rnd/2,horizonY/2+my/2,mx+rnd/2+rnd2/2,horizonY,fat2,0xfdfdfd);
-                lightningLine(g3d, nativeLines, mx+rnd/2,horizonY/2+my/2,mx+rnd/2-rnd2/2,horizonY,fat2,0xfdfdfd);
-            } else lightningLine(g3d, nativeLines, mx,my,mx+rnd,horizonY,fat2,0xfdfdfd); //One lighting
-        }
-        if(nativeLines && lightningLines.count > 0) g3d.addRenderObjectDT(lightningLines,null);
-    }
-
-    private void lightningLine(DirectX7 g,boolean nativeLines,int x1,int y1,int x2,int y2,int fat,int color) {
+private void lightningLine(DirectX7 g,boolean nativeLines,int x1,int y1,int x2,int y2,int fat,int color) {
         if(nativeLines) lightningLines.line(x1,y1,x2,y2,fat,color,true);
         else g.drawLine(x1,y1,x2,y2,fat,color);
     }
