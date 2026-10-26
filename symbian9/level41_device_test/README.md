@@ -5,10 +5,10 @@ This is a separate, fixed-camera S60v3 test application for the native C++
 lightmap, skybox mesh, and the textures required by the scene. It repeatedly
 renders a fixed-camera DMODE 9 view at the handset's native pixel dimensions
 when a bounded framebuffer can be allocated, with a 120x160 low-memory
-fallback. The tested GDI build displays a 10-second end-to-end FPS average,
+fallback. The GDI and DSA builds display a 10-second end-to-end FPS average,
 plus average/maximum time spent inside `SoftwareMeshRenderer::renderScene()`.
-The FPS includes framebuffer clear, software rendering, WindowServer GDI
-presentation, and redraw scheduling; the mesh timing isolates the renderer
+The FPS includes framebuffer clear, software rendering, the selected presenter
+(bitmap-GDI or DSA), and frame scheduling; the mesh timing isolates the renderer
 call. Asset loading is done once before timing. After the sample, the final
 results remain on screen; any key exits. This is a renderer performance
 smoke-test for one Level 41 view, not a measure of the complete game or Java
@@ -23,11 +23,12 @@ ordinal 390, an export added later for tracing. Version
 1.0.8 closes through `RHandleBase::Close()` to avoid that import. Version 1.0.9
 added a stage label to asset/render failures. After the user confirmed that the
 self-contained GDI-only v1.0.3 renders on the E65 while the DSA-enabled full
-v1.0.9 exits after startup, v1.0.10 compiles DSA out of the main app and uses
+v1.0.9 exits after startup, v1.0.10 compiled DSA out of the main app and used
 the tested WindowServer GDI path. The user confirms v1.0.10 works on the E65.
 CI inspection confirms ordinal 390 and the `BitGdi` import are absent from
-v1.0.10; the EFSRV `RFile` imports remain. DSA stays disabled in the main
-candidate until that path is repaired and verified separately.
+v1.0.10; the EFSRV `RFile` imports remain. DSA remained disabled in the main
+candidate through v1.0.29; v1.0.30 re-enables it experimentally with the
+bitmap-GDI path retained as a startup/draw-error fallback.
 
 The user's E65 measurement of v1.0.12 was 0.3 end-to-end FPS, with 111/112 ms
 average/maximum inside `SoftwareMeshRenderer::renderScene()`, for 78 polygons
@@ -237,5 +238,17 @@ Current E65 feedback:
   setup/scanline updates while preserving the exact screen, depth, and UV
   integer operations. Host tests pass (34,119 checks; 69 `.3d` assets), and the
   Level 41 framebuffer remains byte-identical (SHA-256
-  `aa0a90263d5ffd434916aae78bfa134d58e27c7e3b187c071bd51ed3b228e7cd`). E65
-  performance measurement is pending.
+  `aa0a90263d5ffd434916aae78bfa134d58e27c7e3b187c071bd51ed3b228e7cd`). The
+  user reports no measurable E65 change versus v1.0.28.
+
+Version 1.0.30 re-enables Direct Screen Access in the main Level 41 candidate
+for a controlled E65 experiment. DSA now uses the same EColor64K RGB565 bitmap
+conversion as the tested GDI presenter, then submits one `BitBlt` through the
+DSA graphics context; it no longer expands each source pixel into a GDI
+rectangle. An active-object timer repeatedly runs the same 10-second render/
+present benchmark while DSA is active, and the overlay identifies DSA or
+reports its error code. If DSA setup or frame submission fails, the app returns
+to the existing bitmap-GDI BitBlt presenter and restarts timing after fallback
+setup. The `quantum_level41_no_dsa` companion remains available. Host tests and
+the exact E65 framebuffer presentation comparison are required before accepting
+any FPS gain; DSA runtime and S60 OS 9.1 compatibility remain unverified.

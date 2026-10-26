@@ -150,6 +150,9 @@ TInt gAverageMeshPhaseMillis[ESoftwareMeshRenderPhaseCount];
 bool gBenchmarkComplete = false;
 bool gBenchmarkFinalOverlayPending = false;
 bool gBitmapGdiPresenterActive = false;
+bool gDsaPresenterActive = false;
+bool gDsaAttempted = false;
+TInt gDsaStatus = KErrNotSupported;
 
 struct TextureInfo {
     TInt width;
@@ -684,11 +687,18 @@ void drawStatusOverlay(CWsScreenDevice& screen,
                           gAverageMeshRenderMicros / 1000,
                           gMaximumMeshRenderMillis);
         gc.DrawText(renderTime, TPoint(4, 48));
-        if (gBitmapGdiPresenterActive) {
-            gc.DrawText(_L("Presenter: bitmap BitBlt"), TPoint(4, 64));
+        TBuf<48> presenterStatus;
+        if (gDsaPresenterActive) {
+            presenterStatus.Copy(_L("Presenter: DSA bitmap blit"));
+        } else if (gDsaAttempted && gDsaStatus != KErrNone) {
+            presenterStatus.Format(
+                _L("Presenter: BitBlt, DSA error %d"), gDsaStatus);
+        } else if (gBitmapGdiPresenterActive) {
+            presenterStatus.Copy(_L("Presenter: bitmap BitBlt"));
         } else {
-            gc.DrawText(_L("Presenter: GDI fallback"), TPoint(4, 64));
+            presenterStatus.Copy(_L("Presenter: GDI fallback"));
         }
+        gc.DrawText(presenterStatus, TPoint(4, 64));
         TBuf<48> phaseTime;
         phaseTime.Format(_L("Validation: %d ms"),
                          gAverageMeshPhaseMillis[
@@ -764,6 +774,77 @@ void drawOutput(CWsScreenDevice& screen,
     if (session != 0) drawStatusOverlay(screen, gc, size);
 }
 
+TUint16 rgb565Pixel(QInt32 pixel)
+{
+    const QUint32 bits = static_cast<QUint32>(pixel);
+    return static_cast<TUint16>(
+        (((bits >> 19U) & 0x1fU) << 11U) |
+        (((bits >> 10U) & 0x3fU) << 5U) |
+        ((bits >> 3U) & 0x1fU));
+}
+
+bool fillLevel41Rgb565Bitmap(CFbsBitmap& bitmap,
+                             const TSize& size,
+                             TInt stridePixels)
+{
+    if (gFramebuffer == 0 || gRenderWidth <= 0 || gRenderHeight <= 0 ||
+        size.iWidth <= 0 || size.iHeight <= 0 ||
+        stridePixels < size.iWidth) {
+        return false;
+    }
+
+    TInt scaleX = size.iWidth / gRenderWidth;
+    TInt scaleY = size.iHeight / gRenderHeight;
+    TInt scale = scaleX < scaleY ? scaleX : scaleY;
+    if (scale < 1) scale = 1;
+    const TInt imageWidth = gRenderWidth * scale;
+    const TInt imageHeight = gRenderHeight * scale;
+    const TInt left = (size.iWidth - imageWidth) / 2;
+    const TInt top = (size.iHeight - imageHeight) / 2;
+    const TUint16 background = rgb565Pixel(0x00080c14);
+
+    bitmap.LockHeap();
+    TUint32* address = bitmap.DataAddress();
+    if (address == 0) {
+        bitmap.UnlockHeap();
+        return false;
+    }
+
+    TUint16* pixels = reinterpret_cast<TUint16*>(address);
+    TInt y;
+    if (scale == 1 && left == 0 && top == 0 &&
+        gRenderWidth == size.iWidth && gRenderHeight == size.iHeight) {
+        for (y = 0; y < size.iHeight; ++y) {
+            TUint16* row = pixels + y * stridePixels;
+            const QInt32* sourceRow = gFramebuffer + y * gRenderWidth;
+            TInt x;
+            for (x = 0; x < size.iWidth; ++x) {
+                row[x] = rgb565Pixel(sourceRow[x]);
+            }
+        }
+    } else {
+        for (y = 0; y < size.iHeight; ++y) {
+            TUint16* row = pixels + y * stridePixels;
+            const TInt imageY = y - top;
+            const bool insideImageY = imageY >= 0 && imageY < imageHeight;
+            const TInt sourceY = insideImageY ? imageY / scale : -1;
+            TInt x;
+            for (x = 0; x < size.iWidth; ++x) {
+                const TInt imageX = x - left;
+                if (insideImageY && imageX >= 0 && imageX < imageWidth) {
+                    const TInt sourceX = imageX / scale;
+                    row[x] = rgb565Pixel(
+                        gFramebuffer[sourceY * gRenderWidth + sourceX]);
+                } else {
+                    row[x] = background;
+                }
+            }
+        }
+    }
+    bitmap.UnlockHeap();
+    return true;
+}
+
 class TLevel41BitmapGdiPresenter
 {
 public:
@@ -812,75 +893,12 @@ public:
 
     bool DrawFrame(CWindowGc& gc)
     {
-        if (iBitmap == 0 || gFramebuffer == 0 ||
-            gRenderWidth <= 0 || gRenderHeight <= 0 ||
-            iStridePixels < iSize.iWidth) {
+        if (iBitmap == 0 ||
+            !fillLevel41Rgb565Bitmap(*iBitmap, iSize, iStridePixels)) {
             return false;
         }
-
-        TInt scaleX = iSize.iWidth / gRenderWidth;
-        TInt scaleY = iSize.iHeight / gRenderHeight;
-        TInt scale = scaleX < scaleY ? scaleX : scaleY;
-        if (scale < 1) scale = 1;
-        const TInt imageWidth = gRenderWidth * scale;
-        const TInt imageHeight = gRenderHeight * scale;
-        const TInt left = (iSize.iWidth - imageWidth) / 2;
-        const TInt top = (iSize.iHeight - imageHeight) / 2;
-        const TUint16 background = ToRgb565(0x00080c14);
-
-        iBitmap->LockHeap();
-        TUint32* address = iBitmap->DataAddress();
-        if (address == 0) {
-            iBitmap->UnlockHeap();
-            return false;
-        }
-
-        TUint16* pixels = reinterpret_cast<TUint16*>(address);
-        TInt y;
-        if (scale == 1 && left == 0 && top == 0 &&
-            gRenderWidth == iSize.iWidth &&
-            gRenderHeight == iSize.iHeight) {
-            for (y = 0; y < iSize.iHeight; ++y) {
-                TUint16* row = pixels + y * iStridePixels;
-                const QInt32* sourceRow = gFramebuffer + y * gRenderWidth;
-                TInt x;
-                for (x = 0; x < iSize.iWidth; ++x) {
-                    row[x] = ToRgb565(sourceRow[x]);
-                }
-            }
-        } else {
-            for (y = 0; y < iSize.iHeight; ++y) {
-                TUint16* row = pixels + y * iStridePixels;
-                const TInt imageY = y - top;
-                const bool insideImageY = imageY >= 0 && imageY < imageHeight;
-                const TInt sourceY = insideImageY ? imageY / scale : -1;
-                TInt x;
-                for (x = 0; x < iSize.iWidth; ++x) {
-                    const TInt imageX = x - left;
-                    if (insideImageY && imageX >= 0 && imageX < imageWidth) {
-                        const TInt sourceX = imageX / scale;
-                        row[x] = ToRgb565(
-                            gFramebuffer[sourceY * gRenderWidth + sourceX]);
-                    } else {
-                        row[x] = background;
-                    }
-                }
-            }
-        }
-        iBitmap->UnlockHeap();
-
         gc.BitBlt(TPoint(0, 0), iBitmap);
         return true;
-    }
-
-private:
-    static TUint16 ToRgb565(QInt32 pixel)
-    {
-        const QUint32 bits = static_cast<QUint32>(pixel);
-        return static_cast<TUint16>(
-            (((bits >> 19U) & 0x1fU) << 11U) |
-            (((bits >> 10U) & 0x3fU) << 5U) |
-            ((bits >> 3U) & 0x1fU));
     }
 
 private:
@@ -899,7 +917,7 @@ public:
                         CWsScreenDevice& screen,
                         const TSize& size)
         : iSession(session), iScreen(screen), iSize(size), iAccess(0),
-          iStarter(0), iPixmap(0), iPixmapDevice(0), iPixmapGc(0)
+          iStarter(0), iPixmap(0), iStridePixels(0), iDsaActive(false)
     {
     }
 
@@ -918,52 +936,59 @@ public:
         iStarter = starter;
     }
 
+    void SetDsaActive(bool active)
+    {
+        iDsaActive = active;
+        gDsaPresenterActive = active;
+    }
+
+    bool IsDsaActive() const
+    {
+        return iDsaActive;
+    }
+
     void PreparePixmapL()
     {
-        if (iPixmap != 0 && iPixmapDevice != 0 && iPixmapGc != 0) return;
+        if (iPixmap != 0 && iStridePixels >= iSize.iWidth) return;
         CleanupPixmap();
 
         iPixmap = new(ELeave) CWsBitmap(iSession);
-        TDisplayMode mode = iScreen.DisplayMode();
-#ifdef EKA2
-        if (mode == EColor16MA) mode = EColor16MU;
-#endif
-        User::LeaveIfError(iPixmap->Create(iSize, mode));
-        iPixmapDevice = CFbsBitmapDevice::NewL(iPixmap);
-        User::LeaveIfError(iPixmapDevice->CreateContext(iPixmapGc));
+        User::LeaveIfError(iPixmap->Create(iSize, EColor64K));
+        const TInt scanLineBytes =
+            CFbsBitmap::ScanLineLength(iSize.iWidth, EColor64K);
+        if (scanLineBytes <= 0 || (scanLineBytes & 1) != 0 ||
+            scanLineBytes / 2 < iSize.iWidth) {
+            User::Leave(KErrNotSupported);
+        }
+        iStridePixels = scanLineBytes / 2;
     }
 
     void CleanupPixmap()
     {
-        delete iPixmapGc;
-        iPixmapGc = 0;
-        delete iPixmapDevice;
-        iPixmapDevice = 0;
         delete iPixmap;
         iPixmap = 0;
+        iStridePixels = 0;
     }
 
     bool DrawFrame()
     {
-        if (iAccess == 0 || iAccess->Gc() == 0 ||
-            iPixmap == 0 || iPixmapGc == 0) return false;
+        if (!iDsaActive || iAccess == 0 || iAccess->Gc() == 0 ||
+            iPixmap == 0 ||
+            !fillLevel41Rgb565Bitmap(*iPixmap, iSize, iStridePixels)) {
+            return false;
+        }
 
-        // Render the software frame into an FBS bitmap first, then transfer it
-        // to the display with one DSA blit instead of thousands of screen GDI
-        // drawing requests.
-        drawOutput(iScreen, *iPixmapGc, 0, iSize);
-        iAccess->Gc()->BitBlt(TPoint(0, 0), iPixmap);
-
-        // SetAutoUpdate(ETrue) is configured after DSA starts. The explicit
-        // CFbsScreenDevice::Update() experiment was removed in v1.0.6; the
-        // physical E65 launch failure is still unresolved.
+        CBitmapContext* gc = iAccess->Gc();
+        gc->BitBlt(TPoint(0, 0), iPixmap);
+        drawStatusOverlay(iScreen, *gc, iSize);
         return true;
     }
 
     void AbortNow(RDirectScreenAccess::TTerminationReasons reason)
     {
-        // The frame is static; stop drawing immediately and make no WSERV call.
         (void)reason;
+        // Do not issue screen or WindowServer calls while access is being revoked.
+        SetDsaActive(false);
     }
 
     void Restart(RDirectScreenAccess::TTerminationReasons reason);
@@ -975,8 +1000,99 @@ private:
     CDirectScreenAccess* iAccess;
     CDsaStarter* iStarter;
     CWsBitmap* iPixmap;
-    CFbsBitmapDevice* iPixmapDevice;
-    CFbsBitGc* iPixmapGc;
+    TInt iStridePixels;
+    bool iDsaActive;
+};
+
+class CDsaFrameRunner : public CActive
+{
+public:
+    static CDsaFrameRunner* NewL(TLevel41DsaObserver& observer)
+    {
+        CDsaFrameRunner* self = new(ELeave) CDsaFrameRunner(observer);
+        CleanupStack::PushL(self);
+        self->ConstructL();
+        CleanupStack::Pop(self);
+        return self;
+    }
+
+    ~CDsaFrameRunner()
+    {
+        Cancel();
+        if (iTimerCreated) iTimer.Close();
+    }
+
+    void Start()
+    {
+        ScheduleNext();
+    }
+
+    void Stop()
+    {
+        Cancel();
+    }
+
+    TInt Result() const
+    {
+        return iResult;
+    }
+
+private:
+    CDsaFrameRunner(TLevel41DsaObserver& observer)
+        : CActive(CActive::EPriorityStandard), iObserver(observer),
+          iTimerCreated(false), iResult(KErrNone)
+    {
+        CActiveScheduler::Add(this);
+    }
+
+    void ConstructL()
+    {
+        User::LeaveIfError(iTimer.CreateLocal());
+        iTimerCreated = true;
+    }
+
+    void ScheduleNext()
+    {
+        if (IsActive() || gBenchmarkComplete || iResult != KErrNone) return;
+        iTimer.After(iStatus, TTimeIntervalMicroSeconds32(1000));
+        SetActive();
+    }
+
+    void DoCancel()
+    {
+        if (iTimerCreated) iTimer.Cancel();
+    }
+
+    void RunL()
+    {
+        if (iStatus.Int() != KErrNone) {
+            iResult = iStatus.Int();
+            CActiveScheduler::Stop();
+            return;
+        }
+
+        if (iObserver.IsDsaActive()) {
+            if (!renderLevel41Frame()) {
+                iResult = KErrCorrupt;
+                CActiveScheduler::Stop();
+                return;
+            }
+            recordBenchmarkFrame(gLastMeshRenderMicros);
+            if (!iObserver.DrawFrame()) {
+                iResult = KErrNotReady;
+                CActiveScheduler::Stop();
+                return;
+            }
+        }
+
+        if (!gBenchmarkComplete) ScheduleNext();
+    }
+
+private:
+    TLevel41DsaObserver& iObserver;
+    RTimer iTimer;
+    bool iTimerCreated;
+    TInt iResult;
 };
 
 // Run leave-capable DSA setup from an active object so RunError can turn a
@@ -991,8 +1107,9 @@ public:
                 TLevel41DsaObserver& observer)
         : CActive(CActive::EPriorityStandard),
           iSession(session), iScreen(screen), iWindow(window),
-          iObserver(observer), iAccess(0), iResult(KErrNotReady),
-          iStartRequested(false)
+          iObserver(observer), iAccess(0), iFrameRunner(0),
+          iResult(KErrNotReady), iStartRequested(false),
+          iBenchmarkStarted(false)
     {
         CActiveScheduler::Add(this);
         iObserver.SetStarter(this);
@@ -1001,6 +1118,7 @@ public:
     ~CDsaStarter()
     {
         Stop();
+        delete iFrameRunner;
         iObserver.SetStarter(0);
     }
 
@@ -1012,12 +1130,18 @@ public:
     void Stop()
     {
         Cancel();
+        if (iFrameRunner != 0) iFrameRunner->Stop();
         StopAccess();
     }
 
     TInt Result() const
     {
         return iResult;
+    }
+
+    TInt FrameResult() const
+    {
+        return iFrameRunner != 0 ? iFrameRunner->Result() : KErrNone;
     }
 
     void ScheduleStart()
@@ -1053,13 +1177,21 @@ private:
             return;
         }
         directScreen->SetAutoUpdate(ETrue);
+        iObserver.SetDsaActive(true);
         if (!iObserver.DrawFrame()) {
             iResult = KErrNotSupported;
             StopAccess();
             CActiveScheduler::Stop();
             return;
         }
+
         iResult = KErrNone;
+        if (!iBenchmarkStarted) {
+            iFrameRunner = CDsaFrameRunner::NewL(iObserver);
+            resetBenchmark();
+            iBenchmarkStarted = true;
+            iFrameRunner->Start();
+        }
     }
 
     TInt RunError(TInt error)
@@ -1072,6 +1204,8 @@ private:
 
     void StopAccess()
     {
+        if (iFrameRunner != 0) iFrameRunner->Stop();
+        iObserver.SetDsaActive(false);
         if (iAccess != 0) {
             iObserver.SetAccess(0);
             iAccess->Cancel();
@@ -1087,8 +1221,10 @@ private:
     RWindow& iWindow;
     TLevel41DsaObserver& iObserver;
     CDirectScreenAccess* iAccess;
+    CDsaFrameRunner* iFrameRunner;
     TInt iResult;
     bool iStartRequested;
+    bool iBenchmarkStarted;
 };
 
 void TLevel41DsaObserver::Restart(
@@ -1174,7 +1310,10 @@ TInt runDirectScreenAccess(RWsSession& session,
     eventWaiter.Start();
     starter.Start();
     CActiveScheduler::Start();
-    const TInt result = starter.Result();
+
+    TInt result = starter.Result();
+    const TInt frameResult = starter.FrameResult();
+    if (result == KErrNone && frameResult != KErrNone) result = frameResult;
     eventWaiter.Stop();
     starter.Stop();
     usedDirectScreenAccess = (result == KErrNone);
@@ -1286,7 +1425,8 @@ TInt runWindow(RFs& fileServer,
 #ifndef QUANTUM_LEVEL41_NO_DSA
         if (gRenderStatus == KErrNone) {
             bool usedDirectScreenAccess = false;
-            (void)runDirectScreenAccess(
+            gDsaAttempted = true;
+            gDsaStatus = runDirectScreenAccess(
                 session, screen, window, redraws, size,
                 usedDirectScreenAccess);
             if (usedDirectScreenAccess) {
@@ -1295,6 +1435,11 @@ TInt runWindow(RFs& fileServer,
                 session.Flush();
                 return KErrNone;
             }
+
+            // Keep the known-tested bulk WindowServer path as a runtime
+            // fallback, and exclude failed DSA startup time from its FPS.
+            gBitmapGdiPresenterActive = bitmapPresenter.Create(session, size);
+            resetBenchmark();
         }
 #endif
 

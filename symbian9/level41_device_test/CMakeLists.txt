@@ -22,11 +22,8 @@ set(QUANTUM_LEVEL41_SOURCES
 
 symbian_add_executable(quantum_level41_device_test ${QUANTUM_LEVEL41_SOURCES})
 target_include_directories(quantum_level41_device_test PRIVATE ../inc)
-# The E65 runs the software renderer through WindowServer GDI, but the DSA
-# build exits after its startup screen. Keep the tested GDI path as the main
-# S60v3 baseline until the DSA path is repaired and verified on-device.
-target_compile_definitions(quantum_level41_device_test PRIVATE
-    QUANTUM_LEVEL41_NO_DSA=1)
+# Enable the DSA presentation experiment in the main candidate. If DSA setup
+# or drawing fails, the app falls back to the tested bitmap-GDI BitBlt path.
 set(bitgdi_proxy "${SYMBIAN_SDK_PREFIX}/proxies/bitgdi/bitgdi.dso")
 if(NOT EXISTS "${bitgdi_proxy}")
     message(FATAL_ERROR "The Symbian SDK is missing the BitGdi import proxy required for bitmap presentation")
