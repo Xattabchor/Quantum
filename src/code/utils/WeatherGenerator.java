@@ -520,49 +520,6 @@ float yy=y*1.3f*3*frameTime/80/50;
 
 
     
-    public final void lightingEffect(DirectX7 g3d, float rotateX/*, int frameTime, boolean underRoof*/) {
-        // M3G storms change only the sky, even after native failure.
-        if(g3d.getRenderer() == DirectX7.M3G) return;
-        
-        /*animationHorizonLine += frameTime*(underRoof?1:-1);
-        if(animationHorizonLine>1000) return;
-        if(animationHorizonLine<0) animationHorizonLine = 0;*/
-        
-        int horizonY = (int) (screenHeight/2 - horizonLine*screenHeight/g3d.fovY + rotateX*screenHeight/g3d.fovY );
-        horizonY = (horizonY-g3d.centreY) *g3d.distY/(11 + g3d.distY) + g3d.centreY;
-        
-        /*if(animationHorizonLine>0) {
-            horizonY = (
-                    (screenHeight+1)*animationHorizonLine + horizonY*(1000-animationHorizonLine)
-                    )/1000;
-        }*/
-            
-        int ySize = horizonSize*g3d.height/g3d.fovY;
-        
-        if(horizonY>=screenHeight) return;
 
-        int y = horizonY;
-        if(y<0) y = 0;
-        
-        int[] scr = g3d.getDisplay();
-        
-        int x1, x2, col, scrcol;
-        for(;y<screenHeight;y++) {
-            
-            x1 = y*screenWidth;
-            x2 = x1 + screenWidth;
-            col = ((y-horizonY)*255/ySize);//&0xfe;
-            if(col>100) col = 100; //254 is max but its too bright so i used 100 (100&0xfe=100)
-            col = (col&0xfe)*0x010101;
-            
-            while(x1<x2) {
-                scr[x1]=(scrcol=(scr[x1]&0xFEFEFE)+col)|((( scrcol>>>8 ) &0x010101)*0xFF);
-                x1++;
-            }
-            
-        }
-        
-    }
-  
   
 }

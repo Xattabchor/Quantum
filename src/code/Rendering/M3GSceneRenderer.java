@@ -314,7 +314,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
         try { graphics.releaseTarget(); }
         finally { bound = false; }
         int scale=targetScale();
-        if(scale >= 100) return surface;
+        if(scale >= 100) {
+            // keep g.display in sync for direct display readers (pause snapshot, etc.)
+            surface.getRGB(g.display, 0, g.width, 0, 0, g.width, g.height);
+            return surface;
+        }
         int sw=surface.getWidth(), sh=surface.getHeight();
         if(scaleBuffer == null || scaleBuffer.length != sw*sh) scaleBuffer=new int[sw*sh];
         surface.getRGB(scaleBuffer, 0, sw, 0, 0, sw, sh);

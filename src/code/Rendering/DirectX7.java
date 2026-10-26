@@ -344,8 +344,6 @@ this.buffer.resetTex();
    }
 
    public boolean isExpFogPass() {return expFogPass;}
-   public int getRasterFogColor() {return expFogPass?Mode12Fog.color():fogc;}
-
    public boolean isStaticLightmapPass() { return staticLightmapPass; }
 
    /** Selected-M3G baked brightness only: no fog, distance or dynamic light.
