@@ -10,7 +10,6 @@ namespace Rendering {
 using code::Math::QInt32;
 using code::Math::QInt64;
 using code::Math::QUint32;
-using code::Math::QUint64;
 
 namespace {
 
@@ -255,6 +254,25 @@ FixedPerspectivePoint advance(const FixedPerspectivePoint& initial,
     return result;
 }
 
+/* One row of modular additions equals the original slope * row offset. */
+void advanceOneRow(FixedPerspectivePoint& point,
+                   const PerspectiveSlope& slope)
+{
+    point.screenX = code::Math::javaIntAdd(point.screenX, slope.screenX);
+    point.reciprocalDepth = code::Math::javaIntAdd(
+        point.reciprocalDepth, slope.reciprocalDepth);
+    point.uOverDepth = code::Math::javaIntAdd(
+        point.uOverDepth, slope.uOverDepth);
+    point.vOverDepth = code::Math::javaIntAdd(
+        point.vOverDepth, slope.vOverDepth);
+    point.color.redFactor = code::Math::javaIntAdd(
+        point.color.redFactor, slope.color.redFactor);
+    point.color.greenFactor = code::Math::javaIntAdd(
+        point.color.greenFactor, slope.color.greenFactor);
+    point.color.blueFactor = code::Math::javaIntAdd(
+        point.color.blueFactor, slope.color.blueFactor);
+}
+
 QInt64 arithmeticShiftRight12(QInt64 value)
 {
     const QInt64 divisor = 4096;
@@ -286,40 +304,31 @@ QInt32 textureWidthBit(QInt32 width)
     return 0;
 }
 
-QUint32 unsignedMagnitude(QInt32 value)
+bool perspectiveDivide(QInt32 numerator,
+                       QInt32 denominator,
+                       QInt32& result)
 {
-    const QUint32 bits = static_cast<QUint32>(value);
-    return value < 0
-        ? static_cast<QUint32>(static_cast<QUint32>(0) - bits)
-        : bits;
-}
-
-QUint32 scaledQuotientMagnitude(QUint32 numeratorMagnitude,
-                                QUint32 denominatorMagnitude,
-                                QUint32 reciprocal)
-{
-    QUint32 whole;
-    QUint32 remainder;
-    if (denominatorMagnitude == 1U) {
-        whole = numeratorMagnitude;
-        remainder = 0;
-    } else {
-        /*
-         * reciprocal is ceil(2^32 / denominator). Since the numerator is at
-         * most 2^31, the high product gives the exact whole quotient or one
-         * too high. Correct that case before extracting the remainder.
-         */
-        const QUint64 product =
-            static_cast<QUint64>(numeratorMagnitude) * reciprocal;
-        whole = static_cast<QUint32>(product >> 32U);
-        QUint32 integerProduct = whole * denominatorMagnitude;
-        if (integerProduct > numeratorMagnitude) {
-            --whole;
-            integerProduct -= denominatorMagnitude;
-        }
-        remainder = numeratorMagnitude - integerProduct;
+    if (denominator == 0) {
+        return false;
     }
 
+    /*
+     * Java evaluates ((long) numerator << 12) / denominator, then narrows.
+     * Split the quotient into its integer and 12-bit fractional parts so the
+     * ARMv5 path needs only a 32-bit divide. Extend the remainder one bit at
+     * a time; compare with (divisor - remainder) to avoid unsigned overflow.
+     */
+    const QUint32 numeratorBits = static_cast<QUint32>(numerator);
+    const QUint32 denominatorBits = static_cast<QUint32>(denominator);
+    const QUint32 numeratorMagnitude = numerator < 0
+        ? static_cast<QUint32>(static_cast<QUint32>(0) - numeratorBits)
+        : numeratorBits;
+    const QUint32 denominatorMagnitude = denominator < 0
+        ? static_cast<QUint32>(static_cast<QUint32>(0) - denominatorBits)
+        : denominatorBits;
+    const bool negative = (numerator < 0) != (denominator < 0);
+    const QUint32 whole = numeratorMagnitude / denominatorMagnitude;
+    QUint32 remainder = numeratorMagnitude - whole * denominatorMagnitude;
     QUint32 fractional = 0;
     unsigned int bit;
     for (bit = 0; bit < KTextureFractionBits; ++bit) {
@@ -332,36 +341,14 @@ QUint32 scaledQuotientMagnitude(QUint32 numeratorMagnitude,
             remainder += remainder;
         }
     }
-    return (whole << KTextureFractionBits) | fractional;
-}
 
-bool perspectiveDividePair(QInt32 firstNumerator,
-                           QInt32 secondNumerator,
-                           QInt32 denominator,
-                           QInt32& firstResult,
-                           QInt32& secondResult)
-{
-    if (denominator == 0) {
-        return false;
+    QUint32 quotientBits =
+        (whole << KTextureFractionBits) | fractional;
+    if (negative) {
+        quotientBits = static_cast<QUint32>(static_cast<QUint32>(0) -
+                                             quotientBits);
     }
-
-    /* Both U and V use the same W, so compute its reciprocal once. */
-    const QUint32 denominatorMagnitude = unsignedMagnitude(denominator);
-    const QUint32 reciprocal = denominatorMagnitude == 1U
-        ? 0U
-        : static_cast<QUint32>(-1) / denominatorMagnitude + 1U;
-    QUint32 firstBits = scaledQuotientMagnitude(
-        unsignedMagnitude(firstNumerator), denominatorMagnitude, reciprocal);
-    QUint32 secondBits = scaledQuotientMagnitude(
-        unsignedMagnitude(secondNumerator), denominatorMagnitude, reciprocal);
-    if ((firstNumerator < 0) != (denominator < 0)) {
-        firstBits = static_cast<QUint32>(static_cast<QUint32>(0) - firstBits);
-    }
-    if ((secondNumerator < 0) != (denominator < 0)) {
-        secondBits = static_cast<QUint32>(static_cast<QUint32>(0) - secondBits);
-    }
-    firstResult = code::Math::javaIntFromUnsigned(firstBits);
-    secondResult = code::Math::javaIntFromUnsigned(secondBits);
+    result = code::Math::javaIntFromUnsigned(quotientBits);
     return true;
 }
 
@@ -639,8 +626,8 @@ bool drawPerspectiveSpan(const SoftwareRenderSurfaceView& destination,
 
     QInt32 u;
     QInt32 v;
-    if (!perspectiveDividePair(left.uOverDepth, left.vOverDepth,
-                               left.reciprocalDepth, u, v)) {
+    if (!perspectiveDivide(left.uOverDepth, left.reciprocalDepth, u) ||
+        !perspectiveDivide(left.vOverDepth, left.reciprocalDepth, v)) {
         return false;
     }
     QUint32 uBits = static_cast<QUint32>(u);
@@ -668,9 +655,10 @@ bool drawPerspectiveSpan(const SoftwareRenderSurfaceView& destination,
 
             QInt32 endU;
             QInt32 endV;
-            if (!perspectiveDividePair(
-                    left.uOverDepth, left.vOverDepth,
-                    left.reciprocalDepth, endU, endV)) {
+            if (!perspectiveDivide(
+                    left.uOverDepth, left.reciprocalDepth, endU) ||
+                !perspectiveDivide(
+                    left.vOverDepth, left.reciprocalDepth, endV)) {
                 return false;
             }
             const QInt32 divisor =
@@ -684,9 +672,10 @@ bool drawPerspectiveSpan(const SoftwareRenderSurfaceView& destination,
             lineEnd = x2;
             QInt32 endU;
             QInt32 endV;
-            if (!perspectiveDividePair(
-                    right.uOverDepth, right.vOverDepth,
-                    right.reciprocalDepth, endU, endV)) {
+            if (!perspectiveDivide(
+                    right.uOverDepth, right.reciprocalDepth, endU) ||
+                !perspectiveDivide(
+                    right.vOverDepth, right.reciprocalDepth, endV)) {
                 return false;
             }
             du = code::Math::javaIntDiv(
@@ -810,8 +799,8 @@ bool drawPerspectiveEffectSpan(
 
     QInt32 u;
     QInt32 v;
-    if (!perspectiveDividePair(left.uOverDepth, left.vOverDepth,
-                               left.reciprocalDepth, u, v)) {
+    if (!perspectiveDivide(left.uOverDepth, left.reciprocalDepth, u) ||
+        !perspectiveDivide(left.vOverDepth, left.reciprocalDepth, v)) {
         return false;
     }
 
@@ -882,9 +871,10 @@ bool drawPerspectiveEffectSpan(
 
         QInt32 endU;
         QInt32 endV;
-        if (!perspectiveDividePair(
-                segmentEnd.uOverDepth, segmentEnd.vOverDepth,
-                segmentEnd.reciprocalDepth, endU, endV)) {
+        if (!perspectiveDivide(segmentEnd.uOverDepth,
+                               segmentEnd.reciprocalDepth, endU) ||
+            !perspectiveDivide(segmentEnd.vOverDepth,
+                               segmentEnd.reciprocalDepth, endV)) {
             return false;
         }
         const QInt32 du = code::Math::javaIntDiv(
@@ -1029,18 +1019,20 @@ bool drawPerspectiveEffectTriangle(
 
     const QInt32 widthBit = textureWidthBit(texture.width);
     const QUint32 textureMask = static_cast<QUint32>(texture.pixelCount - 1);
+    const QInt32 rowsFromStart = code::Math::javaIntSub(yStart, a.screenY);
+    FixedPerspectivePoint longEdge = advance(fixedA, slopeAC, rowsFromStart);
+    FixedPerspectivePoint shortEdge;
+    if (yStart < b.screenY) {
+        shortEdge = advance(fixedA, slopeAB, rowsFromStart);
+    } else {
+        shortEdge = advance(
+            fixedB, slopeBC, code::Math::javaIntSub(yStart, b.screenY));
+    }
+
     QInt32 y;
     for (y = yStart; y < yEnd; ++y) {
-        const QInt32 rowsFromA = code::Math::javaIntSub(y, a.screenY);
-        const FixedPerspectivePoint longEdge =
-            advance(fixedA, slopeAC, rowsFromA);
-        FixedPerspectivePoint shortEdge;
-        if (y < b.screenY) {
-            shortEdge = advance(fixedA, slopeAB, rowsFromA);
-        } else {
-            shortEdge = advance(
-                fixedB, slopeBC, code::Math::javaIntSub(y, b.screenY));
-        }
+        /* Java starts the lower edge from B exactly at the split scanline. */
+        if (y == b.screenY) shortEdge = fixedB;
         FixedPerspectivePoint left = longEdge;
         FixedPerspectivePoint right = shortEdge;
         if (left.screenX > right.screenX) {
@@ -1052,6 +1044,12 @@ bool drawPerspectiveEffectTriangle(
                 left, right, horizontalSlope, perspectiveStepPixels,
                 floorSpecial, parameters)) {
             return false;
+        }
+        advanceOneRow(longEdge, slopeAC);
+        if (y < b.screenY) {
+            advanceOneRow(shortEdge, slopeAB);
+        } else {
+            advanceOneRow(shortEdge, slopeBC);
         }
     }
     return true;
@@ -1208,19 +1206,20 @@ bool drawPerspectiveCopyTriangle(
 
     const QInt32 widthBit = textureWidthBit(texture.width);
     const QUint32 textureMask = static_cast<QUint32>(texture.pixelCount - 1);
+    const QInt32 rowsFromStart = code::Math::javaIntSub(yStart, a.screenY);
+    FixedPerspectivePoint longEdge = advance(fixedA, slopeAC, rowsFromStart);
+    FixedPerspectivePoint shortEdge;
+    if (yStart < b.screenY) {
+        shortEdge = advance(fixedA, slopeAB, rowsFromStart);
+    } else {
+        shortEdge = advance(
+            fixedB, slopeBC, code::Math::javaIntSub(yStart, b.screenY));
+    }
+
     QInt32 y;
     for (y = yStart; y < yEnd; ++y) {
-        const QInt32 rowsFromA = code::Math::javaIntSub(y, a.screenY);
-        const FixedPerspectivePoint longEdge =
-            advance(fixedA, slopeAC, rowsFromA);
-        FixedPerspectivePoint shortEdge;
-        if (y < b.screenY) {
-            shortEdge = advance(fixedA, slopeAB, rowsFromA);
-        } else {
-            const QInt32 rowsFromB = code::Math::javaIntSub(y, b.screenY);
-            shortEdge = advance(fixedB, slopeBC, rowsFromB);
-        }
-
+        /* Java starts the lower edge from B exactly at the split scanline. */
+        if (y == b.screenY) shortEdge = fixedB;
         FixedPerspectivePoint left = longEdge;
         FixedPerspectivePoint right = shortEdge;
         if (left.screenX > right.screenX) {
@@ -1232,6 +1231,12 @@ bool drawPerspectiveCopyTriangle(
                 destination, texture, widthBit, textureMask, y,
                 left, right, horizontalSlope, perspectiveStepPixels)) {
             return false;
+        }
+        advanceOneRow(longEdge, slopeAC);
+        if (y < b.screenY) {
+            advanceOneRow(shortEdge, slopeAB);
+        } else {
+            advanceOneRow(shortEdge, slopeBC);
         }
     }
     return true;

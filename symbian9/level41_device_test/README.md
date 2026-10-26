@@ -117,12 +117,20 @@ average/maximum, with bitmap BitBlt and phase averages of 0/7/8/0/58 ms. Versus
 v1.0.21, FPS rose by 0.7, average mesh time fell by 18 ms, and draw/raster fell
 by 18 ms; draw/raster is still the largest phase at 58 ms.
 
-Version 1.0.23 shares one exact reciprocal across each pair of perspective U/V
-divides that use the same reciprocal depth. The reciprocal-based integer
-quotient is corrected when it is one too high, and the same 12-bit remainder
-expansion preserves the exact Java result. This halves the 32-bit divide count
-for those pairs without changing interpolation or image quality. Host Level 41
-output remains byte-identical; E65 performance measurement is pending.
+Version 1.0.23 tried sharing one exact reciprocal across each pair of
+perspective U/V divides with the same reciprocal depth. The E65 measured 7.0 FPS
+and 76/77 ms mesh average/maximum, with bitmap BitBlt and phases of
+0/7/8/0/60 ms. Versus v1.0.22, FPS was unchanged and average mesh and draw/raster
+were each 2 ms higher, so the experiment showed no measurable benefit and is
+removed in v1.0.24.
+
+Version 1.0.24 advances perspective scanline edges incrementally: after one
+initial fixed-point calculation at the clipped start, each row advances edge
+coordinates, reciprocal depth, UV-over-depth, and color by wrapped integer
+addition instead of recalculating slope times row offset. The lower edge still
+restarts at vertex B on the split scanline. This is algebraically identical in
+Java 32-bit arithmetic. Host Level 41 output is byte-identical; E65 performance
+measurement is pending.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -190,6 +198,10 @@ Current E65 feedback:
   bitmap BitBlt, and phases of 0/7/8/0/58 ms. Versus v1.0.21, average mesh
   time and draw/raster each fell by 18 ms; the host Level 41 output remains
   byte-identical after the exact perspective-division optimization.
-- The v1.0.23 candidate reuses one exact reciprocal for each U/V quotient pair
-  sharing reciprocal depth. Host output remains byte-identical; E65 timing is
-  pending.
+- The v1.0.23 E65 run reported 7.0 FPS, 76/77 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/60 ms. Versus v1.0.22, FPS was unchanged;
+  average mesh and draw/raster were each 2 ms higher, so the shared-reciprocal
+  experiment had no measurable benefit.
+- The v1.0.24 candidate uses incremental fixed-point edge stepping in both
+  perspective triangle paths. The host Level 41 frame is byte-identical; E65
+  performance measurement is pending.
