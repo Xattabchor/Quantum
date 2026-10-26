@@ -117,6 +117,13 @@ average/maximum, with bitmap BitBlt and phase averages of 0/7/8/0/58 ms. Versus
 v1.0.21, FPS rose by 0.7, average mesh time fell by 18 ms, and draw/raster fell
 by 18 ms; draw/raster is still the largest phase at 58 ms.
 
+Version 1.0.23 shares one exact reciprocal across each pair of perspective U/V
+divides that use the same reciprocal depth. The reciprocal-based integer
+quotient is corrected when it is one too high, and the same 12-bit remainder
+expansion preserves the exact Java result. This halves the 32-bit divide count
+for those pairs without changing interpolation or image quality. Host Level 41
+output remains byte-identical; E65 performance measurement is pending.
+
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
 stored here. The host asset-preparation script converts the four PNG/JPEG
@@ -183,3 +190,6 @@ Current E65 feedback:
   bitmap BitBlt, and phases of 0/7/8/0/58 ms. Versus v1.0.21, average mesh
   time and draw/raster each fell by 18 ms; the host Level 41 output remains
   byte-identical after the exact perspective-division optimization.
+- The v1.0.23 candidate reuses one exact reciprocal for each U/V quotient pair
+  sharing reciprocal depth. Host output remains byte-identical; E65 timing is
+  pending.

@@ -10,6 +10,7 @@ namespace Rendering {
 using code::Math::QInt32;
 using code::Math::QInt64;
 using code::Math::QUint32;
+using code::Math::QUint64;
 
 namespace {
 
@@ -285,31 +286,40 @@ QInt32 textureWidthBit(QInt32 width)
     return 0;
 }
 
-bool perspectiveDivide(QInt32 numerator,
-                       QInt32 denominator,
-                       QInt32& result)
+QUint32 unsignedMagnitude(QInt32 value)
 {
-    if (denominator == 0) {
-        return false;
+    const QUint32 bits = static_cast<QUint32>(value);
+    return value < 0
+        ? static_cast<QUint32>(static_cast<QUint32>(0) - bits)
+        : bits;
+}
+
+QUint32 scaledQuotientMagnitude(QUint32 numeratorMagnitude,
+                                QUint32 denominatorMagnitude,
+                                QUint32 reciprocal)
+{
+    QUint32 whole;
+    QUint32 remainder;
+    if (denominatorMagnitude == 1U) {
+        whole = numeratorMagnitude;
+        remainder = 0;
+    } else {
+        /*
+         * reciprocal is ceil(2^32 / denominator). Since the numerator is at
+         * most 2^31, the high product gives the exact whole quotient or one
+         * too high. Correct that case before extracting the remainder.
+         */
+        const QUint64 product =
+            static_cast<QUint64>(numeratorMagnitude) * reciprocal;
+        whole = static_cast<QUint32>(product >> 32U);
+        QUint32 integerProduct = whole * denominatorMagnitude;
+        if (integerProduct > numeratorMagnitude) {
+            --whole;
+            integerProduct -= denominatorMagnitude;
+        }
+        remainder = numeratorMagnitude - integerProduct;
     }
 
-    /*
-     * Java evaluates ((long) numerator << 12) / denominator, then narrows.
-     * Split the quotient into its integer and 12-bit fractional parts so the
-     * ARMv5 path needs only a 32-bit divide. Extend the remainder one bit at
-     * a time; compare with (divisor - remainder) to avoid unsigned overflow.
-     */
-    const QUint32 numeratorBits = static_cast<QUint32>(numerator);
-    const QUint32 denominatorBits = static_cast<QUint32>(denominator);
-    const QUint32 numeratorMagnitude = numerator < 0
-        ? static_cast<QUint32>(static_cast<QUint32>(0) - numeratorBits)
-        : numeratorBits;
-    const QUint32 denominatorMagnitude = denominator < 0
-        ? static_cast<QUint32>(static_cast<QUint32>(0) - denominatorBits)
-        : denominatorBits;
-    const bool negative = (numerator < 0) != (denominator < 0);
-    const QUint32 whole = numeratorMagnitude / denominatorMagnitude;
-    QUint32 remainder = numeratorMagnitude - whole * denominatorMagnitude;
     QUint32 fractional = 0;
     unsigned int bit;
     for (bit = 0; bit < KTextureFractionBits; ++bit) {
@@ -322,14 +332,36 @@ bool perspectiveDivide(QInt32 numerator,
             remainder += remainder;
         }
     }
+    return (whole << KTextureFractionBits) | fractional;
+}
 
-    QUint32 quotientBits =
-        (whole << KTextureFractionBits) | fractional;
-    if (negative) {
-        quotientBits = static_cast<QUint32>(static_cast<QUint32>(0) -
-                                             quotientBits);
+bool perspectiveDividePair(QInt32 firstNumerator,
+                           QInt32 secondNumerator,
+                           QInt32 denominator,
+                           QInt32& firstResult,
+                           QInt32& secondResult)
+{
+    if (denominator == 0) {
+        return false;
     }
-    result = code::Math::javaIntFromUnsigned(quotientBits);
+
+    /* Both U and V use the same W, so compute its reciprocal once. */
+    const QUint32 denominatorMagnitude = unsignedMagnitude(denominator);
+    const QUint32 reciprocal = denominatorMagnitude == 1U
+        ? 0U
+        : static_cast<QUint32>(-1) / denominatorMagnitude + 1U;
+    QUint32 firstBits = scaledQuotientMagnitude(
+        unsignedMagnitude(firstNumerator), denominatorMagnitude, reciprocal);
+    QUint32 secondBits = scaledQuotientMagnitude(
+        unsignedMagnitude(secondNumerator), denominatorMagnitude, reciprocal);
+    if ((firstNumerator < 0) != (denominator < 0)) {
+        firstBits = static_cast<QUint32>(static_cast<QUint32>(0) - firstBits);
+    }
+    if ((secondNumerator < 0) != (denominator < 0)) {
+        secondBits = static_cast<QUint32>(static_cast<QUint32>(0) - secondBits);
+    }
+    firstResult = code::Math::javaIntFromUnsigned(firstBits);
+    secondResult = code::Math::javaIntFromUnsigned(secondBits);
     return true;
 }
 
@@ -607,8 +639,8 @@ bool drawPerspectiveSpan(const SoftwareRenderSurfaceView& destination,
 
     QInt32 u;
     QInt32 v;
-    if (!perspectiveDivide(left.uOverDepth, left.reciprocalDepth, u) ||
-        !perspectiveDivide(left.vOverDepth, left.reciprocalDepth, v)) {
+    if (!perspectiveDividePair(left.uOverDepth, left.vOverDepth,
+                               left.reciprocalDepth, u, v)) {
         return false;
     }
     QUint32 uBits = static_cast<QUint32>(u);
@@ -636,10 +668,9 @@ bool drawPerspectiveSpan(const SoftwareRenderSurfaceView& destination,
 
             QInt32 endU;
             QInt32 endV;
-            if (!perspectiveDivide(
-                    left.uOverDepth, left.reciprocalDepth, endU) ||
-                !perspectiveDivide(
-                    left.vOverDepth, left.reciprocalDepth, endV)) {
+            if (!perspectiveDividePair(
+                    left.uOverDepth, left.vOverDepth,
+                    left.reciprocalDepth, endU, endV)) {
                 return false;
             }
             const QInt32 divisor =
@@ -653,10 +684,9 @@ bool drawPerspectiveSpan(const SoftwareRenderSurfaceView& destination,
             lineEnd = x2;
             QInt32 endU;
             QInt32 endV;
-            if (!perspectiveDivide(
-                    right.uOverDepth, right.reciprocalDepth, endU) ||
-                !perspectiveDivide(
-                    right.vOverDepth, right.reciprocalDepth, endV)) {
+            if (!perspectiveDividePair(
+                    right.uOverDepth, right.vOverDepth,
+                    right.reciprocalDepth, endU, endV)) {
                 return false;
             }
             du = code::Math::javaIntDiv(
@@ -780,8 +810,8 @@ bool drawPerspectiveEffectSpan(
 
     QInt32 u;
     QInt32 v;
-    if (!perspectiveDivide(left.uOverDepth, left.reciprocalDepth, u) ||
-        !perspectiveDivide(left.vOverDepth, left.reciprocalDepth, v)) {
+    if (!perspectiveDividePair(left.uOverDepth, left.vOverDepth,
+                               left.reciprocalDepth, u, v)) {
         return false;
     }
 
@@ -852,10 +882,9 @@ bool drawPerspectiveEffectSpan(
 
         QInt32 endU;
         QInt32 endV;
-        if (!perspectiveDivide(segmentEnd.uOverDepth,
-                               segmentEnd.reciprocalDepth, endU) ||
-            !perspectiveDivide(segmentEnd.vOverDepth,
-                               segmentEnd.reciprocalDepth, endV)) {
+        if (!perspectiveDividePair(
+                segmentEnd.uOverDepth, segmentEnd.vOverDepth,
+                segmentEnd.reciprocalDepth, endU, endV)) {
             return false;
         }
         const QInt32 du = code::Math::javaIntDiv(
