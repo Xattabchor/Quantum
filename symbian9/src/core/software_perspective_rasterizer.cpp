@@ -674,10 +674,15 @@ bool drawPerspectiveSpan(const SoftwareRenderSurfaceView& destination,
             }
             const QInt32 divisor =
                 code::Math::javaIntAdd(perspectiveStepPixels, 1);
-            du = code::Math::javaIntDiv(
-                code::Math::javaIntSub(endU, u), divisor);
-            dv = code::Math::javaIntDiv(
-                code::Math::javaIntSub(endV, v), divisor);
+            const QInt32 deltaU = code::Math::javaIntSub(endU, u);
+            const QInt32 deltaV = code::Math::javaIntSub(endV, v);
+            if (divisor == 25) {
+                du = deltaU / 25;
+                dv = deltaV / 25;
+            } else {
+                du = code::Math::javaIntDiv(deltaU, divisor);
+                dv = code::Math::javaIntDiv(deltaV, divisor);
+            }
             length = code::Math::javaIntSub(length, perspectiveStepPixels);
         } else {
             lineEnd = x2;
@@ -888,10 +893,17 @@ bool drawPerspectiveEffectSpan(
                                segmentEnd.reciprocalDepth, endV)) {
             return false;
         }
-        const QInt32 du = code::Math::javaIntDiv(
-            code::Math::javaIntSub(endU, u), pixelsInSegment);
-        const QInt32 dv = code::Math::javaIntDiv(
-            code::Math::javaIntSub(endV, v), pixelsInSegment);
+        const QInt32 deltaU = code::Math::javaIntSub(endU, u);
+        const QInt32 deltaV = code::Math::javaIntSub(endV, v);
+        QInt32 du;
+        QInt32 dv;
+        if (pixelsInSegment == 24) {
+            du = deltaU / 24;
+            dv = deltaV / 24;
+        } else {
+            du = code::Math::javaIntDiv(deltaU, pixelsInSegment);
+            dv = code::Math::javaIntDiv(deltaV, pixelsInSegment);
+        }
         const QUint32 duBits = static_cast<QUint32>(du);
         const QUint32 dvBits = static_cast<QUint32>(dv);
         QInt32 i;
