@@ -49,6 +49,29 @@ public class MultyTexture {
             System.out.println("Loading Texture:" + i);
             String[] texInfo = GameIni.cutOnStrings(texList[i], ',', ';');
 
+            // Water scroll tokens FIRST: "wat"/"watv"/"watu"+speed mark the
+            // texture for native UV-scroll; they are stripped here so the
+            // legacy positional fields below (drawmode/addsz/...) keep their
+            // indices intact regardless of where "wat" sits in the line.
+            int watCount = 0;
+            int wdir = 0; float wsp = 0f;
+            for(int k = 0; k < texInfo.length; k++)
+                if(texInfo[k].trim().toLowerCase().startsWith("wat")) watCount++;
+            if(watCount > 0) {
+                String[] rest = new String[texInfo.length - watCount];
+                int n = 0;
+                for(int k = 0; k < texInfo.length; k++) {
+                    String t = texInfo[k].trim().toLowerCase();
+                    if(!t.startsWith("wat")) { rest[n++] = texInfo[k]; continue; }
+                    wdir = t.startsWith("watu") ? 2 : 1;
+                    int p = t.startsWith("watu") || t.startsWith("watv") ? 4 : 3;
+                    float sp = p < t.length()
+                            ? StringTools.parseFloat(t.substring(p)) : 0.25f;
+                    wsp = sp > 0 ? sp : 0.25f;
+                }
+                texInfo = rest;
+            }
+
             
             String[] animation = StringTools.cutOnStrings(texInfo[0], ':');
             textures[i] = Asset.getTexture(animation[animation.length>1?1:0].trim());
@@ -61,6 +84,7 @@ public class MultyTexture {
                 }
             }
             textures[i].setPerspectiveCorrection(true);
+            if(wdir != 0) { textures[i].uvScroll = wdir; textures[i].uvScrollSpeed = wsp; }
             
             if(texInfo.length>=2) {
                 if(!texInfo[1].toLowerCase().trim().equals("std")) { 
@@ -72,18 +96,6 @@ public class MultyTexture {
             if(texInfo.length>=4) textures[i].setPerspectiveCorrection(StringTools.parseInt(texInfo[3])==1);
             if(texInfo.length>=5) textures[i].castShadow=StringTools.parseInt(texInfo[4])==1;
             if(texInfo.length>=6) textures[i].collision=StringTools.parseInt(texInfo[5])==1;
-            // Water tokens anywhere in the tail: "wat", "watv", "watu" + speed
-            // — switches this texture to UV-scroll on the M3G path (kordos FX).
-            for(int k = 1; k < texInfo.length; k++) {
-                String t = texInfo[k].trim().toLowerCase();
-                if(t.startsWith("wat")) {
-                    textures[i].uvScroll = t.startsWith("watu") ? 2 : 1;
-                    int p = t.startsWith("watu") || t.startsWith("watv") ? 4 : 3;
-                    float sp = p < t.length()
-                            ? StringTools.parseFloat(t.substring(p)) : 0.25f;
-                    textures[i].uvScrollSpeed = sp > 0 ? sp : 0.25f;
-                }
-            }
         }
     }
 
