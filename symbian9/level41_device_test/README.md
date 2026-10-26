@@ -104,15 +104,18 @@ cache retain the previous projection path. The 720x960 Level 41 host render
 with the cached path is byte-identical to the previous render. On the E65 it
 measured 6.3 FPS and 92/94 ms mesh average/maximum, with bitmap BitBlt and phase
 averages of 0/7/8/0/76 ms. Versus v1.0.20, average mesh time fell by 8 ms and
-cull/queue fell by 9 ms; draw/raster remained at 76 ms, making it the next phase
-to investigate.
+cull/queue fell by 9 ms. At v1.0.21, draw/raster remained the largest phase at
+76 ms and became the next optimization target.
 
 Version 1.0.22 replaces the perspective rasterizer's signed 64-bit divide at
 span endpoints with an exact quotient decomposition: one unsigned 32-bit divide
 plus 12 remainder-doubling steps for the 12 fractional bits. The sign handling,
 truncation toward zero, and Java 32-bit narrowing/wraparound are preserved. The
 change targets ARMv5's software 64-bit division path; a host Level 41 render is
-byte-identical to v1.0.21. E65 performance measurement is pending.
+byte-identical to v1.0.21. On the E65 it measured 7.0 FPS and 74/75 ms mesh
+average/maximum, with bitmap BitBlt and phase averages of 0/7/8/0/58 ms. Versus
+v1.0.21, FPS rose by 0.7, average mesh time fell by 18 ms, and draw/raster fell
+by 18 ms; draw/raster is still the largest phase at 58 ms.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -176,6 +179,7 @@ Current E65 feedback:
   bitmap BitBlt, and phases of 0/7/8/0/76 ms. Versus v1.0.20, average mesh
   time fell by 8 ms and cull/queue by 9 ms; draw/raster remained at 76 ms.
   The cached cull/queue path is host byte-identical to the prior render.
-- The v1.0.22 candidate replaces the perspective span endpoint's 64-bit
-  division with an exactly equivalent 32-bit quotient plus 12-bit remainder
-  expansion. Host Level 41 output remains byte-identical; E65 timing is pending.
+- The v1.0.22 E65 run reported 7.0 FPS, 74/75 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/58 ms. Versus v1.0.21, average mesh
+  time and draw/raster each fell by 18 ms; the host Level 41 output remains
+  byte-identical after the exact perspective-division optimization.
