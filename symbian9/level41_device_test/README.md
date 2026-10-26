@@ -255,5 +255,16 @@ benchmark while DSA is active, and the overlay identifies DSA or reports its
 error code. If DSA setup or frame submission fails, the app returns to the
 existing bitmap-GDI BitBlt presenter and restarts timing after fallback setup.
 The `quantum_level41_no_dsa` companion remains available. Host tests and the
-Level 41 framebuffer hash are verified; DSA runtime and S60 OS 9.1
-compatibility remain unverified.
+Level 41 framebuffer hash are verified; DSA runtime is confirmed on the E65,
+but general S60 OS 9.1 compatibility remains unverified.
+
+The user measured v1.0.31 on the E65 at 7.1 FPS and 71/72 ms mesh
+average/maximum, with `DSA bitmap blit` active and phases of 0/6/8/0/56 ms.
+Compared with the v1.0.28 GDI result, FPS and mesh time were unchanged; the
+phase differences were within 1 ms, so DSA has not shown a measurable overall
+speedup yet. The user also reports that the overlay text flickers during the
+10-second sample and becomes stable when the timer stops. In v1.0.32, the
+statistics overlay is drawn into the offscreen EColor64K bitmap before its DSA
+BitBlt, so each refresh presents the complete image and text together. The
+software renderer remains at the v1.0.28 state; the anti-flicker presentation
+change still needs E65 verification.

@@ -917,7 +917,8 @@ public:
                         CWsScreenDevice& screen,
                         const TSize& size)
         : iSession(session), iScreen(screen), iSize(size), iAccess(0),
-          iStarter(0), iPixmap(0), iStridePixels(0), iDsaActive(false)
+          iStarter(0), iPixmap(0), iPixmapDevice(0), iPixmapGc(0),
+          iStridePixels(0), iDsaActive(false)
     {
     }
 
@@ -949,7 +950,10 @@ public:
 
     void PreparePixmapL()
     {
-        if (iPixmap != 0 && iStridePixels >= iSize.iWidth) return;
+        if (iPixmap != 0 && iPixmapDevice != 0 && iPixmapGc != 0 &&
+            iStridePixels >= iSize.iWidth) {
+            return;
+        }
         CleanupPixmap();
 
         iPixmap = new(ELeave) CWsBitmap(iSession);
@@ -961,10 +965,16 @@ public:
             User::Leave(KErrNotSupported);
         }
         iStridePixels = scanLineBytes / 2;
+        iPixmapDevice = CFbsBitmapDevice::NewL(iPixmap);
+        User::LeaveIfError(iPixmapDevice->CreateContext(iPixmapGc));
     }
 
     void CleanupPixmap()
     {
+        delete iPixmapGc;
+        iPixmapGc = 0;
+        delete iPixmapDevice;
+        iPixmapDevice = 0;
         delete iPixmap;
         iPixmap = 0;
         iStridePixels = 0;
@@ -973,14 +983,14 @@ public:
     bool DrawFrame()
     {
         if (!iDsaActive || iAccess == 0 || iAccess->Gc() == 0 ||
-            iPixmap == 0 ||
+            iPixmap == 0 || iPixmapGc == 0 ||
             !fillLevel41Rgb565Bitmap(*iPixmap, iSize, iStridePixels)) {
             return false;
         }
 
-        CBitmapContext* gc = iAccess->Gc();
-        gc->BitBlt(TPoint(0, 0), iPixmap);
-        drawStatusOverlay(iScreen, *gc, iSize);
+        /* Composite the changing statistics before presenting the full frame. */
+        drawStatusOverlay(iScreen, *iPixmapGc, iSize);
+        iAccess->Gc()->BitBlt(TPoint(0, 0), iPixmap);
         return true;
     }
 
@@ -1000,6 +1010,8 @@ private:
     CDirectScreenAccess* iAccess;
     CDsaStarter* iStarter;
     CWsBitmap* iPixmap;
+    CFbsBitmapDevice* iPixmapDevice;
+    CFbsBitGc* iPixmapGc;
     TInt iStridePixels;
     bool iDsaActive;
 };
