@@ -228,7 +228,7 @@ Current E65 feedback:
   bitmap BitBlt, and phases of 0/7/8/0/56 ms. This is unchanged from v1.0.26,
   so the fractional-division iteration change showed no measurable device
   performance gain. The host Level 41 framebuffer remains byte-identical.
-- The v1.0.28 candidate uses compile-time constant division for 24-pixel
-  perspective-effect spans and the matching 25 divisor in copy spans, retaining
-  Java-compatible division for other lengths. The host Level 41 framebuffer
-  remains byte-identical; E65 performance measurement is pending.
+- The v1.0.28 E65 run reported 7.1 FPS, 71/72 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/55 ms. Versus v1.0.27, FPS was unchanged;
+  mesh average/maximum and draw/raster each fell by 1 ms. The host Level 41
+  framebuffer remains byte-identical after the constant-step divisions.
