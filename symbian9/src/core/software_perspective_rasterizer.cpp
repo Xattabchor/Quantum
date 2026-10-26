@@ -510,6 +510,7 @@ void writePerspectivePixel(
         code::Math::javaIntFromUnsigned(sum | carry);
 }
 
+template<bool MayContainZeroTexels>
 bool drawPerspectiveSpan(const SoftwareRenderSurfaceView& destination,
                          const SoftwareTextureView& texture,
                          QInt32 widthBit,
@@ -646,8 +647,14 @@ bool drawPerspectiveSpan(const SoftwareRenderSurfaceView& destination,
             vBits += dvBits;
             const QInt32 texel = sampleTexture(
                 texture, widthBit, textureMask, uBits, vBits);
-            if (texel != 0) {
-                destination.pixels[rowOffset + static_cast<size_t>(x1)] = texel;
+            if (MayContainZeroTexels) {
+                if (texel != 0) {
+                    destination.pixels[
+                        rowOffset + static_cast<size_t>(x1)] = texel;
+                }
+            } else {
+                destination.pixels[
+                    rowOffset + static_cast<size_t>(x1)] = texel;
             }
             ++x1;
         }
@@ -1044,7 +1051,10 @@ bool allDark(QInt32 firstBrightness,
 
 } // anonymous namespace
 
-bool SoftwarePerspectiveRasterizer::drawMode0Copy(
+namespace {
+
+template<bool MayContainZeroTexels>
+bool drawPerspectiveCopyTriangle(
     const SoftwareRenderSurfaceView& destination,
     const SoftwareTextureView& texture,
     const AffineTriangleVertex& first,
@@ -1158,13 +1168,34 @@ bool SoftwarePerspectiveRasterizer::drawMode0Copy(
             right = longEdge;
         }
 
-        if (!drawPerspectiveSpan(
+        if (!drawPerspectiveSpan<MayContainZeroTexels>(
                 destination, texture, widthBit, textureMask, y,
                 left, right, horizontalSlope, perspectiveStepPixels)) {
             return false;
         }
     }
     return true;
+}
+
+} // anonymous namespace
+
+bool SoftwarePerspectiveRasterizer::drawMode0Copy(
+    const SoftwareRenderSurfaceView& destination,
+    const SoftwareTextureView& texture,
+    const AffineTriangleVertex& first,
+    const AffineTriangleVertex& second,
+    const AffineTriangleVertex& third,
+    QInt32 perspectiveStepPixels,
+    QInt32 move)
+{
+    if (texture.mayContainZeroTexels) {
+        return drawPerspectiveCopyTriangle<true>(
+            destination, texture, first, second, third,
+            perspectiveStepPixels, move);
+    }
+    return drawPerspectiveCopyTriangle<false>(
+        destination, texture, first, second, third,
+        perspectiveStepPixels, move);
 }
 
 bool SoftwarePerspectiveRasterizer::drawMode1Add(

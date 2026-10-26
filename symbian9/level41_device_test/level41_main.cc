@@ -253,15 +253,18 @@ void setupWorldMaterials(const TextureInfo& forest,
 {
     gWorldMipViews[0] = SoftwareTextureView(
         gForestPixels, forest.width * forest.height,
-        forest.width, forest.height, forest.hasTransparentTexels);
+        forest.width, forest.height, forest.hasTransparentTexels,
+        forest.hasTransparentTexels);
     gWorldMipViews[1] = SoftwareTextureView(
         gMapPixels, map.width * map.height,
-        map.width, map.height, map.hasTransparentTexels);
+        map.width, map.height, map.hasTransparentTexels,
+        map.hasTransparentTexels);
     gWorldMipViews[2] = gWorldMipViews[1];
     gWorldMipViews[3] = gWorldMipViews[1];
     gWorldMipViews[4] = SoftwareTextureView(
         gRiverPixels, river.width * river.height,
-        river.width, river.height, river.hasTransparentTexels);
+        river.width, river.height, river.hasTransparentTexels,
+        river.hasTransparentTexels);
 
     const QInt32 biases[5] = { -20000, 0, -3500, -7000, 0 };
     const bool alphaMixing[5] = {
@@ -404,7 +407,8 @@ bool loadLevel41(RFs& fileServer, const TDesC& drive)
     setupWorldMaterials(forest, map, river);
     gSkyMipView = SoftwareTextureView(
         gSkyPixels, sky.width * sky.height,
-        sky.width, sky.height, sky.hasTransparentTexels);
+        sky.width, sky.height, sky.hasTransparentTexels,
+        sky.hasTransparentTexels);
     gSkyMaterial[0].textureAlphaMixing = sky.alphaMixing;
 
     SoftwareMesh3DRequirements worldRequirements;

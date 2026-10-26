@@ -58,11 +58,14 @@ sorting, and drawing/rasterization. Its E65 run reported 5.7 FPS and 108/110 ms
 mesh average/maximum, with phase averages of 5/7/17/0/79 ms respectively.
 Drawing/rasterization is the dominant measured phase (about 73% of mesh time).
 The added clock reads make this a diagnostic build; the phase times are
-approximate and its FPS may include a small profiling cost. Version 1.0.17
-keeps the Java-compatible modulo-32-bit UV stepping but performs the inner
-affine and perspective scanline increments as unsigned bit arithmetic,
-avoiding repeated wrap-helper work per sampled pixel. Host tests pass, and the
-Level 41 host framebuffer is pixel-identical before and after this optimization.
+approximate and its FPS may include a small profiling cost. The E65 measured
+v1.0.17 at 5.6 FPS and 109/111 ms mesh average/maximum, with the same 5/7/17/0/79
+ms phase breakdown. That short run did not show a measurable improvement in
+the dominant raster phase. Version 1.0.18 adds a branch-free mode-0 copy path
+for textures explicitly guaranteed not to contain the transparent-zero key;
+all other texture views retain the conservative behavior. The Level 41 asset
+loader can make that guarantee from its RGBA alpha bytes. Host tests pass, and
+the Level 41 host framebuffer is pixel-identical with and without the fast path.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -106,5 +109,10 @@ Current E65 feedback:
   bitmap BitBlt, and phase averages: validation 5 ms, transform/projection
   7 ms, cull/queue 17 ms, sort 0 ms, draw/raster 79 ms. Rasterization is the
   largest measured phase on this benchmark.
-- The v1.0.17 candidate uses unsigned UV accumulation in affine and perspective
-  span loops; its device performance has not yet been measured.
+- The v1.0.17 E65 run reported 5.6 FPS, 109/111 ms mesh average/maximum,
+  bitmap BitBlt, and phase averages: validation 5 ms, transform/projection
+  7 ms, cull/queue 17 ms, sort 0 ms, draw/raster 79 ms. It did not show a
+  measurable reduction in the dominant phase.
+- The v1.0.18 candidate skips the zero-key test in mode-0 copy loops only for
+  textures the Level 41 loader can prove contain no zero texels; device
+  performance is not yet measured.

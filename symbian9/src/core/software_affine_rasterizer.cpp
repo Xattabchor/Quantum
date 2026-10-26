@@ -18,6 +18,7 @@ const unsigned int KTextureFractionBits = 12U;
 
 enum RasterPixelMode {
     ERasterPixelCopy,
+    ERasterPixelCopyOpaque,
     ERasterPixelFogAdd,
     ERasterPixelSurfaceAdd,
     ERasterPixelFogBlendLow,
@@ -197,6 +198,10 @@ inline void writePixel(const SoftwareRenderSurfaceView& destination,
                        const AffineTriangleColor& colorSlope,
                        QInt32 logicalDestinationIndex)
 {
+    if (Mode == ERasterPixelCopyOpaque) {
+        destination.pixels[destinationIndex] = texel;
+        return;
+    }
     if (Mode == ERasterPixelFill) {
         destination.pixels[destinationIndex] = parameters.first;
         return;
@@ -616,7 +621,7 @@ SoftwareRenderSurfaceView::SoftwareRenderSurfaceView(
 
 SoftwareTextureView::SoftwareTextureView()
     : pixels(0), pixelCount(0), width(0), height(0),
-      hasTransparentTexels(false)
+      hasTransparentTexels(false), mayContainZeroTexels(true)
 {
 }
 
@@ -624,9 +629,11 @@ SoftwareTextureView::SoftwareTextureView(const QInt32* texturePixels,
                                          QInt32 texturePixelCount,
                                          QInt32 textureWidth,
                                          QInt32 textureHeight,
-                                         bool textureHasTransparentTexels)
+                                         bool textureHasTransparentTexels,
+                                         bool textureMayContainZeroTexels)
     : pixels(texturePixels), pixelCount(texturePixelCount), width(textureWidth),
-      height(textureHeight), hasTransparentTexels(textureHasTransparentTexels)
+      height(textureHeight), hasTransparentTexels(textureHasTransparentTexels),
+      mayContainZeroTexels(textureMayContainZeroTexels)
 {
 }
 
@@ -1237,6 +1244,11 @@ bool SoftwareAffineRasterizer::drawMode0(
     const AffineTriangleVertex& second,
     const AffineTriangleVertex& third)
 {
+    if (!texture.mayContainZeroTexels) {
+        return drawAffineTriangle<ERasterPixelCopyOpaque>(
+            destination, texture, first, second, third,
+            RasterPixelParameters());
+    }
     return drawAffineTriangle<ERasterPixelCopy>(
         destination, texture, first, second, third, RasterPixelParameters());
 }

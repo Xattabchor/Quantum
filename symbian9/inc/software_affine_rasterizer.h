@@ -28,13 +28,16 @@ struct SoftwareTextureView {
     code::Math::QInt32 width;
     code::Math::QInt32 height;
     bool hasTransparentTexels;
+    /* True by default; false guarantees no sampled texel equals the zero key. */
+    bool mayContainZeroTexels;
 
     SoftwareTextureView();
     SoftwareTextureView(const code::Math::QInt32* pixels,
                         code::Math::QInt32 pixelCount,
                         code::Math::QInt32 width,
                         code::Math::QInt32 height,
-                        bool hasTransparentTexels = false);
+                        bool hasTransparentTexels = false,
+                        bool mayContainZeroTexels = true);
 };
 
 /* Screen coordinates are pixels, U/V are integer texels, and depthRz is
