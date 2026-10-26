@@ -232,3 +232,10 @@ Current E65 feedback:
   bitmap BitBlt, and phases of 0/7/8/0/55 ms. Versus v1.0.27, FPS was unchanged;
   mesh average/maximum and draw/raster each fell by 1 ms. The host Level 41
   framebuffer remains byte-identical after the constant-step divisions.
+- The v1.0.29 candidate specializes the perspective copy-triangle path, which
+  does not consume vertex colors. It omits RGB slope divisions and RGB edge
+  setup/scanline updates while preserving the exact screen, depth, and UV
+  integer operations. Host tests pass (34,119 checks; 69 `.3d` assets), and the
+  Level 41 framebuffer remains byte-identical (SHA-256
+  `aa0a90263d5ffd434916aae78bfa134d58e27c7e3b187c071bd51ed3b228e7cd`). E65
+  performance measurement is pending.
