@@ -18,7 +18,12 @@ pdfmetrics.registerFont(TTFont('DJB', FD + '/DejaVuSans-Bold.ttf'))
 pdfmetrics.registerFont(TTFont('DJM', FD + '/DejaVuSansMono.ttf'))
 pdfmetrics.registerFont(TTFont('DJMB', FD + '/DejaVuSansMono-Bold.ttf'))
 
-COMMIT = '13316b210725e77e08a52dc8debc29e0d22bd0d4'
+import subprocess
+try:
+    COMMIT = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
+                                     text=True).strip()
+except Exception:
+    COMMIT = 'worktree'
 OUT = 'docs/Quantum_Render_Modes_Guide.pdf'
 
 H1 = ParagraphStyle('H1', fontName='DJB', fontSize=15, leading=19,
@@ -136,8 +141,8 @@ rows = [
      'Аппаратный lit-проход; при поломке pass → мод 0', '—'),
     ('7', 'glass', 'paint_glass: блик (col−0x808080)·scale>>24 поверх',
      'MODULATE (блик не переносится; см. §9)', '—'),
-    ('8', 'fill', 'Плоская заливка, узор текстуры игнорируется',
-     'близко к REPLACE; lit-проход отвергает', '—'),
+    ('8', 'fill', 'Плоская заливка: цвет = тексель по первой UV треугольника',
+     'точно: тексель-семпл, без аплоада текстуры; lit отвергает', '—'),
     ('9', 'baked light', 'Лайтмап, запечённый в вершинах (+ туман)',
      'static-lightmap: вершинные цвета, без дистант-тумана', 'запечён'),
     ('10', 'dither grad', 'Дизер-градиент прозрачности по вершинным альфам',
