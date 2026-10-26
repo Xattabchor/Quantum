@@ -422,9 +422,6 @@ public final class M3GSceneRenderer implements SceneRenderer {
         // Mode 6 = hardware-lit opt-in (handled above; falls back to plain here).
         if(mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4
                 && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 10 && mode != 11 && mode != 12 && mode != 13) return false;
-        // Mode 1 (legacy CPU fog-tint texturing) is dead weight on M3G:
-        // repurposed as flat fill, handled by the mode-8 solid-fill path.
-        if(mode == 1) mode = 8;
         boolean exponential=mode==12;
         boolean nativeFog=Main.fogQ>0
                 && (mode==3 || mode==6 || (exponential && Mode12Fog.density()>0));
@@ -538,7 +535,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
         // Standard native fog is a single pass for HQ/LQ and affine UVs alike.
         batchable=true;
-        int kind = mode == 2 ? ADD_TEXTURE : mode == 11 || mode == 4 ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
+        int kind = mode == 2 ? ADD_TEXTURE : mode == 1 || mode == 11 || (mode == 4 && raw.alphaMixing) ? ALPHA_TEXTURE : OPAQUE_TEXTURE;
         // Cache eviction/uploads are done outside a bound target.
         Texture2D nativeTexture = texture(g, raw, kind);
         CachedTexture nativeEntry=lastTexture;

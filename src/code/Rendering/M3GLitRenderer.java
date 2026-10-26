@@ -390,7 +390,7 @@ public final class M3GLitRenderer {
     public boolean draw(DirectX7 g, RenderObject object, Texture texture,
             int mode, int count, Vertex[] vertices, int[] uvIn) {
         // Keep exotic fill/fog modes on their certified CPU-equivalent path.
-        if(mode == 1 || mode == 8 || mode == 10 || mode == 12) { frameFail++; frameReason = 1; return false; }
+        if(mode == 8 || mode == 10 || mode == 12) { frameFail++; frameReason = 1; return false; }
         RawImage raw = texture.rImg;
         // Water UV-scroll: pin the base frame (or the sole static texture) and
         // scroll its UV transform natively — one resident texture.
@@ -594,7 +594,7 @@ public final class M3GLitRenderer {
                     ? litTexture(g, (Texture) at.tex, raw, kind) : at.t2d;
         } else {
             kind = mode == 2 ? M3GSceneRenderer.ADD_TEXTURE
-                    : mode == 11 || mode == 4
+                    : mode == 1 || mode == 11 || (mode == 4 && raw.alphaMixing)
                     ? M3GSceneRenderer.ALPHA_TEXTURE : M3GSceneRenderer.OPAQUE_TEXTURE;
             tex = litTexture(g, texture, raw, kind);
             func = mode == 11 ? Texture2D.FUNC_DECAL
