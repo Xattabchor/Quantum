@@ -220,3 +220,6 @@ Current E65 feedback:
   bitmap BitBlt, and phases of 0/7/8/0/57 ms. This is unchanged from v1.0.24,
   so the unsigned color-arithmetic optimization showed no measurable device
   performance gain. Host Level 41 output remains byte-identical.
+- The v1.0.26 candidate short-circuits exact-zero perspective numerators and
+  skips fractional quotient stepping when the integer division has no
+  remainder. Host framebuffer and E65 performance checks are pending.
