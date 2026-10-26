@@ -101,8 +101,11 @@ full temporary camera/projected vertices for every polygon in the cull/queue
 pass. The cached path gathers only camera depth and projected x/y coordinates
 needed for culling, sorting, and mip selection; callers without the optional
 cache retain the previous projection path. The 720x960 Level 41 host render
-with the cached path is byte-identical to the previous render. Device
-performance is pending.
+with the cached path is byte-identical to the previous render. On the E65 it
+measured 6.3 FPS and 92/94 ms mesh average/maximum, with bitmap BitBlt and phase
+averages of 0/7/8/0/76 ms. Versus v1.0.20, average mesh time fell by 8 ms and
+cull/queue fell by 9 ms; draw/raster remained at 76 ms, making it the next phase
+to investigate.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -162,6 +165,7 @@ Current E65 feedback:
 - The v1.0.20 E65 run reported 5.9 FPS, 100/103 ms mesh average/maximum,
   bitmap BitBlt, and phases of 0/7/17/0/76 ms. This is no measurable change
   versus v1.0.19 despite skipping mode-9 zero-key checks on opaque textures.
-- The v1.0.21 candidate reduces per-polygon temporary vertex copying in the
-  cull/queue pass when the optional projected-vertex cache is supplied. Host
-  output is byte-identical; device performance is pending.
+- The v1.0.21 E65 run reported 6.3 FPS, 92/94 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/76 ms. Versus v1.0.20, average mesh
+  time fell by 8 ms and cull/queue by 9 ms; draw/raster remained at 76 ms.
+  The cached cull/queue path is host byte-identical to the prior render.
