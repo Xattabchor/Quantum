@@ -389,8 +389,9 @@ public final class M3GLitRenderer {
      */
     public boolean draw(DirectX7 g, RenderObject object, Texture texture,
             int mode, int count, Vertex[] vertices, int[] uvIn) {
-        // Keep exotic fill/fog modes on their certified CPU-equivalent path.
-        if(mode == 8 || mode == 10 || mode == 12) { frameFail++; frameReason = 1; return false; }
+        // Keep exotic fill/fog and framebuffer-blend modes (7=X2, 8/10, 12) on the
+        // certified scene-renderer path - the lit pass only composites REPLACE/ALPHA/ADD.
+        if(mode == 7 || mode == 8 || mode == 10 || mode == 12) { frameFail++; frameReason = 1; return false; }
         RawImage raw = texture.rImg;
         // Water UV-scroll: pin the base frame (or the sole static texture) and
         // scroll its UV transform natively — one resident texture.
