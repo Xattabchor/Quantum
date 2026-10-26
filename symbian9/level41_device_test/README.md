@@ -222,4 +222,5 @@ Current E65 feedback:
   performance gain. Host Level 41 output remains byte-identical.
 - The v1.0.26 candidate short-circuits exact-zero perspective numerators and
   skips fractional quotient stepping when the integer division has no
-  remainder. Host framebuffer and E65 performance checks are pending.
+  remainder. The host Level 41 framebuffer remains byte-identical; E65
+  performance measurement is pending.
