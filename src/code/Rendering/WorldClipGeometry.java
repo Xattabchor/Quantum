@@ -6,7 +6,7 @@ package code.Rendering;
  * whole-polygon CPU fallback. Existing successful packets never enter here.
  */
 public final class WorldClipGeometry {
-    private static final int STRIDE=11,MAX_TRIANGLES=64,MAX_WEIGHT=4096;
+    private static final int STRIDE=11,MAX_TRIANGLES=64,MAX_WEIGHT=16384;
     private final float[] first=new float[STRIDE*10],second=new float[STRIDE*10];
     private final float[] clipped=new float[STRIDE*10];
     private boolean depthSplit;
