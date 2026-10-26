@@ -624,6 +624,58 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
     }
 
+    /** M3G port of the CPU affine triangle painter: draws one textured
+     *  triangle through the hardware pipe instead of pixel-bashing g.display.
+     *  Coordinates are screen-space (sx/sy), UVs are texel-space (0..255). */
+    public void paintM3GTriangle(DirectX7 g, Texture texture,
+            Vertex a, int au, int av,
+            Vertex b, int bu, int bv,
+            Vertex c, int cu, int cv) {
+        RawImage raw = texture.rImg;
+        if(raw == null || raw.img == null || raw.img.length == 0) return;
+        if(!powerOfTwo(raw.w) || !powerOfTwo(raw.h)) return;
+        if(raw.w > maxTexture || raw.h > maxTexture) return;
+
+        Texture2D nativeTexture = texture(g, raw, OPAQUE_TEXTURE);
+        if(nativeTexture == null) return;
+
+        appearance.setTexture(0, nativeTexture);
+        nativeTexture.setBlending(Texture2D.FUNC_MODULATE);
+        composite.setBlending(CompositingMode.REPLACE);
+        composite.setAlphaThreshold(0);
+        appearance.setCompositingMode(composite);
+        appearance.setFog(null);
+
+        short[] xyz = positions;
+        xyz[0] = (short)a.sx; xyz[1] = (short)a.sy; xyz[2] = 0;
+        xyz[3] = (short)b.sx; xyz[4] = (short)b.sy; xyz[5] = 0;
+        xyz[6] = (short)c.sx; xyz[7] = (short)c.sy; xyz[8] = 0;
+
+        short[] uv = coords;
+        uv[0] = (short)au; uv[1] = (short)av;
+        uv[2] = (short)bu; uv[3] = (short)bv;
+        uv[4] = (short)cu; uv[5] = (short)cv;
+
+        byte[] rgba = colors;
+        for(int i = 0; i < 3; i++) {
+            rgba[i * 4] = (byte)255;
+            rgba[i * 4 + 1] = (byte)255;
+            rgba[i * 4 + 2] = (byte)255;
+            rgba[i * 4 + 3] = (byte)255;
+        }
+
+        int slot = 0; // count == 3
+        posArrays[slot].set(0, 3, xyz);
+        uvArrays[slot].set(0, 3, uv);
+        colorArrays[slot].set(0, 3, rgba);
+        setPositionScale(slot, 1.0f);
+
+        flushBatch(g);
+        bind(g);
+        restoreCamera(g);
+        renderNative(g, buffers[slot], indices[0], appearance);
+    }
+
     void renderSingle(DirectX7 g,int count,float scale,short[] xyz,short[] uv,byte[] rgba,
             TriangleStripArray triangles,Appearance state) {
         int slot=count-3;

@@ -257,6 +257,10 @@ this.buffer.resetTex();
    public String getRendererError() { return rendererError; }
    public boolean isM3GActive() { return sceneRenderer != null && !rendererFailed; }
 
+   /** Exposes the live M3GSceneRenderer for benchmark/diagnostic paths that
+    * need to submit raw textured triangles through the hardware pipe. */
+   public SceneRenderer getSceneRenderer() { return sceneRenderer; }
+
    /** Also call after modifying a texture's public pixel array in place. */
    public void releaseRenderer() {
        syncFrameImage();
