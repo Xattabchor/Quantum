@@ -293,19 +293,43 @@ bool perspectiveDivide(QInt32 numerator,
         return false;
     }
 
-    /* Java evaluates ((long) numerator << 12) / denominator, then narrows. */
-    const QInt64 scaled = code::Math::javaLongMulInt(
-        numerator, KTextureFraction);
-    const bool negative = (scaled < 0) != (denominator < 0);
-    const QInt64 numeratorMagnitude = scaled < 0 ? -scaled : scaled;
-    const QInt64 denominatorMagnitude = denominator < 0
-        ? -static_cast<QInt64>(denominator)
-        : static_cast<QInt64>(denominator);
-    QInt64 quotient = numeratorMagnitude / denominatorMagnitude;
-    if (negative) {
-        quotient = -quotient;
+    /*
+     * Java evaluates ((long) numerator << 12) / denominator, then narrows.
+     * Split the quotient into its integer and 12-bit fractional parts so the
+     * ARMv5 path needs only a 32-bit divide. Extend the remainder one bit at
+     * a time; compare with (divisor - remainder) to avoid unsigned overflow.
+     */
+    const QUint32 numeratorBits = static_cast<QUint32>(numerator);
+    const QUint32 denominatorBits = static_cast<QUint32>(denominator);
+    const QUint32 numeratorMagnitude = numerator < 0
+        ? static_cast<QUint32>(static_cast<QUint32>(0) - numeratorBits)
+        : numeratorBits;
+    const QUint32 denominatorMagnitude = denominator < 0
+        ? static_cast<QUint32>(static_cast<QUint32>(0) - denominatorBits)
+        : denominatorBits;
+    const bool negative = (numerator < 0) != (denominator < 0);
+    const QUint32 whole = numeratorMagnitude / denominatorMagnitude;
+    QUint32 remainder = numeratorMagnitude - whole * denominatorMagnitude;
+    QUint32 fractional = 0;
+    unsigned int bit;
+    for (bit = 0; bit < KTextureFractionBits; ++bit) {
+        fractional <<= 1U;
+        const QUint32 complement = denominatorMagnitude - remainder;
+        if (remainder >= complement) {
+            remainder -= complement;
+            fractional |= 1U;
+        } else {
+            remainder += remainder;
+        }
     }
-    result = code::Math::javaIntFromLong(quotient);
+
+    QUint32 quotientBits =
+        (whole << KTextureFractionBits) | fractional;
+    if (negative) {
+        quotientBits = static_cast<QUint32>(static_cast<QUint32>(0) -
+                                             quotientBits);
+    }
+    result = code::Math::javaIntFromUnsigned(quotientBits);
     return true;
 }
 

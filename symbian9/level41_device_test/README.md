@@ -107,6 +107,13 @@ averages of 0/7/8/0/76 ms. Versus v1.0.20, average mesh time fell by 8 ms and
 cull/queue fell by 9 ms; draw/raster remained at 76 ms, making it the next phase
 to investigate.
 
+Version 1.0.22 replaces the perspective rasterizer's signed 64-bit divide at
+span endpoints with an exact quotient decomposition: one unsigned 32-bit divide
+plus 12 remainder-doubling steps for the 12 fractional bits. The sign handling,
+truncation toward zero, and Java 32-bit narrowing/wraparound are preserved. The
+change targets ARMv5's software 64-bit division path; a host Level 41 render is
+byte-identical to v1.0.21. E65 performance measurement is pending.
+
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
 stored here. The host asset-preparation script converts the four PNG/JPEG
@@ -169,3 +176,6 @@ Current E65 feedback:
   bitmap BitBlt, and phases of 0/7/8/0/76 ms. Versus v1.0.20, average mesh
   time fell by 8 ms and cull/queue by 9 ms; draw/raster remained at 76 ms.
   The cached cull/queue path is host byte-identical to the prior render.
+- The v1.0.22 candidate replaces the perspective span endpoint's 64-bit
+  division with an exactly equivalent 32-bit quotient plus 12-bit remainder
+  expansion. Host Level 41 output remains byte-identical; E65 timing is pending.
