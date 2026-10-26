@@ -66,6 +66,22 @@ for textures explicitly guaranteed not to contain the transparent-zero key;
 all other texture views retain the conservative behavior. The Level 41 asset
 loader can make that guarantee from its RGBA alpha bytes. Host tests pass, and
 the Level 41 host framebuffer is pixel-identical with and without the fast path.
+The user measured v1.0.18 on the E65 at 5.8 FPS and 106/107 ms mesh
+average/maximum, with phase averages of 5/7/17/0/76 ms (validation,
+transform/projection, cull/queue, sort, draw/raster). Compared with v1.0.17,
+that is a 0.2 FPS gain, 3 ms lower average mesh time, and 3 ms lower
+raster time in this same fixed-scene benchmark.
+
+Version 1.0.19 uses the successful untimed warm-up render to establish that
+Level 41's loaded mesh, material, and texture data passed full validation.
+Subsequent frames skip only the repeated per-polygon and texture-content
+validation loop; renderer envelope, pointer, capacity, and runtime option
+checks remain active. The optimization is opt-in in the general renderer and
+requires the caller to keep validated mesh/material/texture data immutable.
+The Level 41 host render produces a byte-identical framebuffer with and
+without prevalidation. A host renderer check also confirms that its envelope
+and capacity checks still reject an undersized workspace in prevalidated mode.
+Device performance for v1.0.19 is pending.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
@@ -113,6 +129,11 @@ Current E65 feedback:
   bitmap BitBlt, and phase averages: validation 5 ms, transform/projection
   7 ms, cull/queue 17 ms, sort 0 ms, draw/raster 79 ms. It did not show a
   measurable reduction in the dominant phase.
-- The v1.0.18 candidate skips the zero-key test in mode-0 copy loops only for
-  textures the Level 41 loader can prove contain no zero texels; device
-  performance is not yet measured.
+- The v1.0.18 E65 run reported 5.8 FPS, 106/107 ms mesh average/maximum,
+  bitmap BitBlt, and phase averages: validation 5 ms, transform/projection
+  7 ms, cull/queue 17 ms, sort 0 ms, draw/raster 76 ms. Against v1.0.17,
+  FPS increased by 0.2 and both mesh average and draw/raster time fell by 3 ms.
+- The v1.0.19 candidate uses the successful warm-up frame to validate the
+  immutable Level 41 mesh/material data once, then skips repeated deep checks
+  while retaining per-frame bounds and capacity checks. Device performance is
+  pending.

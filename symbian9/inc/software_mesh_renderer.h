@@ -148,6 +148,11 @@ struct SoftwareMeshRenderOptions {
     code::Math::QInt32 lightDirectionZ;
     /* Null disables all timing callbacks. */
     const SoftwareMeshRenderInstrumentation* instrumentation;
+    /*
+     * Set only after one full successful validation; use only with immutable
+     * mesh/material/texture data for subsequent frames.
+     */
+    bool meshContentsPrevalidated;
 
     SoftwareMeshRenderOptions();
 };

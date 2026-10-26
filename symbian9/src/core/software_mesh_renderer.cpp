@@ -58,9 +58,9 @@ bool validTexture(const SoftwareTextureView& texture)
     return texelCount <= texture.pixelCount;
 }
 
-bool validMesh(const SoftwareMeshView& mesh,
-               const SoftwareMeshRenderOptions& options,
-               const SoftwareMeshRenderWorkspace& workspace)
+bool validMeshEnvelope(const SoftwareMeshView& mesh,
+                       const SoftwareMeshRenderOptions& options,
+                       const SoftwareMeshRenderWorkspace& workspace)
 {
     if (mesh.vertexCount < 0 || mesh.polygonCount < 0 ||
         mesh.materialCount < 0 || workspace.cameraVertexCapacity < 0 ||
@@ -89,6 +89,14 @@ bool validMesh(const SoftwareMeshView& mesh,
         options.shootLength == 0) {
         return false;
     }
+    return true;
+}
+
+bool validMesh(const SoftwareMeshView& mesh,
+               const SoftwareMeshRenderOptions& options,
+               const SoftwareMeshRenderWorkspace& workspace)
+{
+    if (!validMeshEnvelope(mesh, options, workspace)) return false;
 
     QInt32 polygonIndex;
     for (polygonIndex = 0; polygonIndex < mesh.polygonCount; ++polygonIndex) {
@@ -638,7 +646,7 @@ SoftwareMeshRenderOptions::SoftwareMeshRenderOptions()
       cameraWorldX(0), cameraWorldY(0), cameraWorldZ(0),
       cameraVectorLight(false), shootIntensity(0), shootLength(0),
       flashlightEnabled(false), lightDirectionX(0), lightDirectionY(0),
-      lightDirectionZ(0), instrumentation(0)
+      lightDirectionZ(0), instrumentation(0), meshContentsPrevalidated(false)
 {
 }
 
@@ -713,7 +721,10 @@ bool SoftwareMeshRenderer::renderScene(
     for (instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex) {
         if (instances[instanceIndex].mesh == 0) return false;
         const SoftwareMeshView& mesh = *instances[instanceIndex].mesh;
-        if (!validMesh(mesh, options, workspace)) return false;
+        const bool meshValid = options.meshContentsPrevalidated
+            ? validMeshEnvelope(mesh, options, workspace)
+            : validMesh(mesh, options, workspace);
+        if (!meshValid) return false;
         totalVertices += mesh.vertexCount;
         totalPolygons += mesh.polygonCount;
         if (totalVertices > 2147483647L ||

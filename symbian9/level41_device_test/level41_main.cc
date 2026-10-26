@@ -132,6 +132,7 @@ enum TRenderStage {
 
 TInt gRenderStatus = KErrNone;
 TInt gRenderStage = ERenderStageNone;
+bool gMeshContentsPrevalidated = false;
 QInt32 gPolygonsDrawn = 0;
 QInt32 gTrianglesDrawn = 0;
 const TInt64 KBenchmarkDurationMicros = 10000000;
@@ -544,6 +545,7 @@ bool renderLevel41Frame()
     options.farDistance = KFarDistance;
     options.clipZ = -KClipDistance;
     options.mipQuality = 24;
+    options.meshContentsPrevalidated = gMeshContentsPrevalidated;
 
     const SoftwareRenderSurfaceView surface(
         gFramebuffer, gRenderPixelCount,
@@ -1271,6 +1273,9 @@ TInt runWindow(RFs& fileServer,
             if (!renderLevel41Frame()) {
                 gRenderStatus = KErrCorrupt;
             } else {
+                // The warm-up render performed the full mesh/material checks.
+                // Level 41's loaded assets remain immutable while benchmarking.
+                gMeshContentsPrevalidated = true;
 #ifdef QUANTUM_LEVEL41_NO_DSA
                 gBitmapGdiPresenterActive = bitmapPresenter.Create(session, size);
 #endif
