@@ -603,7 +603,7 @@ this.buffer.resetTex();
            ensureNativeRenderer();
            if(effects!=null) sceneRenderer.prepareEffects(this,effects);
            if(weather!=null) sceneRenderer.prepareWeather(this,weather);
-           // Refresh the true-3D lit-pass camera/lights (M3G_LIT) — without
+           // Refresh the true-3D lit-pass camera/lights (mode-6 polys) — without
            // this the hardware-lit pass never exists in the required path.
            if(sceneRenderer instanceof M3GSceneRenderer)
                ((M3GSceneRenderer)sceneRenderer).beginFrame(this);

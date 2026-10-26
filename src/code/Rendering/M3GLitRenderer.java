@@ -44,7 +44,7 @@ import javax.microedition.m3g.Image2D;
  *
  * Everything not in (Polygon3V|Polygon4V textured) keeps the legacy path
  * (sky, sprites, weather lines, HUD). Disabled by default; enabled only
- * via the M3G_LIT setting (kordos-full build). Other builds keep the old
+ * via drawmode 6 per texture (kordos-full build). Other builds keep the old
  * packed path untouched.
  */
 public final class M3GLitRenderer {

@@ -86,7 +86,7 @@ public final class Main extends MIDlet {
     // True-3D hardware-lit world pass (M3GLitRenderer). 0=off, 1=ambient+
     // directional+weapon omni flash, 2=ambient+directional only. Off keeps
     // every previous build/rasterizer bit-identical.
-    public static int m3gWorldLighting = 0;
+    public static int m3gWorldLighting = 1; // engine-side default; per-texture opt-in via drawmode 6
     public static int m3gLitAmbient = 32;     // 0..255 ambient lamp strength (dark by default)
     public static int m3gLitAmbCol = 0xffffff; // ambient lamp RGB (M3G_LIT_AMBCOL=R,G,B)
     public static int m3gLitDirCol = 0xffffff; // directional RGB (M3G_LIT_DIRCOL)
@@ -304,7 +304,8 @@ public final class Main extends MIDlet {
         // M3G-only gameplay ignores the old Renderer choice without deleting its
         // store or changing the original settings/game-save record layouts.
         m3gPerspective = settings.getIntNoLang("M3G_PERSPECTIVE",1)!=0;
-        m3gWorldLighting = Math.min(2, Math.max(0, settings.getIntNoLang("M3G_LIT", 0)));
+        // M3G_LIT key removed: hardware light is per-texture now — render
+        // mode 6 opts a texture into the true-3D lit pass (was linear fog).
         m3gLitAmbient = settings.getIntNoLang("M3G_LIT_AMBIENT", 32);
         m3gLitAmbCol = readRgb(settings, "M3G_LIT_AMBCOL", 0xffffff);
         m3gLitDirCol = readRgb(settings, "M3G_LIT_DIRCOL", 0xffffff);
@@ -338,8 +339,8 @@ public final class Main extends MIDlet {
         // Menu-driven hardware toggles (Setting screen) persist separately.
         byte[] fx = RmsUtils.openStore("Quantum.M3GFx");
         if(fx != null && fx.length >= 4) {
-            // fx[0]/HW light: menu row removed — the level's M3G_LIT ini key
-            // is the single source now (stale RMS lit=0 must not kill light).
+            // fx[0]/HW light: per-texture drawmode 6 owns the lit pass now;
+            // stale RMS lit bytes must not change that (layout kept).
             m3gLitMip = (fx[1] & 0xff) != 0 ? 1 : 0;
             m3gScreenScale = Math.max(25, Math.min(100, fx[2] & 0xff));
             m3gLitNoVertexColors = (fx[3] & 0xff) == 1;

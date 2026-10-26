@@ -3,7 +3,7 @@ WORLD_SCALE=6
 LIGHTMAP=/lightmap/kordod.vla
 [WTEX_BEGIN]
 /maps/kordos/forestOrigy.png,std,-20000
-/maps/kordos/map-selo1.png
+/maps/kordos/map-selo1.png,6
 /maps/kordos/river0.bmp,7,watu0.75
 [WTEX_END]
 

@@ -41,7 +41,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final int[] uv = new int[8];
     private final short[] positions = new short[12], coords = new short[8];
     final byte[] colors = new byte[16];
-    private M3GLitRenderer litRenderer; // created only when M3G_LIT != 0
+    private M3GLitRenderer litRenderer; // lit pass feeds only drawmode-6 polys
     private final float[] work = new float[12];
     private final VertexBuffer[] buffers = new VertexBuffer[2];
     // These two buffers own stable position arrays; contents change, bindings do not.
@@ -419,6 +419,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(texture == null) return false;
         int mode = DirectX7.m3gDrawMode(texture.drawmode);
         // Modes 7/10 use MODULATE/MODULATE_X2, 11 uses DECAL, 12 uses native exponential Fog.
+        // Mode 6 = hardware-lit opt-in (handled above; falls back to plain here).
         if(mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4
                 && mode != 5 && mode != 6 && mode != 7 && mode != 8 && mode != 9 && mode != 10 && mode != 11 && mode != 12 && mode != 13) return false;
         boolean exponential=mode==12;
@@ -447,17 +448,21 @@ public final class M3GSceneRenderer implements SceneRenderer {
             uv[4] = p.cu; uv[5] = p.cv; uv[6] = p.du; uv[7] = p.dv;
             count = 4;
         }
-        // True-3D hardware-lit pass (M3G_LIT): consumes the polygon in view
-        // space with hardware lights, or returns false to keep the packed path.
+        // Render mode 6 = hardware light opt-in (no longer fog): only such
+        // polys enter the true-3D lit pass. When the pass is absent/broken or
+        // refuses the poly, mode 6 degrades to a plain textured polygon.
         // A native-side failure disables the pass instead of killing the frame.
-        if(litRenderer != null) {
-            try {
-                if(litRenderer.draw(g, object, texture, mode, count, vertices, uv)) return true;
-            } catch(Throwable t) {
-                M3GLitRenderer.statsErr = t.toString();
-                litRenderer = null;
-                litBroken = true;
+        if(mode == 6) {
+            if(litRenderer != null) {
+                try {
+                    if(litRenderer.draw(g, object, texture, mode, count, vertices, uv)) return true;
+                } catch(Throwable t) {
+                    M3GLitRenderer.statsErr = t.toString();
+                    litRenderer = null;
+                    litBroken = true;
+                }
             }
+            mode = 0;
         }
         materialMath.resetBounds();
         boolean fastPath = fast || (Main.persQ == 0 && !Main.mipMapping);

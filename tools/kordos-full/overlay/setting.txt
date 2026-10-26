@@ -107,7 +107,7 @@ PLAYER_ZOOM=74,44,1
 //Minimal Zoom, Maximal Zoom, Ability to use zoom
 
 // Hardware-lit true-3D world pass (kordos-full build)
-M3G_LIT=1
+// M3G_LIT master key removed: textures opt in via render mode 6 (WTEX).
 M3G_LIT_AMBIENT=64
 M3G_LIT_DIR=0
 M3G_OMNI_BASE=0
