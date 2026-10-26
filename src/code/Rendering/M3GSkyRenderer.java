@@ -113,7 +113,7 @@ final class M3GSkyRenderer {
                     if(mode==5) texture.setBlendColor(DirectX7.getM3GBlendColor());
                     appearance.setTexture(0,texture); appearance.setFog(null);
                     composite.setBlending(mode==2?CompositingMode.ALPHA_ADD
-                            :mode==7?CompositingMode.MODULATE:mode==10?CompositingMode.MODULATE_X2
+                            :mode==7?CompositingMode.MODULATE_X2:mode==10?CompositingMode.MODULATE
                             :alpha ? CompositingMode.ALPHA : CompositingMode.REPLACE);
                     composite.setAlphaThreshold(alpha || mode==11 ? 0 : owner.textureCutoutThreshold());
                 }

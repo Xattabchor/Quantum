@@ -558,8 +558,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
         setFunction(nativeTexture,mode==11?Texture2D.FUNC_DECAL:mode==5?Texture2D.FUNC_BLEND:Texture2D.FUNC_MODULATE);
         batchState.blendColor=mode==5?DirectX7.getM3GBlendColor():0;
         setBlend(mode == 2 ? CompositingMode.ALPHA_ADD
-                : mode == 10 ? CompositingMode.MODULATE_X2
-                : mode == 7 ? CompositingMode.MODULATE
+                : mode == 7 ? CompositingMode.MODULATE_X2
+                : mode == 10 ? CompositingMode.MODULATE
                 : kind == ALPHA_TEXTURE && mode!=11 ? CompositingMode.ALPHA : CompositingMode.REPLACE);
         setThreshold(kind==ALPHA_TEXTURE?0:nativeEntry.cutoutThreshold);
 
