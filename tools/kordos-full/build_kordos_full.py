@@ -49,7 +49,6 @@ EXTRAS_RIVER7 = (
     'meshes/cars/carNagib.png', 'meshes/cars/car_down.3d',
     'meshes/computer.3d', 'meshes/computer.png',
     'shop/icon_medicine_chest.png', 'shop/icon_patron.png',
-    'sounds/fx_step1.wav', 'sounds/fx_step3.wav',
 )
 
 # World decimation (silhouette-safe): welds coincident vertices, merges
@@ -120,6 +119,10 @@ def stage_resources() -> None:
     # only river0.bmp is referenced now (single base frame, native UV flow).
     for dead in ('maps/kordos/river1.bmp', 'maps/kordos/river2.bmp',
                  'maps/kordos/river3.bmp'):
+        stage.pop(dead, None)
+    # Footstep/jump sounds excised from the code — the wavs are dead weight.
+    for dead in ('sounds/fx_step1.wav', 'sounds/fx_step2.wav',
+                 'sounds/fx_step3.wav', 'sounds/fx_jump.wav'):
         stage.pop(dead, None)
     # Overlay-referenced extras missing from the sym9 bundle.
     with zipfile.ZipFile(RIVER7) as jar:

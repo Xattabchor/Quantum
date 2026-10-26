@@ -31,8 +31,6 @@ MENU_MUSIC=/music/menu.mp3
 MUSIC=null
       
 
-WALK_SOUND=/sounds/fx_step1.wav,/sounds/fx_step2.wav,/sounds/fx_step3.wav
-JUMP_SOUND=/sounds/fx_jump.wav
  
 
 BLOOD_TEX=/bots/decal_blood.png

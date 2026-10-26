@@ -122,12 +122,12 @@ public final class Main extends MIDlet {
 
     public static int music = 100;
     public static int sounds = 100;
-    public static int footsteps = 100;
+    // footsteps volume removed (footstep sounds excised, kordos).
     public static int mouseSpeed = 66;
 
     public static boolean isMusic = true;
     public static boolean isSounds = true;
-    public static boolean isFootsteps = true;
+    // isFootsteps removed (footstep sounds excised, kordos).
     public static Sound musicPlayer = Sound.createMusicPlayer();
 
     public static boolean verticalShopScroll = false;
@@ -235,7 +235,7 @@ public final class Main extends MIDlet {
                 DataInputStream var6 = new DataInputStream(var5);
                 music = var6.readInt();
                 sounds = var6.readInt();
-                footsteps = var6.readInt();
+                var6.readInt(); // legacy footsteps slot (removed; keep RMS layout)
                 displaySize = var6.readInt();
                 availableLevel = var6.readInt();
                 setPersQ(var6.readInt());
@@ -367,7 +367,6 @@ public final class Main extends MIDlet {
     private static void defaultSettings() {
         music = 100;
         sounds = 100;
-        footsteps = 100;
         displaySize = 80;
         availableLevel = 1;
         persQ = 2;
@@ -537,7 +536,7 @@ public final class Main extends MIDlet {
 
             dos.writeInt(music);
             dos.writeInt(sounds);
-            dos.writeInt(footsteps);
+            dos.writeInt(100); // legacy footsteps slot (removed; keep RMS layout)
             dos.writeInt(displaySize);
             dos.writeInt(availableLevel);
             dos.writeInt(persQ);

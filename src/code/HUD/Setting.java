@@ -50,7 +50,7 @@ public final class Setting extends Selectable {
 	}
 
     private int itemCount() {
-        return 21+(hasLangSelect()?1:0);
+        return 20+(hasLangSelect()?1:0);
     }
 
     private static String langGetDef(IniFile lang, String key, String def) {
@@ -79,10 +79,6 @@ public final class Setting extends Selectable {
         ms[i] = false;
         if(Main.music > 0 && Main.isMusic) var2[i] = lang.get("MUSIC_VOLUME") + ":" + Main.music;
         ms[i] = false;
-        i++;
-        var2[i] = lang.get("FOOTSTEPS_VOLUME") + ":" + lang.get("OFF");
-        ms[i] = false;
-        if(Main.footsteps > 0 && Main.isFootsteps) var2[i] = lang.get("FOOTSTEPS_VOLUME") + ":" + Main.footsteps;
         i++;
         var2[i] = lang.get("SOUNDS_VOLUME") + ":" + lang.get("OFF");
         ms[i] = false;
@@ -197,7 +193,6 @@ public final class Setting extends Selectable {
         id++;//Audio
         id++;
         id++;
-        id++;
         id++;//Conrols
         id++;
         if(var1 == id) {
@@ -233,16 +228,6 @@ public final class Setting extends Selectable {
                 if(Main.music == 0) Main.isMusic = false;
             }
             Main.musicPlayer.setVolume(Main.isMusic ? Main.music : 0);
-        }
-        id++;
-
-        if(var1 == id) {
-            if(Main.isFootsteps) {
-                Main.footsteps -= 10;
-                if(Main.footsteps < 0) Main.footsteps = 0;
-                if(Main.footsteps > 100) Main.footsteps = 100;
-                if(Main.footsteps == 0) Main.isFootsteps = false;
-            }
         }
         id++;
 
@@ -314,16 +299,6 @@ public final class Setting extends Selectable {
             }
             if(!Main.isMusic) Main.isMusic = true;
             Main.musicPlayer.setVolume(Main.isMusic ? Main.music : 0);
-        }
-        id++;
-
-        if(var1 == id) {
-            if(Main.isFootsteps) {
-                Main.footsteps += 10;
-                if(Main.footsteps < 0) Main.footsteps = 0;
-                if(Main.footsteps > 100) Main.footsteps = 100;
-            }
-            if(!Main.isFootsteps) Main.isFootsteps = true;
         }
         id++;
 
