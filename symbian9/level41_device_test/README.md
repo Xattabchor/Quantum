@@ -216,6 +216,7 @@ Current E65 feedback:
   bitmap BitBlt, and phases of 0/7/8/0/57 ms. Versus v1.0.22, FPS rose by 0.1
   and mesh average/maximum and draw/raster each fell by 1 ms. The user confirms
   the gain repeats; host output is byte-identical after edge stepping.
-- The v1.0.25 candidate simplifies unsigned color arithmetic in the perspective
-  vertex-shading pixel kernel. Host Level 41 output remains byte-identical;
-  E65 performance measurement is pending.
+- The v1.0.25 E65 run reported 7.1 FPS, 73/74 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/57 ms. This is unchanged from v1.0.24,
+  so the unsigned color-arithmetic optimization showed no measurable device
+  performance gain. Host Level 41 output remains byte-identical.
