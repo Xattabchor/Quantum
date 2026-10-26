@@ -18,7 +18,12 @@ pdfmetrics.registerFont(TTFont('DJB', FD + '/DejaVuSans-Bold.ttf'))
 pdfmetrics.registerFont(TTFont('DJM', FD + '/DejaVuSansMono.ttf'))
 pdfmetrics.registerFont(TTFont('DJMB', FD + '/DejaVuSansMono-Bold.ttf'))
 
-COMMIT = '13316b210725e77e08a52dc8debc29e0d22bd0d4'
+import subprocess
+try:
+    COMMIT = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
+                                     text=True).strip()
+except Exception:
+    COMMIT = 'worktree'
 OUT = 'docs/Quantum_Render_Modes_Guide.pdf'
 
 H1 = ParagraphStyle('H1', fontName='DJB', fontSize=15, leading=19,
@@ -122,22 +127,22 @@ p('Режим задаётся вторым полем WTEX-строки (см. 
 rows = [
     ('0', 'plain affine', 'Чистая перспективная/аффинная текстура, без тумана',
      'REPLACE (непрозрач.) + cutout-порог', '—'),
-    ('1', 'affine + fog', 'Аффина + туман (при fogQ=0 → мод 0)',
-     'ALPHA-смешивание (ALPHA_TEXTURE)', 'линейный'),
+    ('1', 'flat fill (new!)', 'Легаси CPU-туман — вырезан',
+     'Плоская заливка: алиас мода 8, сплошной цвет из текселя', '—'),
     ('2', 'additive', 'Аддитивное сложение (огонь, свечение)',
      'ALPHA_ADD + ADD_TEXTURE', '—'),
     ('3', 'fog LQ/HQ', 'Аффина + туман, варианты качества',
      'нативный линейный Fog; quads бьются по диагонали', 'линейный'),
-    ('4', 'alpha mix', 'Текстура с alphaMixing',
-     'ALPHA только если raw.alphaMixing, иначе REPLACE', '—'),
+    ('4', 'alpha blend', 'Бленд по альфа-каналу текстуры с фреймбуфером',
+     'ALPHA безусловно (заменяет легаси-роль мода 1)', '—'),
     ('5', 'blend color', 'Смешение с внешним цветом, вершинная яркость',
      'FUNC_BLEND + blendColor', '—'),
     ('6', 'M3G light ON (new!)', 'CPU-фолбэк: старый туманный мод (rz/fDist)',
      'Аппаратный lit-проход; при поломке pass → мод 0', '—'),
     ('7', 'glass', 'paint_glass: блик (col−0x808080)·scale>>24 поверх',
      'MODULATE (блик не переносится; см. §9)', '—'),
-    ('8', 'fill', 'Плоская заливка, узор текстуры игнорируется',
-     'близко к REPLACE; lit-проход отвергает', '—'),
+    ('8', 'fill', 'Плоская заливка: цвет = тексель по первой UV треугольника',
+     'точно: тексель-семпл, без аплоада текстуры; lit отвергает', '—'),
     ('9', 'baked light', 'Лайтмап, запечённый в вершинах (+ туман)',
      'static-lightmap: вершинные цвета, без дистант-тумана', 'запечён'),
     ('10', 'dither grad', 'Дизер-градиент прозрачности по вершинным альфам',
