@@ -220,7 +220,7 @@ Current E65 feedback:
   bitmap BitBlt, and phases of 0/7/8/0/57 ms. This is unchanged from v1.0.24,
   so the unsigned color-arithmetic optimization showed no measurable device
   performance gain. Host Level 41 output remains byte-identical.
-- The v1.0.26 candidate short-circuits exact-zero perspective numerators and
-  skips fractional quotient stepping when the integer division has no
-  remainder. The host Level 41 framebuffer remains byte-identical; E65
-  performance measurement is pending.
+- The v1.0.26 E65 run reported 7.1 FPS, 72/73 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/56 ms. Versus v1.0.25, FPS was unchanged;
+  mesh average/maximum and draw/raster each fell by 1 ms. Host output remains
+  byte-identical after the exact-quotient fast paths.
