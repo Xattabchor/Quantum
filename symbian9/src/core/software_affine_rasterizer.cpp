@@ -28,6 +28,7 @@ enum RasterPixelMode {
     ERasterPixelFill,
     ERasterPixelGlass,
     ERasterPixelMode9,
+    ERasterPixelMode9Opaque,
     ERasterPixelMode13
 };
 
@@ -243,10 +244,10 @@ inline void writePixel(const SoftwareRenderSurfaceView& destination,
         destination.pixels[destinationIndex] = destination.pixels[sourceIndex];
         return;
     }
-    if (Mode == ERasterPixelMode9) {
-        if (texel == 0) {
-            return;
-        }
+    if (Mode == ERasterPixelMode9 && texel == 0) {
+        return;
+    }
+    if (Mode == ERasterPixelMode9 || Mode == ERasterPixelMode9Opaque) {
         colorAccumulator.redFactor = code::Math::javaIntAdd(
             colorAccumulator.redFactor, colorSlope.redFactor);
         const QUint32 texelBits = static_cast<QUint32>(texel);
@@ -461,7 +462,9 @@ void drawSpan(const SoftwareRenderSurfaceView& destination,
         u = code::Math::javaIntSub(u, code::Math::javaIntMul(du, x1));
         v = code::Math::javaIntSub(v, code::Math::javaIntMul(dv, x1));
         fog = code::Math::javaIntSub(fog, code::Math::javaIntMul(df, x1));
-        if (Mode == ERasterPixelMode13 || Mode == ERasterPixelMode9) {
+        if (Mode == ERasterPixelMode13 ||
+            Mode == ERasterPixelMode9 ||
+            Mode == ERasterPixelMode9Opaque) {
             color.redFactor = code::Math::javaIntSub(
                 color.redFactor,
                 code::Math::javaIntMul(colorSlope.redFactor, x1));
@@ -501,7 +504,9 @@ void drawSpan(const SoftwareRenderSurfaceView& destination,
     uBits = static_cast<QUint32>(u);
     vBits = static_cast<QUint32>(v);
     fog = code::Math::javaIntSub(fog, df);
-    if (Mode == ERasterPixelMode13 || Mode == ERasterPixelMode9) {
+    if (Mode == ERasterPixelMode13 ||
+        Mode == ERasterPixelMode9 ||
+        Mode == ERasterPixelMode9Opaque) {
         if (color.redFactor < 0) color.redFactor = 0;
         const QInt32 spanLength = code::Math::javaIntSub(x2, x1);
         if (code::Math::javaIntAdd(
@@ -699,7 +704,9 @@ bool drawAffineTriangle(const SoftwareRenderSurfaceView& destination,
     AffineTriangleColor colorB;
     AffineTriangleColor colorC;
 
-    if (Mode == ERasterPixelMode13 || Mode == ERasterPixelMode9) {
+    if (Mode == ERasterPixelMode13 ||
+        Mode == ERasterPixelMode9 ||
+        Mode == ERasterPixelMode9Opaque) {
         if (vertexColors == 0) {
             return false;
         }
@@ -710,15 +717,27 @@ bool drawAffineTriangle(const SoftwareRenderSurfaceView& destination,
 
     if (b.screenY < a.screenY) {
         swapVertices(a, b);
-        if (Mode == ERasterPixelMode13 || Mode == ERasterPixelMode9) swapTriangleColors(colorA, colorB);
+        if (Mode == ERasterPixelMode13 ||
+            Mode == ERasterPixelMode9 ||
+            Mode == ERasterPixelMode9Opaque) {
+            swapTriangleColors(colorA, colorB);
+        }
     }
     if (c.screenY < a.screenY) {
         swapVertices(a, c);
-        if (Mode == ERasterPixelMode13 || Mode == ERasterPixelMode9) swapTriangleColors(colorA, colorC);
+        if (Mode == ERasterPixelMode13 ||
+            Mode == ERasterPixelMode9 ||
+            Mode == ERasterPixelMode9Opaque) {
+            swapTriangleColors(colorA, colorC);
+        }
     }
     if (c.screenY < b.screenY) {
         swapVertices(b, c);
-        if (Mode == ERasterPixelMode13 || Mode == ERasterPixelMode9) swapTriangleColors(colorB, colorC);
+        if (Mode == ERasterPixelMode13 ||
+            Mode == ERasterPixelMode9 ||
+            Mode == ERasterPixelMode9Opaque) {
+            swapTriangleColors(colorB, colorC);
+        }
     }
     if (a.screenY == c.screenY) {
         return true;
@@ -771,7 +790,9 @@ bool drawAffineTriangle(const SoftwareRenderSurfaceView& destination,
         }
     }
 
-    if (Mode == ERasterPixelMode13 || Mode == ERasterPixelMode9) {
+    if (Mode == ERasterPixelMode13 ||
+        Mode == ERasterPixelMode9 ||
+        Mode == ERasterPixelMode9Opaque) {
         temp = code::Math::javaIntSub(c.screenY, a.screenY);
         if (!computeColorSlope(colorA, colorC, temp, colorSlopeStart)) {
             return true;
@@ -855,7 +876,7 @@ bool drawAffineTriangle(const SoftwareRenderSurfaceView& destination,
         code::Math::javaIntDiv(
             code::Math::javaIntSub(colorStart.blueFactor, colorEnd.blueFactor),
             temp));
-    if (Mode == ERasterPixelMode9) {
+    if (Mode == ERasterPixelMode9 || Mode == ERasterPixelMode9Opaque) {
         if (colorSlope.redFactor > 0) {
             colorSlope.redFactor = code::Math::javaIntSub(
                 colorSlope.redFactor, 1);
@@ -909,7 +930,9 @@ bool drawAffineTriangle(const SoftwareRenderSurfaceView& destination,
                               KTextureFractionBits, dfEnd)) {
                 return true;
             }
-            if ((Mode == ERasterPixelMode13 || Mode == ERasterPixelMode9) &&
+            if ((Mode == ERasterPixelMode13 ||
+                 Mode == ERasterPixelMode9 ||
+                 Mode == ERasterPixelMode9Opaque) &&
                 !computeColorSlope(colorB, colorC, temp, colorSlopeEnd)) {
                 return true;
             }
@@ -972,7 +995,9 @@ bool drawAffineTriangle(const SoftwareRenderSurfaceView& destination,
                               KTextureFractionBits, dfEnd)) {
                 return true;
             }
-            if ((Mode == ERasterPixelMode13 || Mode == ERasterPixelMode9) &&
+            if ((Mode == ERasterPixelMode13 ||
+                 Mode == ERasterPixelMode9 ||
+                 Mode == ERasterPixelMode9Opaque) &&
                 !computeColorSlope(colorB, colorC, temp, colorSlopeEnd)) {
                 return true;
             }
@@ -982,7 +1007,9 @@ bool drawAffineTriangle(const SoftwareRenderSurfaceView& destination,
                        xStart, xEnd, uStart, vStart, uEnd, vEnd,
                        fStart, fEnd, colorStart, colorEnd, colorSlope,
                        du, dv, df, parameters);
-        if (Mode == ERasterPixelMode13 || Mode == ERasterPixelMode9) {
+        if (Mode == ERasterPixelMode13 ||
+            Mode == ERasterPixelMode9 ||
+            Mode == ERasterPixelMode9Opaque) {
             colorStart = addColors(colorStart, colorSlopeStart);
             colorEnd = addColors(colorEnd, colorSlopeEnd);
         }
@@ -1445,6 +1472,11 @@ bool SoftwareAffineRasterizer::drawMode9(
         AffineTriangleColor(secondBrightness, 0, 0),
         AffineTriangleColor(thirdBrightness, 0, 0)
     };
+    if (!texture.mayContainZeroTexels) {
+        return drawAffineTriangle<ERasterPixelMode9Opaque>(
+            destination, texture, first, second, third,
+            RasterPixelParameters(), colors);
+    }
     return drawAffineTriangle<ERasterPixelMode9>(
         destination, texture, first, second, third,
         RasterPixelParameters(), colors);

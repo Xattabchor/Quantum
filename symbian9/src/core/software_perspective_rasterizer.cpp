@@ -24,6 +24,7 @@ enum PerspectivePixelMode {
     EPerspectiveAlphaBlend,
     EPerspectiveShade,
     EPerspectiveVertexShade,
+    EPerspectiveVertexShadeOpaque,
     EPerspectiveVertexShadeFloor6,
     EPerspectiveGlass,
     EPerspectiveMode13
@@ -363,7 +364,7 @@ void writePerspectivePixel(
         return;
     }
 
-    if (texel == 0) return;
+    if (Mode != EPerspectiveVertexShadeOpaque && texel == 0) return;
     const QUint32 texelBits = static_cast<QUint32>(texel);
 
     if (Mode == EPerspectiveMode13) {
@@ -395,9 +396,10 @@ void writePerspectivePixel(
     }
 
     if (Mode == EPerspectiveVertexShade ||
+        Mode == EPerspectiveVertexShadeOpaque ||
         Mode == EPerspectiveVertexShadeFloor6) {
         QInt32 brightness;
-        if (Mode == EPerspectiveVertexShade) {
+        if (Mode != EPerspectiveVertexShadeFloor6) {
             colorAccumulator.redFactor = code::Math::javaIntAdd(
                 colorAccumulator.redFactor, colorSlope.redFactor);
             brightness = code::Math::javaShiftRightUnsigned(
@@ -681,6 +683,7 @@ bool drawPerspectiveEffectSpan(
     AffineTriangleColor colorSlope = horizontalSlope.color;
     if (floorSpecial &&
         (Mode == EPerspectiveVertexShade ||
+         Mode == EPerspectiveVertexShadeOpaque ||
          Mode == EPerspectiveVertexShadeFloor6)) {
         /* TexturingFloors nudges mode 6/9's shade derivative toward zero. */
         if (colorSlope.redFactor > 0) {
@@ -764,7 +767,9 @@ bool drawPerspectiveEffectSpan(
     const size_t rowOffset = static_cast<size_t>(screenY) *
                              static_cast<size_t>(destination.stride);
     AffineTriangleColor color = left.color;
-    if (floorSpecial && Mode == EPerspectiveVertexShade) {
+    if (floorSpecial &&
+        (Mode == EPerspectiveVertexShade ||
+         Mode == EPerspectiveVertexShadeOpaque)) {
         /* Mode 9 floor fog clamps a negative start/end shade to zero. */
         if (color.redFactor < 0) color.redFactor = 0;
         if (code::Math::javaIntAdd(
@@ -881,9 +886,11 @@ bool drawPerspectiveEffectTriangle(
         (Mode == EPerspectiveFogBlendLow ||
          Mode == EPerspectiveFogBlendHigh ||
          Mode == EPerspectiveVertexShade ||
+         Mode == EPerspectiveVertexShadeOpaque ||
          Mode == EPerspectiveVertexShadeFloor6 ||
          Mode == EPerspectiveMode13);
     if ((Mode == EPerspectiveVertexShade ||
+         Mode == EPerspectiveVertexShadeOpaque ||
          Mode == EPerspectiveVertexShadeFloor6 ||
          Mode == EPerspectiveFogBlendHigh ||
          Mode == EPerspectiveMode13) && vertexColors == 0) {
@@ -1460,6 +1467,13 @@ bool SoftwarePerspectiveRasterizer::drawMode9Shade(
         AffineTriangleColor(secondBrightness, 0, 0),
         AffineTriangleColor(thirdBrightness, 0, 0)
     };
+    if (!texture.mayContainZeroTexels) {
+        return drawPerspectiveEffectTriangle<
+            EPerspectiveVertexShadeOpaque>(
+                destination, texture, first, second, third,
+                PerspectivePixelParameters(), perspectiveStepPixels, move,
+                colors);
+    }
     return drawPerspectiveEffectTriangle<EPerspectiveVertexShade>(
         destination, texture, first, second, third,
         PerspectivePixelParameters(), perspectiveStepPixels, move, colors);
