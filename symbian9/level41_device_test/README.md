@@ -133,7 +133,8 @@ Java 32-bit arithmetic. Host Level 41 output is byte-identical. On the E65,
 v1.0.24 measured 7.1 FPS and 73/74 ms mesh average/maximum, with bitmap BitBlt
 and phase averages of 0/7/8/0/57 ms. Compared with v1.0.22, FPS rose by 0.1 and
 mesh average/maximum and draw/raster each fell by 1 ms; draw/raster remains the
-largest phase.
+largest phase. The user reports that this improvement repeats on every run, so
+the incremental edge-stepping optimization is retained.
 
 The necessary Level 41 inputs are intentionally limited to the seven files in
 `assets/level41/`. No SDK, build tool, certificate, or private signing key is
