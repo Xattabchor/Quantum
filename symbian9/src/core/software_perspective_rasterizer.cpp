@@ -443,25 +443,30 @@ void writePerspectivePixel(
         Mode == EPerspectiveVertexShadeFloor6) {
         QInt32 brightness;
         if (Mode != EPerspectiveVertexShadeFloor6) {
-            colorAccumulator.redFactor = code::Math::javaIntAdd(
-                colorAccumulator.redFactor, colorSlope.redFactor);
-            brightness = code::Math::javaShiftRightUnsigned(
-                colorAccumulator.redFactor, KTextureFractionBits);
+            const QUint32 shadeBits =
+                static_cast<QUint32>(colorAccumulator.redFactor) +
+                static_cast<QUint32>(colorSlope.redFactor);
+            colorAccumulator.redFactor =
+                code::Math::javaIntFromUnsigned(shadeBits);
+            brightness = static_cast<QInt32>(
+                shadeBits >> KTextureFractionBits);
         } else {
             /* Java's DMODE 6 floor kernel samples one shade per scanline. */
             brightness = code::Math::javaShiftRight(
                 colorAccumulator.redFactor, KTextureFractionBits);
             if (brightness < 0) brightness = 0;
         }
-        const QInt32 redBlue = code::Math::javaIntMul(
-            static_cast<QInt32>(texelBits & 0x00ff00ffU), brightness);
-        const QInt32 green = code::Math::javaIntMul(
-            static_cast<QInt32>(texelBits & 0x0000ff00U), brightness);
+        /* Unsigned products reproduce Java int wraparound without conversions. */
+        const QUint32 brightnessBits = static_cast<QUint32>(brightness);
+        const QUint32 redBlue =
+            (texelBits & 0x00ff00ffU) * brightnessBits;
+        const QUint32 green =
+            (texelBits & 0x0000ff00U) * brightnessBits;
         const QUint32 output =
-            ((static_cast<QUint32>(redBlue) & 0xff00ff00U) |
-             (static_cast<QUint32>(green) & 0x00ff0000U)) >> 8U;
-        destination.pixels[destinationIndex] =
-            code::Math::javaIntFromUnsigned(output);
+            ((redBlue & 0xff00ff00U) |
+             (green & 0x00ff0000U)) >> 8U;
+        /* RGB888 output is at most 0x00ffffff, so this signed cast is safe. */
+        destination.pixels[destinationIndex] = static_cast<QInt32>(output);
         return;
     }
 
