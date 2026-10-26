@@ -17,6 +17,11 @@ public class Texture {
     public Texture[] animMIP;
     public float animation_speed = 1.0f;
 
+    // M3G water UV-scroll (WTEX token "wat"/"watu"/"watv"+speed, e.g. ",wat0.75").
+    // 0=off (flipbook animMIP), 1=V-flow, 2=U-flow; speed = full UV wraps/sec.
+    public int uvScroll = 0;
+    public float uvScrollSpeed = 0f;
+
     Texture() {
     }
 

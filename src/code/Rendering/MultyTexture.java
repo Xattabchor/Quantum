@@ -72,6 +72,18 @@ public class MultyTexture {
             if(texInfo.length>=4) textures[i].setPerspectiveCorrection(StringTools.parseInt(texInfo[3])==1);
             if(texInfo.length>=5) textures[i].castShadow=StringTools.parseInt(texInfo[4])==1;
             if(texInfo.length>=6) textures[i].collision=StringTools.parseInt(texInfo[5])==1;
+            // Water tokens anywhere in the tail: "wat", "watv", "watu" + speed
+            // — switches this texture to UV-scroll on the M3G path (kordos FX).
+            for(int k = 1; k < texInfo.length; k++) {
+                String t = texInfo[k].trim().toLowerCase();
+                if(t.startsWith("wat")) {
+                    textures[i].uvScroll = t.startsWith("watu") ? 2 : 1;
+                    int p = t.startsWith("watu") || t.startsWith("watv") ? 4 : 3;
+                    float sp = p < t.length()
+                            ? StringTools.parseFloat(t.substring(p)) : 0.25f;
+                    textures[i].uvScrollSpeed = sp > 0 ? sp : 0.25f;
+                }
+            }
         }
     }
 

@@ -112,6 +112,7 @@ public final class M3GLitRenderer {
 
     private static final class LitBucket {
         Texture2D tex; int kind; int func; boolean fogged;
+        int scrollDir; float scrollSpeed; // water UV-scroll (0 = static tex)
         int verts, indexLen, stripCount, maxAbs = 1;
         int[] iv = new int[0];
         short[] uva = new short[0];
@@ -391,7 +392,11 @@ public final class M3GLitRenderer {
         // Keep exotic fill/fog modes on their certified CPU-equivalent path.
         if(mode == 8 || mode == 10 || mode == 12) { frameFail++; frameReason = 1; return false; }
         RawImage raw = texture.rImg;
-        if(texture.mip != null && texture.mip.length > 0) raw = texture.mip[0];
+        // Water UV-scroll: pin the base frame and scroll its UV transform
+        // natively (one resident texture, zero per-frame rebinding logic).
+        if(texture.uvScroll != 0 && texture.animMIP != null)
+            raw = texture.animMIP[0].rImg;
+        else if(texture.mip != null && texture.mip.length > 0) raw = texture.mip[0];
         if(raw == null || !owner.supportsTexture(raw)) { frameFail++; frameReason = 2; return false; }
 
         int maxAbs = 1;
@@ -625,6 +630,7 @@ public final class M3GLitRenderer {
         if(bk == null) {
             bk = new LitBucket();
             bk.tex = tex; bk.kind = kind; bk.func = func; bk.fogged = foggy;
+            bk.scrollDir = texture.uvScroll; bk.scrollSpeed = texture.uvScrollSpeed;
             buckets.addElement(bk);
         }
         int vbase = bk.verts;
@@ -678,11 +684,22 @@ public final class M3GLitRenderer {
     void flushBuckets(DirectX7 g) {
         int n = buckets.size();
         if(n == 0) return;
+        // Absolute-time water offset: no drift, one call per frame even with
+        // several scroll buckets (river + future water textures).
+        float offV = (float) (System.currentTimeMillis() % 4000000L) / 1000f;
         for(int phase = 0; phase < 2; phase++) {
             for(int bi = 0; bi < n; bi++) {
                 LitBucket bk = (LitBucket) buckets.elementAt(bi);
                 boolean opaque = bk.kind == M3GSceneRenderer.OPAQUE_TEXTURE;
                 if((phase == 0) != opaque) continue;
+                // Water scroll: skew this bucket's texture transform. The
+                // object is river-only in practice, so leaving the offset on
+                // it across frames is fine (re-set every flush anyway).
+                if(bk.scrollDir != 0) {
+                    float o = offV * bk.scrollSpeed % 1.0f;
+                    if(bk.scrollDir == 2) bk.tex.setTranslation(-o, 0f, 0f);
+                    else bk.tex.setTranslation(0f, -o, 0f);
+                }
                 flushBucket(g, bk);
             }
         }
