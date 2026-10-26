@@ -21,8 +21,7 @@ import code.utils.WeaponCreator;
 import java.util.Vector;
 
 public final class Player extends GameObject {
-    public static String[] sndWalk = null;
-    public static String sndJump = null;
+    // sndWalk removed with the footstep sound code (kordos).
     public static boolean arcadeJumpPhysics = false;
     public static boolean fallDamage = true;
 	public static int walkSpeed = 150;
@@ -33,7 +32,6 @@ public final class Player extends GameObject {
     
     public int money = 0;
     public int frags = 0;
-    public int stepIndex = 0;
     public Arsenal arsenal;
     private boolean damage = false;
     
@@ -42,7 +40,7 @@ public final class Player extends GameObject {
     public int stdFov = Main.stdFov, zoomFov = Main.zoomFov;
     public long lastZoomAction = 0L;
     private int falldist = 0;
-    private long lastStep = 0, lastYCheck = 0;
+    private long lastYCheck = 0;
     private int lastY = 0;
     public float rotateX = 0.0f, rotateY = 0.0f;
     
@@ -109,30 +107,8 @@ public final class Player extends GameObject {
     }
 
     public final void render(DirectX7 g3d, int x1, int y1, int x2, int y2) {
-        if(Main.stepSound != null && Main.isFootsteps && Main.footsteps != 0) {
-            if((character.speed.x != 0 || character.speed.z != 0)
-                    && character.onFloor == true
-                    && System.currentTimeMillis() - lastStep > 450
-                    && !character.fly) {
-                
-                String[] soundz = Main.stepSound;
-                if(sndWalk != null)  soundz = sndWalk;
-                if(soundz != null && stepIndex >= soundz.length) stepIndex = 0;
-                
-                if(soundz != null) {
-                    try {
-                        Asset.getSound(soundz[stepIndex]).setVolume(Main.footsteps);
-                        Asset.getSound(soundz[stepIndex]).start(0);
-                        stepIndex++;
-                    } catch (Exception var2) {
-                        System.err.println("ERROR in Step sound: " + var2);
-
-                    }
-                }
-                lastStep = System.currentTimeMillis();
-            }
-        }
-        
+        // Footstep/jump sounds excised (kordos): no per-frame timing, sound
+        // selection or playback calls at all.
         if(arsenal.currentWeapon() != null) arsenal.currentWeapon().renderSplinter(g3d);
         
         if(currentPose() != null) {
@@ -159,9 +135,6 @@ public final class Player extends GameObject {
 
     public final void update(Scene scene, Player player) {
         super.update(scene, player);
-        
-        sndWalk = scene.getHouse().getRooms()[getPart()].stepSound;
-        sndJump = scene.getHouse().getRooms()[getPart()].jumpSound;
         
         if(fallDamage) {
         if (character.onFloor == false && System.currentTimeMillis() - lastYCheck < 1000) {
@@ -358,20 +331,6 @@ public final class Player extends GameObject {
         if(!canJump()) return;
         if(!arcadeJumpPhysics) jump(150, 1.2F);
         else character.jumpArcade(150, 1.2F);
-        if (character.onFloor && Main.isFootsteps && Main.footsteps != 0) {
-            try {
-                String snd = Main.jumpSound;
-                if (sndJump != null) snd = sndJump;
-                //STARTED=400
-                if(snd!=null && Asset.getSound(snd).getState()!=400) {
-                    Asset.getSound(snd).setVolume(Main.footsteps);
-                    Asset.getSound(snd).start();
-                }
-            } catch (Exception var2) {
-                System.err.println("ERROR in Step sound: " + var2);
-
-            }
-        }
 
     }
     

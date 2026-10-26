@@ -45,8 +45,7 @@ public class Room {
     private boolean openSky;
     private Portal[] portals;
     public int x1, y1, x2, y2;
-    public String[] stepSound = null;
-    public String jumpSound = null;
+    // stepSound/jumpSound removed (footstep sounds excised, kordos).
     public static int chunkSize;
     public static int chunkSizeRender = 0;
     public String reverb;

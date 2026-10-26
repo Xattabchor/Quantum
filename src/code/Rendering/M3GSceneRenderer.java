@@ -542,6 +542,14 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(!batchable) setPositionScale(slot,scale);
         setFog(null);
         setTexture(nativeTexture);
+        // Water UV-scroll on the native (non-lit) path as well: "wat" moves
+        // the texture transform instead of flipbook frames (kordos FX).
+        if(texture.uvScroll != 0) {
+            float o = ((float)(System.currentTimeMillis() % 4000000L) / 1000f
+                    * texture.uvScrollSpeed) % 1.0f;
+            if(texture.uvScroll == 2) nativeTexture.setTranslation(-o, 0f, 0f);
+            else nativeTexture.setTranslation(0f, -o, 0f);
+        }
         setFunction(nativeTexture,mode==11?Texture2D.FUNC_DECAL:mode==5?Texture2D.FUNC_BLEND:Texture2D.FUNC_MODULATE);
         batchState.blendColor=mode==5?DirectX7.getM3GBlendColor():0;
         setBlend(mode == 2 ? CompositingMode.ALPHA_ADD

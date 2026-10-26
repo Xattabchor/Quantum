@@ -61,8 +61,7 @@ public final class Main extends MIDlet {
             low_patron_icon, patron_no_weapon_icon;
 
     public static String[] splash;
-    public static String[] stepSound = null;
-    public static String jumpSound = null;
+    // stepSound/jumpSound removed (footstep sounds excised, kordos).
     public static String menuMusic = null;
 
     public static boolean canSave = true, canSelectLevel,

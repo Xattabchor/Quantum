@@ -449,43 +449,18 @@ public class LevelLoader {
             gs.wg.createParticles();
         }
 
-        String str = getString("WALK_SOUND", lvl, setting);
-
-        if(str != null) {
-            String[] snds = GameIni.cutOnStrings(str, ';', ',');
-            Main.stepSound = snds;
-            for (int i=0; i<snds.length; i++) {
-                if (Main.isFootsteps && Main.footsteps != 0) Asset.getSound(snds[i]);
-            }
-        }
-
-        
-        Main.jumpSound = getString("JUMP_SOUND",lvl,setting);
-        if (Main.isFootsteps && Main.footsteps != 0 && Main.jumpSound!=null) Asset.getSound(Main.jumpSound);
-        
+        // Footstep/jump sound loading excised (kordos): WALK_SOUND and
+        // JUMP_SOUND (+ per-room variants) are ignored; no wav decode here.
         gs.levelIni = lvl;
 
         String rev=getString("REVERB",lvl,setting);
         for(int i=0; i<house.getRooms().length; i++) {
             Room rm = house.getRooms()[i];
-            str = lvl.get("WALK_SOUND_" + i);
             String reverb=getStringdef("REVERB_" + i,lvl,setting,rev);
-                    
-            if (str != null) {
-                String[] snds = GameIni.cutOnStrings(str, ';', ',');
-                rm.stepSound = snds;
-                for (int i2 = 0; i2 < snds.length; i2++) {
-                    if (Main.isFootsteps && Main.footsteps != 0) Asset.getSound(snds[i2]);
-                }
-            }
             rm.reverb=reverb;
-
-            rm.jumpSound = lvl.get("JUMP_SOUND_" + i);
-            if (rm.jumpSound!=null && Main.isFootsteps && Main.footsteps != 0) Asset.getSound(rm.jumpSound);
-
         }
 
-        str = getString("PLAYER_ZOOM", lvl, setting);
+        String str = getString("PLAYER_ZOOM", lvl, setting);
 
         if (str != null) {
             int[] snds = GameIni.cutOnInts(str, ';', ',');
