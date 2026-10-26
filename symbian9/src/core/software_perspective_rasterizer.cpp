@@ -219,21 +219,6 @@ bool computeSlope(const PerspectiveVertex& start,
                         slope.color.blueFactor);
 }
 
-/* Copy/textured-only triangles do not interpolate vertex colors. */
-bool computeTextureSlope(const PerspectiveVertex& start,
-                         const PerspectiveVertex& end,
-                         QInt32 rows,
-                         PerspectiveSlope& slope)
-{
-    return computeSlope(start.screenX, end.screenX, rows, slope.screenX) &&
-           computeSlope(start.reciprocalDepth, end.reciprocalDepth, rows,
-                        slope.reciprocalDepth) &&
-           computeSlope(start.uOverDepth, end.uOverDepth, rows,
-                        slope.uOverDepth) &&
-           computeSlope(start.vOverDepth, end.vOverDepth, rows,
-                        slope.vOverDepth);
-}
-
 QInt32 advance(QInt32 initial, QInt32 slope, QInt32 rows)
 {
     return code::Math::javaIntAdd(
@@ -269,21 +254,6 @@ FixedPerspectivePoint advance(const FixedPerspectivePoint& initial,
     return result;
 }
 
-FixedPerspectivePoint advanceTexture(const FixedPerspectivePoint& initial,
-                                     const PerspectiveSlope& slope,
-                                     QInt32 rows)
-{
-    FixedPerspectivePoint result;
-    result.screenX = advance(initial.screenX, slope.screenX, rows);
-    result.reciprocalDepth = advance(
-        initial.reciprocalDepth, slope.reciprocalDepth, rows);
-    result.uOverDepth = advance(
-        initial.uOverDepth, slope.uOverDepth, rows);
-    result.vOverDepth = advance(
-        initial.vOverDepth, slope.vOverDepth, rows);
-    return result;
-}
-
 /* One row of modular additions equals the original slope * row offset. */
 void advanceOneRow(FixedPerspectivePoint& point,
                    const PerspectiveSlope& slope)
@@ -301,18 +271,6 @@ void advanceOneRow(FixedPerspectivePoint& point,
         point.color.greenFactor, slope.color.greenFactor);
     point.color.blueFactor = code::Math::javaIntAdd(
         point.color.blueFactor, slope.color.blueFactor);
-}
-
-void advanceOneTextureRow(FixedPerspectivePoint& point,
-                          const PerspectiveSlope& slope)
-{
-    point.screenX = code::Math::javaIntAdd(point.screenX, slope.screenX);
-    point.reciprocalDepth = code::Math::javaIntAdd(
-        point.reciprocalDepth, slope.reciprocalDepth);
-    point.uOverDepth = code::Math::javaIntAdd(
-        point.uOverDepth, slope.uOverDepth);
-    point.vOverDepth = code::Math::javaIntAdd(
-        point.vOverDepth, slope.vOverDepth);
 }
 
 QInt64 arithmeticShiftRight12(QInt64 value)
@@ -1226,16 +1184,16 @@ bool drawPerspectiveCopyTriangle(
     const QInt32 rowsAB = code::Math::javaIntSub(b.screenY, a.screenY);
     PerspectiveSlope slopeAC;
     PerspectiveSlope slopeAB;
-    if (!computeTextureSlope(a, c, rowsAC, slopeAC)) {
+    if (!computeSlope(a, c, rowsAC, slopeAC)) {
         return false;
     }
     if (b.screenY != a.screenY &&
-        !computeTextureSlope(a, b, rowsAB, slopeAB)) {
+        !computeSlope(a, b, rowsAB, slopeAB)) {
         return false;
     }
 
     const FixedPerspectivePoint longAtB =
-        advanceTexture(fixedA, slopeAC, rowsAB);
+        advance(fixedA, slopeAC, rowsAB);
     const QInt32 horizontalPixels = code::Math::javaShiftRight(
         code::Math::javaIntSub(longAtB.screenX, fixedB.screenX),
         KTextureFractionBits);
@@ -1257,8 +1215,8 @@ bool drawPerspectiveCopyTriangle(
 
     PerspectiveSlope slopeBC;
     if (c.screenY != b.screenY &&
-        !computeTextureSlope(
-            b, c, code::Math::javaIntSub(c.screenY, b.screenY), slopeBC)) {
+        !computeSlope(b, c,
+                      code::Math::javaIntSub(c.screenY, b.screenY), slopeBC)) {
         return false;
     }
 
@@ -1272,13 +1230,12 @@ bool drawPerspectiveCopyTriangle(
     const QInt32 widthBit = textureWidthBit(texture.width);
     const QUint32 textureMask = static_cast<QUint32>(texture.pixelCount - 1);
     const QInt32 rowsFromStart = code::Math::javaIntSub(yStart, a.screenY);
-    FixedPerspectivePoint longEdge =
-        advanceTexture(fixedA, slopeAC, rowsFromStart);
+    FixedPerspectivePoint longEdge = advance(fixedA, slopeAC, rowsFromStart);
     FixedPerspectivePoint shortEdge;
     if (yStart < b.screenY) {
-        shortEdge = advanceTexture(fixedA, slopeAB, rowsFromStart);
+        shortEdge = advance(fixedA, slopeAB, rowsFromStart);
     } else {
-        shortEdge = advanceTexture(
+        shortEdge = advance(
             fixedB, slopeBC, code::Math::javaIntSub(yStart, b.screenY));
     }
 
@@ -1298,11 +1255,11 @@ bool drawPerspectiveCopyTriangle(
                 left, right, horizontalSlope, perspectiveStepPixels)) {
             return false;
         }
-        advanceOneTextureRow(longEdge, slopeAC);
+        advanceOneRow(longEdge, slopeAC);
         if (y < b.screenY) {
-            advanceOneTextureRow(shortEdge, slopeAB);
+            advanceOneRow(shortEdge, slopeAB);
         } else {
-            advanceOneTextureRow(shortEdge, slopeBC);
+            advanceOneRow(shortEdge, slopeBC);
         }
     }
     return true;

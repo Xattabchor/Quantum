@@ -241,14 +241,19 @@ Current E65 feedback:
   `aa0a90263d5ffd434916aae78bfa134d58e27c7e3b187c071bd51ed3b228e7cd`). The
   user reports no measurable E65 change versus v1.0.28.
 
-Version 1.0.30 re-enables Direct Screen Access in the main Level 41 candidate
-for a controlled E65 experiment. DSA now uses the same EColor64K RGB565 bitmap
+The user reports no measurable E65 gain from the v1.0.29-only perspective
+copy-triangle color-work optimization. At the user's request, v1.0.31 drops
+that optimization and restores `software_perspective_rasterizer.cpp` to the
+v1.0.28 state; the DSA experiment is kept separate from that renderer change.
+
+Version 1.0.31 re-enables Direct Screen Access in the main Level 41 candidate
+for a controlled E65 experiment. DSA uses the same EColor64K RGB565 bitmap
 conversion as the tested GDI presenter, then submits one `BitBlt` through the
-DSA graphics context; it no longer expands each source pixel into a GDI
-rectangle. An active-object timer repeatedly runs the same 10-second render/
-present benchmark while DSA is active, and the overlay identifies DSA or
-reports its error code. If DSA setup or frame submission fails, the app returns
-to the existing bitmap-GDI BitBlt presenter and restarts timing after fallback
-setup. The `quantum_level41_no_dsa` companion remains available. Host tests and
-the exact E65 framebuffer presentation comparison are required before accepting
-any FPS gain; DSA runtime and S60 OS 9.1 compatibility remain unverified.
+DSA graphics context instead of expanding source pixels into GDI rectangles.
+An active-object timer repeatedly runs the same 10-second render/present
+benchmark while DSA is active, and the overlay identifies DSA or reports its
+error code. If DSA setup or frame submission fails, the app returns to the
+existing bitmap-GDI BitBlt presenter and restarts timing after fallback setup.
+The `quantum_level41_no_dsa` companion remains available. Host tests and the
+Level 41 framebuffer hash are verified; DSA runtime and S60 OS 9.1
+compatibility remain unverified.
