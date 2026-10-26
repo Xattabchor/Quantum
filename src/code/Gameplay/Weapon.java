@@ -164,13 +164,14 @@ public final class Weapon {
         dxb = dx;
         dxmb = dx_max;
         
-        int oldWidth=width;
-        if (customPos) {
-            x = (int) ((width - (height * 240 / 256)) * customPosX / 2);
-            width = (int) (height * 240 * customPosX / 256);
-        } else {
-            x = 0;
-        }
+    int oldWidth=width;
+    if (customPos) {
+        x = (int) ((width - (height * 240 / 256)) * customPosX / 2);
+        width = (int) (height * 240 * customPosX / 256);
+    }
+    // x сохраняет vX — левое смещение центрированного вьюпорта (GameScreen).
+    // При scale<100 оружие/прицел должны привязываться к правому краю
+    // видимой области (vX+vW), а не к правому краю полного холста (vW).
         if (centreAlign && imgWeapon != null) x += imgWeapon.getWidth() / 2;
         
 
@@ -230,13 +231,13 @@ public final class Weapon {
         
         if (sightWeapon != null) {
             if (!twoHands) {
-                drawImage(g,images,sightWeapon, width / 2, height + y + dy, Graphics.BOTTOM | Graphics.HCENTER);
+                drawImage(g,images,sightWeapon, x + width / 2, height + y + dy, Graphics.BOTTOM | Graphics.HCENTER);
             } else {
-                drawImage(g,images,sightWeapon, width / 2, height + y + dy, Graphics.BOTTOM | Graphics.LEFT);
-                drawRegion(g,images,sightWeapon, 0, 0, sightWeapon.getWidth(), sightWeapon.getHeight(), Sprite.TRANS_MIRROR, width / 2, height + y + dy, Graphics.BOTTOM | Graphics.RIGHT);
+                drawImage(g,images,sightWeapon, x + width / 2, height + y + dy, Graphics.BOTTOM | Graphics.LEFT);
+                drawRegion(g,images,sightWeapon, 0, 0, sightWeapon.getWidth(), sightWeapon.getHeight(), Sprite.TRANS_MIRROR, x + width / 2, height + y + dy, Graphics.BOTTOM | Graphics.RIGHT);
             }
         }
-        if (sight != null) drawImage(g,images,sight, 0, y, Graphics.TOP | Graphics.LEFT);
+        if (sight != null) drawImage(g,images,sight, x, y, Graphics.TOP | Graphics.LEFT);
         
     }
 
