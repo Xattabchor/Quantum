@@ -262,9 +262,12 @@ The user measured v1.0.31 on the E65 at 7.1 FPS and 71/72 ms mesh
 average/maximum, with `DSA bitmap blit` active and phases of 0/6/8/0/56 ms.
 Compared with the v1.0.28 GDI result, FPS and mesh time were unchanged; the
 phase differences were within 1 ms, so DSA has not shown a measurable overall
-speedup yet. The user also reports that the overlay text flickers during the
-10-second sample and becomes stable when the timer stops. In v1.0.32, the
-statistics overlay is drawn into the offscreen EColor64K bitmap before its DSA
-BitBlt, so each refresh presents the complete image and text together. The
-software renderer remains at the v1.0.28 state; the anti-flicker presentation
-change still needs E65 verification.
+speedup yet. The user reports that v1.0.31's overlay text flickered during the
+10-second sample and became stable when the timer stopped. The v1.0.32 attempt
+to composite text with `CFbsBitmapDevice`/`CFbsBitGc` instead exits after
+"Starting renderer" on the E65, so that offscreen-GDI approach is
+removed in v1.0.33. The new candidate draws a small 5x7 diagnostic font
+straight into the locked RGB565 bitmap, then presents the complete frame and
+text with one DSA BitBlt; it adds no bitmap-device/context API imports. The
+software renderer remains at the v1.0.28 state. V1.0.33 E65 startup and
+flicker verification are pending.

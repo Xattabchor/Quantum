@@ -845,6 +845,179 @@ bool fillLevel41Rgb565Bitmap(CFbsBitmap& bitmap,
     return true;
 }
 
+
+const TUint8* level41StatusGlyph(TUint16 character)
+{
+    static const TUint8 glyphs[41][7] = {
+        {0x0e,0x11,0x11,0x1f,0x11,0x11,0x11}, /* A */
+        {0x1e,0x11,0x11,0x1e,0x11,0x11,0x1e}, /* B */
+        {0x0e,0x11,0x10,0x10,0x10,0x11,0x0e}, /* C */
+        {0x1e,0x11,0x11,0x11,0x11,0x11,0x1e}, /* D */
+        {0x1f,0x10,0x10,0x1e,0x10,0x10,0x1f}, /* E */
+        {0x1f,0x10,0x10,0x1e,0x10,0x10,0x10}, /* F */
+        {0x0e,0x11,0x10,0x17,0x11,0x11,0x0f}, /* G */
+        {0x11,0x11,0x11,0x1f,0x11,0x11,0x11}, /* H */
+        {0x0e,0x04,0x04,0x04,0x04,0x04,0x0e}, /* I */
+        {0x07,0x02,0x02,0x02,0x12,0x12,0x0c}, /* J */
+        {0x11,0x12,0x14,0x18,0x14,0x12,0x11}, /* K */
+        {0x10,0x10,0x10,0x10,0x10,0x10,0x1f}, /* L */
+        {0x11,0x1b,0x15,0x15,0x11,0x11,0x11}, /* M */
+        {0x11,0x19,0x15,0x13,0x11,0x11,0x11}, /* N */
+        {0x0e,0x11,0x11,0x11,0x11,0x11,0x0e}, /* O */
+        {0x1e,0x11,0x11,0x1e,0x10,0x10,0x10}, /* P */
+        {0x0e,0x11,0x11,0x11,0x15,0x12,0x0d}, /* Q */
+        {0x1e,0x11,0x11,0x1e,0x14,0x12,0x11}, /* R */
+        {0x0f,0x10,0x10,0x0e,0x01,0x01,0x1e}, /* S */
+        {0x1f,0x04,0x04,0x04,0x04,0x04,0x04}, /* T */
+        {0x11,0x11,0x11,0x11,0x11,0x11,0x0e}, /* U */
+        {0x11,0x11,0x11,0x11,0x11,0x0a,0x04}, /* V */
+        {0x11,0x11,0x11,0x15,0x15,0x15,0x0a}, /* W */
+        {0x11,0x11,0x0a,0x04,0x0a,0x11,0x11}, /* X */
+        {0x11,0x11,0x0a,0x04,0x04,0x04,0x04}, /* Y */
+        {0x1f,0x01,0x02,0x04,0x08,0x10,0x1f}, /* Z */
+        {0x0e,0x11,0x13,0x15,0x19,0x11,0x0e}, /* 0 */
+        {0x04,0x0c,0x04,0x04,0x04,0x04,0x0e}, /* 1 */
+        {0x0e,0x11,0x01,0x02,0x04,0x08,0x1f}, /* 2 */
+        {0x1e,0x01,0x01,0x0e,0x01,0x01,0x1e}, /* 3 */
+        {0x02,0x06,0x0a,0x12,0x1f,0x02,0x02}, /* 4 */
+        {0x1f,0x10,0x10,0x1e,0x01,0x01,0x1e}, /* 5 */
+        {0x0e,0x10,0x10,0x1e,0x11,0x11,0x0e}, /* 6 */
+        {0x1f,0x01,0x02,0x04,0x08,0x08,0x08}, /* 7 */
+        {0x0e,0x11,0x11,0x0e,0x11,0x11,0x0e}, /* 8 */
+        {0x0e,0x11,0x11,0x0f,0x01,0x01,0x0e}, /* 9 */
+        {0x00,0x04,0x04,0x00,0x04,0x04,0x00}, /* : */
+        {0x00,0x00,0x00,0x00,0x00,0x0c,0x0c}, /* . */
+        {0x01,0x02,0x02,0x04,0x08,0x08,0x10}, /* / */
+        {0x00,0x00,0x00,0x1f,0x00,0x00,0x00}, /* - */
+        {0x00,0x00,0x00,0x00,0x06,0x04,0x08}  /* , */
+    };
+
+    if (character >= 'a' && character <= 'z') {
+        character = static_cast<TUint16>(character - 'a' + 'A');
+    }
+    if (character >= 'A' && character <= 'Z') {
+        return glyphs[character - 'A'];
+    }
+    if (character >= '0' && character <= '9') {
+        return glyphs[26 + character - '0'];
+    }
+    switch (character) {
+    case ':': return glyphs[36];
+    case '.': return glyphs[37];
+    case '/': return glyphs[38];
+    case '-': return glyphs[39];
+    case ',': return glyphs[40];
+    default: return 0;
+    }
+}
+
+void drawLevel41StatusText(TUint16* pixels,
+                           const TSize& size,
+                           TInt stridePixels,
+                           TInt left,
+                           TInt baseline,
+                           const TDesC& text)
+{
+    const TInt top = baseline - 7;
+    const TUint16 white = 0xffff;
+    TInt x = left;
+    TInt index;
+    for (index = 0; index < text.Length(); ++index) {
+        const TUint16 character = static_cast<TUint16>(text[index]);
+        const TUint8* glyph = level41StatusGlyph(character);
+        if (glyph != 0) {
+            TInt row;
+            for (row = 0; row < 7; ++row) {
+                const TInt y = top + row;
+                if (y < 0 || y >= size.iHeight) continue;
+                TInt column;
+                for (column = 0; column < 5; ++column) {
+                    if ((glyph[row] & (1U << (4 - column))) == 0) continue;
+                    const TInt pixelX = x + column;
+                    if (pixelX >= 0 && pixelX < size.iWidth) {
+                        pixels[y * stridePixels + pixelX] = white;
+                    }
+                }
+            }
+        }
+        x += 6;
+        if (x >= size.iWidth) break;
+    }
+}
+
+bool drawLevel41StatusOverlay(CFbsBitmap& bitmap,
+                              const TSize& size,
+                              TInt stridePixels)
+{
+    if (size.iWidth <= 0 || size.iHeight <= 0 ||
+        stridePixels < size.iWidth) {
+        return false;
+    }
+
+    bitmap.LockHeap();
+    TUint32* address = bitmap.DataAddress();
+    if (address == 0) {
+        bitmap.UnlockHeap();
+        return false;
+    }
+    TUint16* pixels = reinterpret_cast<TUint16*>(address);
+    TBuf<48> line;
+
+    line.Copy(_L("LEVEL 41 / DMODE 9"));
+    drawLevel41StatusText(pixels, size, stridePixels, 4, 14, line);
+
+    if (gBenchmarkComplete) {
+        line.Format(_L("10s average FPS: %d.%d"),
+                    gDeviceFpsTenths / 10, gDeviceFpsTenths % 10);
+    } else {
+        line.Format(_L("Live FPS: %d.%d"),
+                    gDeviceFpsTenths / 10, gDeviceFpsTenths % 10);
+    }
+    drawLevel41StatusText(pixels, size, stridePixels, 4, 32, line);
+
+    line.Format(_L("Mesh avg/max: %d/%d ms"),
+                gAverageMeshRenderMicros / 1000, gMaximumMeshRenderMillis);
+    drawLevel41StatusText(pixels, size, stridePixels, 4, 48, line);
+
+    if (gDsaPresenterActive) {
+        line.Copy(_L("Presenter: DSA bitmap blit"));
+    } else if (gDsaAttempted && gDsaStatus != KErrNone) {
+        line.Format(_L("Presenter: BitBlt, DSA error %d"), gDsaStatus);
+    } else if (gBitmapGdiPresenterActive) {
+        line.Copy(_L("Presenter: bitmap BitBlt"));
+    } else {
+        line.Copy(_L("Presenter: GDI fallback"));
+    }
+    drawLevel41StatusText(pixels, size, stridePixels, 4, 64, line);
+
+    line.Format(_L("Validation: %d ms"),
+                gAverageMeshPhaseMillis[ESoftwareMeshRenderPhaseValidation]);
+    drawLevel41StatusText(pixels, size, stridePixels, 4, 80, line);
+    line.Format(_L("Transform/proj: %d ms"),
+                gAverageMeshPhaseMillis[
+                    ESoftwareMeshRenderPhaseTransformProjection]);
+    drawLevel41StatusText(pixels, size, stridePixels, 4, 96, line);
+    line.Format(_L("Cull/queue: %d ms"),
+                gAverageMeshPhaseMillis[ESoftwareMeshRenderPhasePolygonQueue]);
+    drawLevel41StatusText(pixels, size, stridePixels, 4, 112, line);
+    line.Format(_L("Sort: %d ms"),
+                gAverageMeshPhaseMillis[ESoftwareMeshRenderPhaseSort]);
+    drawLevel41StatusText(pixels, size, stridePixels, 4, 128, line);
+    line.Format(_L("Draw/raster: %d ms"),
+                gAverageMeshPhaseMillis[ESoftwareMeshRenderPhaseDraw]);
+    drawLevel41StatusText(pixels, size, stridePixels, 4, 144, line);
+    line.Format(_L("Polygons %d Triangles %d"),
+                gPolygonsDrawn, gTrianglesDrawn);
+    drawLevel41StatusText(
+        pixels, size, stridePixels, 4, size.iHeight - 22, line);
+    line.Copy(_L("Press any key to exit"));
+    drawLevel41StatusText(
+        pixels, size, stridePixels, 4, size.iHeight - 6, line);
+
+    bitmap.UnlockHeap();
+    return true;
+}
+
 class TLevel41BitmapGdiPresenter
 {
 public:
@@ -917,8 +1090,7 @@ public:
                         CWsScreenDevice& screen,
                         const TSize& size)
         : iSession(session), iScreen(screen), iSize(size), iAccess(0),
-          iStarter(0), iPixmap(0), iPixmapDevice(0), iPixmapGc(0),
-          iStridePixels(0), iDsaActive(false)
+          iStarter(0), iPixmap(0), iStridePixels(0), iDsaActive(false)
     {
     }
 
@@ -950,10 +1122,7 @@ public:
 
     void PreparePixmapL()
     {
-        if (iPixmap != 0 && iPixmapDevice != 0 && iPixmapGc != 0 &&
-            iStridePixels >= iSize.iWidth) {
-            return;
-        }
+        if (iPixmap != 0 && iStridePixels >= iSize.iWidth) return;
         CleanupPixmap();
 
         iPixmap = new(ELeave) CWsBitmap(iSession);
@@ -965,16 +1134,10 @@ public:
             User::Leave(KErrNotSupported);
         }
         iStridePixels = scanLineBytes / 2;
-        iPixmapDevice = CFbsBitmapDevice::NewL(iPixmap);
-        User::LeaveIfError(iPixmapDevice->CreateContext(iPixmapGc));
     }
 
     void CleanupPixmap()
     {
-        delete iPixmapGc;
-        iPixmapGc = 0;
-        delete iPixmapDevice;
-        iPixmapDevice = 0;
         delete iPixmap;
         iPixmap = 0;
         iStridePixels = 0;
@@ -983,13 +1146,12 @@ public:
     bool DrawFrame()
     {
         if (!iDsaActive || iAccess == 0 || iAccess->Gc() == 0 ||
-            iPixmap == 0 || iPixmapGc == 0 ||
-            !fillLevel41Rgb565Bitmap(*iPixmap, iSize, iStridePixels)) {
+            iPixmap == 0 ||
+            !fillLevel41Rgb565Bitmap(*iPixmap, iSize, iStridePixels) ||
+            !drawLevel41StatusOverlay(*iPixmap, iSize, iStridePixels)) {
             return false;
         }
 
-        /* Composite the changing statistics before presenting the full frame. */
-        drawStatusOverlay(iScreen, *iPixmapGc, iSize);
         iAccess->Gc()->BitBlt(TPoint(0, 0), iPixmap);
         return true;
     }
@@ -1010,8 +1172,6 @@ private:
     CDirectScreenAccess* iAccess;
     CDsaStarter* iStarter;
     CWsBitmap* iPixmap;
-    CFbsBitmapDevice* iPixmapDevice;
-    CFbsBitGc* iPixmapGc;
     TInt iStridePixels;
     bool iDsaActive;
 };
