@@ -1,0 +1,665 @@
+{
+  "sis": {
+    "file": "quantum_level41_walk_test-v1.0.30-level1-import-drt-uidiv-223-omap1710-dsa-argb32-armv5t.sis",
+    "size_bytes": 740840,
+    "sha256": "9b7c2d7c2957efbec0d93878e55e75753810e56aea4fc6cf40249fbe80223647",
+    "md5": "5aa50f273fcc053425603b44c53b93c8",
+    "signed": false,
+    "drive_file_id": "1IZnjvqYVI_gCkVt9gMp1YUCibMmh-i0V",
+    "drive_link": "https://drive.google.com/file/d/1IZnjvqYVI_gCkVt9gMp1YUCibMmh-i0V/view?usp=drivesdk",
+    "drive_md5_matches_local": true,
+    "drive_md5": "5aa50f273fcc053425603b44c53b93c8"
+  },
+  "package_uid": "0xE000A021",
+  "executable_uid3": "0xe000a020",
+  "version": "1.0.30",
+  "target": {
+    "architecture": "armv5t",
+    "kernel": "eka2",
+    "omap1710": true,
+    "ecolor64k": true,
+    "dsa_argb_bitmap": true,
+    "interactive_walk": true,
+    "gameplay_audio_enabled": false,
+    "midi_audio_enabled": false,
+    "native_leaves_import_probe": false,
+    "drt_import_proxy_probe": true,
+    "drt_ten_ordinal_import_probe": true,
+    "drt_lookup_probe": false,
+    "native_leave_personality_objects": false,
+    "mda_import_probe": false,
+    "mda_probe_calls_play": false,
+    "scalar_pdiv_asm": false,
+    "mode9_mul_order_experiment": false,
+    "custom_additional_drt_ordinal": 223,
+    "custom_additional_drt_symbol": "__aeabi_uidiv"
+  },
+  "drt_lookup_probe": false,
+  "build": {
+    "status": "Cross-built and statically audited before packaging; exact E32 import set verified; E65 device launch not yet tested.",
+    "toolchain": "Symbian SDK 0.3.0, ARMv5T / EKA2; Clang 23.1.2",
+    "configuration": {
+      "QUANTUM_LEVEL41_OMAP1710": true,
+      "QUANTUM_LEVEL41_OMAP1710_ECOLOR64K": true,
+      "QUANTUM_LEVEL41_OMAP1710_DSA_ARGB_BITMAP": true,
+      "QUANTUM_LEVEL41_INTERACTIVE_WALK": true,
+      "QUANTUM_LEVEL41_ENABLE_SYMBIAN_AUDIO": false,
+      "QUANTUM_LEVEL41_ENABLE_MIDI_AUDIO": false,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_DRT_TEN_ORDINALS": true,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_DRT_DLL": false,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_DRT_LOOKUP": false,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_NATIVE_LEAVES": false,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_MDA": false,
+      "QUANTUM_LEVEL41_OMAP1710_EFFECTS_ASM_EXPERIMENT": false,
+      "scalar_pdiv_asm": false,
+      "mode9_mul_order_experiment": false,
+      "custom_drt_additional_import_ordinal": 223,
+      "custom_drt_additional_import_symbol": "__aeabi_uidiv"
+    },
+    "drtaeabi_proxy": {
+      "definition": "drtaeabi-ordinal-223-import-proxy.def",
+      "generated_with": "symbian-native proxy-sources; SDK clang++ and ld.lld",
+      "file": "drtaeabi-ordinal-223-import-proxy.dso",
+      "size_bytes": 1708,
+      "sha256": "2486505069dd3f210ae07b3b41ee6a68fa54a1b0f7109e84750951f3b002f78c",
+      "target_dll": "drtaeabi.dll",
+      "static_imports": [
+        135,
+        139,
+        140,
+        141,
+        142,
+        147,
+        148,
+        155,
+        157,
+        221,
+        223
+      ],
+      "exports": [
+        {
+          "symbol": "__aeabi_idivmod",
+          "ordinal": 135
+        },
+        {
+          "symbol": "__aeabi_ldivmod",
+          "ordinal": 139
+        },
+        {
+          "symbol": "__aeabi_llsl",
+          "ordinal": 140
+        },
+        {
+          "symbol": "__aeabi_llsr",
+          "ordinal": 141
+        },
+        {
+          "symbol": "__aeabi_lmul",
+          "ordinal": 142
+        },
+        {
+          "symbol": "__aeabi_memcpy4",
+          "ordinal": 147
+        },
+        {
+          "symbol": "__aeabi_memcpy8",
+          "ordinal": 148
+        },
+        {
+          "symbol": "__aeabi_uidivmod",
+          "ordinal": 155
+        },
+        {
+          "symbol": "__aeabi_uldivmod",
+          "ordinal": 157
+        },
+        {
+          "symbol": "abort",
+          "ordinal": 221
+        },
+        {
+          "symbol": "__aeabi_uidiv",
+          "ordinal": 223
+        }
+      ]
+    },
+    "division_helpers": {
+      "symbols": [
+        "__aeabi_idiv",
+        "__aeabi_uidiv"
+      ],
+      "resolutions": {
+        "__aeabi_idiv": "local SDK legacy EKA2 runtime definition (divsi3.S.obj)",
+        "__aeabi_uidiv": "static DRT import ordinal 223"
+      },
+      "direct_probe_calls": false,
+      "note": "The filtered runtime archive keeps divsi3.S.obj and the __udivsi3 implementation needed internally by idiv, but renames that object\u2019s public __aeabi_uidiv alias to __aeabi_local so external unsigned-division references stay unresolved and bind to DRT ordinal 223."
+    },
+    "host_tests": {
+      "status": "not rerun for these link/package-only variants",
+      "reason": "C++ sources and non-E32 payloads are unchanged from v1.0.28; only the filtered runtime archive, custom DRT proxy, E32, and SIS version differ."
+    }
+  },
+  "e32": {
+    "size_bytes": 189932,
+    "sha256": "8912a70334667622f914b829de3c2008940ca4eb2554e26347f39c112934caa1",
+    "heap_min": 4096,
+    "heap_max": 2097152,
+    "header_crc_valid": true,
+    "uid3": "0xe000a020",
+    "secure_id": "0xe000a020",
+    "capabilities": 0,
+    "imports": [
+      "bitgdi.dll",
+      "drtaeabi.dll",
+      "efsrv.dll",
+      "estlib.dll",
+      "euser.dll",
+      "fbscli.dll",
+      "gdi.dll",
+      "libm.dll",
+      "ws32.dll"
+    ],
+    "import_ordinals": {
+      "bitgdi.dll": [
+        52
+      ],
+      "drtaeabi.dll": [
+        135,
+        139,
+        140,
+        141,
+        142,
+        147,
+        148,
+        155,
+        157,
+        221,
+        223
+      ],
+      "efsrv.dll": [
+        68,
+        93,
+        257,
+        264,
+        300
+      ],
+      "estlib.dll": [
+        18,
+        141,
+        153,
+        154,
+        168,
+        195,
+        205,
+        253,
+        275
+      ],
+      "euser.dll": [
+        64,
+        69,
+        85,
+        120,
+        196,
+        205,
+        208,
+        422,
+        424,
+        425,
+        426,
+        428,
+        430,
+        532,
+        540,
+        549,
+        585,
+        593,
+        604,
+        617,
+        626,
+        641,
+        644,
+        645,
+        646,
+        649,
+        652,
+        654,
+        665,
+        669,
+        674,
+        815,
+        839,
+        841,
+        842,
+        855,
+        925,
+        928,
+        929,
+        953,
+        968,
+        973,
+        1088,
+        1089,
+        1090,
+        1091,
+        1094,
+        1169,
+        1196,
+        1213,
+        1360,
+        1415,
+        1416,
+        1417,
+        1793,
+        1806,
+        1853,
+        1951,
+        1953,
+        1954,
+        1955,
+        2103,
+        2106,
+        2128
+      ],
+      "fbscli.dll": [
+        14,
+        107,
+        108,
+        133
+      ],
+      "gdi.dll": [
+        169
+      ],
+      "libm.dll": [
+        92,
+        145
+      ],
+      "ws32.dll": [
+        1,
+        7,
+        23,
+        29,
+        68,
+        69,
+        70,
+        72,
+        73,
+        76,
+        81,
+        107,
+        148,
+        157,
+        158,
+        184,
+        185,
+        190,
+        211,
+        224,
+        233,
+        234,
+        264,
+        265,
+        275,
+        276,
+        277,
+        278,
+        348,
+        351,
+        354,
+        359,
+        361
+      ]
+    },
+    "drtaeabi_static_ordinals": [
+      135,
+      139,
+      140,
+      141,
+      142,
+      147,
+      148,
+      155,
+      157,
+      221,
+      223
+    ],
+    "drtaeabi_import_symbols": {
+      "135": "__aeabi_idivmod",
+      "139": "__aeabi_ldivmod",
+      "140": "__aeabi_llsl",
+      "141": "__aeabi_llsr",
+      "142": "__aeabi_lmul",
+      "147": "__aeabi_memcpy4",
+      "148": "__aeabi_memcpy8",
+      "155": "__aeabi_uidivmod",
+      "157": "__aeabi_uldivmod",
+      "221": "abort",
+      "223": "__aeabi_uidiv"
+    },
+    "drtaeabi_proxy_exports": [
+      {
+        "symbol": "__aeabi_idivmod",
+        "ordinal": 135
+      },
+      {
+        "symbol": "__aeabi_ldivmod",
+        "ordinal": 139
+      },
+      {
+        "symbol": "__aeabi_llsl",
+        "ordinal": 140
+      },
+      {
+        "symbol": "__aeabi_llsr",
+        "ordinal": 141
+      },
+      {
+        "symbol": "__aeabi_lmul",
+        "ordinal": 142
+      },
+      {
+        "symbol": "__aeabi_memcpy4",
+        "ordinal": 147
+      },
+      {
+        "symbol": "__aeabi_memcpy8",
+        "ordinal": 148
+      },
+      {
+        "symbol": "__aeabi_uidivmod",
+        "ordinal": 155
+      },
+      {
+        "symbol": "__aeabi_uldivmod",
+        "ordinal": 157
+      },
+      {
+        "symbol": "abort",
+        "ordinal": 221
+      },
+      {
+        "symbol": "__aeabi_uidiv",
+        "ordinal": 223
+      }
+    ],
+    "drtaeabi_proxy_sha256": "2486505069dd3f210ae07b3b41ee6a68fa54a1b0f7109e84750951f3b002f78c",
+    "drtaeabi_proxy_size_bytes": 1708,
+    "euser_imports_delta_vs_v1.0.22": {
+      "added": [],
+      "removed": []
+    },
+    "euser_imports_identical_to_v1.0.22": true,
+    "mediaclientaudio_ordinals": [],
+    "midi_client_imports": [],
+    "inspector_note": "E32 imports inspected with symbian.native.require_native().inspect_e32 on a disposable copy capped at 1 MiB; the shipped heap bounds remain 4096..2097152. This is static metadata, not a device loader or ROM-availability result.",
+    "division_helpers": {
+      "__aeabi_idiv": "local SDK legacy EKA2 runtime definition (divsi3.S.obj)",
+      "__aeabi_uidiv": "static DRT import ordinal 223"
+    },
+    "division_helper_implementation_note": "The filtered runtime archive keeps divsi3.S.obj and the __udivsi3 implementation needed internally by idiv, but renames that object\u2019s public __aeabi_uidiv alias to __aeabi_local so external unsigned-division references stay unresolved and bind to DRT ordinal 223."
+  },
+  "audio_resources": [
+    {
+      "resource": "/music/wth.mp3",
+      "target": "!:\\private\\e000a020\\audio\\music\\wth.mp3",
+      "size_bytes": 221984,
+      "sha256": "7f441cdca71ef026915056ab60cd95c06d2d6ab0a8640ed8e9bd9e3f396b91d6"
+    },
+    {
+      "resource": "/sounds/wpn/fn2000.wav",
+      "target": "!:\\private\\e000a020\\audio\\sounds\\wpn\\fn2000.wav",
+      "size_bytes": 6444,
+      "sha256": "99ef9989a3b17949a2bd4cfbadfa6b2f16d84f33b207a01b91b42d72c0e25d3b"
+    },
+    {
+      "resource": "/sounds/wpn/r.wav",
+      "target": "!:\\private\\e000a020\\audio\\sounds\\wpn\\r.wav",
+      "size_bytes": 54380,
+      "sha256": "9292944115644ac4dbd358079987af3235bf6f4678fabde5c185ac1d4023ea06"
+    }
+  ],
+  "sis_integrity": {
+    "root_field": "SISContents",
+    "header_uid_crc_valid": true,
+    "controller_checksum_crc16": "0xc292",
+    "controller_checksum_valid": true,
+    "data_checksum_crc16": "0x362f",
+    "data_checksum_valid": true,
+    "pkg_target_list_matches": true,
+    "data_unit_count": 1,
+    "application_registered": true,
+    "all_payload_hashes_valid": true,
+    "all_staged_payloads_match": true
+  },
+  "payloads": [
+    {
+      "index": 0,
+      "source": "quantum_level41_walk_test.exe",
+      "target": "!:\\sys\\bin\\quantum_level41_walk_test.exe",
+      "size_bytes": 189932,
+      "sha256": "8912a70334667622f914b829de3c2008940ca4eb2554e26347f39c112934caa1"
+    },
+    {
+      "index": 1,
+      "source": "quantum_level41_walk_test_reg.rsc",
+      "target": "!:\\private\\10003a3f\\import\\apps\\quantum_level41_walk_test_reg.rsc",
+      "size_bytes": 133,
+      "sha256": "e4b35f648dc2c06e4c3e66f76de6510aff00da337793b9f00d0f65d5d40a4b1c"
+    },
+    {
+      "index": 2,
+      "source": "quantum_level41_walk_test_loc.rsc",
+      "target": "!:\\resource\\apps\\quantum_level41_walk_test_loc.rsc",
+      "size_bytes": 88,
+      "sha256": "9df5beb4624cd761b4cd75d7872c6b73d304e2e8d48158ff8ad4ec5c4709d6eb"
+    },
+    {
+      "index": 3,
+      "source": "L3D_new.3d",
+      "target": "!:\\private\\e000a020\\level41\\L3D_new.3d",
+      "size_bytes": 56544,
+      "sha256": "00cf889f495aa5b8fe6bc058c022ef16f49a8761c2d30b7d084fa43eec088ad9"
+    },
+    {
+      "index": 4,
+      "source": "lightmap.vla",
+      "target": "!:\\private\\e000a020\\level41\\lightmap.vla",
+      "size_bytes": 10032,
+      "sha256": "b62c6b46df7b60e50d3cced9e5fe4f73d32b21d45521273932c5a53e0bfad53e"
+    },
+    {
+      "index": 5,
+      "source": "skybox8.3d",
+      "target": "!:\\private\\e000a020\\level41\\skybox8.3d",
+      "size_bytes": 484,
+      "sha256": "e7fe2edc8d7132808f3ea15ab55dc7663ba3263de25a007f7c576f58c8ad9e1f"
+    },
+    {
+      "index": 6,
+      "source": "forest.qtx",
+      "target": "!:\\private\\e000a020\\level41\\forest.qtx",
+      "size_bytes": 131080,
+      "sha256": "0b2963f5ff7371cb698be871ff37775d9cd82c42c3ad73bef7d89c274e98450e"
+    },
+    {
+      "index": 7,
+      "source": "map.qtx",
+      "target": "!:\\private\\e000a020\\level41\\map.qtx",
+      "size_bytes": 262152,
+      "sha256": "c963a1dc3f644cfd3e5ddf2991bfbaf446e6580e97a816b2b2c5785d2df16286"
+    },
+    {
+      "index": 8,
+      "source": "river.qtx",
+      "target": "!:\\private\\e000a020\\level41\\river.qtx",
+      "size_bytes": 4104,
+      "sha256": "707a5e6fd572f4f9fc127ea325edc0df90292eb1f1dad925cd26dcf6a487a231"
+    },
+    {
+      "index": 9,
+      "source": "sky.qtx",
+      "target": "!:\\private\\e000a020\\level41\\sky.qtx",
+      "size_bytes": 262152,
+      "sha256": "40125dacbfa69d2b2fb45e9810056e417ca970239846615332d6f29a99a43aa7"
+    },
+    {
+      "index": 10,
+      "source": "weather.txt",
+      "target": "!:\\private\\e000a020\\level41\\weather.txt",
+      "size_bytes": 64,
+      "sha256": "a5e63bfbd7b958fa97202021a37ca02b8211081c98b06f0a2577a2a6e96911d5"
+    },
+    {
+      "index": 11,
+      "source": "weapon.qtx",
+      "target": "!:\\private\\e000a020\\level41\\weapon.qtx",
+      "size_bytes": 67768,
+      "sha256": "b1d3f2ad6c7cb058e37f88d2b2e9c33c925483eb362abb6b965f161631dcf87d"
+    },
+    {
+      "index": 12,
+      "source": "weapon-fire.qtx",
+      "target": "!:\\private\\e000a020\\level41\\weapon-fire.qtx",
+      "size_bytes": 4104,
+      "sha256": "4266609c689254079829cc85b8446c5b368c6efc1cfb0e6b919d34f14e8bf91f"
+    },
+    {
+      "index": 13,
+      "source": "weapon-sight-weapon.qtx",
+      "target": "!:\\private\\e000a020\\level41\\weapon-sight-weapon.qtx",
+      "size_bytes": 245768,
+      "sha256": "6869c5b17a2765e1af7ac758701f39ddebf677fef7c4aa3781bd15a7f5fbe6e4"
+    },
+    {
+      "index": 14,
+      "source": "weapon-gameplay.qwg",
+      "target": "!:\\private\\e000a020\\level41\\weapon-gameplay.qwg",
+      "size_bytes": 26,
+      "sha256": "a7ac756bc9daefc1858d59eecc687b1e40783b8ba911ebffebd02780a0ac0b69"
+    },
+    {
+      "index": 15,
+      "source": "weapon-catalog.qwc",
+      "target": "!:\\private\\e000a020\\level41\\weapon-catalog.qwc",
+      "size_bytes": 776,
+      "sha256": "3c8fe379775a8cba6fdb702f7bba3ef885fc9301334a5d1d6c1a96953d9d7ee2"
+    },
+    {
+      "index": 16,
+      "source": "audio/music/wth.mp3",
+      "target": "!:\\private\\e000a020\\audio\\music\\wth.mp3",
+      "size_bytes": 221984,
+      "sha256": "7f441cdca71ef026915056ab60cd95c06d2d6ab0a8640ed8e9bd9e3f396b91d6"
+    },
+    {
+      "index": 17,
+      "source": "audio/sounds/wpn/fn2000.wav",
+      "target": "!:\\private\\e000a020\\audio\\sounds\\wpn\\fn2000.wav",
+      "size_bytes": 6444,
+      "sha256": "99ef9989a3b17949a2bd4cfbadfa6b2f16d84f33b207a01b91b42d72c0e25d3b"
+    },
+    {
+      "index": 18,
+      "source": "audio/sounds/wpn/r.wav",
+      "target": "!:\\private\\e000a020\\audio\\sounds\\wpn\\r.wav",
+      "size_bytes": 54380,
+      "sha256": "9292944115644ac4dbd358079987af3235bf6f4678fabde5c185ac1d4023ea06"
+    }
+  ],
+  "e65_runtime_result": "Not yet tested on Nokia E65. v1.0.30 is a prepared launch-only candidate; no device launch, helper execution, gameplay, audio, or MIDI result is available.",
+  "device_comparison": {
+    "1.0.22": {
+      "device": "Nokia E65",
+      "status": "works_as_expected",
+      "user_reported": true
+    },
+    "1.0.23": {
+      "device": "Nokia E65",
+      "status": "popup",
+      "popup_text": "Feature not supported",
+      "user_reported": true
+    },
+    "1.0.24": {
+      "device": "Nokia E65",
+      "status": "popup",
+      "popup_text": "Feature not supported",
+      "user_reported": true
+    },
+    "1.0.25": {
+      "device": "Nokia E65",
+      "status": "popup",
+      "popup_text": "Feature not supported",
+      "user_reported": true
+    },
+    "1.0.26": {
+      "device": "Nokia E65",
+      "status": "works",
+      "user_reported": true,
+      "drt_overlay_line_reported": false,
+      "dynamic_load_lookup_result": "unknown"
+    },
+    "1.0.27": {
+      "device": "Nokia E65",
+      "status": "load_succeeded_partial_lookup",
+      "user_reported": true,
+      "drt_load_error": 0,
+      "lookup_found_count": 10,
+      "lookup_ordinal_count": 12,
+      "lookup_mask": "0x3FF",
+      "missing_mask_bits": [
+        10,
+        11
+      ],
+      "missing_ordinals": [
+        222,
+        223
+      ],
+      "missing_symbols": [
+        "__aeabi_idiv",
+        "__aeabi_uidiv"
+      ],
+      "resolved_helpers_invoked": false
+    },
+    "1.0.28": {
+      "device": "Nokia E65",
+      "status": "launched",
+      "user_reported": true,
+      "test": "Static drtaeabi.dll import set limited to ordinals 135, 139, 140, 141, 142, 147, 148, 155, 157, and 221; ordinals 222/223 excluded.",
+      "observed_result": "Application launched on Nokia E65.",
+      "result_scope": "Launch only; no helper execution, gameplay, audio, or MIDI result was reported.",
+      "interpretation": "Evidence favoring the missing 222/223 DRT imports as a v1.0.25 factor, but not proof; this candidate also resolves division helpers locally and uses a custom ten-export proxy."
+    },
+    "1.0.30": {
+      "device": "Nokia E65",
+      "status": "not_yet_tested",
+      "user_reported": false,
+      "test": "Static drtaeabi.dll import set is the v1.0.28 ten-ordinal set plus ordinal 223 (__aeabi_uidiv).",
+      "launch_only": true
+    }
+  },
+  "e32_import_audit": {
+    "file": "e32-import-audit.json",
+    "static_drt_import_set_exact": true,
+    "actual_drtaeabi_ordinals": [
+      135,
+      139,
+      140,
+      141,
+      142,
+      147,
+      148,
+      155,
+      157,
+      221,
+      223
+    ],
+    "included_division_ordinal": 223,
+    "included_division_symbol": "__aeabi_uidiv",
+    "other_division_ordinal_local": 222,
+    "all_non_drt_import_blocks_match_v1.0.28": true,
+    "proxy_exports_exact_match": true,
+    "all_18_non_e32_payloads_match_v1.0.28": true
+  },
+  "non_e32_payloads_identical_to_v1.0.28": true,
+  "audio_payloads_identical_to_v1.0.28": true
+}

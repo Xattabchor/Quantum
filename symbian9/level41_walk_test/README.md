@@ -478,7 +478,7 @@ same-frame parity check fails. On the E65, only `Presenter: DSA ARGB32`
 confirms the requested active path; `DSA EColor64K` means fallback. Launch,
 key-up behavior, runtime presenter, and FPS still require device verification.
 
-## v1.0.22–v1.0.28 launch/import diagnostics
+## v1.0.22–v1.0.30 launch/import diagnostics
 
 The user reports that the no-audio/no-DRT v1.0.22 baseline works as expected,
 while v1.0.23 (native-leaves/DRT-only), v1.0.24 (DRT plus trapped MDA imports,
@@ -532,3 +532,34 @@ See [`output/IMPORT-PROBE-MATRIX.md`](output/IMPORT-PROBE-MATRIX.md) for the
 comparison table and earlier device results. The v1.0.28 `BUILD-REPORT.md`,
 `payload-manifest.json`, `e32-import-audit.json`, and `sis-audit.json` are in its
 version directory and record the exact package, import table, and audit results.
+
+## v1.0.29 and v1.0.30 single-division-import controls
+
+The next two launch-only SIS candidates separate the two E65 lookup misses:
+
+- **v1.0.29** adds only DRT ordinal 222 (`__aeabi_idiv`) to v1.0.28's ten
+  imports. `__aeabi_uidiv` remains local.
+- **v1.0.30** adds only DRT ordinal 223 (`__aeabi_uidiv`) to the same ten
+  imports. `__aeabi_idiv` remains local.
+
+Neither package includes both 222 and 223. The E32 import tables and 11-export
+proxies were inspected before SIS packaging; all non-DRT imports match
+v1.0.28, and the EUser imports still match v1.0.22. Both unsigned SIS files
+passed the 19-payload audit, and all 18 non-E32 payloads match v1.0.28
+byte-for-byte. Gameplay audio and MIDI remain disabled, with audio files
+retained only for package consistency. These checks establish package and
+static-import metadata, not E65 loader acceptance or successful helper
+execution. Neither version has a device result yet.
+
+The v1.0.30 filtered runtime keeps the SDK's internal `__udivsi3` routine,
+which the local `__aeabi_idiv` implementation depends on, but renames that
+object's public `__aeabi_uidiv` alias in the temporary archive. That leaves
+external `__aeabi_uidiv` references unresolved for the custom DRT proxy at
+ordinal 223. The SIS contains no runtime archive.
+
+Downloads: [v1.0.29 ordinal-222 control](https://drive.google.com/file/d/1CscxgVwC4UbsIPE1kdESASDBT4SuPi48/view?usp=drivesdk) · [v1.0.30 ordinal-223 control](https://drive.google.com/file/d/1IZnjvqYVI_gCkVt9gMp1YUCibMmh-i0V/view?usp=drivesdk)
+
+See each version directory for its `BUILD-REPORT.md`, `payload-manifest.json`,
+`e32-import-audit.json`, and `sis-audit.json`. The candidates remain launch
+checks only: no helper is explicitly called, and audio, MIDI, codec, DSP, and
+performance behavior are not established.
