@@ -1,0 +1,11 @@
+EXPORTS
+__aeabi_idivmod @ 135 NONAME
+__aeabi_ldivmod @ 139 NONAME
+__aeabi_llsl @ 140 NONAME
+__aeabi_llsr @ 141 NONAME
+__aeabi_lmul @ 142 NONAME
+__aeabi_memcpy4 @ 147 NONAME
+__aeabi_memcpy8 @ 148 NONAME
+__aeabi_uidivmod @ 155 NONAME
+__aeabi_uldivmod @ 157 NONAME
+abort @ 221 NONAME

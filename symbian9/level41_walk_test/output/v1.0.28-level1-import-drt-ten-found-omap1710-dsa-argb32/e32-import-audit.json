@@ -1,0 +1,267 @@
+{
+  "e32": {
+    "file": "quantum_level41_walk_test.exe",
+    "size_bytes": 189852,
+    "sha256": "d9f311a9e8466fee97a3977fdf58f6837f2699a6efe2daf3a8fce990c58a8519",
+    "uid3": "0xe000a020",
+    "secure_id": "0xe000a020",
+    "architecture": "armv5t",
+    "kernel": "eka2",
+    "capabilities": 0,
+    "heap_min": 4096,
+    "heap_max": 2097152,
+    "imports": {
+      "bitgdi.dll": [
+        52
+      ],
+      "drtaeabi.dll": [
+        135,
+        139,
+        140,
+        141,
+        142,
+        147,
+        148,
+        155,
+        157,
+        221
+      ],
+      "efsrv.dll": [
+        68,
+        93,
+        257,
+        264,
+        300
+      ],
+      "estlib.dll": [
+        18,
+        141,
+        153,
+        154,
+        168,
+        195,
+        205,
+        253,
+        275
+      ],
+      "euser.dll": [
+        64,
+        69,
+        85,
+        120,
+        196,
+        205,
+        208,
+        422,
+        424,
+        425,
+        426,
+        428,
+        430,
+        532,
+        540,
+        549,
+        585,
+        593,
+        604,
+        617,
+        626,
+        641,
+        644,
+        645,
+        646,
+        649,
+        652,
+        654,
+        665,
+        669,
+        674,
+        815,
+        839,
+        841,
+        842,
+        855,
+        925,
+        928,
+        929,
+        953,
+        968,
+        973,
+        1088,
+        1089,
+        1090,
+        1091,
+        1094,
+        1169,
+        1196,
+        1213,
+        1360,
+        1415,
+        1416,
+        1417,
+        1793,
+        1806,
+        1853,
+        1951,
+        1953,
+        1954,
+        1955,
+        2103,
+        2106,
+        2128
+      ],
+      "fbscli.dll": [
+        14,
+        107,
+        108,
+        133
+      ],
+      "gdi.dll": [
+        169
+      ],
+      "libm.dll": [
+        92,
+        145
+      ],
+      "ws32.dll": [
+        1,
+        7,
+        23,
+        29,
+        68,
+        69,
+        70,
+        72,
+        73,
+        76,
+        81,
+        107,
+        148,
+        157,
+        158,
+        184,
+        185,
+        190,
+        211,
+        224,
+        233,
+        234,
+        264,
+        265,
+        275,
+        276,
+        277,
+        278,
+        348,
+        351,
+        354,
+        359,
+        361
+      ]
+    },
+    "drtaeabi_ordinals": [
+      135,
+      139,
+      140,
+      141,
+      142,
+      147,
+      148,
+      155,
+      157,
+      221
+    ],
+    "drtaeabi_ordinals_exact_match": true,
+    "ordinals_222_223_excluded": true,
+    "mediaclientaudio_and_midi_imports_absent": true,
+    "inspection_note": "Import table inspected on a disposable copy capped at 1 MiB; shipped heap bounds remain 4096..2097152."
+  },
+  "drtaeabi_proxy": {
+    "file": "drtaeabi-ten-import-proxy.dso",
+    "size_bytes": 1640,
+    "sha256": "1da4d1fa9ce115111f4b325a13d8267f5b101cf004b922a8c062ce88a0dbfca0",
+    "soname": "drtaeabi.dso",
+    "target_dll": "drtaeabi.dll",
+    "exports": [
+      {
+        "symbol": "__aeabi_idivmod",
+        "ordinal": 135
+      },
+      {
+        "symbol": "__aeabi_ldivmod",
+        "ordinal": 139
+      },
+      {
+        "symbol": "__aeabi_llsl",
+        "ordinal": 140
+      },
+      {
+        "symbol": "__aeabi_llsr",
+        "ordinal": 141
+      },
+      {
+        "symbol": "__aeabi_lmul",
+        "ordinal": 142
+      },
+      {
+        "symbol": "__aeabi_memcpy4",
+        "ordinal": 147
+      },
+      {
+        "symbol": "__aeabi_memcpy8",
+        "ordinal": 148
+      },
+      {
+        "symbol": "__aeabi_uidivmod",
+        "ordinal": 155
+      },
+      {
+        "symbol": "__aeabi_uldivmod",
+        "ordinal": 157
+      },
+      {
+        "symbol": "abort",
+        "ordinal": 221
+      }
+    ],
+    "exports_exact_match": true
+  },
+  "checks": {
+    "static_drt_import_set_exact": true,
+    "ordinal_222_excluded": true,
+    "ordinal_223_excluded": true,
+    "euser_imports_equal_v1.0.22": true,
+    "gameplay_audio_disabled": true,
+    "midi_disabled": true,
+    "mda_import_absent": true,
+    "all_18_non_e32_payloads_match_v1.0.27": true,
+    "sis_payload_count": 19,
+    "sis_integrity_checks_pass": true
+  },
+  "non_e32_payloads_matching_v1.0.27": [
+    "quantum_level41_walk_test_reg.rsc",
+    "quantum_level41_walk_test_loc.rsc",
+    "L3D_new.3d",
+    "lightmap.vla",
+    "skybox8.3d",
+    "forest.qtx",
+    "map.qtx",
+    "river.qtx",
+    "sky.qtx",
+    "weather.txt",
+    "weapon.qtx",
+    "weapon-fire.qtx",
+    "weapon-sight-weapon.qtx",
+    "weapon-gameplay.qwg",
+    "weapon-catalog.qwc",
+    "audio/music/wth.mp3",
+    "audio/sounds/wpn/fn2000.wav",
+    "audio/sounds/wpn/r.wav"
+  ],
+  "sis": {
+    "file": "quantum_level41_walk_test-v1.0.28-level1-import-drt-ten-found-omap1710-dsa-argb32-armv5t.sis",
+    "size_bytes": 740660,
+    "sha256": "7cc5206d07cffc1768dcd52c7988410f08fcbef7a234cbd60a1b48880e1025bb",
+    "md5": "232b9054434eae764627761961be260c"
+  }
+}

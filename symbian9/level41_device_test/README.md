@@ -271,3 +271,16 @@ straight into the locked RGB565 bitmap, then presents the complete frame and
 text with one DSA BitBlt; it adds no bitmap-device/context API imports. The
 software renderer remains at the v1.0.28 state. V1.0.33 E65 startup and
 flicker verification are pending.
+
+### Separate v1.0.28 static-import diagnostic
+
+The v1.0.28 ten-ordinal DRT-import SIS documented in
+[`../level41_walk_test/README.md`](../level41_walk_test/README.md) is a separate
+interactive-walk launch/import control, not the renderer-performance v1.0.28
+candidate described above. It has package UID `0xE000A021` and executable UID3
+`0xE000A020` (the renderer executable UID3 here is `0xE000A012`). Its E32
+imports only ordinals 135, 139, 140, 141, 142, 147, 148, 155, 157, and 221 from
+`drtaeabi.dll`; ordinals 222/223 and MDA/MIDI imports are absent. Playback is
+disabled, and the E65 result remains pending. See the separate
+[`import comparison matrix`](../level41_walk_test/output/IMPORT-PROBE-MATRIX.md)
+for the test history and interpretation limits.

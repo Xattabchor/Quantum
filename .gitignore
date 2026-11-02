@@ -1,4 +1,8 @@
-﻿build
+build
 dist
 nbproject/private
 Thumbs.db
+__pycache__/
+
+# Local SDK archive parts restored from Drive; never add these to the repository.
+/google_drive/
