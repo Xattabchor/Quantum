@@ -588,8 +588,11 @@ DRT imports plus exactly MDA ordinals `[15, 35, 36, 42]`; EUser is unchanged
 from v1.0.22/v1.0.28 and no MIDI import is present. [Download the unsigned SIS
 from Drive](https://drive.google.com/file/d/1bc9NUYZ73_TQke7UljWBdqAkg_M19pOv/view?usp=drivesdk).
 
-**E65 result is pending.** This package tests only whether the loader accepts
-this static import set. It does not test MDA initialization, file opening,
-codec support, or playback. See the v1.0.31 `BUILD-REPORT.md`,
-`payload-manifest.json`, `e32-import-audit.json`, and `sis-audit.json` in its
-version directory.
+**User-reported E65 result: v1.0.31 works.** Since this control adds only the
+four MDA imports to the user-reported-working v1.0.28 baseline, this run did not
+reproduce the popup with that import delta. It weighs against those static MDA
+imports alone causing the launch failure in this configuration; it does not
+explain v1.0.24's different native-leave/DRT combination. MDA initialization,
+file opening, codec support, and playback were not tested. See the v1.0.31
+`BUILD-REPORT.md`, `payload-manifest.json`, `e32-import-audit.json`, and
+`sis-audit.json` in its version directory.

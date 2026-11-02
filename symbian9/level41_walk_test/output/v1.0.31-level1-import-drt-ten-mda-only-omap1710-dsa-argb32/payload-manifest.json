@@ -36,7 +36,7 @@
   },
   "drt_lookup_probe": false,
   "build": {
-    "status": "Cross-built and statically audited; E65 device launch not yet tested.",
+    "status": "Cross-built and statically audited; user reports v1.0.31 works on Nokia E65.",
     "toolchain": "Symbian SDK 0.3.0, ARMv5T / EKA2; Clang 23.1.2; CMake 3.30.5",
     "configuration": {
       "QUANTUM_LEVEL41_OMAP1710": true,
@@ -587,7 +587,7 @@
       "sha256": "9292944115644ac4dbd358079987af3235bf6f4678fabde5c185ac1d4023ea06"
     }
   ],
-  "e65_runtime_result": "Pending user test on Nokia E65; local checks establish the E32 static MDA import set and SIS integrity only, not launch or playback.",
+  "e65_runtime_result": "User reports v1.0.31 works on Nokia E65. The popup was not reproduced after adding only the four MDA imports to v1.0.28 in this configuration; this weighs against those imports alone causing launch failure here. MDA initialization, codec, DSP, playback, and MIDI were not tested.",
   "device_comparison": {
     "1.0.22": {
       "device": "Nokia E65",
@@ -652,12 +652,12 @@
     },
     "1.0.31": {
       "device": "Nokia E65",
-      "status": "not yet tested",
-      "user_reported": false,
+      "status": "works",
+      "user_reported": true,
       "test": "Known-good v1.0.28 ten-ordinal DRT proxy plus mediaclientaudio.dll ordinals 15, 35, 36, 42; gameplay audio and MIDI disabled; MDA API execution gate remains false.",
-      "observed_result": "Pending user device test.",
-      "result_scope": "Launch/import only. No player creation, media open, playback, MIDI, codec, or DSP behavior is tested.",
-      "interpretation": "The static MDA import table is verified locally; E65 loader acceptance and ROM availability are unknown."
+      "observed_result": "User reports v1.0.31 works on Nokia E65.",
+      "result_scope": "User-reported app run for this candidate; only the four MDA imports differ from the v1.0.28 DLL import set. Gameplay audio and MIDI are disabled. MDA player creation, media opening, codec, DSP, and playback behavior were not tested.",
+      "interpretation": "The popup was not reproduced with this four-ordinal MDA import delta on the v1.0.28 baseline, weighing against the imports alone causing launch failure in this configuration; this does not explain v1.0.24's different native-leave/DRT combination or establish MDA initialization/playback."
     }
   },
   "audio_payloads_identical_to_v1.0.27": true,

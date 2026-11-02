@@ -27,7 +27,7 @@ these imports.
   `bd1274fefef3e8f10e68a3bd8023c6a3`.
 - Unsigned SIS, built with GnuPoc MakeSIS 4.0.
 - [Download from Google Drive](https://drive.google.com/file/d/1bc9NUYZ73_TQke7UljWBdqAkg_M19pOv/view?usp=drivesdk) (file ID `1bc9NUYZ73_TQke7UljWBdqAkg_M19pOv`); Drive MD5 matches the local SIS.
-- Nokia E65 result: **not yet tested**.
+- Nokia E65 result: **user reports v1.0.31 works**.
 
 ## Verified E32 imports
 
@@ -67,11 +67,13 @@ link/package variant; the v1.0.28 core/payload baseline was previously tested.
 
 ## Device interpretation
 
-The E65 result is pending. If the app launches, that establishes launch for this
-particular static-import set only—not MDA utility initialization, file opening,
-codec support, or audible playback. If the known popup appears, that associates
-the symptom with this import configuration but still does not identify the exact
-ROM export or loader check. Playback remains off in this candidate.
+The user reports that v1.0.31 works on the Nokia E65. Since the only DLL
+import delta from the user-reported-working v1.0.28 baseline is the four-entry
+MDA block, this run did not reproduce the popup with these imports in this
+configuration. That weighs against the four static MDA imports alone causing
+launch failure here, but does not explain v1.0.24's different native-leave/DRT
+combination. Gameplay audio and MIDI remain disabled; MDA utility initialization,
+file opening, codec support, DSP access, and playback were not tested.
 
 Build evidence: `cmake-configure.log`, `e32-build.log`, `makesis.log`,
 `mda-import-probe.cpp`, `mda-import-probe-source.patch`, `e32-import-audit.json`,
