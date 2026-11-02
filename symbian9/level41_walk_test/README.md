@@ -629,9 +629,12 @@ The unsigned SIS is **742,756 bytes**, SHA-256
 all 18 non-E32 payloads match v1.0.28 byte-for-byte. [Download the unsigned SIS
 from Drive](https://drive.google.com/file/d/12Yt2aCwT8pKXfwCG715Veup1AbJLO4qO/view?usp=drivesdk).
 
-**Nokia E65 result: pending.** This is a launch/import control, not evidence
-that the E65 accepts each static import or that leave propagation works. MDA
-initialization, audio playback, MIDI, codec support, DSP access, and performance
-are outside the test. See the v1.0.32 version directory for `BUILD-REPORT.md`,
-`payload-manifest.json`, `e32-import-audit.json`, `sis-audit.json`, build logs,
-and `native-leaves-source.patch`.
+**User-reported Nokia E65 result: “Feature not supported”.** The popup
+reappeared with the v1.0.32 native-leave/personality configuration; the
+false-gated test did not deliberately raise a leave. This strengthens the
+association with the combined personality/import change set over v1.0.28, but
+does not identify a particular ordinal/export or demonstrate leave
+propagation. MDA initialization, audio playback, MIDI, codec support, DSP
+access, and performance are outside the test. See the v1.0.32 version directory
+for `BUILD-REPORT.md`, `payload-manifest.json`, `e32-import-audit.json`,
+`sis-audit.json`, build logs, and `native-leaves-source.patch`.

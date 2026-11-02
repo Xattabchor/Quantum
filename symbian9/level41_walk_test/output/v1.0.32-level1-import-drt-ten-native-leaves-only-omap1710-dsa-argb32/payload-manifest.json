@@ -29,8 +29,14 @@
       "status": "not rerun for this import/personality-link package control"
     },
     "source_patch": "native-leaves-source.patch",
-    "status": "Cross-built, package-audited, E32 imports compared with v1.0.28, and SIS uploaded/verified on Google Drive; Nokia E65 result pending.",
+    "status": "Cross-built, package-audited, and Drive-verified; user reports v1.0.32 shows \u201cFeature not supported\u201d on Nokia E65.",
     "toolchain": "Symbian SDK 0.3.0; ARMv5T/EKA2; Clang 23.1.2; CMake 3.30.5; GnuPoc MakeSIS 4.0"
+  },
+  "device_comparison": {
+    "baseline": "v1.0.28, user-reported launch success",
+    "interpretation": "Associates the symptom with the combined native-leave/personality path and its DRT/EUser import delta; does not isolate an ordinal/export and does not show that a leave was raised.",
+    "mda_control_context": "v1.0.31 MDA import-only control was user-reported working; that does not identify the v1.0.32 failure cause.",
+    "result": "v1.0.32 shows the exact \u201cFeature not supported\u201d popup, user-reported"
   },
   "drtaeabi_proxy": {
     "export_count": 23,
@@ -509,7 +515,7 @@
     "size_bytes": 193636,
     "uid3": "0xe000a020"
   },
-  "e65_runtime_result": "pending; no device test reported for v1.0.32",
+  "e65_runtime_result": "User-reported: exact \u201cFeature not supported\u201d popup on Nokia E65; app did not launch in that run.",
   "executable_uid3": "0xE000A020",
   "import_delta_vs_v1.0.28": {
     "added": {
@@ -810,7 +816,7 @@
     "drive_md5": "9bc60ad4e816aeaab4ff77e5b4993db2",
     "drive_md5_matches_local": true,
     "drive_size_bytes": 742756,
-    "drive_upload_status": "pending",
+    "drive_upload_status": "uploaded_and_md5_verified",
     "file": "quantum_level41_walk_test-v1.0.32-level1-import-drt-ten-native-leaves-only-omap1710-dsa-argb32-armv5t.sis",
     "md5": "9bc60ad4e816aeaab4ff77e5b4993db2",
     "sha256": "2091b0d15b7ff0319d7dec22bbe855e0f164120cf281612a581476b74be30140",

@@ -28,7 +28,7 @@ ASM, Mode-9 MUL-order, and effects-ASM experiments are off.
   `9bc60ad4e816aeaab4ff77e5b4993db2`.
 - Unsigned SIS, built with GnuPoc MakeSIS 4.0.
 - [Download the unsigned SIS from Google Drive](https://drive.google.com/file/d/12Yt2aCwT8pKXfwCG715Veup1AbJLO4qO/view?usp=drivesdk) (file ID `12Yt2aCwT8pKXfwCG715Veup1AbJLO4qO`); Drive size and MD5 match the local package.
-- Nokia E65 result: **not yet tested**.
+- Nokia E65 result: **user-reported: “Feature not supported”**.
 
 ## Verified E32 import delta
 
@@ -73,13 +73,16 @@ CMake/definition delta is in `native-leaves-source.patch`.
 
 ## Device interpretation
 
-The Nokia E65 result is pending. If the app launches, that will establish
-launch for this combined native-leave/personality import configuration only;
-it will not prove that a leave was raised or propagated successfully. If the
-known “Feature not supported” popup appears, the result will associate it with
-this import configuration, but will not identify a particular ordinal or
-firmware export as the cause. No MDA, MIDI, audio playback, codec, DSP, or
-performance conclusion is in scope.
+The user reports that v1.0.32 displays the exact “Feature not supported”
+popup on the Nokia E65; this candidate did not launch in that run. Compared with
+the user-reported-working v1.0.28 baseline, the candidate adds native-leave /
+personality support and its associated DRT/EUser imports. The result strengthens
+the association with that combined change set, but does not identify a specific
+ordinal or firmware export as the cause. The leave probe remains false-gated, so
+this does not show that a leave was raised or propagated. v1.0.31's separate
+MDA-import-only run worked, but that does not resolve this native-leave result.
+No MIDI, gameplay audio, playback, codec, DSP, or performance conclusion is in
+scope.
 
 Build evidence: `cmake-configure.log`, `e32-build.log`, `makesis.log`,
 `native-leaves-import-probe.cpp`, `native-leaves-source.patch`,

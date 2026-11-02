@@ -16,6 +16,12 @@
     "package_uid_and_e32_uid3_valid": true,
     "starts_from_v1_0_28_import_and_package_baseline": true
   },
+  "device_result": {
+    "device": "Nokia E65",
+    "interpretation": "This associates the popup with the v1.0.32 combined native-leave/personality path and its DRT/EUser import delta versus v1.0.28, but does not identify a particular ordinal/export. The probe gate remains false, so no leave was deliberately raised.",
+    "launch_success": false,
+    "reported_outcome": "\u201cFeature not supported\u201d"
+  },
   "drtaeabi_proxy": {
     "export_count": 23,
     "exports": [

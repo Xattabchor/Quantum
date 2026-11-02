@@ -18,7 +18,7 @@ Compare launch-only import variants for the already-reported **“Feature not su
 | 1.0.29 | Single ordinal-222 static-import control | v1.0.28 ten ordinals + `222 __aeabi_idiv`; `__aeabi_uidiv` local | 740,620 | **User-reported: “Feature not supported”** |
 | 1.0.30 | Single ordinal-223 static-import control | v1.0.28 ten ordinals + `223 __aeabi_uidiv`; `__aeabi_idiv` local | 740,840 | **User-reported: “Feature not supported”** |
 | 1.0.31 | MDA import-only on v1.0.28 | v1.0.28 ten DRT ordinals + `mediaclientaudio.dll` [15, 35, 36, 42]; no native leaves; MDA API gate false | 740,924 | **User-reported: works on Nokia E65** |
-| 1.0.32 | Native-leave/personality import control on v1.0.28 | Ten baseline DRT ordinals + 13 native-leave DRT ordinals; EUser [2060, 2061, 2082]; 23 distinct DRT ordinals/25 slots; MDA/MIDI/gameplay audio off; leave gate false | 742,756 | **E65 result pending** |
+| 1.0.32 | Native-leave/personality import control on v1.0.28 | Ten baseline DRT ordinals + 13 native-leave DRT ordinals; EUser [2060, 2061, 2082]; 23 distinct DRT ordinals/25 slots; MDA/MIDI/gameplay audio off; leave gate false | 742,756 | **User-reported: “Feature not supported”** |
 
 Downloads: [v1.0.22 baseline](https://drive.google.com/file/d/12LFx5fGrUhy28c3pTkKDs9PzXFt_yKUm/view?usp=drivesdk) · [v1.0.23 DRT-only](https://drive.google.com/file/d/1VtqRmMdDG1VVWJQVQ5gNzS9v1Gk3uJT4/view?usp=drivesdk) · [v1.0.24 DRT+MDA](https://drive.google.com/file/d/1rhJzecHwYvSNZSXj6w3Wbw6OraD8ccnj/view?usp=drivesdk) · [v1.0.25 DRT proxy/no native leaves](https://drive.google.com/file/d/13hWfbu7-Qj8k9hLmj7r1ssiXqgnl66ZI/view?usp=drivesdk) · [v1.0.26 dynamic DRT lookup](https://drive.google.com/file/d/1kipGIy5t-MbSuHL1mpR1fDP9fPlzmVmx/view?usp=drivesdk) · [v1.0.27 readable DRT panel](https://drive.google.com/file/d/1WPgZE_fNdN5qCMj_vwVKXlV1LEFgGYVG/view?usp=drivesdk) · [v1.0.28 ten-ordinal static import control](https://drive.google.com/file/d/1mXfVd9lVIz8m7TzkFjRpqvhZYTjkB9U3/view?usp=drivesdk) · [v1.0.29 ordinal-222 control](https://drive.google.com/file/d/1CscxgVwC4UbsIPE1kdESASDBT4SuPi48/view?usp=drivesdk) · [v1.0.30 ordinal-223 control](https://drive.google.com/file/d/1IZnjvqYVI_gCkVt9gMp1YUCibMmh-i0V/view?usp=drivesdk) · [v1.0.31 MDA import-only control](https://drive.google.com/file/d/1bc9NUYZ73_TQke7UljWBdqAkg_M19pOv/view?usp=drivesdk) · [v1.0.32 native-leave/personality control](https://drive.google.com/file/d/12Yt2aCwT8pKXfwCG715Veup1AbJLO4qO/view?usp=drivesdk)
 
@@ -107,7 +107,7 @@ The v1.0.22–v1.0.32 candidates cross-built with the restored SDK 0.3.0 toolcha
 
 ## Device result
 
-The user reports that v1.0.28 launched on the Nokia E65. Treat this as a successful launch of this particular static-import control, not proof that 222/223 alone caused v1.0.25's popup: v1.0.28 also resolves the division helpers locally and uses a custom ten-export proxy. Playback and MIDI remain disabled, and successful helper execution was not tested. v1.0.29 and v1.0.30 were separately packaged and audited; the user reports that both show “Feature not supported”. The user reports v1.0.31 works on the E65; it changes the MDA import set only, and playback remains disabled. v1.0.32 is built, audited, and uploaded; its E65 result is pending.
+The user reports that v1.0.28 launched on the Nokia E65. Treat this as a successful launch of this particular static-import control, not proof that 222/223 alone caused v1.0.25's popup: v1.0.28 also resolves the division helpers locally and uses a custom ten-export proxy. Playback and MIDI remain disabled, and successful helper execution was not tested. v1.0.29 and v1.0.30 were separately packaged and audited; the user reports that both show “Feature not supported”. The user reports v1.0.31 works on the E65; it changes the MDA import set only, and playback remains disabled. The user reports that v1.0.32 shows “Feature not supported” on the E65.
 
 ## Ninth probe: native-leave/personality import control (v1.0.32)
 
@@ -115,4 +115,9 @@ v1.0.32 starts from the user-reported-working v1.0.28 baseline. Its custom DRT p
 
 The default-false native-leave probe is not written and no leave is deliberately raised at launch. The temporary CMake build redirects `SymbianCxxAbi` and the legacy EKA2 runtime proxy edge to the same combined custom DRT proxy, resolving the duplicate-proxy conversion failure. The unsigned SIS is 742,756 bytes, SHA-256 `2091b0d15b7ff0319d7dec22bbe855e0f164120cf281612a581476b74be30140`, MD5 `9bc60ad4e816aeaab4ff77e5b4993db2`; it passed the 19-payload audit and all 18 non-E32 payloads match v1.0.28. [Download v1.0.32 from Drive](https://drive.google.com/file/d/12Yt2aCwT8pKXfwCG715Veup1AbJLO4qO/view?usp=drivesdk).
 
-**E65 result pending.** A successful launch would apply only to this combined import/personality configuration and would not show that a leave is successfully raised/propagated. See the version directory for the exact E32 import audit, source patch, build logs, manifest, and SIS audit.
+**User-reported Nokia E65 result: “Feature not supported”.** This reproduces
+the popup with the v1.0.32 combined native-leave/personality import configuration
+based on v1.0.28. It implicates that combined change set, not a specific ordinal
+or ROM export; the false-gated probe does not raise a leave. See the version
+directory for the exact E32 import audit, source patch, build logs, manifest,
+and SIS audit.
