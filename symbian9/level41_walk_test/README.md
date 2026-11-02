@@ -478,7 +478,7 @@ same-frame parity check fails. On the E65, only `Presenter: DSA ARGB32`
 confirms the requested active path; `DSA EColor64K` means fallback. Launch,
 key-up behavior, runtime presenter, and FPS still require device verification.
 
-## v1.0.22–v1.0.30 launch/import diagnostics
+## v1.0.22–v1.0.31 launch/import diagnostics
 
 The user reports that the no-audio/no-DRT v1.0.22 baseline works as expected,
 while v1.0.23 (native-leaves/DRT-only), v1.0.24 (DRT plus trapped MDA imports,
@@ -563,3 +563,33 @@ See each version directory for its `BUILD-REPORT.md`, `payload-manifest.json`,
 `e32-import-audit.json`, and `sis-audit.json`. The candidates remain launch
 checks only: no helper is explicitly called, and audio, MIDI, codec, DSP, and
 performance behavior are not established.
+
+## v1.0.31 MDA static-import-only control
+
+v1.0.31 is a controlled follow-up to v1.0.24. It starts from the
+user-reported launched v1.0.28 executable/import configuration and adds only
+`mediaclientaudio.dll` ordinals `15, 35, 36, 42` (SDK proxy names:
+`SetPosition`, `NewL`, `Close`, `OpenFileL`). The ten v1.0.28 DRT imports remain
+unchanged; no other E32 DLL/ordinal block changes. Unlike v1.0.24, this build
+has no native-leave/personality import path, so the MDA import delta is isolated
+on the known-good v1.0.28 baseline.
+
+The MDA references are retained only behind the default-false volatile
+`quantumMdaImportProbeEnabled` gate. The normal path does not create an MDA
+player, open a file, call `Play()`, enable MIDI, or use a guessed audio/weapon
+resource path. The three audio payloads are unchanged from v1.0.28 and remain
+package-consistency controls only.
+
+The unsigned SIS is **740,924 bytes**, SHA-256
+`062dda9fe06d19d3f2311b66ec272627b6c9ca4c0fb4f67a82ccc22433818a4b`, MD5
+`bd1274fefef3e8f10e68a3bd8023c6a3`. It passed the 19-payload SIS audit; all 18
+non-E32 payloads match v1.0.28 byte-for-byte. The E32 audit confirmed the ten
+DRT imports plus exactly MDA ordinals `[15, 35, 36, 42]`; EUser is unchanged
+from v1.0.22/v1.0.28 and no MIDI import is present. [Download the unsigned SIS
+from Drive](https://drive.google.com/file/d/1bc9NUYZ73_TQke7UljWBdqAkg_M19pOv/view?usp=drivesdk).
+
+**E65 result is pending.** This package tests only whether the loader accepts
+this static import set. It does not test MDA initialization, file opening,
+codec support, or playback. See the v1.0.31 `BUILD-REPORT.md`,
+`payload-manifest.json`, `e32-import-audit.json`, and `sis-audit.json` in its
+version directory.
