@@ -478,7 +478,7 @@ same-frame parity check fails. On the E65, only `Presenter: DSA ARGB32`
 confirms the requested active path; `DSA EColor64K` means fallback. Launch,
 key-up behavior, runtime presenter, and FPS still require device verification.
 
-## v1.0.22–v1.0.32 launch/import diagnostics
+## v1.0.22–v1.0.33 launch/import diagnostics
 
 The user reports that the no-audio/no-DRT v1.0.22 baseline works as expected,
 while v1.0.23 (native-leaves/DRT-only), v1.0.24 (DRT plus trapped MDA imports,
@@ -560,9 +560,10 @@ ordinal 223. The SIS contains no runtime archive.
 Downloads: [v1.0.29 ordinal-222 control](https://drive.google.com/file/d/1CscxgVwC4UbsIPE1kdESASDBT4SuPi48/view?usp=drivesdk) · [v1.0.30 ordinal-223 control](https://drive.google.com/file/d/1IZnjvqYVI_gCkVt9gMp1YUCibMmh-i0V/view?usp=drivesdk)
 
 See each version directory for its `BUILD-REPORT.md`, `payload-manifest.json`,
-`e32-import-audit.json`, and `sis-audit.json`. The candidates remain launch
-checks only: no helper is explicitly called, and audio, MIDI, codec, DSP, and
-performance behavior are not established.
+`e32-import-audit.json`, and `sis-audit.json`. These are launch checks only:
+no DRT helper is invoked on the normal launch path. In v1.0.33 the additional
+helper ordinals are data-only GOT imports, not callsites. Audio, MIDI, codec,
+DSP, and performance behavior are not established.
 
 ## v1.0.31 MDA static-import-only control
 
@@ -638,3 +639,13 @@ propagation. MDA initialization, audio playback, MIDI, codec support, DSP
 access, and performance are outside the test. See the v1.0.32 version directory
 for `BUILD-REPORT.md`, `payload-manifest.json`, `e32-import-audit.json`,
 `sis-audit.json`, build logs, and `native-leaves-source.patch`.
+
+## v1.0.33 static import-only DRT expansion (no helper calls)
+
+v1.0.33 continues from the user-reported-launched v1.0.28 ten-ordinal static DRT control. It adds the 13 DRT ordinals associated with the v1.0.32 configuration—`123, 158, 159, 160, 180, 181, 183, 184, 204, 213, 217, 218, 220`—but leaves native-leave/personality support off and adds no EUser imports. The final `drtaeabi.dll` import block has 23 unique ordinals in 23 slots, each appearing once; DRT 222/223 are absent. EUser remains 64 slots/64 unique ordinals, identical to v1.0.28, and every other non-DRT import block matches by slot multiplicity. MDA, MIDI, gameplay audio, and playback are disabled; all 18 non-E32 payloads, including the three retained audio files, match v1.0.28 byte-for-byte.
+
+The 12 added helper-function ordinals are represented as data-only GOT imports, not call relocations. Each has one `R_ARM_GLOB_DAT` slot and zero `R_ARM_CALL`, `R_ARM_THM_CALL`, `R_ARM_JUMP24`, or `R_ARM_PLT32` relocations. The retained address probe has no startup/runtime caller. I decoded its instructions from the exact shipped E32 with Capstone 5.0.9: 64 Thumb instructions in a 128-byte body at VMA `0x29e44`, **zero `BL`/`BLX`**, then `BX LR`; the following 48 bytes are 12 GOT_PREL literal words, not instructions. The temporary, link-time-only DRT proxy marks those function exports `DATA 4` to create GOT slots without callsites; the proxy is not packed in the SIS, and the E32 import records carry the DLL/ordinal/fixup rather than that proxy type annotation. The separate class-type-info probe remains behind a default-false, unwritten gate. Native-leave/personality support is off, and the E32 exception-descriptor offset is zero. The version directory includes `scan_e32_helper_instructions.py` and `final-e32-helper-instruction-scan.json` as reproducible scan evidence.
+
+The unsigned SIS is **741,128 bytes**, SHA-256 `002e698f84393f7304108716daa755904da8c33bacc7967d1c481293712ade8a`, MD5 `2dc6ebf815d5f17c0f04cd1fe3de5f3a`. It passed the 19-payload SIS audit; all 18 non-E32 payloads match v1.0.28. [Download v1.0.33 from Drive](https://drive.google.com/file/d/1L-TVV6T-v5CSrJ0Ll_HwZRsIOf0Jz8Fu/view?usp=drivesdk).
+
+**Nokia E65 result: not yet tested.** The reported v1.0.32 popup does not identify a particular unsupported ordinal, ROM export, or leave propagation. See the v1.0.33 version directory for the exact build report, payload manifest, detailed E32 slot/multiplicity audit, callsite audit, source patch, logs, and SIS audit.

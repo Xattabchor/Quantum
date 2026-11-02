@@ -1,0 +1,1789 @@
+{
+  "schema_version": 1,
+  "artifact_version": "1.0.33",
+  "baseline": "v1.0.28 user-reported-launched ten-ordinal DRT import control",
+  "status": "Clean cross-build complete; final E32 imports and the address-probe instruction body scanned; all 19 SIS payloads audited; E65 device result pending.",
+  "build": {
+    "toolchain": "Symbian SDK 0.3.0; ARMv5T/EKA2; Clang 23.1.2; CMake 3.30.5; GnuPoc MakeSIS 4.0",
+    "configuration": {
+      "QUANTUM_LEVEL41_IMPORT_PROBE_DRT_TEN_ORDINALS": true,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_DRT_ADDITIONAL_13": true,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_NATIVE_LEAVES": false,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_MDA": false,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_DRT_DLL": false,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_DRT_LOOKUP": false,
+      "QUANTUM_LEVEL41_ENABLE_SYMBIAN_AUDIO": false,
+      "QUANTUM_LEVEL41_ENABLE_MIDI_AUDIO": false,
+      "QUANTUM_LEVEL41_INTERACTIVE_WALK": true,
+      "QUANTUM_LEVEL41_OMAP1710": true,
+      "QUANTUM_LEVEL41_OMAP1710_ECOLOR64K": true,
+      "QUANTUM_LEVEL41_OMAP1710_DSA_ARGB_BITMAP": true,
+      "effects_asm_experiment": false,
+      "mode9_mul_order_experiment": false,
+      "scalar_pdiv_asm": false
+    },
+    "source_patch": "drt-additional-13-import-only.patch",
+    "clean_ninja_build": true,
+    "host_tests": {
+      "status": "not rerun",
+      "reason": "This is a Symbian import/package-only control; host tests do not validate E65 import loading."
+    }
+  },
+  "e32": {
+    "file": "quantum_level41_walk_test.exe",
+    "size_bytes": 190916,
+    "sha256": "0d23b4b408167a83870f1c2d577dd9d51a5f1155b51f7a461ea056e7e72fb2b4",
+    "uid3": "0xe000a020",
+    "secure_id": "0xe000a020",
+    "architecture": "armv5t",
+    "kernel": "eka2",
+    "capabilities": 0,
+    "heap_min": 4096,
+    "heap_max": 2097152,
+    "header_crc_valid": true,
+    "exception_descriptor_offset": 0,
+    "imports": {
+      "bitgdi.dll": {
+        "slot_count": 1,
+        "unique_ordinal_count": 1,
+        "unique_ordinals": [
+          52
+        ],
+        "slot_counts": {
+          "52": 1
+        },
+        "slots": [
+          {
+            "ordinal": 52,
+            "code_offset": "0x0002dd54",
+            "addend": 0
+          }
+        ]
+      },
+      "drtaeabi.dll": {
+        "slot_count": 23,
+        "unique_ordinal_count": 23,
+        "unique_ordinals": [
+          123,
+          135,
+          139,
+          140,
+          141,
+          142,
+          147,
+          148,
+          155,
+          157,
+          158,
+          159,
+          160,
+          180,
+          181,
+          183,
+          184,
+          204,
+          213,
+          217,
+          218,
+          220,
+          221
+        ],
+        "slot_counts": {
+          "123": 1,
+          "135": 1,
+          "139": 1,
+          "140": 1,
+          "141": 1,
+          "142": 1,
+          "147": 1,
+          "148": 1,
+          "155": 1,
+          "157": 1,
+          "158": 1,
+          "159": 1,
+          "160": 1,
+          "180": 1,
+          "181": 1,
+          "183": 1,
+          "184": 1,
+          "204": 1,
+          "213": 1,
+          "217": 1,
+          "218": 1,
+          "220": 1,
+          "221": 1
+        },
+        "slots": [
+          {
+            "ordinal": 123,
+            "code_offset": "0x0002de44",
+            "addend": 0
+          },
+          {
+            "ordinal": 135,
+            "code_offset": "0x0002dd90",
+            "addend": 0
+          },
+          {
+            "ordinal": 139,
+            "code_offset": "0x0002dcf4",
+            "addend": 0
+          },
+          {
+            "ordinal": 140,
+            "code_offset": "0x0002dde8",
+            "addend": 0
+          },
+          {
+            "ordinal": 141,
+            "code_offset": "0x0002ddec",
+            "addend": 0
+          },
+          {
+            "ordinal": 142,
+            "code_offset": "0x0002dd24",
+            "addend": 0
+          },
+          {
+            "ordinal": 147,
+            "code_offset": "0x0002dce8",
+            "addend": 0
+          },
+          {
+            "ordinal": 148,
+            "code_offset": "0x0002dd28",
+            "addend": 0
+          },
+          {
+            "ordinal": 155,
+            "code_offset": "0x0002dd7c",
+            "addend": 0
+          },
+          {
+            "ordinal": 157,
+            "code_offset": "0x0002dcf0",
+            "addend": 0
+          },
+          {
+            "ordinal": 158,
+            "code_offset": "0x0002de14",
+            "addend": 0
+          },
+          {
+            "ordinal": 159,
+            "code_offset": "0x0002de18",
+            "addend": 0
+          },
+          {
+            "ordinal": 160,
+            "code_offset": "0x0002de1c",
+            "addend": 0
+          },
+          {
+            "ordinal": 180,
+            "code_offset": "0x0002de20",
+            "addend": 0
+          },
+          {
+            "ordinal": 181,
+            "code_offset": "0x0002de24",
+            "addend": 0
+          },
+          {
+            "ordinal": 183,
+            "code_offset": "0x0002de28",
+            "addend": 0
+          },
+          {
+            "ordinal": 184,
+            "code_offset": "0x0002de2c",
+            "addend": 0
+          },
+          {
+            "ordinal": 204,
+            "code_offset": "0x0002de30",
+            "addend": 0
+          },
+          {
+            "ordinal": 213,
+            "code_offset": "0x0002de34",
+            "addend": 0
+          },
+          {
+            "ordinal": 217,
+            "code_offset": "0x0002de38",
+            "addend": 0
+          },
+          {
+            "ordinal": 218,
+            "code_offset": "0x0002de3c",
+            "addend": 0
+          },
+          {
+            "ordinal": 220,
+            "code_offset": "0x0002de40",
+            "addend": 0
+          },
+          {
+            "ordinal": 221,
+            "code_offset": "0x0002dc10",
+            "addend": 0
+          }
+        ]
+      },
+      "efsrv.dll": {
+        "slot_count": 5,
+        "unique_ordinal_count": 5,
+        "unique_ordinals": [
+          68,
+          93,
+          257,
+          264,
+          300
+        ],
+        "slot_counts": {
+          "68": 1,
+          "93": 1,
+          "257": 1,
+          "264": 1,
+          "300": 1
+        },
+        "slots": [
+          {
+            "ordinal": 68,
+            "code_offset": "0x0002dc2c",
+            "addend": 0
+          },
+          {
+            "ordinal": 93,
+            "code_offset": "0x0002dd30",
+            "addend": 0
+          },
+          {
+            "ordinal": 257,
+            "code_offset": "0x0002dd40",
+            "addend": 0
+          },
+          {
+            "ordinal": 264,
+            "code_offset": "0x0002dd34",
+            "addend": 0
+          },
+          {
+            "ordinal": 300,
+            "code_offset": "0x0002dd38",
+            "addend": 0
+          }
+        ]
+      },
+      "estlib.dll": {
+        "slot_count": 9,
+        "unique_ordinal_count": 9,
+        "unique_ordinals": [
+          18,
+          141,
+          153,
+          154,
+          168,
+          195,
+          205,
+          253,
+          275
+        ],
+        "slot_counts": {
+          "18": 1,
+          "141": 1,
+          "153": 1,
+          "154": 1,
+          "168": 1,
+          "195": 1,
+          "205": 1,
+          "253": 1,
+          "275": 1
+        },
+        "slots": [
+          {
+            "ordinal": 18,
+            "code_offset": "0x0002ddf0",
+            "addend": 0
+          },
+          {
+            "ordinal": 141,
+            "code_offset": "0x0002ddf4",
+            "addend": 0
+          },
+          {
+            "ordinal": 153,
+            "code_offset": "0x0002de0c",
+            "addend": 0
+          },
+          {
+            "ordinal": 154,
+            "code_offset": "0x0002de08",
+            "addend": 0
+          },
+          {
+            "ordinal": 168,
+            "code_offset": "0x0002ddf8",
+            "addend": 0
+          },
+          {
+            "ordinal": 195,
+            "code_offset": "0x0002ddfc",
+            "addend": 0
+          },
+          {
+            "ordinal": 205,
+            "code_offset": "0x0002de00",
+            "addend": 0
+          },
+          {
+            "ordinal": 253,
+            "code_offset": "0x0002de04",
+            "addend": 0
+          },
+          {
+            "ordinal": 275,
+            "code_offset": "0x0002de10",
+            "addend": 0
+          }
+        ]
+      },
+      "euser.dll": {
+        "slot_count": 64,
+        "unique_ordinal_count": 64,
+        "unique_ordinals": [
+          64,
+          69,
+          85,
+          120,
+          196,
+          205,
+          208,
+          422,
+          424,
+          425,
+          426,
+          428,
+          430,
+          532,
+          540,
+          549,
+          585,
+          593,
+          604,
+          617,
+          626,
+          641,
+          644,
+          645,
+          646,
+          649,
+          652,
+          654,
+          665,
+          669,
+          674,
+          815,
+          839,
+          841,
+          842,
+          855,
+          925,
+          928,
+          929,
+          953,
+          968,
+          973,
+          1088,
+          1089,
+          1090,
+          1091,
+          1094,
+          1169,
+          1196,
+          1213,
+          1360,
+          1415,
+          1416,
+          1417,
+          1793,
+          1806,
+          1853,
+          1951,
+          1953,
+          1954,
+          1955,
+          2103,
+          2106,
+          2128
+        ],
+        "slot_counts": {
+          "64": 1,
+          "69": 1,
+          "85": 1,
+          "120": 1,
+          "196": 1,
+          "205": 1,
+          "208": 1,
+          "422": 1,
+          "424": 1,
+          "425": 1,
+          "426": 1,
+          "428": 1,
+          "430": 1,
+          "532": 1,
+          "540": 1,
+          "549": 1,
+          "585": 1,
+          "593": 1,
+          "604": 1,
+          "617": 1,
+          "626": 1,
+          "641": 1,
+          "644": 1,
+          "645": 1,
+          "646": 1,
+          "649": 1,
+          "652": 1,
+          "654": 1,
+          "665": 1,
+          "669": 1,
+          "674": 1,
+          "815": 1,
+          "839": 1,
+          "841": 1,
+          "842": 1,
+          "855": 1,
+          "925": 1,
+          "928": 1,
+          "929": 1,
+          "953": 1,
+          "968": 1,
+          "973": 1,
+          "1088": 1,
+          "1089": 1,
+          "1090": 1,
+          "1091": 1,
+          "1094": 1,
+          "1169": 1,
+          "1196": 1,
+          "1213": 1,
+          "1360": 1,
+          "1415": 1,
+          "1416": 1,
+          "1417": 1,
+          "1793": 1,
+          "1806": 1,
+          "1853": 1,
+          "1951": 1,
+          "1953": 1,
+          "1954": 1,
+          "1955": 1,
+          "2103": 1,
+          "2106": 1,
+          "2128": 1
+        },
+        "slots": [
+          {
+            "ordinal": 64,
+            "code_offset": "0x0002ddb4",
+            "addend": 0
+          },
+          {
+            "ordinal": 69,
+            "code_offset": "0x0002ddb8",
+            "addend": 0
+          },
+          {
+            "ordinal": 85,
+            "code_offset": "0x0002dc28",
+            "addend": 0
+          },
+          {
+            "ordinal": 120,
+            "code_offset": "0x0002dce0",
+            "addend": 0
+          },
+          {
+            "ordinal": 196,
+            "code_offset": "0x0002dc14",
+            "addend": 0
+          },
+          {
+            "ordinal": 205,
+            "code_offset": "0x0002dd60",
+            "addend": 0
+          },
+          {
+            "ordinal": 208,
+            "code_offset": "0x0002dd58",
+            "addend": 0
+          },
+          {
+            "ordinal": 422,
+            "code_offset": "0x0002dcac",
+            "addend": 0
+          },
+          {
+            "ordinal": 424,
+            "code_offset": "0x0002dd00",
+            "addend": 0
+          },
+          {
+            "ordinal": 425,
+            "code_offset": "0x0002dd68",
+            "addend": 0
+          },
+          {
+            "ordinal": 426,
+            "code_offset": "0x0002dd0c",
+            "addend": 0
+          },
+          {
+            "ordinal": 428,
+            "code_offset": "0x0002dc20",
+            "addend": 0
+          },
+          {
+            "ordinal": 430,
+            "code_offset": "0x0002dc1c",
+            "addend": 0
+          },
+          {
+            "ordinal": 532,
+            "code_offset": "0x0002dda0",
+            "addend": 0
+          },
+          {
+            "ordinal": 540,
+            "code_offset": "0x0002dd9c",
+            "addend": 0
+          },
+          {
+            "ordinal": 549,
+            "code_offset": "0x0002dd98",
+            "addend": 0
+          },
+          {
+            "ordinal": 585,
+            "code_offset": "0x0002ddb0",
+            "addend": 0
+          },
+          {
+            "ordinal": 593,
+            "code_offset": "0x0002dd48",
+            "addend": 0
+          },
+          {
+            "ordinal": 604,
+            "code_offset": "0x0002dc8c",
+            "addend": 0
+          },
+          {
+            "ordinal": 617,
+            "code_offset": "0x0002dd08",
+            "addend": 0
+          },
+          {
+            "ordinal": 626,
+            "code_offset": "0x0002dca8",
+            "addend": 0
+          },
+          {
+            "ordinal": 641,
+            "code_offset": "0x0002dda8",
+            "addend": 0
+          },
+          {
+            "ordinal": 644,
+            "code_offset": "0x0002dce4",
+            "addend": 0
+          },
+          {
+            "ordinal": 645,
+            "code_offset": "0x0002dca0",
+            "addend": 0
+          },
+          {
+            "ordinal": 646,
+            "code_offset": "0x0002dc24",
+            "addend": 0
+          },
+          {
+            "ordinal": 649,
+            "code_offset": "0x0002dcf8",
+            "addend": 0
+          },
+          {
+            "ordinal": 652,
+            "code_offset": "0x0002dc18",
+            "addend": 0
+          },
+          {
+            "ordinal": 654,
+            "code_offset": "0x0002dd44",
+            "addend": 0
+          },
+          {
+            "ordinal": 665,
+            "code_offset": "0x0002ddbc",
+            "addend": 0
+          },
+          {
+            "ordinal": 669,
+            "code_offset": "0x0002ddac",
+            "addend": 0
+          },
+          {
+            "ordinal": 674,
+            "code_offset": "0x0002ddc0",
+            "addend": 0
+          },
+          {
+            "ordinal": 815,
+            "code_offset": "0x0002dd3c",
+            "addend": 0
+          },
+          {
+            "ordinal": 839,
+            "code_offset": "0x0002dcb8",
+            "addend": 0
+          },
+          {
+            "ordinal": 841,
+            "code_offset": "0x0002dcc8",
+            "addend": 0
+          },
+          {
+            "ordinal": 842,
+            "code_offset": "0x0002dc90",
+            "addend": 0
+          },
+          {
+            "ordinal": 855,
+            "code_offset": "0x0002dcec",
+            "addend": 0
+          },
+          {
+            "ordinal": 925,
+            "code_offset": "0x0002dd5c",
+            "addend": 0
+          },
+          {
+            "ordinal": 928,
+            "code_offset": "0x0002dd64",
+            "addend": 0
+          },
+          {
+            "ordinal": 929,
+            "code_offset": "0x0002dd80",
+            "addend": 0
+          },
+          {
+            "ordinal": 953,
+            "code_offset": "0x0002dc3c",
+            "addend": 0
+          },
+          {
+            "ordinal": 968,
+            "code_offset": "0x0002dd2c",
+            "addend": 0
+          },
+          {
+            "ordinal": 973,
+            "code_offset": "0x0002dcc4",
+            "addend": 0
+          },
+          {
+            "ordinal": 1088,
+            "code_offset": "0x0002dd10",
+            "addend": 0
+          },
+          {
+            "ordinal": 1089,
+            "code_offset": "0x0002dd88",
+            "addend": 0
+          },
+          {
+            "ordinal": 1090,
+            "code_offset": "0x0002dd04",
+            "addend": 0
+          },
+          {
+            "ordinal": 1091,
+            "code_offset": "0x0002dcfc",
+            "addend": 0
+          },
+          {
+            "ordinal": 1094,
+            "code_offset": "0x0002dd14",
+            "addend": 0
+          },
+          {
+            "ordinal": 1169,
+            "code_offset": "0x0002dcbc",
+            "addend": 0
+          },
+          {
+            "ordinal": 1196,
+            "code_offset": "0x0002ddc4",
+            "addend": 0
+          },
+          {
+            "ordinal": 1213,
+            "code_offset": "0x0002ddc8",
+            "addend": 0
+          },
+          {
+            "ordinal": 1360,
+            "code_offset": "0x0002dda4",
+            "addend": 0
+          },
+          {
+            "ordinal": 1415,
+            "code_offset": "0x0002ddcc",
+            "addend": 0
+          },
+          {
+            "ordinal": 1416,
+            "code_offset": "0x0002ddd0",
+            "addend": 0
+          },
+          {
+            "ordinal": 1417,
+            "code_offset": "0x0002ddd4",
+            "addend": 0
+          },
+          {
+            "ordinal": 1793,
+            "code_offset": "0x0002ddd8",
+            "addend": 0
+          },
+          {
+            "ordinal": 1806,
+            "code_offset": "0x0002dc34",
+            "addend": 0
+          },
+          {
+            "ordinal": 1853,
+            "code_offset": "0x0002dc30",
+            "addend": 0
+          },
+          {
+            "ordinal": 1951,
+            "code_offset": "0x0002dcb0",
+            "addend": 0
+          },
+          {
+            "ordinal": 1953,
+            "code_offset": "0x0002dd94",
+            "addend": 0
+          },
+          {
+            "ordinal": 1954,
+            "code_offset": "0x0002dddc",
+            "addend": 0
+          },
+          {
+            "ordinal": 1955,
+            "code_offset": "0x0002dd74",
+            "addend": 0
+          },
+          {
+            "ordinal": 2103,
+            "code_offset": "0x0002dde0",
+            "addend": 0
+          },
+          {
+            "ordinal": 2106,
+            "code_offset": "0x0002dc38",
+            "addend": 0
+          },
+          {
+            "ordinal": 2128,
+            "code_offset": "0x0002dd84",
+            "addend": 0
+          }
+        ]
+      },
+      "fbscli.dll": {
+        "slot_count": 4,
+        "unique_ordinal_count": 4,
+        "unique_ordinals": [
+          14,
+          107,
+          108,
+          133
+        ],
+        "slot_counts": {
+          "14": 1,
+          "107": 1,
+          "108": 1,
+          "133": 1
+        },
+        "slots": [
+          {
+            "ordinal": 14,
+            "code_offset": "0x0002dd20",
+            "addend": 0
+          },
+          {
+            "ordinal": 107,
+            "code_offset": "0x0002dd78",
+            "addend": 0
+          },
+          {
+            "ordinal": 108,
+            "code_offset": "0x0002dd70",
+            "addend": 0
+          },
+          {
+            "ordinal": 133,
+            "code_offset": "0x0002dd6c",
+            "addend": 0
+          }
+        ]
+      },
+      "gdi.dll": {
+        "slot_count": 1,
+        "unique_ordinal_count": 1,
+        "unique_ordinals": [
+          169
+        ],
+        "slot_counts": {
+          "169": 1
+        },
+        "slots": [
+          {
+            "ordinal": 169,
+            "code_offset": "0x0002dcc0",
+            "addend": 0
+          }
+        ]
+      },
+      "libm.dll": {
+        "slot_count": 2,
+        "unique_ordinal_count": 2,
+        "unique_ordinals": [
+          92,
+          145
+        ],
+        "slot_counts": {
+          "92": 1,
+          "145": 1
+        },
+        "slots": [
+          {
+            "ordinal": 92,
+            "code_offset": "0x0002dde4",
+            "addend": 0
+          },
+          {
+            "ordinal": 145,
+            "code_offset": "0x0002dd8c",
+            "addend": 0
+          }
+        ]
+      },
+      "ws32.dll": {
+        "slot_count": 33,
+        "unique_ordinal_count": 33,
+        "unique_ordinals": [
+          1,
+          7,
+          23,
+          29,
+          68,
+          69,
+          70,
+          72,
+          73,
+          76,
+          81,
+          107,
+          148,
+          157,
+          158,
+          184,
+          185,
+          190,
+          211,
+          224,
+          233,
+          234,
+          264,
+          265,
+          275,
+          276,
+          277,
+          278,
+          348,
+          351,
+          354,
+          359,
+          361
+        ],
+        "slot_counts": {
+          "1": 1,
+          "7": 1,
+          "23": 1,
+          "29": 1,
+          "68": 1,
+          "69": 1,
+          "70": 1,
+          "72": 1,
+          "73": 1,
+          "76": 1,
+          "81": 1,
+          "107": 1,
+          "148": 1,
+          "157": 1,
+          "158": 1,
+          "184": 1,
+          "185": 1,
+          "190": 1,
+          "211": 1,
+          "224": 1,
+          "233": 1,
+          "234": 1,
+          "264": 1,
+          "265": 1,
+          "275": 1,
+          "276": 1,
+          "277": 1,
+          "278": 1,
+          "348": 1,
+          "351": 1,
+          "354": 1,
+          "359": 1,
+          "361": 1
+        },
+        "slots": [
+          {
+            "ordinal": 1,
+            "code_offset": "0x0002dca4",
+            "addend": 0
+          },
+          {
+            "ordinal": 7,
+            "code_offset": "0x0002dc80",
+            "addend": 0
+          },
+          {
+            "ordinal": 23,
+            "code_offset": "0x0002dccc",
+            "addend": 0
+          },
+          {
+            "ordinal": 29,
+            "code_offset": "0x0002dcd0",
+            "addend": 0
+          },
+          {
+            "ordinal": 68,
+            "code_offset": "0x0002dcd8",
+            "addend": 0
+          },
+          {
+            "ordinal": 69,
+            "code_offset": "0x0002dc88",
+            "addend": 0
+          },
+          {
+            "ordinal": 70,
+            "code_offset": "0x0002dc44",
+            "addend": 0
+          },
+          {
+            "ordinal": 72,
+            "code_offset": "0x0002dcb4",
+            "addend": 0
+          },
+          {
+            "ordinal": 73,
+            "code_offset": "0x0002dc94",
+            "addend": 0
+          },
+          {
+            "ordinal": 76,
+            "code_offset": "0x0002dc40",
+            "addend": 0
+          },
+          {
+            "ordinal": 81,
+            "code_offset": "0x0002dc74",
+            "addend": 0
+          },
+          {
+            "ordinal": 107,
+            "code_offset": "0x0002dc78",
+            "addend": 0
+          },
+          {
+            "ordinal": 148,
+            "code_offset": "0x0002dc7c",
+            "addend": 0
+          },
+          {
+            "ordinal": 157,
+            "code_offset": "0x0002dc5c",
+            "addend": 0
+          },
+          {
+            "ordinal": 158,
+            "code_offset": "0x0002dc58",
+            "addend": 0
+          },
+          {
+            "ordinal": 184,
+            "code_offset": "0x0002dc4c",
+            "addend": 0
+          },
+          {
+            "ordinal": 185,
+            "code_offset": "0x0002dc48",
+            "addend": 0
+          },
+          {
+            "ordinal": 190,
+            "code_offset": "0x0002dcdc",
+            "addend": 0
+          },
+          {
+            "ordinal": 211,
+            "code_offset": "0x0002dc6c",
+            "addend": 0
+          },
+          {
+            "ordinal": 224,
+            "code_offset": "0x0002dc68",
+            "addend": 0
+          },
+          {
+            "ordinal": 233,
+            "code_offset": "0x0002dd4c",
+            "addend": 0
+          },
+          {
+            "ordinal": 234,
+            "code_offset": "0x0002dd50",
+            "addend": 0
+          },
+          {
+            "ordinal": 264,
+            "code_offset": "0x0002dc84",
+            "addend": 0
+          },
+          {
+            "ordinal": 265,
+            "code_offset": "0x0002dc98",
+            "addend": 0
+          },
+          {
+            "ordinal": 275,
+            "code_offset": "0x0002dc64",
+            "addend": 0
+          },
+          {
+            "ordinal": 276,
+            "code_offset": "0x0002dc9c",
+            "addend": 0
+          },
+          {
+            "ordinal": 277,
+            "code_offset": "0x0002dc70",
+            "addend": 0
+          },
+          {
+            "ordinal": 278,
+            "code_offset": "0x0002dc60",
+            "addend": 0
+          },
+          {
+            "ordinal": 348,
+            "code_offset": "0x0002dc54",
+            "addend": 0
+          },
+          {
+            "ordinal": 351,
+            "code_offset": "0x0002dc50",
+            "addend": 0
+          },
+          {
+            "ordinal": 354,
+            "code_offset": "0x0002dcd4",
+            "addend": 0
+          },
+          {
+            "ordinal": 359,
+            "code_offset": "0x0002dd1c",
+            "addend": 0
+          },
+          {
+            "ordinal": 361,
+            "code_offset": "0x0002dd18",
+            "addend": 0
+          }
+        ]
+      }
+    },
+    "drtaeabi_import_slot_count": 23,
+    "drtaeabi_unique_ordinal_count": 23,
+    "drtaeabi_duplicate_slot_references": {},
+    "added_13_imports": [
+      {
+        "ordinal": 123,
+        "symbol": "_ZTVN10__cxxabiv117__class_type_infoE",
+        "elf_dynamic_relocation_type": "R_ARM_GLOB_DAT",
+        "proxy_link_type": "DATA 4",
+        "direct_call_relocations": 0,
+        "e32_code_offset": "0x0002de44"
+      },
+      {
+        "ordinal": 158,
+        "symbol": "__aeabi_unwind_cpp_pr0",
+        "elf_dynamic_relocation_type": "R_ARM_GLOB_DAT",
+        "elf_got_vma": "0x00035e14",
+        "e32_code_offset": "0x0002de14",
+        "direct_call_relocations": 0,
+        "proxy_link_type": "DATA 4"
+      },
+      {
+        "ordinal": 159,
+        "symbol": "__aeabi_unwind_cpp_pr1",
+        "elf_dynamic_relocation_type": "R_ARM_GLOB_DAT",
+        "elf_got_vma": "0x00035e18",
+        "e32_code_offset": "0x0002de18",
+        "direct_call_relocations": 0,
+        "proxy_link_type": "DATA 4"
+      },
+      {
+        "ordinal": 160,
+        "symbol": "__aeabi_unwind_cpp_pr2",
+        "elf_dynamic_relocation_type": "R_ARM_GLOB_DAT",
+        "elf_got_vma": "0x00035e1c",
+        "e32_code_offset": "0x0002de1c",
+        "direct_call_relocations": 0,
+        "proxy_link_type": "DATA 4"
+      },
+      {
+        "ordinal": 180,
+        "symbol": "__cxa_begin_catch",
+        "elf_dynamic_relocation_type": "R_ARM_GLOB_DAT",
+        "elf_got_vma": "0x00035e20",
+        "e32_code_offset": "0x0002de20",
+        "direct_call_relocations": 0,
+        "proxy_link_type": "DATA 4"
+      },
+      {
+        "ordinal": 181,
+        "symbol": "__cxa_begin_cleanup",
+        "elf_dynamic_relocation_type": "R_ARM_GLOB_DAT",
+        "elf_got_vma": "0x00035e24",
+        "e32_code_offset": "0x0002de24",
+        "direct_call_relocations": 0,
+        "proxy_link_type": "DATA 4"
+      },
+      {
+        "ordinal": 183,
+        "symbol": "__cxa_end_catch",
+        "elf_dynamic_relocation_type": "R_ARM_GLOB_DAT",
+        "elf_got_vma": "0x00035e28",
+        "e32_code_offset": "0x0002de28",
+        "direct_call_relocations": 0,
+        "proxy_link_type": "DATA 4"
+      },
+      {
+        "ordinal": 184,
+        "symbol": "__cxa_end_cleanup",
+        "elf_dynamic_relocation_type": "R_ARM_GLOB_DAT",
+        "elf_got_vma": "0x00035e2c",
+        "e32_code_offset": "0x0002de2c",
+        "direct_call_relocations": 0,
+        "proxy_link_type": "DATA 4"
+      },
+      {
+        "ordinal": 204,
+        "symbol": "_ZN23TCppRTExceptionsGlobalsC1Ev",
+        "elf_dynamic_relocation_type": "R_ARM_GLOB_DAT",
+        "elf_got_vma": "0x00035e30",
+        "e32_code_offset": "0x0002de30",
+        "direct_call_relocations": 0,
+        "proxy_link_type": "DATA 4"
+      },
+      {
+        "ordinal": 213,
+        "symbol": "_ZSt9terminatev",
+        "elf_dynamic_relocation_type": "R_ARM_GLOB_DAT",
+        "elf_got_vma": "0x00035e34",
+        "e32_code_offset": "0x0002de34",
+        "direct_call_relocations": 0,
+        "proxy_link_type": "DATA 4"
+      },
+      {
+        "ordinal": 217,
+        "symbol": "__cxa_type_match",
+        "elf_dynamic_relocation_type": "R_ARM_GLOB_DAT",
+        "elf_got_vma": "0x00035e38",
+        "e32_code_offset": "0x0002de38",
+        "direct_call_relocations": 0,
+        "proxy_link_type": "DATA 4"
+      },
+      {
+        "ordinal": 218,
+        "symbol": "_Unwind_VRS_Get",
+        "elf_dynamic_relocation_type": "R_ARM_GLOB_DAT",
+        "elf_got_vma": "0x00035e3c",
+        "e32_code_offset": "0x0002de3c",
+        "direct_call_relocations": 0,
+        "proxy_link_type": "DATA 4"
+      },
+      {
+        "ordinal": 220,
+        "symbol": "_Unwind_VRS_Set",
+        "elf_dynamic_relocation_type": "R_ARM_GLOB_DAT",
+        "elf_got_vma": "0x00035e40",
+        "e32_code_offset": "0x0002de40",
+        "direct_call_relocations": 0,
+        "proxy_link_type": "DATA 4"
+      }
+    ],
+    "comparison_to_v1_0_28": {
+      "baseline_drt_ordinals": [
+        135,
+        139,
+        140,
+        141,
+        142,
+        147,
+        148,
+        155,
+        157,
+        221
+      ],
+      "added_drt_ordinals": [
+        123,
+        158,
+        159,
+        160,
+        180,
+        181,
+        183,
+        184,
+        204,
+        213,
+        217,
+        218,
+        220
+      ],
+      "removed_drt_ordinals": [],
+      "euser_added_ordinals": [],
+      "euser_removed_ordinals": [],
+      "euser_slots_before": 64,
+      "euser_slots_after": 64,
+      "all_non_drt_import_slot_counts_identical": true,
+      "all_other_dll_import_slots_identical": true,
+      "baseline_import_slot_counts": {
+        "bitgdi.dll": {
+          "52": 1
+        },
+        "drtaeabi.dll": {
+          "135": 1,
+          "139": 1,
+          "140": 1,
+          "141": 1,
+          "142": 1,
+          "147": 1,
+          "148": 1,
+          "155": 1,
+          "157": 1,
+          "221": 1
+        },
+        "efsrv.dll": {
+          "68": 1,
+          "93": 1,
+          "257": 1,
+          "264": 1,
+          "300": 1
+        },
+        "estlib.dll": {
+          "18": 1,
+          "141": 1,
+          "153": 1,
+          "154": 1,
+          "168": 1,
+          "195": 1,
+          "205": 1,
+          "253": 1,
+          "275": 1
+        },
+        "euser.dll": {
+          "64": 1,
+          "69": 1,
+          "85": 1,
+          "120": 1,
+          "196": 1,
+          "205": 1,
+          "208": 1,
+          "422": 1,
+          "424": 1,
+          "425": 1,
+          "426": 1,
+          "428": 1,
+          "430": 1,
+          "532": 1,
+          "540": 1,
+          "549": 1,
+          "585": 1,
+          "593": 1,
+          "604": 1,
+          "617": 1,
+          "626": 1,
+          "641": 1,
+          "644": 1,
+          "645": 1,
+          "646": 1,
+          "649": 1,
+          "652": 1,
+          "654": 1,
+          "665": 1,
+          "669": 1,
+          "674": 1,
+          "815": 1,
+          "839": 1,
+          "841": 1,
+          "842": 1,
+          "855": 1,
+          "925": 1,
+          "928": 1,
+          "929": 1,
+          "953": 1,
+          "968": 1,
+          "973": 1,
+          "1088": 1,
+          "1089": 1,
+          "1090": 1,
+          "1091": 1,
+          "1094": 1,
+          "1169": 1,
+          "1196": 1,
+          "1213": 1,
+          "1360": 1,
+          "1415": 1,
+          "1416": 1,
+          "1417": 1,
+          "1793": 1,
+          "1806": 1,
+          "1853": 1,
+          "1951": 1,
+          "1953": 1,
+          "1954": 1,
+          "1955": 1,
+          "2103": 1,
+          "2106": 1,
+          "2128": 1
+        },
+        "fbscli.dll": {
+          "14": 1,
+          "107": 1,
+          "108": 1,
+          "133": 1
+        },
+        "gdi.dll": {
+          "169": 1
+        },
+        "libm.dll": {
+          "92": 1,
+          "145": 1
+        },
+        "ws32.dll": {
+          "1": 1,
+          "7": 1,
+          "23": 1,
+          "29": 1,
+          "68": 1,
+          "69": 1,
+          "70": 1,
+          "72": 1,
+          "73": 1,
+          "76": 1,
+          "81": 1,
+          "107": 1,
+          "148": 1,
+          "157": 1,
+          "158": 1,
+          "184": 1,
+          "185": 1,
+          "190": 1,
+          "211": 1,
+          "224": 1,
+          "233": 1,
+          "234": 1,
+          "264": 1,
+          "265": 1,
+          "275": 1,
+          "276": 1,
+          "277": 1,
+          "278": 1,
+          "348": 1,
+          "351": 1,
+          "354": 1,
+          "359": 1,
+          "361": 1
+        }
+      }
+    },
+    "inspector_note": "Imports were inspected on a disposable copy capped at 1 MiB. The shipped E32 retains heap 4096..2097152; heap patch changes only heap header/CRC. Static imports do not establish E65 ROM export availability or loader acceptance.",
+    "header_size_bytes": 156,
+    "code_base": "0x00008000",
+    "code_size_bytes": 188248
+  },
+  "drtaeabi_proxy": {
+    "file": "drtaeabi-ten-plus-13-proxy.dso",
+    "definition": "drtaeabi-ten-plus-13-proxy.def",
+    "target_dll": "drtaeabi.dll",
+    "soname": "drtaeabi.dso",
+    "size_bytes": 2788,
+    "sha256": "ed1b5fb990de71e16960e903503e0afd84653fe9e8714380f491c10e1cb7923c",
+    "definition_sha256": "db1ad9ab9f314b99e991a3fe2fd591b2ee585475faffde3ce3fea9a2c9d86cf0",
+    "export_count": 23,
+    "exports": [
+      {
+        "ordinal": 123,
+        "symbol": "_ZTVN10__cxxabiv117__class_type_infoE",
+        "data": true,
+        "absent": false
+      },
+      {
+        "ordinal": 135,
+        "symbol": "__aeabi_idivmod",
+        "data": false,
+        "absent": false
+      },
+      {
+        "ordinal": 139,
+        "symbol": "__aeabi_ldivmod",
+        "data": false,
+        "absent": false
+      },
+      {
+        "ordinal": 140,
+        "symbol": "__aeabi_llsl",
+        "data": false,
+        "absent": false
+      },
+      {
+        "ordinal": 141,
+        "symbol": "__aeabi_llsr",
+        "data": false,
+        "absent": false
+      },
+      {
+        "ordinal": 142,
+        "symbol": "__aeabi_lmul",
+        "data": false,
+        "absent": false
+      },
+      {
+        "ordinal": 147,
+        "symbol": "__aeabi_memcpy4",
+        "data": false,
+        "absent": false
+      },
+      {
+        "ordinal": 148,
+        "symbol": "__aeabi_memcpy8",
+        "data": false,
+        "absent": false
+      },
+      {
+        "ordinal": 155,
+        "symbol": "__aeabi_uidivmod",
+        "data": false,
+        "absent": false
+      },
+      {
+        "ordinal": 157,
+        "symbol": "__aeabi_uldivmod",
+        "data": false,
+        "absent": false
+      },
+      {
+        "ordinal": 158,
+        "symbol": "__aeabi_unwind_cpp_pr0",
+        "data": true,
+        "absent": false
+      },
+      {
+        "ordinal": 159,
+        "symbol": "__aeabi_unwind_cpp_pr1",
+        "data": true,
+        "absent": false
+      },
+      {
+        "ordinal": 160,
+        "symbol": "__aeabi_unwind_cpp_pr2",
+        "data": true,
+        "absent": false
+      },
+      {
+        "ordinal": 180,
+        "symbol": "__cxa_begin_catch",
+        "data": true,
+        "absent": false
+      },
+      {
+        "ordinal": 181,
+        "symbol": "__cxa_begin_cleanup",
+        "data": true,
+        "absent": false
+      },
+      {
+        "ordinal": 183,
+        "symbol": "__cxa_end_catch",
+        "data": true,
+        "absent": false
+      },
+      {
+        "ordinal": 184,
+        "symbol": "__cxa_end_cleanup",
+        "data": true,
+        "absent": false
+      },
+      {
+        "ordinal": 204,
+        "symbol": "_ZN23TCppRTExceptionsGlobalsC1Ev",
+        "data": true,
+        "absent": false
+      },
+      {
+        "ordinal": 213,
+        "symbol": "_ZSt9terminatev",
+        "data": true,
+        "absent": false
+      },
+      {
+        "ordinal": 217,
+        "symbol": "__cxa_type_match",
+        "data": true,
+        "absent": false
+      },
+      {
+        "ordinal": 218,
+        "symbol": "_Unwind_VRS_Get",
+        "data": true,
+        "absent": false
+      },
+      {
+        "ordinal": 220,
+        "symbol": "_Unwind_VRS_Set",
+        "data": true,
+        "absent": false
+      },
+      {
+        "ordinal": 221,
+        "symbol": "abort",
+        "data": false,
+        "absent": false
+      }
+    ],
+    "data_export_ordinals": [
+      123,
+      158,
+      159,
+      160,
+      180,
+      181,
+      183,
+      184,
+      204,
+      213,
+      217,
+      218,
+      220
+    ],
+    "link_time_only": true,
+    "runtime_scope_note": "The proxy DSO is a build/conversion input and is not included in the SIS. DATA 4 models function addresses as GOT slots only so the E32 contains static ordinal imports without helper call relocations; E32 import records retain DLL/ordinal/fixup offsets, not the proxy type annotation."
+  },
+  "runtime_helper_call_policy": {
+    "added_drt_helper_call_relocations": 0,
+    "added_drt_helper_calls_from_startup_or_runtime_path": false,
+    "linker_retained_probe": "quantumDrtAdditional13AddressRetentionProbe",
+    "probe_linker_retained_but_unreferenced": true,
+    "probe_function_size_bytes": 176,
+    "probe_relocations": [
+      {
+        "address": "0x00029ec4",
+        "type": "R_ARM_GOT_PREL",
+        "symbol": "__aeabi_unwind_cpp_pr0"
+      },
+      {
+        "address": "0x00029ec8",
+        "type": "R_ARM_GOT_PREL",
+        "symbol": "__aeabi_unwind_cpp_pr1"
+      },
+      {
+        "address": "0x00029ecc",
+        "type": "R_ARM_GOT_PREL",
+        "symbol": "__aeabi_unwind_cpp_pr2"
+      },
+      {
+        "address": "0x00029ed0",
+        "type": "R_ARM_GOT_PREL",
+        "symbol": "__cxa_begin_catch"
+      },
+      {
+        "address": "0x00029ed4",
+        "type": "R_ARM_GOT_PREL",
+        "symbol": "__cxa_begin_cleanup"
+      },
+      {
+        "address": "0x00029ed8",
+        "type": "R_ARM_GOT_PREL",
+        "symbol": "__cxa_end_catch"
+      },
+      {
+        "address": "0x00029edc",
+        "type": "R_ARM_GOT_PREL",
+        "symbol": "__cxa_end_cleanup"
+      },
+      {
+        "address": "0x00029ee0",
+        "type": "R_ARM_GOT_PREL",
+        "symbol": "_ZN23TCppRTExceptionsGlobalsC1Ev"
+      },
+      {
+        "address": "0x00029ee4",
+        "type": "R_ARM_GOT_PREL",
+        "symbol": "_ZSt9terminatev"
+      },
+      {
+        "address": "0x00029ee8",
+        "type": "R_ARM_GOT_PREL",
+        "symbol": "__cxa_type_match"
+      },
+      {
+        "address": "0x00029eec",
+        "type": "R_ARM_GOT_PREL",
+        "symbol": "_Unwind_VRS_Get"
+      },
+      {
+        "address": "0x00029ef0",
+        "type": "R_ARM_GOT_PREL",
+        "symbol": "_Unwind_VRS_Set"
+      }
+    ],
+    "class_type_info_gate": "quantumDrtAdditional13ImportProbeEnabled",
+    "class_type_info_gate_default": 0,
+    "class_type_info_gate_written": false,
+    "note": "The 12 added helper imports are R_ARM_GLOB_DAT GOT slots, with no R_ARM_CALL/R_ARM_THM_CALL/R_ARM_JUMP24 relocations to them. The address-retention function is forced into the ELF only to keep the GOT fixups and is not called. The default-false class-info probe reads the vtable address only if its gate is enabled; no DRT helper is invoked.",
+    "probe_assembly": {
+      "file": "helper-address-probe.s",
+      "observed_instructions": [
+        "SUB SP",
+        "LDR",
+        "ADD PC",
+        "LDR",
+        "STR",
+        "BX LR"
+      ],
+      "bl_instructions": 0,
+      "blx_instructions": 0,
+      "note": "Generated with the same ARMv5T/Thumb optimization and ABI flags; the retained function body only fetches GOT addresses, stores volatile local pointers, and returns."
+    },
+    "final_e32_instruction_scan": {
+      "report_file": "final-e32-helper-instruction-scan.json",
+      "scanner_script": "scan_e32_helper_instructions.py",
+      "e32_sha256": "0d23b4b408167a83870f1c2d577dd9d51a5f1155b51f7a461ea056e7e72fb2b4",
+      "probe_thumb_symbol": "0x00029e45",
+      "probe_vma": "0x00029e44",
+      "probe_file_offset": "0x00021ee0",
+      "decoded_instruction_body_bytes": 128,
+      "decoded_instruction_count": 64,
+      "bl_count": 0,
+      "blx_count": 0,
+      "return_instruction": "BX LR",
+      "trailing_literal_data_bytes": 48,
+      "trailing_got_prel_literal_count": 12,
+      "decoder": "Capstone package 5.0.9 (engine 5.0.7) / ARM Thumb little-endian",
+      "scope": "Exact shipped E32 bytes. Probe body only; the complete relocation audit covers all 12 added helper symbols and reports zero call relocations."
+    }
+  },
+  "checks": {
+    "clean_cross_build_from_v1_0_28_baseline": true,
+    "exactly_13_additional_drtaeabi_ordinals_present": true,
+    "drtaeabi_unique_ordinal_set_is_23_and_slot_count_is_23": true,
+    "all_drtaeabi_slots_have_multiplicity_one": true,
+    "drtaeabi_proxy_exports_match_e32_ordinals": true,
+    "additional_13_link_proxy_entries_are_data_slots_only": true,
+    "no_direct_call_relocations_to_12_added_helper_symbols": true,
+    "added_helpers_use_r_arm_glob_dat_not_jump_slots": true,
+    "address_retention_probe_has_no_incoming_relocation": true,
+    "address_retention_probe_has_12_got_prels_and_no_call_relocations": true,
+    "class_type_info_probe_gate_defaults_false_and_is_not_written": true,
+    "native_leave_personality_support_off_and_exception_descriptor_absent": true,
+    "euser_import_slots_exactly_match_v1_0_28": true,
+    "no_euser_ordinals_2060_2061_2082": true,
+    "all_non_drt_dll_slot_multiplicities_match_v1_0_28": true,
+    "drt_ordinals_222_223_absent": true,
+    "mda_midi_imports_absent_and_gameplay_audio_disabled": true,
+    "shipped_e32_heap_and_header_crc_valid": true,
+    "all_18_non_e32_payloads_match_v1_0_28_byte_for_byte": true,
+    "all_19_sis_payloads_pass_checksums_and_staging_byte_audit": true,
+    "address_retention_probe_assembly_has_no_bl_blx": true,
+    "final_e32_address_retention_probe_instruction_scan_has_no_bl_blx": true
+  },
+  "non_e32_payloads_matching_v1_0_28": [
+    "quantum_level41_walk_test_reg.rsc",
+    "quantum_level41_walk_test_loc.rsc",
+    "L3D_new.3d",
+    "lightmap.vla",
+    "skybox8.3d",
+    "forest.qtx",
+    "map.qtx",
+    "river.qtx",
+    "sky.qtx",
+    "weather.txt",
+    "weapon.qtx",
+    "weapon-fire.qtx",
+    "weapon-sight-weapon.qtx",
+    "weapon-gameplay.qwg",
+    "weapon-catalog.qwc",
+    "audio/music/wth.mp3",
+    "audio/sounds/wpn/fn2000.wav",
+    "audio/sounds/wpn/r.wav"
+  ],
+  "sis": {
+    "file": "quantum_level41_walk_test-v1.0.33-level1-import-drt-ten-plus-13-no-native-leaves-omap1710-dsa-argb32-armv5t.sis",
+    "size_bytes": 741128,
+    "sha256": "002e698f84393f7304108716daa755904da8c33bacc7967d1c481293712ade8a",
+    "md5": "2dc6ebf815d5f17c0f04cd1fe3de5f3a",
+    "signed": false,
+    "package_uid": "0xe000a021",
+    "version": [
+      1,
+      0,
+      33
+    ],
+    "payload_count": 19,
+    "header_uid_crc_valid": true,
+    "controller_checksum_valid": true,
+    "data_checksum_valid": true,
+    "all_payload_hashes_valid": true,
+    "all_staged_payloads_match": true,
+    "drive": {
+      "file_id": "1L-TVV6T-v5CSrJ0Ll_HwZRsIOf0Jz8Fu",
+      "web_view_link": "https://drive.google.com/file/d/1L-TVV6T-v5CSrJ0Ll_HwZRsIOf0Jz8Fu/view?usp=drivesdk",
+      "size_bytes_verified": 741128,
+      "md5_verified": "2dc6ebf815d5f17c0f04cd1fe3de5f3a"
+    }
+  },
+  "device_result": {
+    "device": "Nokia E65",
+    "launch_success": null,
+    "reported_outcome": "Pending user test",
+    "interpretation": "No conclusion is drawn about a specific unsupported export, ROM availability, or leave propagation from v1.0.32."
+  },
+  "published_to_drive": true
+}
