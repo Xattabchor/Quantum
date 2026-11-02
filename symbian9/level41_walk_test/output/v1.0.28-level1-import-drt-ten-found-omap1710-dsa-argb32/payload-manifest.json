@@ -549,7 +549,7 @@
       "sha256": "9292944115644ac4dbd358079987af3235bf6f4678fabde5c185ac1d4023ea06"
     }
   ],
-  "e65_runtime_result": "Pending: no v1.0.28 Nokia E65 launch result has been reported.",
+  "e65_runtime_result": "User-reported: v1.0.28 launched on Nokia E65. This establishes launch for this candidate only; helper execution, gameplay, audio, and MIDI were not tested.",
   "device_comparison": {
     "1.0.22": {
       "device": "Nokia E65",
@@ -605,11 +605,12 @@
     },
     "1.0.28": {
       "device": "Nokia E65",
-      "status": "pending",
-      "user_reported": false,
+      "status": "launched",
+      "user_reported": true,
       "test": "Static drtaeabi.dll import set limited to ordinals 135, 139, 140, 141, 142, 147, 148, 155, 157, and 221; ordinals 222/223 excluded.",
-      "interpretation_if_launches": "Evidence favoring the missing 222/223 imports as a v1.0.25 factor, but not proof; the division helpers resolve from the local SDK runtime.",
-      "interpretation_if_popup": "Suggests a broader static-import issue or another difference; does not prove which import is responsible."
+      "observed_result": "Application launched on Nokia E65.",
+      "result_scope": "Launch only; no helper execution, gameplay, audio, or MIDI result was reported.",
+      "interpretation": "Evidence favoring the missing 222/223 DRT imports as a v1.0.25 factor, but not proof; this candidate also resolves division helpers locally and uses a custom ten-export proxy."
     }
   },
   "audio_payloads_identical_to_v1.0.27": true,

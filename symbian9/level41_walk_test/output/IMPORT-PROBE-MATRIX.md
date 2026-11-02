@@ -14,7 +14,7 @@ Compare the launch-only import variants for the already-reported **“Feature no
 | 1.0.25 | DRT-proxy/no-native-leaves probe | Static `drtaeabi.dll` import with 12 ARM EABI/helper ordinals; no native-leave/personality objects or EUser import delta | 740,368 | **User-reported: “Feature not supported”** |
 | 1.0.26 | Dynamic DRT-helper lookup probe | No static DRT import; calls `RLibrary::Load`/`Lookup` for those 12 ordinals; adds EUser [1308, 1311, 1838] | 741,840 | **User-reported: works; DRT labels unreadable, exact values unknown** |
 | 1.0.27 | Readability-only revision of v1.0.26 | Same Load/Lookup sequence and static imports; dedicated panel replaces older status text | 739,848 | **User-reported: load error 0; 10/12; mask 3FF (ordinals 222 and 223 missing)** |
-| 1.0.28 | Ten-ordinal static DRT-import control | Static `drtaeabi.dll` imports only 135, 139, 140, 141, 142, 147, 148, 155, 157, 221; excludes 222/223 | 740,660 | **Pending E65 test** |
+| 1.0.28 | Ten-ordinal static DRT-import control | Static `drtaeabi.dll` imports only 135, 139, 140, 141, 142, 147, 148, 155, 157, 221; excludes 222/223 | 740,660 | **User-reported: launched on Nokia E65** |
 
 Downloads: [v1.0.22 baseline](https://drive.google.com/file/d/12LFx5fGrUhy28c3pTkKDs9PzXFt_yKUm/view?usp=drivesdk) · [v1.0.23 DRT-only](https://drive.google.com/file/d/1VtqRmMdDG1VVWJQVQ5gNzS9v1Gk3uJT4/view?usp=drivesdk) · [v1.0.24 DRT+MDA](https://drive.google.com/file/d/1rhJzecHwYvSNZSXj6w3Wbw6OraD8ccnj/view?usp=drivesdk) · [v1.0.25 DRT proxy/no native leaves](https://drive.google.com/file/d/13hWfbu7-Qj8k9hLmj7r1ssiXqgnl66ZI/view?usp=drivesdk) · [v1.0.26 dynamic DRT lookup](https://drive.google.com/file/d/1kipGIy5t-MbSuHL1mpR1fDP9fPlzmVmx/view?usp=drivesdk) · [v1.0.27 readable DRT panel](https://drive.google.com/file/d/1WPgZE_fNdN5qCMj_vwVKXlV1LEFgGYVG/view?usp=drivesdk) · [v1.0.28 ten-ordinal static import control](https://drive.google.com/file/d/1mXfVd9lVIz8m7TzkFjRpqvhZYTjkB9U3/view?usp=drivesdk)
 
@@ -69,7 +69,7 @@ v1.0.28 builds a custom import proxy for `drtaeabi.dll` from only the ten export
 
 The SDK legacy EKA2 runtime supplies local `__aeabi_idiv` and `__aeabi_uidiv` implementations so the program remains linkable without importing those two DRT ordinals. The probe adds no direct call into a DRT helper and performs no dynamic lookup; ordinary compiler/runtime references may still use the imported runtime services. This local resolution is a build difference that must be considered when interpreting the result.
 
-The unsigned SIS is **740,660 bytes**, SHA-256 `7cc5206d07cffc1768dcd52c7988410f08fcbef7a234cbd60a1b48880e1025bb`, MD5 `232b9054434eae764627761961be260c`. It was uploaded to Drive and passed the 19-payload SIS audit; all 18 non-E32 payloads match v1.0.27 byte-for-byte. The device result is pending. A successful launch would be evidence favoring the missing 222/223 imports as a v1.0.25 factor, not proof; a repeated popup would suggest a broader static-import issue or another difference.
+The unsigned SIS is **740,660 bytes**, SHA-256 `7cc5206d07cffc1768dcd52c7988410f08fcbef7a234cbd60a1b48880e1025bb`, MD5 `232b9054434eae764627761961be260c`. It was uploaded to Drive and passed the 19-payload SIS audit; all 18 non-E32 payloads match v1.0.27 byte-for-byte. The user reports that it launched on the Nokia E65. This favors, but does not prove, the missing 222/223 imports as a factor in v1.0.25: v1.0.28 also supplies those division helpers locally and uses a custom ten-export proxy. The result confirms launch for this candidate only; it does not establish helper execution or playback behavior.
 
 ## Interpretation limits and scope
 
@@ -83,6 +83,6 @@ The unsigned SIS is **740,660 bytes**, SHA-256 `7cc5206d07cffc1768dcd52c7988410f
 
 The v1.0.22–v1.0.28 candidates cross-built with the restored SDK 0.3.0 toolchain; v1.0.28's custom proxy exposes only its ten declared exports. All packages passed the local SIS decompression/hash/package-target audit for 19 payloads. The v1.0.28 E32 import table, custom proxy export list, and excluded division ordinals were checked before SIS packaging/upload. `PATH=/home/user/quantum-sdk-cache/pyenv/bin:$PATH make -C symbian9 test` passed, including both core suites (149,093 checks each), Python suites, asset/audio, heap, SID, key-up, and presentation checks. The detailed v1.0.28 build logs, `BUILD-REPORT.md`, `payload-manifest.json`, and audit JSON files are in its version directory; previous candidate links and results are recorded above.
 
-## Next step
+## Device result
 
-The immediate next step is an E65 launch test of the v1.0.28 SIS. Report whether the known `Feature not supported` popup appears or the app screen opens. Keep playback and MIDI disabled. A success would favor, but not prove, the 222/223 hypothesis; a popup would leave a broader static-import issue or another build difference in play.
+The user reports that v1.0.28 launched on the Nokia E65. Treat this as a successful launch of this particular static-import control, not proof that 222/223 alone caused v1.0.25's popup: v1.0.28 also resolves the division helpers locally and uses a custom ten-export proxy. Playback and MIDI remain disabled, and successful helper execution was not tested.

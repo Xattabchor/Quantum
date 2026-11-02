@@ -281,6 +281,9 @@ candidate described above. It has package UID `0xE000A021` and executable UID3
 `0xE000A020` (the renderer executable UID3 here is `0xE000A012`). Its E32
 imports only ordinals 135, 139, 140, 141, 142, 147, 148, 155, 157, and 221 from
 `drtaeabi.dll`; ordinals 222/223 and MDA/MIDI imports are absent. Playback is
-disabled, and the E65 result remains pending. See the separate
+disabled. The user reports that this separate v1.0.28 package launched on the
+Nokia E65. That supports, but does not prove, the missing-ordinal hypothesis;
+local division-helper resolution and the custom proxy are additional build
+differences. See the separate
 [`import comparison matrix`](../level41_walk_test/output/IMPORT-PROBE-MATRIX.md)
 for the test history and interpretation limits.

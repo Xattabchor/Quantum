@@ -13,7 +13,7 @@ This v1.0.28 candidate tests the **static-import** path with only those ten prev
 - SIS size: **740,660 bytes**; SHA-256 `7cc5206d07cffc1768dcd52c7988410f08fcbef7a234cbd60a1b48880e1025bb`; MD5 `232b9054434eae764627761961be260c`.
 - Unsigned SIS, built with local GnuPoc MakeSIS 4.0.
 - [Download from Google Drive](https://drive.google.com/file/d/1mXfVd9lVIz8m7TzkFjRpqvhZYTjkB9U3/view?usp=drivesdk) (file ID `1mXfVd9lVIz8m7TzkFjRpqvhZYTjkB9U3`).
-- Nokia E65 result: **pending**; no v1.0.28 device result has been reported.
+- Nokia E65 result: **user-reported launch success**. The user reports v1.0.28 launched on the device; this is not a gameplay, audio, or MIDI result.
 
 ## Static DRT import set
 
@@ -42,6 +42,6 @@ The E32 inspector rejects the shipped 2 MiB heap limit, so import inspection use
 
 ## Nokia E65 test and interpretation
 
-Device test is pending. If v1.0.28 launches, that would be **evidence favoring** the two excluded ordinals as a factor in v1.0.25, but not proof: this candidate also resolves those division helpers locally and uses a custom ten-export proxy. If it still shows **“Feature not supported,”** that would suggest a broader static-import issue or another difference; it would not identify a particular offending import.
+The user reports that v1.0.28 **launched on the Nokia E65**. This is evidence favoring the two excluded ordinals as a factor in v1.0.25, but not proof: this candidate also resolves those division helpers locally and uses a custom ten-export proxy. The result confirms launch for this candidate only; it does not establish that the helpers were invoked successfully or identify the exact cause of v1.0.25's popup.
 
 No playback or MIDI path is enabled. This build and its host-side audits make no claim about codec availability, direct DSP access, audio output, or general E65 compatibility.

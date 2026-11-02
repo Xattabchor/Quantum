@@ -522,10 +522,11 @@ final E32 were audited to contain exactly ordinals `135, 139, 140, 141, 142,
 legacy EKA2 runtime resolves `__aeabi_idiv` and `__aeabi_uidiv` locally, while
 the application probe performs no dynamic lookup and makes no direct helper
 call. The E32 retains the same EUser import set as v1.0.22, has no MDA/MIDI
-imports, and all 18 non-E32 payloads match v1.0.27. The v1.0.28 E65 launch
-result is pending. A successful launch would favor, but not prove, the two
-missing ordinals as a v1.0.25 factor; a repeated popup would suggest a broader
-static-import problem or another difference. Playback remains disabled.
+imports, and all 18 non-E32 payloads match v1.0.27. The user reports that
+v1.0.28 launched on the Nokia E65. This favors, but does not prove, the two
+missing ordinals as a factor in v1.0.25: the ten-import control also resolves
+the division helpers locally and uses a custom proxy. Playback and MIDI remain
+disabled, so this result says nothing about audio or helper execution.
 
 See [`output/IMPORT-PROBE-MATRIX.md`](output/IMPORT-PROBE-MATRIX.md) for the
 comparison table and earlier device results. The v1.0.28 `BUILD-REPORT.md`,
