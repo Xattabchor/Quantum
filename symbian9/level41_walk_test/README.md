@@ -478,7 +478,7 @@ same-frame parity check fails. On the E65, only `Presenter: DSA ARGB32`
 confirms the requested active path; `DSA EColor64K` means fallback. Launch,
 key-up behavior, runtime presenter, and FPS still require device verification.
 
-## v1.0.22–v1.0.31 launch/import diagnostics
+## v1.0.22–v1.0.32 launch/import diagnostics
 
 The user reports that the no-audio/no-DRT v1.0.22 baseline works as expected,
 while v1.0.23 (native-leaves/DRT-only), v1.0.24 (DRT plus trapped MDA imports,
@@ -596,3 +596,42 @@ explain v1.0.24's different native-leave/DRT combination. MDA initialization,
 file opening, codec support, and playback were not tested. See the v1.0.31
 `BUILD-REPORT.md`, `payload-manifest.json`, `e32-import-audit.json`, and
 `sis-audit.json` in its version directory.
+
+## v1.0.32 native-leave/personality import control
+
+v1.0.32 is the selected native-leave/personality-only launch control, based on
+the user-reported-working v1.0.28 ten-ordinal DRT import set. Enabling the SDK
+native-leave path necessarily adds related static imports, so the test compares
+that associated import surface against v1.0.28; it does not claim to toggle a
+single library or ordinal in isolation.
+
+The final `drtaeabi.dll` block retains the ten v1.0.28 ordinals and adds exactly
+13 native-leave/personality ordinals `[123, 158, 159, 160, 180, 181, 183,
+184, 204, 213, 217, 218, 220]`. The E32 has 23 distinct DRT ordinals and 25
+slot references because 158 and 159 each appear twice. The only other import
+delta is EUser `[2060, 2061, 2082]` (`MarkCleanupStack`,
+`UnMarkCleanupStack`, `XLeaveException::GetReason`); every other DLL/ordinal
+block matches v1.0.28. DRT ordinals 222/223 are absent. MDA, MIDI, and gameplay
+audio imports/calls are absent; audio payloads remain unchanged only as
+package-consistency controls.
+
+The native-leave probe is default-false and has no writes to its gate. Its
+`TRAPD`/`User::Leave(KErrNotSupported)` branch remains compiled, but no leave
+is deliberately raised on the normal launch path. For this temporary build,
+CMake redirects the imported `SymbianCxxAbi` target and legacy EKA2 runtime
+proxy edge to the combined custom DRT proxy; this resolves the earlier
+duplicate-proxy conversion failure. The exact patch is included with the
+artifact.
+
+The unsigned SIS is **742,756 bytes**, SHA-256
+`2091b0d15b7ff0319d7dec22bbe855e0f164120cf281612a581476b74be30140`, MD5
+`9bc60ad4e816aeaab4ff77e5b4993db2`. It passed the 19-payload SIS audit, and
+all 18 non-E32 payloads match v1.0.28 byte-for-byte. [Download the unsigned SIS
+from Drive](https://drive.google.com/file/d/12Yt2aCwT8pKXfwCG715Veup1AbJLO4qO/view?usp=drivesdk).
+
+**Nokia E65 result: pending.** This is a launch/import control, not evidence
+that the E65 accepts each static import or that leave propagation works. MDA
+initialization, audio playback, MIDI, codec support, DSP access, and performance
+are outside the test. See the v1.0.32 version directory for `BUILD-REPORT.md`,
+`payload-manifest.json`, `e32-import-audit.json`, `sis-audit.json`, build logs,
+and `native-leaves-source.patch`.

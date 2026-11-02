@@ -1,0 +1,852 @@
+{
+  "audio_payloads_identical_to_v1.0.28": [
+    "audio/music/wth.mp3",
+    "audio/sounds/wpn/fn2000.wav",
+    "audio/sounds/wpn/r.wav"
+  ],
+  "build": {
+    "configuration": {
+      "QUANTUM_LEVEL41_ENABLE_MIDI_AUDIO": false,
+      "QUANTUM_LEVEL41_ENABLE_SYMBIAN_AUDIO": false,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_DRT_DLL": false,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_DRT_LOOKUP": false,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_DRT_TEN_ORDINALS": true,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_MDA": false,
+      "QUANTUM_LEVEL41_IMPORT_PROBE_NATIVE_LEAVES": true,
+      "QUANTUM_LEVEL41_INTERACTIVE_WALK": true,
+      "QUANTUM_LEVEL41_OMAP1710": true,
+      "QUANTUM_LEVEL41_OMAP1710_DSA_ARGB_BITMAP": true,
+      "QUANTUM_LEVEL41_OMAP1710_ECOLOR64K": true,
+      "SYMBIAN_RUNTIME_LEGACY_EKA2": true,
+      "combined_drt_proxy_replaces_SymbianCxxAbi_target": true,
+      "combined_proxy_exports": 23,
+      "effects_asm_experiment": false,
+      "mode9_mul_order_experiment": false,
+      "scalar_pdiv_asm": false
+    },
+    "host_tests": {
+      "reason": "The native-leave probe is Symbian-only; v1.0.28 core/payload baseline remains unchanged and host tests cannot validate E65 static import acceptance.",
+      "status": "not rerun for this import/personality-link package control"
+    },
+    "source_patch": "native-leaves-source.patch",
+    "status": "Cross-built, package-audited, E32 imports compared with v1.0.28, and SIS uploaded/verified on Google Drive; Nokia E65 result pending.",
+    "toolchain": "Symbian SDK 0.3.0; ARMv5T/EKA2; Clang 23.1.2; CMake 3.30.5; GnuPoc MakeSIS 4.0"
+  },
+  "drtaeabi_proxy": {
+    "export_count": 23,
+    "exports": [
+      {
+        "ordinal": 123,
+        "symbol": "_ZTVN10__cxxabiv117__class_type_infoE"
+      },
+      {
+        "ordinal": 135,
+        "symbol": "__aeabi_idivmod"
+      },
+      {
+        "ordinal": 139,
+        "symbol": "__aeabi_ldivmod"
+      },
+      {
+        "ordinal": 140,
+        "symbol": "__aeabi_llsl"
+      },
+      {
+        "ordinal": 141,
+        "symbol": "__aeabi_llsr"
+      },
+      {
+        "ordinal": 142,
+        "symbol": "__aeabi_lmul"
+      },
+      {
+        "ordinal": 147,
+        "symbol": "__aeabi_memcpy4"
+      },
+      {
+        "ordinal": 148,
+        "symbol": "__aeabi_memcpy8"
+      },
+      {
+        "ordinal": 155,
+        "symbol": "__aeabi_uidivmod"
+      },
+      {
+        "ordinal": 157,
+        "symbol": "__aeabi_uldivmod"
+      },
+      {
+        "ordinal": 158,
+        "symbol": "__aeabi_unwind_cpp_pr0"
+      },
+      {
+        "ordinal": 159,
+        "symbol": "__aeabi_unwind_cpp_pr1"
+      },
+      {
+        "ordinal": 160,
+        "symbol": "__aeabi_unwind_cpp_pr2"
+      },
+      {
+        "ordinal": 180,
+        "symbol": "__cxa_begin_catch"
+      },
+      {
+        "ordinal": 181,
+        "symbol": "__cxa_begin_cleanup"
+      },
+      {
+        "ordinal": 183,
+        "symbol": "__cxa_end_catch"
+      },
+      {
+        "ordinal": 184,
+        "symbol": "__cxa_end_cleanup"
+      },
+      {
+        "ordinal": 204,
+        "symbol": "_ZN23TCppRTExceptionsGlobalsC1Ev"
+      },
+      {
+        "ordinal": 213,
+        "symbol": "_ZSt9terminatev"
+      },
+      {
+        "ordinal": 217,
+        "symbol": "__cxa_type_match"
+      },
+      {
+        "ordinal": 218,
+        "symbol": "_Unwind_VRS_Get"
+      },
+      {
+        "ordinal": 220,
+        "symbol": "_Unwind_VRS_Set"
+      },
+      {
+        "ordinal": 221,
+        "symbol": "abort"
+      }
+    ],
+    "exports_exactly_match_e32_import_ordinals": true,
+    "file": "drtaeabi-ten-native-leaves-proxy.dso",
+    "sha256": "4592ef95cd252e1140f453d096cac73b75199e699883d55ad8dcf148893d2c0a",
+    "size_bytes": 2788,
+    "soname": "drtaeabi.dso",
+    "target_dll": "drtaeabi.dll"
+  },
+  "e32": {
+    "architecture": "armv5t",
+    "capabilities": 0,
+    "drtaeabi_duplicate_slot_references": {
+      "158": 2,
+      "159": 2
+    },
+    "drtaeabi_import_slot_count": 25,
+    "drtaeabi_ordinals_exactly_match_custom_proxy": true,
+    "drtaeabi_unique_ordinal_count": 23,
+    "file": "quantum_level41_walk_test.exe",
+    "header_crc_valid": true,
+    "heap_max": 2097152,
+    "heap_min": 4096,
+    "import_slot_counts": {
+      "bitgdi.dll": {
+        "52": 1
+      },
+      "drtaeabi.dll": {
+        "123": 1,
+        "135": 1,
+        "139": 1,
+        "140": 1,
+        "141": 1,
+        "142": 1,
+        "147": 1,
+        "148": 1,
+        "155": 1,
+        "157": 1,
+        "158": 2,
+        "159": 2,
+        "160": 1,
+        "180": 1,
+        "181": 1,
+        "183": 1,
+        "184": 1,
+        "204": 1,
+        "213": 1,
+        "217": 1,
+        "218": 1,
+        "220": 1,
+        "221": 1
+      },
+      "efsrv.dll": {
+        "257": 1,
+        "264": 1,
+        "300": 1,
+        "68": 1,
+        "93": 1
+      },
+      "estlib.dll": {
+        "141": 1,
+        "153": 1,
+        "154": 1,
+        "168": 1,
+        "18": 1,
+        "195": 1,
+        "205": 1,
+        "253": 1,
+        "275": 1
+      },
+      "euser.dll": {
+        "1088": 1,
+        "1089": 2,
+        "1090": 1,
+        "1091": 1,
+        "1094": 2,
+        "1169": 1,
+        "1196": 1,
+        "120": 1,
+        "1213": 1,
+        "1360": 1,
+        "1415": 1,
+        "1416": 1,
+        "1417": 1,
+        "1793": 1,
+        "1806": 1,
+        "1853": 1,
+        "1951": 1,
+        "1953": 1,
+        "1954": 1,
+        "1955": 1,
+        "196": 1,
+        "205": 1,
+        "2060": 1,
+        "2061": 1,
+        "208": 1,
+        "2082": 1,
+        "2103": 1,
+        "2106": 1,
+        "2128": 3,
+        "422": 1,
+        "424": 1,
+        "425": 1,
+        "426": 1,
+        "428": 1,
+        "430": 1,
+        "532": 1,
+        "540": 1,
+        "549": 1,
+        "585": 1,
+        "593": 1,
+        "604": 1,
+        "617": 1,
+        "626": 1,
+        "64": 1,
+        "641": 1,
+        "644": 1,
+        "645": 1,
+        "646": 1,
+        "649": 1,
+        "652": 1,
+        "654": 1,
+        "665": 1,
+        "669": 1,
+        "674": 1,
+        "69": 1,
+        "815": 1,
+        "839": 1,
+        "841": 1,
+        "842": 1,
+        "85": 1,
+        "855": 1,
+        "925": 1,
+        "928": 1,
+        "929": 1,
+        "953": 1,
+        "968": 1,
+        "973": 1
+      },
+      "fbscli.dll": {
+        "107": 1,
+        "108": 1,
+        "133": 1,
+        "14": 1
+      },
+      "gdi.dll": {
+        "169": 1
+      },
+      "libm.dll": {
+        "145": 1,
+        "92": 1
+      },
+      "ws32.dll": {
+        "1": 1,
+        "107": 1,
+        "148": 1,
+        "157": 1,
+        "158": 1,
+        "184": 1,
+        "185": 1,
+        "190": 1,
+        "211": 1,
+        "224": 1,
+        "23": 1,
+        "233": 1,
+        "234": 1,
+        "264": 1,
+        "265": 1,
+        "275": 1,
+        "276": 1,
+        "277": 1,
+        "278": 1,
+        "29": 1,
+        "348": 1,
+        "351": 1,
+        "354": 1,
+        "359": 1,
+        "361": 1,
+        "68": 1,
+        "69": 1,
+        "7": 1,
+        "70": 1,
+        "72": 1,
+        "73": 1,
+        "76": 1,
+        "81": 1
+      }
+    },
+    "imports": {
+      "bitgdi.dll": [
+        52
+      ],
+      "drtaeabi.dll": [
+        123,
+        135,
+        139,
+        140,
+        141,
+        142,
+        147,
+        148,
+        155,
+        157,
+        158,
+        159,
+        160,
+        180,
+        181,
+        183,
+        184,
+        204,
+        213,
+        217,
+        218,
+        220,
+        221
+      ],
+      "efsrv.dll": [
+        68,
+        93,
+        257,
+        264,
+        300
+      ],
+      "estlib.dll": [
+        18,
+        141,
+        153,
+        154,
+        168,
+        195,
+        205,
+        253,
+        275
+      ],
+      "euser.dll": [
+        64,
+        69,
+        85,
+        120,
+        196,
+        205,
+        208,
+        422,
+        424,
+        425,
+        426,
+        428,
+        430,
+        532,
+        540,
+        549,
+        585,
+        593,
+        604,
+        617,
+        626,
+        641,
+        644,
+        645,
+        646,
+        649,
+        652,
+        654,
+        665,
+        669,
+        674,
+        815,
+        839,
+        841,
+        842,
+        855,
+        925,
+        928,
+        929,
+        953,
+        968,
+        973,
+        1088,
+        1089,
+        1090,
+        1091,
+        1094,
+        1169,
+        1196,
+        1213,
+        1360,
+        1415,
+        1416,
+        1417,
+        1793,
+        1806,
+        1853,
+        1951,
+        1953,
+        1954,
+        1955,
+        2060,
+        2061,
+        2082,
+        2103,
+        2106,
+        2128
+      ],
+      "fbscli.dll": [
+        14,
+        107,
+        108,
+        133
+      ],
+      "gdi.dll": [
+        169
+      ],
+      "libm.dll": [
+        92,
+        145
+      ],
+      "ws32.dll": [
+        1,
+        7,
+        23,
+        29,
+        68,
+        69,
+        70,
+        72,
+        73,
+        76,
+        81,
+        107,
+        148,
+        157,
+        158,
+        184,
+        185,
+        190,
+        211,
+        224,
+        233,
+        234,
+        264,
+        265,
+        275,
+        276,
+        277,
+        278,
+        348,
+        351,
+        354,
+        359,
+        361
+      ]
+    },
+    "inspection_note": "E32 imports were inspected with symbian.native.require_native().inspect_e32 on a disposable copy capped at 1 MiB; packaged heap bounds remain 4096..2097152. Static import metadata does not prove Nokia E65 ROM availability or loader acceptance.",
+    "kernel": "eka2",
+    "mda_imports_absent": true,
+    "midi_imports_absent": true,
+    "native_leaves_added_drtaeabi_ordinals": [
+      123,
+      158,
+      159,
+      160,
+      180,
+      181,
+      183,
+      184,
+      204,
+      213,
+      217,
+      218,
+      220
+    ],
+    "native_leaves_added_euser_ordinals": [
+      2060,
+      2061,
+      2082
+    ],
+    "ordinals_222_223_excluded": true,
+    "secure_id": "0xe000a020",
+    "sha256": "085b0cbcd7ec10dd90955933ee14f8831dcd875b1b9afbcd1433463b722e4338",
+    "size_bytes": 193636,
+    "uid3": "0xe000a020"
+  },
+  "e65_runtime_result": "pending; no device test reported for v1.0.32",
+  "executable_uid3": "0xE000A020",
+  "import_delta_vs_v1.0.28": {
+    "added": {
+      "drtaeabi.dll": [
+        123,
+        158,
+        159,
+        160,
+        180,
+        181,
+        183,
+        184,
+        204,
+        213,
+        217,
+        218,
+        220
+      ],
+      "euser.dll": [
+        2060,
+        2061,
+        2082
+      ]
+    },
+    "removed": {
+      "bitgdi.dll": [],
+      "drtaeabi.dll": [],
+      "efsrv.dll": [],
+      "estlib.dll": [],
+      "euser.dll": [],
+      "fbscli.dll": [],
+      "gdi.dll": [],
+      "libm.dll": [],
+      "ws32.dll": []
+    }
+  },
+  "interpretation_limit": "A static import/SIS audit does not prove the Nokia E65 loader accepts these imports or that native leave propagation works. The launch-path leave branch remains false-gated.",
+  "native_leaves_personality_control": {
+    "associated_import_delta": {
+      "drtaeabi.dll": [
+        {
+          "ordinal": 123,
+          "symbol": "_ZTVN10__cxxabiv117__class_type_infoE"
+        },
+        {
+          "ordinal": 158,
+          "symbol": "__aeabi_unwind_cpp_pr0"
+        },
+        {
+          "ordinal": 159,
+          "symbol": "__aeabi_unwind_cpp_pr1"
+        },
+        {
+          "ordinal": 160,
+          "symbol": "__aeabi_unwind_cpp_pr2"
+        },
+        {
+          "ordinal": 180,
+          "symbol": "__cxa_begin_catch"
+        },
+        {
+          "ordinal": 181,
+          "symbol": "__cxa_begin_cleanup"
+        },
+        {
+          "ordinal": 183,
+          "symbol": "__cxa_end_catch"
+        },
+        {
+          "ordinal": 184,
+          "symbol": "__cxa_end_cleanup"
+        },
+        {
+          "ordinal": 204,
+          "symbol": "_ZN23TCppRTExceptionsGlobalsC1Ev"
+        },
+        {
+          "ordinal": 213,
+          "symbol": "_ZSt9terminatev"
+        },
+        {
+          "ordinal": 217,
+          "symbol": "__cxa_type_match"
+        },
+        {
+          "ordinal": 218,
+          "symbol": "_Unwind_VRS_Get"
+        },
+        {
+          "ordinal": 220,
+          "symbol": "_Unwind_VRS_Set"
+        }
+      ],
+      "euser.dll": [
+        {
+          "ordinal": 2060,
+          "symbol": "_ZN4User16MarkCleanupStackEv"
+        },
+        {
+          "ordinal": 2061,
+          "symbol": "_ZN4User18UnMarkCleanupStackEP12TTrapHandler"
+        },
+        {
+          "ordinal": 2082,
+          "symbol": "_ZNK15XLeaveException9GetReasonEv"
+        }
+      ]
+    },
+    "gameplay_audio_enabled": false,
+    "leave_raised_by_default_launch_path": false,
+    "mda_api_calls": false,
+    "midi_enabled": false,
+    "native_leave_branch": "TRAPD(error, User::Leave(KErrNotSupported)) retained behind the false gate",
+    "native_personality_support_enabled_in_build": true,
+    "probe_source": "native-leaves-import-probe.cpp",
+    "probe_source_sha256": "f6e1134bf917cc3fbcae8f3bf54889d859e1dd716372c6667bce913d1ae245aa",
+    "runtime_gate": "volatile quantumNativeLeavesImportProbeEnabled initialized to EFalse; only the initializer writes it",
+    "scope_note": "Launch-only static import control. Native-leave/personality support is compiled and its associated imports are retained, but no leave is deliberately raised during startup; this does not test successful leave propagation on-device."
+  },
+  "non_e32_payloads_identical_to_v1.0.28": [
+    "L3D_new.3d",
+    "audio/music/wth.mp3",
+    "audio/sounds/wpn/fn2000.wav",
+    "audio/sounds/wpn/r.wav",
+    "forest.qtx",
+    "lightmap.vla",
+    "map.qtx",
+    "quantum_level41_walk_test_loc.rsc",
+    "quantum_level41_walk_test_reg.rsc",
+    "river.qtx",
+    "sky.qtx",
+    "skybox8.3d",
+    "weapon-catalog.qwc",
+    "weapon-fire.qtx",
+    "weapon-gameplay.qwg",
+    "weapon-sight-weapon.qtx",
+    "weapon.qtx",
+    "weather.txt"
+  ],
+  "package_uid": "0xE000A021",
+  "payloads": [
+    {
+      "embedded_hash_matches": true,
+      "sha256": "085b0cbcd7ec10dd90955933ee14f8831dcd875b1b9afbcd1433463b722e4338",
+      "size_bytes": 193636,
+      "source": "quantum_level41_walk_test.exe",
+      "staged_payload_matches": true,
+      "target": "!:\\sys\\bin\\quantum_level41_walk_test.exe"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "e4b35f648dc2c06e4c3e66f76de6510aff00da337793b9f00d0f65d5d40a4b1c",
+      "size_bytes": 133,
+      "source": "quantum_level41_walk_test_reg.rsc",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\10003a3f\\import\\apps\\quantum_level41_walk_test_reg.rsc"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "9df5beb4624cd761b4cd75d7872c6b73d304e2e8d48158ff8ad4ec5c4709d6eb",
+      "size_bytes": 88,
+      "source": "quantum_level41_walk_test_loc.rsc",
+      "staged_payload_matches": true,
+      "target": "!:\\resource\\apps\\quantum_level41_walk_test_loc.rsc"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "00cf889f495aa5b8fe6bc058c022ef16f49a8761c2d30b7d084fa43eec088ad9",
+      "size_bytes": 56544,
+      "source": "L3D_new.3d",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\level41\\L3D_new.3d"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "b62c6b46df7b60e50d3cced9e5fe4f73d32b21d45521273932c5a53e0bfad53e",
+      "size_bytes": 10032,
+      "source": "lightmap.vla",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\level41\\lightmap.vla"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "e7fe2edc8d7132808f3ea15ab55dc7663ba3263de25a007f7c576f58c8ad9e1f",
+      "size_bytes": 484,
+      "source": "skybox8.3d",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\level41\\skybox8.3d"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "0b2963f5ff7371cb698be871ff37775d9cd82c42c3ad73bef7d89c274e98450e",
+      "size_bytes": 131080,
+      "source": "forest.qtx",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\level41\\forest.qtx"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "c963a1dc3f644cfd3e5ddf2991bfbaf446e6580e97a816b2b2c5785d2df16286",
+      "size_bytes": 262152,
+      "source": "map.qtx",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\level41\\map.qtx"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "707a5e6fd572f4f9fc127ea325edc0df90292eb1f1dad925cd26dcf6a487a231",
+      "size_bytes": 4104,
+      "source": "river.qtx",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\level41\\river.qtx"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "40125dacbfa69d2b2fb45e9810056e417ca970239846615332d6f29a99a43aa7",
+      "size_bytes": 262152,
+      "source": "sky.qtx",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\level41\\sky.qtx"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "a5e63bfbd7b958fa97202021a37ca02b8211081c98b06f0a2577a2a6e96911d5",
+      "size_bytes": 64,
+      "source": "weather.txt",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\level41\\weather.txt"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "b1d3f2ad6c7cb058e37f88d2b2e9c33c925483eb362abb6b965f161631dcf87d",
+      "size_bytes": 67768,
+      "source": "weapon.qtx",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\level41\\weapon.qtx"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "4266609c689254079829cc85b8446c5b368c6efc1cfb0e6b919d34f14e8bf91f",
+      "size_bytes": 4104,
+      "source": "weapon-fire.qtx",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\level41\\weapon-fire.qtx"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "6869c5b17a2765e1af7ac758701f39ddebf677fef7c4aa3781bd15a7f5fbe6e4",
+      "size_bytes": 245768,
+      "source": "weapon-sight-weapon.qtx",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\level41\\weapon-sight-weapon.qtx"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "a7ac756bc9daefc1858d59eecc687b1e40783b8ba911ebffebd02780a0ac0b69",
+      "size_bytes": 26,
+      "source": "weapon-gameplay.qwg",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\level41\\weapon-gameplay.qwg"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "3c8fe379775a8cba6fdb702f7bba3ef885fc9301334a5d1d6c1a96953d9d7ee2",
+      "size_bytes": 776,
+      "source": "weapon-catalog.qwc",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\level41\\weapon-catalog.qwc"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "7f441cdca71ef026915056ab60cd95c06d2d6ab0a8640ed8e9bd9e3f396b91d6",
+      "size_bytes": 221984,
+      "source": "audio/music/wth.mp3",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\audio\\music\\wth.mp3"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "99ef9989a3b17949a2bd4cfbadfa6b2f16d84f33b207a01b91b42d72c0e25d3b",
+      "size_bytes": 6444,
+      "source": "audio/sounds/wpn/fn2000.wav",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\audio\\sounds\\wpn\\fn2000.wav"
+    },
+    {
+      "embedded_hash_matches": true,
+      "sha256": "9292944115644ac4dbd358079987af3235bf6f4678fabde5c185ac1d4023ea06",
+      "size_bytes": 54380,
+      "source": "audio/sounds/wpn/r.wav",
+      "staged_payload_matches": true,
+      "target": "!:\\private\\e000a020\\audio\\sounds\\wpn\\r.wav"
+    }
+  ],
+  "sis": {
+    "drive_file_id": "12Yt2aCwT8pKXfwCG715Veup1AbJLO4qO",
+    "drive_link": "https://drive.google.com/file/d/12Yt2aCwT8pKXfwCG715Veup1AbJLO4qO/view?usp=drivesdk",
+    "drive_md5": "9bc60ad4e816aeaab4ff77e5b4993db2",
+    "drive_md5_matches_local": true,
+    "drive_size_bytes": 742756,
+    "drive_upload_status": "pending",
+    "file": "quantum_level41_walk_test-v1.0.32-level1-import-drt-ten-native-leaves-only-omap1710-dsa-argb32-armv5t.sis",
+    "md5": "9bc60ad4e816aeaab4ff77e5b4993db2",
+    "sha256": "2091b0d15b7ff0319d7dec22bbe855e0f164120cf281612a581476b74be30140",
+    "signed": false,
+    "size_bytes": 742756
+  },
+  "sis_integrity": {
+    "all_checks_passed": true,
+    "all_payload_hashes_valid": true,
+    "all_staged_payloads_match": true,
+    "application_registered": true,
+    "controller_checksum_valid": true,
+    "data_checksum_valid": true,
+    "header_uid_crc_valid": true,
+    "payload_count": 19,
+    "pkg_target_list_matches": true
+  },
+  "target": {
+    "architecture": "armv5t",
+    "drt_lookup_probe": false,
+    "drt_ten_ordinal_base": true,
+    "dsa_argb_bitmap": true,
+    "ecolor64k": true,
+    "effects_asm_experiment": false,
+    "gameplay_audio_enabled": false,
+    "interactive_walk": true,
+    "kernel": "eka2",
+    "mda_api_calls_enabled": false,
+    "mda_import_probe": false,
+    "midi_audio_enabled": false,
+    "mode9_mul_order_experiment": false,
+    "native_leave_deliberately_raised": false,
+    "native_leave_personality_support": true,
+    "native_leaves_import_probe": true,
+    "omap1710": true,
+    "scalar_pdiv_asm": false
+  },
+  "version": "1.0.32"
+}
