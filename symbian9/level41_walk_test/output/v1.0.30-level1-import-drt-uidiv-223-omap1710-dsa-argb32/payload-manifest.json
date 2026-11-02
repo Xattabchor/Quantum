@@ -36,7 +36,7 @@
   },
   "drt_lookup_probe": false,
   "build": {
-    "status": "Cross-built and statically audited before packaging; exact E32 import set verified; E65 device launch not yet tested.",
+    "status": "Cross-built and statically audited before packaging; exact E32 import set verified; user reports the E65 popup \u201cFeature not supported\u201d.",
     "toolchain": "Symbian SDK 0.3.0, ARMv5T / EKA2; Clang 23.1.2",
     "configuration": {
       "QUANTUM_LEVEL41_OMAP1710": true,
@@ -566,7 +566,7 @@
       "sha256": "9292944115644ac4dbd358079987af3235bf6f4678fabde5c185ac1d4023ea06"
     }
   ],
-  "e65_runtime_result": "Not yet tested on Nokia E65. v1.0.30 is a prepared launch-only candidate; no device launch, helper execution, gameplay, audio, or MIDI result is available.",
+  "e65_runtime_result": "User-reported Nokia E65 result: \u201cFeature not supported\u201d. This records the device popup only; it does not establish the exact loader cause, helper execution, gameplay, audio, or MIDI behavior.",
   "device_comparison": {
     "1.0.22": {
       "device": "Nokia E65",
@@ -631,10 +631,12 @@
     },
     "1.0.30": {
       "device": "Nokia E65",
-      "status": "not_yet_tested",
-      "user_reported": false,
+      "status": "popup",
+      "user_reported": true,
       "test": "Static drtaeabi.dll import set is the v1.0.28 ten-ordinal set plus ordinal 223 (__aeabi_uidiv).",
-      "launch_only": true
+      "launch_only": true,
+      "popup_text": "Feature not supported",
+      "result_scope": "Popup text reported; exact loader failure point, helper execution, gameplay, audio, and MIDI remain unverified."
     }
   },
   "e32_import_audit": {

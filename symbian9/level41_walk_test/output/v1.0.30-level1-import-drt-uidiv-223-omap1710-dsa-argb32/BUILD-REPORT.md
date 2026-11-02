@@ -11,7 +11,7 @@ This is the second of two separate controls following the v1.0.28 ten-ordinal DR
 - Size: **740,840 bytes**; SHA-256 `9b7c2d7c2957efbec0d93878e55e75753810e56aea4fc6cf40249fbe80223647`; MD5 `5aa50f273fcc053425603b44c53b93c8`.
 - [Download from Google Drive](https://drive.google.com/file/d/1IZnjvqYVI_gCkVt9gMp1YUCibMmh-i0V/view?usp=drivesdk); Drive MD5 verified against local SIS.
 - Unsigned. E32 image: 189,932 bytes; ARMv5T/EKA2; capabilities 0; heap 4,096..2,097,152; header CRC valid.
-- Nokia E65 result: **not yet tested**. This is a launch-only candidate, not a device-acceptance result.
+- Nokia E65 result: **user-reported popup: “Feature not supported”.** The report records the popup text; the E32/SIS audit does not diagnose the device loader.
 
 ## Exact import isolation
 

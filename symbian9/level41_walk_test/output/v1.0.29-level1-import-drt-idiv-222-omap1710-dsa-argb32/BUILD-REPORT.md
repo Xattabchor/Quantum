@@ -11,7 +11,7 @@ This is the first of two separate controls following the v1.0.28 ten-ordinal DRT
 - Size: **740,620 bytes**; SHA-256 `4d71a0890ab00ff0e9820d553c223954f1ba42ea4dbd1c9e63878eaf86f09978`; MD5 `0042da2ddda2c714c115065b2478eaa8`.
 - [Download from Google Drive](https://drive.google.com/file/d/1CscxgVwC4UbsIPE1kdESASDBT4SuPi48/view?usp=drivesdk); Drive MD5 verified against local SIS.
 - Unsigned. E32 image: 189,876 bytes; ARMv5T/EKA2; capabilities 0; heap 4,096..2,097,152; header CRC valid.
-- Nokia E65 result: **not yet tested**. This is a launch-only candidate, not a device-acceptance result.
+- Nokia E65 result: **user-reported popup: “Feature not supported”.** The report records the popup text; the E32/SIS audit does not diagnose the device loader.
 
 ## Exact import isolation
 

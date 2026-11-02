@@ -549,7 +549,7 @@ passed the 19-payload audit, and all 18 non-E32 payloads match v1.0.28
 byte-for-byte. Gameplay audio and MIDI remain disabled, with audio files
 retained only for package consistency. These checks establish package and
 static-import metadata, not E65 loader acceptance or successful helper
-execution. Neither version has a device result yet.
+execution. The user reports that both versions show the exact “Feature not supported” popup; this strengthens the association with the two single-ordinal import controls but does not prove the exact loader failure.
 
 The v1.0.30 filtered runtime keeps the SDK's internal `__udivsi3` routine,
 which the local `__aeabi_idiv` implementation depends on, but renames that
