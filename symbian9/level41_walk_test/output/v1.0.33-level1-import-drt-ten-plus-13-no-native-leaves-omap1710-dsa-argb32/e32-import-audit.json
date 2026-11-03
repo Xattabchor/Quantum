@@ -2,7 +2,7 @@
   "schema_version": 1,
   "artifact_version": "1.0.33",
   "baseline": "v1.0.28 user-reported-launched ten-ordinal DRT import control",
-  "status": "Clean cross-build complete; final E32 imports and the address-probe instruction body scanned; all 19 SIS payloads audited; E65 device result pending.",
+  "status": "Clean cross-build complete; final E32 imports and address-probe instructions scanned; all 19 SIS payloads audited; user reports v1.0.33 launches on Nokia E65.",
   "build": {
     "toolchain": "Symbian SDK 0.3.0; ARMv5T/EKA2; Clang 23.1.2; CMake 3.30.5; GnuPoc MakeSIS 4.0",
     "configuration": {
@@ -1781,9 +1781,12 @@
   },
   "device_result": {
     "device": "Nokia E65",
-    "launch_success": null,
-    "reported_outcome": "Pending user test",
-    "interpretation": "No conclusion is drawn about a specific unsupported export, ROM availability, or leave propagation from v1.0.32."
+    "launch_success": true,
+    "reported_outcome": "User-reported: v1.0.33 launches (2026-11-03).",
+    "reported_date": "2026-11-03",
+    "audio_playback_tested": false,
+    "audio_playback_enabled_in_build": false,
+    "interpretation": "User-reported app launch only. This build has gameplay audio, MDA, MIDI, and playback disabled; it is not evidence about audible output, helper execution, codecs, or DSP access."
   },
   "published_to_drive": true
 }

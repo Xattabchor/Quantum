@@ -296,5 +296,5 @@
     "final_e32_instruction_scan": "final-e32-helper-instruction-scan.json",
     "final_e32_instruction_scan_script": "scan_e32_helper_instructions.py"
   },
-  "device_result": "Not yet tested on Nokia E65."
+  "device_result": "User-reported: v1.0.33 launches on Nokia E65 (2026-11-03). Sound playback was not tested and is disabled in this build."
 }

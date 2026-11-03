@@ -2,7 +2,7 @@
 
 ## Status
 
-The clean ARMv5T/EKA2 cross-build is complete. The final E32 import table and the unsigned 19-payload SIS passed the local audits. **No Nokia E65 test has been performed for v1.0.33; the device result is pending.** The SIS is ready for a controlled device test, but local validation does not establish that the E65 loader accepts these imports.
+The clean ARMv5T/EKA2 cross-build is complete. The final E32 import table and the unsigned 19-payload SIS passed the local audits. **User-reported Nokia E65 result (2026-11-03): v1.0.33 launches.** This records app launch only; sound playback is disabled in this build and was not tested.
 
 ## Test objective and scope
 
@@ -52,6 +52,6 @@ The shipped E32 is **190,916 bytes**, SHA-256 `0d23b4b408167a83870f1c2d577dd9d51
 
 The unsigned SIS is **741,128 bytes**, SHA-256 `002e698f84393f7304108716daa755904da8c33bacc7967d1c481293712ade8a`, MD5 `2dc6ebf815d5f17c0f04cd1fe3de5f3a`. All 19 payload hashes and staged bytes match; SIS header UID/CRC, controller and data checksums, package target list, and application registration checks passed. All 18 non-E32 payloads match v1.0.28 byte-for-byte.
 
-The unsigned SIS has been uploaded to [Google Drive](https://drive.google.com/file/d/1L-TVV6T-v5CSrJ0Ll_HwZRsIOf0Jz8Fu/view?usp=drivesdk); Drive reports the same 741,128-byte size and MD5 as the local artifact. The E65 result remains pending. The exact source patch, clean configure/build logs, link-time proxy, detailed E32 slot audit, helper-callsite audit, payload manifest, and SIS audit are retained beside this report.
+The unsigned SIS has been uploaded to [Google Drive](https://drive.google.com/file/d/1L-TVV6T-v5CSrJ0Ll_HwZRsIOf0Jz8Fu/view?usp=drivesdk); Drive reports the same 741,128-byte size and MD5 as the local artifact. The user reports that v1.0.33 launches on the Nokia E65; this is not an audio-playback result. The exact source patch, clean configure/build logs, link-time proxy, detailed E32 slot audit, helper-callsite audit, final E32 instruction scan, payload manifest, and SIS audit are retained beside this report.
 
 Host tests were not rerun: the changes are limited to the Symbian import probe, link-time proxy metadata, and package. Host tests would not establish E65 import-loader acceptance.
