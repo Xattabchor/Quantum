@@ -609,6 +609,9 @@ jobs:
             ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 \
             "$PACKER/makesis" -v \
             quantum_level41_mda_init_test.pkg quantum_level41_mda_init_test.sis
+          test -s quantum_level41_mda_init_test.sis
+          stat -c '%n %s bytes' quantum_level41_mda_init_test.sis
+          sha256sum quantum_level41_mda_init_test.sis
           run_logged "Sign MDA-init probe SIS archive" "$PACKER/signsis" \
             quantum_level41_mda_init_test.sis \
             quantum_level41_mda_init_test-e65-candidate.sisx \
@@ -745,6 +748,8 @@ jobs:
             "$GITHUB_WORKSPACE/symbian9/device_render_test/quantum_render_device_test-e65-candidate.sisx"
           cp "$RUNNER_TEMP/quantum-level41-probe-package/quantum_level41_launch_probe-e65-candidate.sisx" \
             "$GITHUB_WORKSPACE/symbian9/level41_launch_probe/quantum_level41_launch_probe-e65-candidate.sisx"
+          cp "$RUNNER_TEMP/quantum-level41-mda-init-package/quantum_level41_mda_init_test.sis" \
+            "$GITHUB_WORKSPACE/symbian9/level41_mda_init_test/quantum_level41_mda_init_test.sis"
           cp "$RUNNER_TEMP/quantum-level41-mda-init-package/quantum_level41_mda_init_test-e65-candidate.sisx" \
             "$GITHUB_WORKSPACE/symbian9/level41_mda_init_test/quantum_level41_mda_init_test-e65-candidate.sisx"
           cp "$RUNNER_TEMP/quantum-level41-no-dsa-package/quantum_level41_no_dsa-e65-candidate.sisx" \
@@ -763,6 +768,7 @@ jobs:
             symbian9/level41_device_test/quantum_level41_device_test-e65-candidate.sisx \
             symbian9/device_render_test/quantum_render_device_test-e65-candidate.sisx \
             symbian9/level41_launch_probe/quantum_level41_launch_probe-e65-candidate.sisx \
+            symbian9/level41_mda_init_test/quantum_level41_mda_init_test.sis \
             symbian9/level41_mda_init_test/quantum_level41_mda_init_test-e65-candidate.sisx \
             symbian9/level41_no_dsa/quantum_level41_no_dsa-e65-candidate.sisx \
             symbian9/level41_service_probe/quantum_level41_service_probe-e65-candidate.sisx \
@@ -772,6 +778,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No SISX change to publish."
           else
-            git commit -m "Publish Level 41 E65 SISX candidate"
+            git commit -m "Publish Level 41 E65 SIS candidates"
             git push origin HEAD:refs/heads/arena/671096c5-quantum
           fi
