@@ -43,6 +43,10 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final CompositingMode composite = new CompositingMode();
     private final Fog fog = new Fog();
     private final Vertex[] vertices = new Vertex[4];
+    // Weather overlay quads: pooled verts + shared line geometry, reused per entry.
+    private final Vertex[] overlayVerts = new Vertex[4];
+    private final ScreenLineGeometry overlayGeometry = new ScreenLineGeometry();
+    private int overlayVertsReady;
     private final int[] uv = new int[8];
     private final short[] positions = new short[12], coords = new short[8];
     final byte[] colors = new byte[16];
@@ -64,7 +68,6 @@ public final class M3GSceneRenderer implements SceneRenderer {
     private final Vector textures = new Vector();
     private Image surface;
     private M3GSkyRenderer skyRenderer;
-    private M3GScreenLines screenLines;
     private M3GSpriteRenderer spriteRenderer;
     private M3GPanoramaRenderer panoramaRenderer;
     private M3GFrameEffects frameEffects;
@@ -273,10 +276,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     private boolean litBroken; // sticky: native side rejected the lit pass
 
-    /** Prepare native weather before binding the shared scene target. */
+    /** Weather rides the shared polygon batch now: nothing native to prepare. */
     public void prepareWeather(DirectX7 g,ScreenLines weather) {
-        if(weather!=null && weather.count>0 && screenLines==null)
-            screenLines=new M3GScreenLines(this,graphics);
+        // kept for SceneRenderer API; polygon weather needs no preallocation
     }
 
     /** Intermediate native -> CPU/resource transition, not the final readback. */
@@ -367,7 +369,6 @@ public final class M3GSceneRenderer implements SceneRenderer {
             surface = null;projectionReady=false;
             positionScales[0]=positionScales[1]=Float.NaN;
             skyRenderer = null;
-            screenLines = null;
             spriteRenderer = null;
             panoramaRenderer = null;
             frameEffects = null;canvasImages=null;
@@ -418,8 +419,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             return true;
         }
         if(object instanceof ScreenLines) {
-            if(screenLines == null) screenLines = new M3GScreenLines(this,graphics);
-            return screenLines.draw(g,(ScreenLines)object);
+            return drawScreenLines(g,(ScreenLines)object);
         }
         if(object instanceof SkyMesh) {
             if(skyRenderer == null) skyRenderer = new M3GSkyRenderer(this, graphics);
@@ -632,6 +632,52 @@ public final class M3GSceneRenderer implements SceneRenderer {
             v = perspective ? (v * raw.h) >> 8 : v * raw.h / 256;
         }
         return raw.img[((v << raw.widthBIT) + u) & (raw.img.length - 1)] & 0xffffff;
+    }
+
+    /** Screen-space effect quads (rain/snow/lightning) as untextured
+     * vertex-colored polygons inside the SHARED polygon batch: same thin
+     * four-corner geometry ScreenLineGeometry builds, but merged with the
+     * world packets instead of owning a separate native call chain.
+     * Constant homogeneous weight (w=1) packs pixel-exact screen offsets;
+     * the batch appearance stays depth-off as before. */
+    private boolean drawScreenLines(DirectX7 g, ScreenLines lines) {
+        if(lines.count == 0) return true;
+        int drawn = 0;
+        for(int i = 0; i < lines.count; i++) {
+            if(!overlayGeometry.build(lines, i, g.width, g.height)) continue;
+            if(overlayVertsReady == 0) {
+                for(int v = 0; v < 4; v++) overlayVerts[v] = new Vertex();
+                overlayVertsReady = 1;
+            }
+            float[] q = overlayGeometry.xy;
+            boolean rect = lines.get(i, 6) == ScreenLines.RECT;
+            // Reorder strip pairs to quad perimeter (0->1->2->3) matching
+            // baseQuad's {0,1,3,1,2,3} triangulation.
+            overlaySet(0, q[0], q[1]);
+            overlaySet(1, rect ? q[2] : q[4], rect ? q[3] : q[5]);
+            overlaySet(2, q[6], q[7]);
+            overlaySet(3, rect ? q[4] : q[2], rect ? q[5] : q[3]);
+            float scale = ProjectedGeometry.pack(overlayVerts, 4, g.centreX, g.centreY,
+                    TexturingPers.move, false, positions, work);
+            if(scale == 0) continue; // pixel offsets do not fit: skip like the old clip
+            buffersScale = scale;
+            uniformColors(4, lines.get(i, 5), 255);
+            batchable = true;
+            setFog(null);
+            setTexture(null);
+            setBlend(CompositingMode.REPLACE);
+            setThreshold(0);
+            render(g, 1, baseQuad);
+            drawn++;
+        }
+        return drawn > 0; // false -> caller falls back like the old line renderer
+    }
+
+    private void overlaySet(int v, float x, float y) {
+        Vertex vertex = overlayVerts[v];
+        vertex.sx = (int)(x + (x < 0 ? -0.5f : 0.5f));
+        vertex.sy = (int)(y + (y < 0 ? -0.5f : 0.5f));
+        vertex.rz = 0; // constant homogeneous weight 1: pixel-exact overlay quad
     }
 
     private void render(DirectX7 g, int slot, TriangleStripArray triangles) {
