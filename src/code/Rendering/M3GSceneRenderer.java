@@ -663,6 +663,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             buffersScale = scale;
             uniformColors(4, lines.get(i, 5), 255);
             batchable = true;
+            selectPolygonMode(screenPolygon); // CULL_NONE, like the line stripper
             setFog(null);
             setTexture(null);
             setBlend(CompositingMode.REPLACE);
