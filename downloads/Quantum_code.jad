@@ -1,3 +1,4 @@
+Manifest-Version: 1.0
 MIDlet-Name: Quantum Kordos FX
 MIDlet-Version: 1.0.0
 MIDlet-Vendor: AE-MODS.RU
@@ -5,4 +6,4 @@ MIDlet-1: Quantum Kordos FX,,code.utils.Main
 MicroEdition-Configuration: CLDC-1.1
 MicroEdition-Profile: MIDP-2.0
 MIDlet-Jar-URL: Quantum_code.jar
-MIDlet-Jar-Size: 433252
+MIDlet-Jar-Size: 423329
