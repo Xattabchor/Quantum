@@ -20,15 +20,16 @@ public final class SMGen {
     static final int TOP=0, INTEGER=1, FLOAT=2, LONG=3, DOUBLE=4, NULL=5, UNINIT_THIS=6, OBJECT=7, UNINIT=8;
 
     static final class T {
-        final int tag; final String name;
-        T(int tag){this.tag=tag; name=null;}
-        T(String n){tag=OBJECT;name=n;}
-        public boolean equals(Object o){T t=(T)o;return tag==t.tag&&(name==null?t.name==null:name.equals(t.name));}
-        public int hashCode(){return tag*31+(name==null?0:name.hashCode());}
-        public String toString(){return tag==OBJECT?name:("#"+tag);}
+        final int tag; final String name; final int newPc; // UNINIT: newPc = offset of NEW instruction
+        T(int tag){this.tag=tag; name=null;newPc=-1;}
+        T(String n){tag=OBJECT;name=n;newPc=-1;}
+        T(String n,int pc){tag=UNINIT;name=n;newPc=pc;}
+        public boolean equals(Object o){T t=(T)o;if(tag!=t.tag)return false; if(tag==UNINIT)return name.equals(t.name)&&newPc==t.newPc; return name==null?t.name==null:name.equals(t.name);}
+        public int hashCode(){return tag*31+(name==null?0:name.hashCode())+newPc;}
+        public String toString(){return tag==OBJECT?name:("#"+tag+(newPc>=0?"@"+newPc:""));}
     }
     static final T T_TOP=new T(TOP), T_INT=new T(INTEGER), T_FLOAT=new T(FLOAT),
-            T_LONG=new T(LONG), T_DBL=new T(DOUBLE), T_NULL=new T(NULL), T_CLASS=new T("java/lang/Class"), T_STRING=new T("java/lang/String");
+            T_LONG=new T(LONG), T_DBL=new T(DOUBLE), T_UNINIT_THIS=new T(UNINIT_THIS), T_NULL=new T(NULL), T_CLASS=new T("java/lang/Class"), T_STRING=new T("java/lang/String");
 
     // ================= class parsing =================
     static final class Cp {
@@ -36,6 +37,7 @@ public final class SMGen {
         String utf8(int i){return (String)obj[i];}
         String className(int i){return utf8(((int[])obj[i])[0]);}
         String memberDesc(int memberIdx){int nat=((int[])obj[memberIdx])[1];return utf8(((int[])obj[nat])[1]);}
+        String memberName(int memberIdx){int nat=((int[])obj[memberIdx])[1];return utf8(((int[])obj[nat])[0]);}
         private void grow(){if(count>=kind.length){int n=kind.length*2+16;byte[] k=new byte[n];System.arraycopy(kind,0,k,0,kind.length);kind=k;Object[] o=new Object[n];System.arraycopy(obj,0,o,0,obj.length);obj=o;}}
         int addUtf8(String s){for(int i=1;i<count;i++)if(kind[i]==1&&utf8(i).equals(s))return i;grow();kind[count]=1;obj[count]=s;return count++;}
         int addClass(String internal){for(int i=1;i<count;i++)if(kind[i]==7&&className(i).equals(internal))return i;int u=addUtf8(internal);grow();kind[count]=7;obj[count]=new int[]{u};return count++;}
@@ -125,10 +127,21 @@ public final class SMGen {
 
     T pop(Frame f){return f.stack[--f.sp];}
     void push(Frame f,T t){f.stack[f.sp++]=t;}
+    // value-level helpers: a category-2 value is TWO cells [wide, TOP]; popValue/popValue push/pop a *value*
+    T popValue(Frame f){
+        T top=pop(f);
+        if(top.tag==TOP && f.sp>0 && wide(f.stack[f.sp-1])){ f.sp--; return f.stack[f.sp]; }
+        return top;
+    }
+    void pushValue(Frame f,T v){ push(f,v); if(wide(v)) push(f,T_TOP); }
     void popVal(Frame f){ // pops one value: cat1 single cell, cat2 two cells (TOP sentinel on top)
+        popValT(f);
+    }
+    T popValT(Frame f){
         T t=pop(f);
-        if(t.tag==LONG||t.tag==DOUBLE){ f.sp--; }                 // raw cat2 cell on top
-        else if(t.tag==TOP && f.sp>0){ T u=f.stack[f.sp-1]; if(u.tag==LONG||u.tag==DOUBLE) f.sp--; } // sentinel
+        if(t.tag==LONG||t.tag==DOUBLE){ f.sp--; }
+        else if(t.tag==TOP && f.sp>0){ T u=f.stack[f.sp-1]; if(u.tag==LONG||u.tag==DOUBLE) f.sp--; }
+        return t;
     }
     void popWide(Frame f){f.sp-=2;}
 
@@ -164,7 +177,7 @@ public final class SMGen {
         entry.locals=new T[maxLocals];Arrays.fill(entry.locals,T_TOP);
         entry.stack=new T[maxStack];entry.sp=0;
         int li=0;
-        if((m.access&0x0008)==0){entry.locals[0]=new T(thisName);li=1;}
+        if((m.access&0x0008)==0){entry.locals[0]="<init>".equals(m.name)?T_UNINIT_THIS:new T(thisName);li=1;}
         List ps=new ArrayList();params(m.desc,ps);
         for(int i=0;i<ps.size();i++){T t=(T)ps.get(i);entry.locals[li++]=t;if(t.tag==LONG||t.tag==DOUBLE)entry.locals[li++]=T_TOP;}
 
@@ -221,15 +234,23 @@ int pc=((Integer)q.poll()).intValue();
                 case 0x4F: case 0x50: case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x56:
                     popVal(f); popVal(f); popVal(f); break;
                 case 0x57: popVal(f); break;
-                case 0x58: { T t=pop(f); if(t.tag!=LONG&&t.tag!=DOUBLE) f.sp--; break; }
-                case 0x59: { T a=f.stack[f.sp-1]; push(f,a); break; }
+                case 0x58: { T v=popValue(f); if(!wide(v)) popValue(f); break; }
+                case 0x59: { T a=pop(f); push(f,a); push(f,a); break; }
                 case 0x5A: { T a=pop(f); T b=pop(f); push(f,a); push(f,b); push(f,a); break; }
-                case 0x5B: { T a=pop(f); T b=pop(f); T c=pop(f); push(f,a); push(f,c); push(f,b); push(f,a); break; }
-                case 0x5C: { T a=f.stack[f.sp-1];
-                    if(a.tag==LONG||a.tag==DOUBLE){ push(f,a); push(f,T_TOP); }
-                    else { T b=f.stack[f.sp-2]; push(f,b); push(f,a); } break; }
-                case 0x5D: { T a=pop(f); T b=pop(f); T c=pop(f); push(f,b); push(f,a); push(f,c); push(f,b); push(f,a); break; }
-                case 0x5E: { T a=pop(f); T b=pop(f); T c=pop(f); T d=pop(f); push(f,b); push(f,a); push(f,d); push(f,c); push(f,b); push(f,a); break; }
+                case 0x5B: { T v1=popValue(f); T v2=popValue(f);
+                    if(wide(v2)){ pushValue(f,v1); pushValue(f,v2); pushValue(f,v1); }
+                    else { T v3=popValue(f); pushValue(f,v1); pushValue(f,v3); pushValue(f,v2); pushValue(f,v1); } break; }
+                case 0x5C: { T v1=popValue(f);
+                    if(wide(v1)){ pushValue(f,v1); pushValue(f,v1); }
+                    else { T v2=popValue(f); pushValue(f,v2); pushValue(f,v1); pushValue(f,v2); pushValue(f,v1); } break; }
+                case 0x5D: { T v1=popValue(f); T v2=popValue(f);
+                    if(wide(v1)){ pushValue(f,v1); pushValue(f,v2); pushValue(f,v1); }
+                    else { T v3=popValue(f); pushValue(f,v2); pushValue(f,v1); pushValue(f,v3); pushValue(f,v2); pushValue(f,v1); } break; }
+                case 0x5E: { T v1=popValue(f); T v2=popValue(f);
+                    if(wide(v1)){ T v3=popValue(f); pushValue(f,v1); pushValue(f,v3); pushValue(f,v2); pushValue(f,v1); }
+                    else { T v3=popValue(f);
+                        if(wide(v3)){ pushValue(f,v2); pushValue(f,v1); pushValue(f,v3); pushValue(f,v2); pushValue(f,v1); }
+                        else { T v4=popValue(f); pushValue(f,v2); pushValue(f,v1); pushValue(f,v4); pushValue(f,v3); pushValue(f,v2); pushValue(f,v1); } } break; }
                 case 0x5F: { T a=pop(f); T b=pop(f); push(f,a); push(f,b); break; }
                 case 0x60: case 0x61: case 0x62: case 0x63:
                 case 0x64: case 0x65: case 0x66: case 0x67:
@@ -298,15 +319,48 @@ int pc=((Integer)q.poll()).intValue();
                 case 0xB3: { String d=cp.memberDesc(u2(code,pc+1)); if(d.charAt(0)=='J'||d.charAt(0)=='D')popWide(f); else pop(f); next=pc+3; break; }
                 case 0xB4: { String d=cp.memberDesc(u2(code,pc+1)); popVal(f); push(f,primType(d)); if(d.charAt(0)=='J'||d.charAt(0)=='D')push(f,T_TOP); next=pc+3; break; }
                 case 0xB5: { String d=cp.memberDesc(u2(code,pc+1)); if(d.charAt(0)=='J'||d.charAt(0)=='D')popWide(f); else pop(f); pop(f); next=pc+3; break; }
-                case 0xB6: case 0xB7: case 0xB8: case 0xB9: {
+                case 0xB6: case 0xB8: {
                     String d=cp.memberDesc(u2(code,pc+1));
                     List args=new ArrayList(); params(d,args);
                     if(op!=0xB8)popVal(f);
                     for(int i=args.size()-1;i>=0;i--)popVal(f);
                     String r=d.substring(d.indexOf(')')+1);
                     if(r.charAt(0)!='V'){ push(f,primType(r)); if(r.charAt(0)=='J'||r.charAt(0)=='D')push(f,T_TOP); }
-                    next=(op==0xB9)?pc+5:pc+3; break; }
-                case 0xBB: push(f,new T(cp.className(u2(code,pc+1)))); next=pc+3; break;
+                    next=pc+3; break; }
+                case 0xB9: {
+                    String d=cp.memberDesc(u2(code,pc+1));
+                    List args=new ArrayList(); params(d,args);
+                    popVal(f);
+                    for(int i=args.size()-1;i>=0;i--)popVal(f);
+                    String r=d.substring(d.indexOf(')')+1);
+                    if(r.charAt(0)!='V'){ push(f,primType(r)); if(r.charAt(0)=='J'||r.charAt(0)=='D')push(f,T_TOP); }
+                    next=pc+5; break; }
+                case 0xB7: { // invokespecial: <init>/private/super — receiver uninit handling
+                    int mi=u2(code,pc+1);
+                    String d=cp.memberDesc(mi);
+                    String mn=cp.memberName(mi);
+                    List args=new ArrayList(); params(d,args);
+                    for(int i=args.size()-1;i>=0;i--)popVal(f);
+                    T recv=popValT(f);
+                    if(mn.equals("<init>")){
+                        T toType=null; int markPc=-1;
+                        if(recv.tag==UNINIT){ toType=new T(recv.name); markPc=recv.newPc; }
+                        else if(recv.tag==UNINIT_THIS){ toType=new T(thisName); }
+                        if(toType!=null){
+                            for(int i2=0;i2<f.sp;i2++){
+                                T t=f.stack[i2];
+                                if(t.tag==UNINIT_THIS||(markPc>=0&&t.tag==UNINIT&&t.newPc==markPc&&recv.name.equals(t.name))) f.stack[i2]=toType;
+                            }
+                            for(int i2=0;i2<f.locals.length;i2++){
+                                T t=f.locals[i2];
+                                if(t!=null&&(t.tag==UNINIT_THIS||(markPc>=0&&t.tag==UNINIT&&t.newPc==markPc&&recv.name.equals(t.name)))) f.locals[i2]=toType;
+                            }
+                        }
+                    }
+                    String r=d.substring(d.indexOf(')')+1);
+                    if(r.charAt(0)!='V'){ push(f,primType(r)); if(r.charAt(0)=='J'||r.charAt(0)=='D')push(f,T_TOP); }
+                    next=pc+3; break; }
+                case 0xBB: push(f,new T(cp.className(u2(code,pc+1)),pc)); next=pc+3; break;
                 case 0xBC: { popVal(f); push(f,new T("["+PRIM[code[pc+1]&0xF])); next=pc+2; break; }
                 case 0xBD: { popVal(f); push(f,new T("[L"+cp.className(u2(code,pc+1))+";")); next=pc+3; break; }
                 case 0xC5: { int dim=code[pc+3]&0xFF; for(int i=0;i<dim;i++)popVal(f); push(f,new T(cp.className(u2(code,pc+1)))); next=pc+4; break; }
@@ -450,7 +504,7 @@ int pc=((Integer)q.poll()).intValue();
         if(t.tag==OBJECT){
             w2o(bos,cp.addClass(t.name));
         }else if(t.tag==UNINIT){
-            w2o(bos,0);
+            w2o(bos,t.newPc);
         }
     }
 
