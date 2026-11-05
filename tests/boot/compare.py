@@ -12,15 +12,31 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST = Path(__file__).resolve().parent
-ORIG_JAR = Path(os.environ.get("BOOT_ORIG_JAR",
-                               ROOT / "downloads/Quantum_Kordos_Full.jar"))
+# downloads/Quantum_Kordos_Full.jar is rebuilt by the fix, so the "before" JAR
+# comes from the commit the branch was based on, not from the working tree.
+BASE_COMMIT = os.environ.get("BOOT_BASE_COMMIT", "1e39c9e")
+ORIG_JAR_PATH = "downloads/Quantum_Kordos_Full.jar"
+ORIG_JAR = ROOT / "build/boot/before.jar"
 ORIG_DIR = ROOT / "build/boot/orig"
 SCENARIOS = ("boot", "nomedia", "missing")
+
+
+def extract_before_jar():
+    """Pre-fix JAR straight out of git history (never from the working tree)."""
+    ORIG_JAR.parent.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run(["git", "show", BASE_COMMIT + ":" + ORIG_JAR_PATH],
+                            cwd=str(ROOT), stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    if result.returncode != 0:
+        raise SystemExit("cannot read " + ORIG_JAR_PATH + " from " + BASE_COMMIT
+                         + ": " + result.stderr.decode(errors="replace").strip())
+    ORIG_JAR.write_bytes(result.stdout)
 
 
 def unpack_original():
     if (ORIG_DIR / "code").is_dir():
         return
+    extract_before_jar()
     ORIG_DIR.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(ORIG_JAR) as z:
         for info in z.infolist():
@@ -52,7 +68,7 @@ def first_failure(output):
 
 def main():
     unpack_original()
-    print("=== before: " + str(ORIG_JAR.relative_to(ROOT)))
+    print("=== before: " + ORIG_JAR_PATH + " @ " + BASE_COMMIT)
     before_code, before = run(ORIG_DIR, SCENARIOS)
     for scenario in SCENARIOS:
         block = before.split("== " + scenario)[-1]
