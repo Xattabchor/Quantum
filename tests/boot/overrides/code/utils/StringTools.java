@@ -20,11 +20,18 @@ public class StringTools {
             // jar on the classpath must NOT leak assets in: that is the whole
             // point of the missing-resource scenarios.
             if(System.getProperty("stub.isolate") == null) {
+                // A leading slash is an absolute name even to getResourceAsStream,
+                // and a missing lookup returns null without throwing: every form
+                // has to be tried before falling back to the directory.
                 InputStream is = StringTools.class.getResourceAsStream(file);
                 if(is != null) return is;
-                if(file.startsWith("/")) return StringTools.class.getResourceAsStream(file.substring(1));
-                is = StringTools.class.getResourceAsStream("/" + file);
-                if(is != null) return is;
+                if(file.startsWith("/")) {
+                    is = StringTools.class.getResourceAsStream(file.substring(1));
+                    if(is != null) return is;
+                } else {
+                    is = StringTools.class.getResourceAsStream("/" + file);
+                    if(is != null) return is;
+                }
             }
             // Unpacked assets in a directory. A device has no java.io.File,
             // which is why this lives in the harness copy only.

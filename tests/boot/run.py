@@ -38,8 +38,13 @@ def run(cmd, **kw):
 def build(out):
     out.mkdir(parents=True, exist_ok=True)
     sources = (sorted(TEST.glob("stubs/**/*.java"))
-                + sorted(TEST.glob("overrides/**/*.java"))
-                + sorted(TEST.glob("java/**/*.java")))
+               + sorted(TEST.glob("overrides/**/*.java")))
+    # Scenarios that only make sense against the fixed build (they use APIs the
+    # pre-fix JAR does not have) are skipped when BOOT_TAG=orig.
+    if os.environ.get("BOOT_TAG", "fixed") == "orig":
+        sources += [TEST / "java/code/HUD/BootTest.java"]
+    else:
+        sources += sorted(TEST.glob("java/**/*.java"))
     run([JAVAC, "-nowarn", "-source", "8", "-target", "8",
          "-classpath", os.pathsep.join([str(CLASSES), str(API)]),
          "-d", str(out)] + [str(p) for p in sources])
@@ -53,14 +58,19 @@ def resources():
 
 
 def main():
+    # BOOT_CONTINUE=1 runs every scenario even after a failure (used by the
+    # before/after comparison, where the "before" build is expected to crash).
+    cont = os.environ.get("BOOT_CONTINUE") == "1"
+    failures = []
     scenarios = sys.argv[1:] or ["boot", "noplatform", "nomedia", "brokenmedia",
-                                 "rmsdeny", "missing", "nolangs", "nofont"]
+                                 "rmsdeny", "sound", "missing", "nolangs",
+                                 "nofont", "nomedia-noclass"]
     work = ROOT / "build/boot"
     work.mkdir(parents=True, exist_ok=True)
     resources()
-    # A jar and a directory cannot share a classpath entry, so pre-fix runs
-    # (BOOT_CLASSES=unpacked jar dir) get their own output directory.
-    tag = "orig" if Path(CLASSES).is_dir() else "fixed"
+    # Tag only affects the build label (and the "before/after" assertions);
+    # the harness always compiles into its own directory.
+    tag = os.environ.get("BOOT_TAG", "fixed")
     harness = work / ("classes-" + tag)
     if harness.exists():
         shutil.rmtree(harness)
@@ -100,6 +110,21 @@ def main():
                     target.unlink()
         props = ["-Dstub.resource.dir=" + str(res),
                  "-Dquantum.resource.dir=" + str(res)]
+        # Harness first: its StringTools override must shadow the game's class
+        # (the shipped one deliberately has no directory lookup).
+        classpath = os.pathsep.join([str(harness), str(CLASSES), str(API)])
+        if scenario == "sound":
+            print("== sound")
+            result = subprocess.run([JAVA] + props + ["-Dstub.media=strict",
+                                                      "-cp", classpath,
+                                                      "code.HUD.SoundTest"],
+                                    cwd=str(ROOT), stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, text=True)
+            sys.stdout.write(result.stdout)
+            if result.returncode != 0:
+                print("FAILED scenario sound")
+                return 1
+            continue
         if scenario in ("missing", "nolangs", "nofont"):
             props.append("-Dstub.isolate=true")
         if scenario == "noplatform":
@@ -123,8 +148,12 @@ def main():
             sys.stdout.write(result.stdout)
             if result.returncode != 0:
                 print("FAILED scenario " + scenario)
-                return 1
+                failures.append(scenario)
+                if not cont:
+                    return 1
             continue
+        # harness first: its StringTools override must shadow the game's class
+        # (the shipped one keeps no directory lookup, by design).
         classpath = os.pathsep.join([str(harness), str(CLASSES), str(API)])
         print("== " + scenario)
         result = subprocess.run([JAVA] + props + ["-cp", classpath,
@@ -134,7 +163,12 @@ def main():
         sys.stdout.write(result.stdout)
         if result.returncode != 0:
             print("FAILED scenario " + scenario)
-            return 1
+            failures.append(scenario)
+            if not cont:
+                return 1
+    if failures:
+        print("failed: " + ", ".join(failures))
+        return 1
     return 0
 
 

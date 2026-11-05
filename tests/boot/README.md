@@ -19,7 +19,7 @@ python3 tests/boot/compare.py
 ```
 === before: downloads/Quantum_Kordos_Full.jar @ 1e39c9e
   boot      FAILED -> Caused by: java.lang.NullPointerException
-  nomedia   FAILED -> Caused by: java.lang.NullPointerException
+  nomedia   FAILED -> Caused by: java.lang.IllegalStateException: MMAPI not available: types
   missing   FAILED -> Caused by: java.lang.NullPointerException
 === after: build/cldc (scripts/build_cldc.py)
   boot      passed
@@ -40,6 +40,7 @@ python3 tests/boot/compare.py
 | `missing` | JAR without `/setting.txt` -> explanatory error screen |
 | `nolangs` | language texts missing -> explanatory error screen |
 | `nofont` | HUD font images missing -> explanatory error screen |
+| `sound` | weapon sound on 10 + 20 consecutive shots, strict Symbian-like player |
 
 ## Running
 

@@ -50,6 +50,8 @@ def unpack_original():
 
 def run(classes, scenarios):
     env = dict(os.environ, BOOT_CLASSES=str(classes))
+    env["BOOT_TAG"] = "orig" if classes == ORIG_DIR else "fixed"
+    env["BOOT_CONTINUE"] = "1"  # the "before" build is expected to crash
     result = subprocess.run([sys.executable, str(TEST / "run.py"), *scenarios],
                             env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             text=True)
@@ -57,13 +59,34 @@ def run(classes, scenarios):
 
 
 def first_failure(output):
-    for line in output.splitlines():
+    """Report the exception a scenario died on, not the harness wrapper."""
+    lines = output.splitlines()
+    for i, line in enumerate(lines):
         stripped = line.strip()
-        if stripped.startswith("Caused by:") or stripped.startswith("java.lang."):
+        if stripped.startswith("Caused by:"):
+            # Prefer the cause: that is the real defect, the wrapper is noise.
             return stripped
-        if "FAILED" in stripped:
-            return stripped
+        if stripped.startswith("java.lang.") and i + 1 < len(lines):
+            nxt = lines[i + 1].strip()
+            if nxt.startswith("at "):
+                return stripped
+    for line in output.splitlines():
+        if "FAILED" in line:
+            return line.strip()
     return "(no failure)"
+
+
+def scenario_block(output, scenario):
+    """Everything between this scenario's header and the next one."""
+    blocks = {}
+    current = None
+    for line in output.splitlines(keepends=True):
+        if line.startswith("== "):
+            current = line[3:].strip()
+            blocks[current] = []
+        elif current is not None:
+            blocks[current].append(line)
+    return "".join(blocks.get(scenario, []))
 
 
 def main():
@@ -71,14 +94,14 @@ def main():
     print("=== before: " + ORIG_JAR_PATH + " @ " + BASE_COMMIT)
     before_code, before = run(ORIG_DIR, SCENARIOS)
     for scenario in SCENARIOS:
-        block = before.split("== " + scenario)[-1]
+        block = scenario_block(before, scenario)
         ok = "[ok]" in block
         print("  %-9s %s" % (scenario, "passed" if ok else "FAILED -> " + first_failure(block)))
 
     print("=== after: build/cldc (scripts/build_cldc.py)")
     after_code, after = run(ROOT / "build/cldc/Quantum-unverified.jar", SCENARIOS)
     for scenario in SCENARIOS:
-        block = after.split("== " + scenario)[-1]
+        block = scenario_block(after, scenario)
         ok = "[ok]" in block
         print("  %-9s %s" % (scenario, "passed" if ok else "FAILED -> " + first_failure(block)))
 

@@ -19,6 +19,7 @@ import code.Rendering.Meshes.Polygon3V;
 import code.Rendering.Meshes.Polygon4V;
 import code.Rendering.RenderObject;
 import code.utils.Asset;
+import code.utils.Sound;
 import code.utils.QFPS;
 import code.utils.ImageResize;
 import code.utils.Main;
@@ -404,9 +405,15 @@ public final class Weapon {
                 }
                 
                 if (shoot != null && Main.isSounds && Main.sounds != 0) {
-                    Asset.getSound(reload).stop();
-                    Asset.getSound(shoot).setVolume(Main.sounds);
-                    Asset.getSound(shoot).start();
+                    // getSound() returns null when sound is off or the file is
+                    // missing: firing must not throw on a handset.
+                    Sound reloadSound = reload == null ? null : Asset.getSound(reload);
+                    Sound shootSound = Asset.getSound(shoot);
+                    if(reloadSound != null) reloadSound.stop();
+                    if(shootSound != null) {
+                        shootSound.setVolume(Main.sounds);
+                        shootSound.start();
+                    }
                 }
 
                 magazine.takeRounds(twoHands ? 2 : 1);
@@ -416,9 +423,12 @@ public final class Weapon {
             if (!magazine.isReloading()) {
                 magazine.reload();
                 if (magazine.isReloading() && reload != null && Main.isSounds && Main.sounds != 0) {
-                    Asset.getSound(reload).stop();
-                    Asset.getSound(reload).setVolume(Main.sounds);
-                    Asset.getSound(reload).start(0);
+                    Sound reloadSound = Asset.getSound(reload);
+                    if(reloadSound != null) {
+                        reloadSound.stop();
+                        reloadSound.setVolume(Main.sounds);
+                        reloadSound.start(0);
+                    }
                 }
             }
         }

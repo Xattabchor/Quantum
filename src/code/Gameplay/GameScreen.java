@@ -947,6 +947,10 @@ public final class GameScreen extends MyCanvas {
         try {
             if(Main.getMusicPlayer().hasPlayer()) {
                 Main.getMusicPlayer().setVolume(Main.music);
+                // A player left running from before the pause cannot seek.
+                if(Main.getMusicPlayer().getState() == javax.microedition.media.Player.STARTED) {
+                    Main.getMusicPlayer().stop();
+                }
                 Main.getMusicPlayer().start(t);
             }
 

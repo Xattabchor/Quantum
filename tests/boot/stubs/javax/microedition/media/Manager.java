@@ -8,7 +8,10 @@ import javax.microedition.media.control.VolumeControl;
  * simulate a handset without MMAPI:
  *   -Dstub.media=absent  -> every call throws (no MMAPI installed)
  *   -Dstub.media=broken  -> createPlayer throws SecurityException
- * default              -> silent player that accepts every format
+ *   -Dstub.media=strict  -> like real Symbian/Nokia players: seek and loop
+ *                           count are illegal while the player is STARTED, and
+ *                           start() on a STARTED player throws
+ * default              -> permissive silent player
  */
 public final class Manager {
     public static final String TONE_DEVICE_LOCATOR = "device://tone";
@@ -18,6 +21,22 @@ public final class Manager {
         String m = System.getProperty("stub.media");
         return m == null ? "ok" : m;
     }
+
+    /** Real handsets reject state changes that a permissive stub would allow. */
+    public static boolean strict() {
+        return "strict".equals(mode());
+    }
+
+    public static int livePlayers() {
+        int live = 0;
+        for (int i = 0; i < ALL.size(); i++) {
+            StubPlayer p = (StubPlayer) ALL.elementAt(i);
+            if (p.state == Player.CLOSED) live++;
+        }
+        return ALL.size() - live;
+    }
+
+    static final java.util.Vector ALL = new java.util.Vector();
 
     private static void gate(String what) {
         String m = mode();
@@ -34,7 +53,9 @@ public final class Manager {
     public static Player createPlayer(InputStream stream, String type) throws java.io.IOException, MediaException {
         gate("stream:" + type);
         created++;
-        return new StubPlayer();
+        StubPlayer p = new StubPlayer();
+        ALL.addElement(p);
+        return p;
     }
 
     public static String[] getSupportedContentTypes(String protocol) {
@@ -55,14 +76,32 @@ public final class Manager {
         private long time;
         private VolumeControl volume = new StubVolume();
 
-        public void realize() { state = REALIZED; }
-        public void prefetch() { state = PREFETCHED; }
-        public void start() { state = STARTED; }
-        public void stop() { state = PREFETCHED; }
+        public void realize() {
+            if (state == CLOSED) throw new IllegalStateException("realize on CLOSED");
+            state = REALIZED;
+        }
+        public void prefetch() {
+            if (state == CLOSED) throw new IllegalStateException("prefetch on CLOSED");
+            state = PREFETCHED;
+        }
+        public void start() {
+            if (state == CLOSED) throw new IllegalStateException("start on CLOSED");
+            if (strict() && state == STARTED) throw new IllegalStateException("start on STARTED");
+            state = STARTED;
+        }
+        public void stop() {
+            if (state != STARTED && state != PREFETCHED) return;
+            state = PREFETCHED;
+        }
         public void deallocate() { state = UNREALIZED; }
         public void close() { state = CLOSED; }
-        public void setLoopCount(int c) { }
-        public long setMediaTime(long now) { long old = time; time = now; return old; }
+        public void setLoopCount(int c) {
+            if (strict() && state == STARTED) throw new IllegalStateException("setLoopCount while STARTED");
+        }
+        public long setMediaTime(long now) {
+            if (strict() && state == STARTED) throw new IllegalStateException("setMediaTime while STARTED");
+            long old = time; time = now; return old;
+        }
         public long getMediaTime() { return time; }
         public long getDuration() { return 30000; }
         public String getContentType() { return "audio/midi"; }

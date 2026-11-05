@@ -1,30 +1,43 @@
-From 06482e2aa81fccb6814b175bc5bbc25c44e91557 Mon Sep 17 00:00:00 2001
+From 5fe7cc99e3311048b5827e0b32fc6833f59a4a57 Mon Sep 17 00:00:00 2001
 From: arena-agent <agent@arena.ai>
-Date: Thu, 5 Nov 2026 17:57:24 +0000
-Subject: [PATCH] Harden Sound against absent/partial MMAPI
+Date: Thu, 5 Nov 2026 18:12:42 +0000
+Subject: [PATCH] Keep weapon sounds playing on every shot
 
-Every Player/VolumeControl call is guarded, formats are probed once and never
-throw, and a missing or unsupported file yields a silent no-op player instead
-of a startup crash on handsets without JSR-135.
+Regression: start() destroyed the player on any exception, and this Sound lives
+in the Asset cache for the whole game, so the first failed restart silenced the
+weapon permanently. Symbian/Nokia reject setMediaTime()/setLoopCount() while a
+player is STARTED, which is exactly the state during rapid fire.
+
+- stop a running player before seeking instead of throwing
+- rebuild a closed/broken player lazily from the cached object (prepare/recover)
+- remember an unusable file so it is not re-parsed on every shot
+- destroy() no longer implies the sound can never play again
+- drop the dead getLoopCount() accessor ProGuard stripped anyway
 ---
- src/code/utils/Sound.java | 140 +++++++++++++++++++++++---------------
- 1 file changed, 86 insertions(+), 54 deletions(-)
+ src/code/utils/Sound.java | 259 +++++++++++++++++++++++++++-----------
+ 1 file changed, 187 insertions(+), 72 deletions(-)
 
 diff --git a/src/code/utils/Sound.java b/src/code/utils/Sound.java
-index 6dee87b..3827bc8 100644
+index 6dee87b..58405f8 100644
 --- a/src/code/utils/Sound.java
 +++ b/src/code/utils/Sound.java
-@@ -6,116 +6,137 @@ import javax.microedition.media.MediaException;
+@@ -6,116 +6,227 @@ import javax.microedition.media.MediaException;
  import javax.microedition.media.Player;
  import javax.microedition.media.control.VolumeControl;
  
 +/**
 + * Sound wrapper that degrades to silence instead of failing.
 + *
-+ * Two handset realities are handled here:
-+ *  - MMAPI may be missing or refuse MP3/MIDI: every call returns quietly.
-+ *  - Loading is lazy. A crashed device must not spend startup time parsing
-+ *    audio, and a missing file must be a no-op, not a thrown exception.
++ * Handset realities handled here:
++ *  - MMAPI may be missing, or refuse the codec: every call returns quietly.
++ *  - A phone rejects setMediaTime()/setLoopCount() while the player is already
++ *    PLAYING (Symbian/Nokia do), and a weapon fires again long before the
++ *    previous shot finished. Retrying in the right state is what keeps the
++ *    second, third and hundredth shot audible.
++ *  - Loading is lazy and a missing file is a no-op, not a thrown exception.
++ *  - Recovering from a broken player must REBUILD it: this object lives in the
++ *    Asset cache for the whole game, so a destroyed player here means a
++ *    permanently silent weapon.
 + */
  public class Sound {
 -    
@@ -43,14 +56,16 @@ index 6dee87b..3827bc8 100644
 -        
 -    }
 -    
+-    //private InputStream is = null;
 +    private static boolean formatsProbed;
 +
-     //private InputStream is = null;
      private Player player = null;
      public String file;
      private int volume = 100;
      private int loopCount = 1;
 -    
++    /** Set after a failed prepare so a broken file is not parsed on every shot. */
++    private boolean loadFailed;
 +
      public Sound() {}
 -    
@@ -101,44 +116,101 @@ index 6dee87b..3827bc8 100644
 +            if(format.length() == 0) return;
  
 -            InputStream is = (new Object()).getClass().getResourceAsStream(file);
-+            InputStream is = Main.openResource(file);
-+            if(is == null) return; // missing audio file is not fatal
-             player = Manager.createPlayer(is, format);
-             player.realize();
-             player.prefetch();
-             is.close();
+-            player = Manager.createPlayer(is, format);
+-            player.realize();
+-            player.prefetch();
+-            is.close();
 -        } catch(Exception e) {}
++            loadFailed = !prepare();
 +        } catch(Throwable t) {
 +            destroy();
 +        }
      }
 -    
 +
++    /** Creates the player and brings it to PREFETCHED. False when impossible. */
++    private boolean prepare() {
++        if(file == null) return false;
++        String format = formatCheck(file.toLowerCase());
++        if(format.length() == 0) return false;
++
++        InputStream is = null;
++        Player p = null;
++        try {
++            is = Main.openResource(file);
++            if(is == null) return false; // missing audio file is not fatal
++            p = Manager.createPlayer(is, format);
++            p.realize();
++            p.prefetch();
++            try {
++                p.setLoopCount(loopCount);
++            } catch(Throwable ignored) {
++                // Some devices accept it only at start().
++            }
++            player = p;
++            loadFailed = false;
++            return true;
++        } catch(Throwable t) {
++            if(p != null) {
++                try { p.close(); } catch(Throwable ignored) {}
++            }
++            player = null;
++            return false;
++        } finally {
++            if(is != null) {
++                try { is.close(); } catch(Throwable ignored) {}
++            }
++        }
++    }
++
++    /** Brings a cached player back after it was closed or refused to start. */
++    private boolean recover() {
++        try {
++            if(player != null) {
++                try { player.close(); } catch(Throwable ignored) {}
++            }
++            player = null;
++            if(loadFailed) return false;
++            if(!prepare()) {
++                loadFailed = true;
++                return false;
++            }
++            return true;
++        } catch(Throwable t) {
++            player = null;
++            return false;
++        }
++    }
++
      public void destroy() {
          file = null;
 -        
+-        stop();
++        loadFailed = false;
 +
-         stop();
          try {
 -            
-+
-             if(player != null) player.close();
-             player = null;
+-            if(player != null) player.close();
+-            player = null;
 -            
 -        } catch (Exception exc) {}
 -        
 -        /*try {
 -            is.close();
 -        } catch(Exception e) {}*/
-+
-+        } catch (Throwable exc) {}
-     }
+-    }
 -    
-+
-     public int getLoopCount(int count) {
-         return loopCount;
-     }
+-    public int getLoopCount(int count) {
+-        return loopCount;
+-    }
 -    
++            if(player != null) {
++                try { player.stop(); } catch(Throwable ignored) {}
++                try { player.close(); } catch(Throwable ignored) {}
++            }
++        } catch(Throwable ignored) {}
++        player = null;
++    }
 +
      public void setLoopCount(int count) {
          loopCount = count;
@@ -148,7 +220,9 @@ index 6dee87b..3827bc8 100644
          try {
              player.setLoopCount(loopCount);
 -        } catch (Exception e) {}
-+        } catch (Throwable e) {}
++        } catch(Throwable e) {
++            // Applied again in start(); illegal while playing on some handsets.
++        }
      }
  
      public void start() {
@@ -156,19 +230,57 @@ index 6dee87b..3827bc8 100644
      }
 -    
 +
++    /**
++     * Plays from {@code time}. A player that is already running is stopped
++     * first, because seeking a STARTED player throws on Symbian/Nokia and used
++     * to leave the weapon with a dead player after the very first shot.
++     */
      public void start(long time) {
-         if(player == null) return;
+-        if(player == null) return;
 -        
++        if(file == null) return;
++        if(player == null && !recover()) return;
 +
          try {
++            if(state() == Player.STARTED) {
++                try {
++                    player.stop();
++                } catch(Throwable ignored) {
++                    // Restarting still works on devices that ignore stop().
++                }
++            }
              setVolume(volume);
-             player.setMediaTime(time);
-             player.setLoopCount(loopCount);
+-            player.setMediaTime(time);
+-            player.setLoopCount(loopCount);
++            try {
++                player.setMediaTime(time);
++            } catch(Throwable ignored) {
++                // Some players cannot seek before the first start().
++            }
++            try {
++                player.setLoopCount(loopCount);
++            } catch(Throwable ignored) {
++                // Illegal while running on strict devices; already set in prepare().
++            }
              player.start();
 -        } catch (Exception exc) {}
-+        } catch (Throwable exc) {
-+            // A handset can reject a codec after a successful prefetch.
-+            destroy();
++        } catch(Throwable exc) {
++            // Only a failed start justifies rebuilding: the object stays cached.
++            if(!recover()) return;
++            try {
++                player.setMediaTime(time);
++            } catch(Throwable ignored) {}
++            try {
++                player.start();
++            } catch(Throwable ignored) {}
++        }
++    }
++
++    private int state() {
++        try {
++            return player.getState();
++        } catch(Throwable t) {
++            return -1;
 +        }
      }
  
@@ -179,7 +291,7 @@ index 6dee87b..3827bc8 100644
          try {
              player.stop();
 -        } catch (MediaException exc) {}
-+        } catch (Throwable exc) {}
++        } catch(Throwable exc) {}
      }
 -    
 +
@@ -198,18 +310,20 @@ index 6dee87b..3827bc8 100644
      }
  
      public void setTime(long time) {
-@@ -123,7 +144,7 @@ public class Sound {
+@@ -123,33 +234,37 @@ public class Sound {
  
          try {
              player.setMediaTime(time);
 -        } catch (MediaException exc) {}
-+        } catch (Throwable exc) {}
++        } catch(Throwable exc) {}
      }
  
- 
-@@ -132,24 +153,35 @@ public class Sound {
- 
+-
+     public void setVolume(int i) {
+-        if(player == null) return;
+-
          volume = i>100?100:(i<0?0:i);
++        if(player == null) return;
  
 -        VolumeControl control = (VolumeControl) player.getControl("VolumeControl");
 -        if(control != null) control.setLevel(volume);
@@ -231,12 +345,7 @@ index 6dee87b..3827bc8 100644
          if(player == null) return -1;
 -        
 -        return player.getState();
-+
-+        try {
-+            return player.getState();
-+        } catch(Throwable t) {
-+            return -1;
-+        }
++        return state();
      }
  
      public static final String formatCheck(String file) {
