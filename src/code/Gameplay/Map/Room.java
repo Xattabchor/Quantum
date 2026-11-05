@@ -692,7 +692,8 @@ public class Room {
         ByteArrayInputStream bais = null;
         
         try {
-            is = (new Object()).getClass().getResourceAsStream(file);
+            is = code.utils.StringTools.openResource(file);
+            if(is == null) throw new java.io.IOException("mesh not found: " + file);
             dis = new DataInputStream(is);
             byte[] data = new byte[dis.available()];
             dis.read(data);

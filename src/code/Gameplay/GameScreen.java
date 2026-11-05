@@ -114,30 +114,45 @@ public final class GameScreen extends MyCanvas {
 
             try {
                 scene = LevelLoader.createScene(width, height * Main.getDisplaySize() / 100, levelFile, main, this);
-            } catch(Exception ex) {
+            } catch(Throwable ex) {
+                scene = null;
                 ex.printStackTrace();
+            }
+            if(scene == null) {
+                // No scene means no game: report the missing level instead of
+                // letting the next line NPE and kill the MIDlet.
+                throw new IllegalStateException("level failed to load: " + levelFile);
             }
             
             String path = Main.getGameText().getDef(Main.sight_icon, Main.sight_icon);
 
-            if(!Main.originalSight) {
-                if(!Main.fullScreenSight) imgSight = createImage2(path);
-                else imgSight = ImageResize.createImage(path, width, height * Main.displaySize / 100);
-            } else {
-                imgSight = Image.createImage(path);
+            try {
+                if(!Main.originalSight) {
+                    if(!Main.fullScreenSight) imgSight = createImage2(path);
+                    else imgSight = ImageResize.createImage(path, width, height * Main.displaySize / 100);
+                } else {
+                    imgSight = Image.createImage(path);
+                }
+            } catch(Throwable ignored) {
+                imgSight = null; // HUD draws without the crosshair
             }
 
             path = Main.getGameText().getDef(Main.hand_icon, Main.hand_icon);
 
-            if(Main.originalUseIcon) imgHand = Image.createImage(path);
-            else imgHand = createImage2(path);
-        } catch (Exception e) {
+            try {
+                if(Main.originalUseIcon) imgHand = Image.createImage(path);
+                else imgHand = createImage2(path);
+            } catch(Throwable ignored) {
+                imgHand = null;
+            }
+        } catch (Throwable e) {
             e.printStackTrace();
         }
 
         player = new Player(scene.getG3D().getWidth(), (int) (height * (Main.getDisplaySize() / 100.0F)), scene.getStartPoint(), hudInfo, scene.camPose);
         if(!Main.isLastLevel(levelNumber)) {
-            String st = (new IniFile(StringTools.getStringFromResource("/level" + (levelNumber+1) + ".txt"), false)).get("START");
+            String nextText = StringTools.getStringFromResource("/level" + (levelNumber+1) + ".txt");
+            String st = nextText == null ? null : (new IniFile(nextText, false)).get("START");
 
             if(st != null) {
                 int[] ps = GameIni.createPos(st, ',');
@@ -152,7 +167,7 @@ public final class GameScreen extends MyCanvas {
 
         scene.getHouse().addObject(player);
         dialogScreen = new DialogScreen(font, scene.getG3D(), main, this);
-        boolean hasPlayer = Main.musicPlayer.hasPlayer();
+        boolean hasPlayer = Main.getMusicPlayer().hasPlayer();
         init();
         if(!hasPlayer) startMus(0);
         changed = true;
@@ -623,8 +638,8 @@ public final class GameScreen extends MyCanvas {
         paused=true;
         keys.reset();
         stop();
-        if(Main.musicPlayer.hasPlayer()) {
-            musTime=Main.musicPlayer.getTime();
+        if(Main.getMusicPlayer().hasPlayer()) {
+            musTime=Main.getMusicPlayer().getTime();
             stopMus();
         }
         QFPS.miniReset();
@@ -930,9 +945,9 @@ public final class GameScreen extends MyCanvas {
 
     public void startMus(long t) {
         try {
-            if(Main.musicPlayer.hasPlayer()) {
-                Main.musicPlayer.setVolume(Main.music);
-                Main.musicPlayer.start(t);
+            if(Main.getMusicPlayer().hasPlayer()) {
+                Main.getMusicPlayer().setVolume(Main.music);
+                Main.getMusicPlayer().start(t);
             }
 
             QFPS.miniReset();
@@ -946,19 +961,19 @@ public final class GameScreen extends MyCanvas {
     }
 
     private void stopMus() {
-        if(Main.musicPlayer.hasPlayer()) Main.musicPlayer.stop();
+        if(Main.getMusicPlayer().hasPlayer()) Main.getMusicPlayer().stop();
     }
 
     public void destroyMusic() {
-        if(Main.musicPlayer.hasPlayer()) {
-            Main.musicPlayer.destroy();
+        if(Main.getMusicPlayer().hasPlayer()) {
+            Main.getMusicPlayer().destroy();
         }
     }
 
     public void init() {
         try {
             if(Main.isMusic && Main.music != 0) {
-                if(!Main.musicPlayer.hasPlayer()) Main.musicPlayer.loadFile(mus);
+                if(!Main.getMusicPlayer().hasPlayer()) Main.getMusicPlayer().loadFile(mus);
                 QFPS.miniReset();
             }
         } catch (Exception exc) {
@@ -1061,8 +1076,8 @@ public final class GameScreen extends MyCanvas {
 
     public final void openPause() {
         paused = true;
-        if(Main.musicPlayer.hasPlayer()) {
-            musTime = Main.musicPlayer.getTime();
+        if(Main.getMusicPlayer().hasPlayer()) {
+            musTime = Main.getMusicPlayer().getTime();
             stopMus();
         }
         

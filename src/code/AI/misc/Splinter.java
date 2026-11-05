@@ -17,6 +17,10 @@ public class Splinter {
     }
     
     public static void cache() {
+        if(texture == null || texture.rImg == null) {
+            sprite = null;
+            return;
+        }
         sprite.setTextures(new Texture[]{texture});
         sprite.setScale(5);
         sprite.mode = (byte) 3;
@@ -24,6 +28,7 @@ public class Splinter {
     }
 
     public final void set(int x, int y, int z) {
+        if(sprite == null) return;
         sprite.getPosition().set(x, y, z);
         frame = 0;
         sprite.mirX = false;
@@ -37,6 +42,7 @@ public class Splinter {
     }
 
     public final void project(DirectX7 g3d) {
+        if(sprite == null) return;
         sprite.setScale((int) (frame / 2 * Main.splinterscale));
         sprite.setOffset(0, -sprite.getHeight() / 2 - frame * 4);
         sprite.project(g3d.getInvCamera(), g3d);
@@ -44,6 +50,7 @@ public class Splinter {
     }
 
     public final void render(DirectX7 g3d, int sz) {
+        if(sprite == null) return;
         frame += QFPS.frameTime / 5;
         project(g3d);
         g3d.addRenderObject( sprite);

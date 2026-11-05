@@ -30,9 +30,9 @@ public class TitleScreen extends GUIScreen {
       
       String music = Main.settings.get("TITLE_SCREEN_MUSIC");
       if(Main.isMusic && music != null) {
-          Main.musicPlayer.loadFile(music);
-          Main.musicPlayer.setVolume(Main.music);
-          Main.musicPlayer.start();
+          Main.getMusicPlayer().loadFile(music);
+          Main.getMusicPlayer().setVolume(Main.music);
+          Main.getMusicPlayer().start();
       }
       
       start = System.currentTimeMillis();
@@ -60,7 +60,7 @@ public class TitleScreen extends GUIScreen {
     }
 
     protected final void onRightSoftKey() {
-        if(Main.musicPlayer.hasPlayer()) Main.musicPlayer.stop();
+        if(Main.getMusicPlayer().hasPlayer()) Main.getMusicPlayer().stop();
         
         if(menu == null) menu = new Menu(main);
         Main.setCurrent(menu);

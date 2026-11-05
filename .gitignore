@@ -6,3 +6,6 @@ Thumbs.db
 
 __pycache__/
 *.pyc
+
+# Boot harness: assets are unpacked from the game JAR at run time.
+tests/boot/res/

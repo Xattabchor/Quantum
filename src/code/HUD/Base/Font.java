@@ -20,15 +20,20 @@ public final class Font {
    public Font(String file) {
       try {
          IniFile str = IniFile.createFromResource(file);
+         if(str == null) throw new IOException("no font ini " + file);
          String var2 = str.get("IMG");
          String sel_font = str.get("SELECTED_IMG");
          String act_font = str.get("ACTIVE_IMG");
          if(act_font==null) act_font = var2;
          if(sel_font==null) sel_font = var2;
+
+         String charsLine = str.get("CHARS");
+         if(var2 == null || charsLine == null) throw new IOException("font without IMG/CHARS " + file);
+
          selimg = Image.createImage(sel_font);
          actimg = Image.createImage(act_font);
 
-         chars = str.get("CHARS").toCharArray();
+         chars = charsLine.toCharArray();
 
             if(str.get("COORDS") != null) {
                 img = Image.createImage(var2);
@@ -66,12 +71,32 @@ public final class Font {
                 space /= chars.length;
 
             }
-        } catch (IOException var3) {
-            var3.printStackTrace();
-        }
+
+         // A font image with fewer glyph cells than CHARS used to crash every
+         // string draw (charWidth reads coords[code+1]). Clamp the table instead.
+         int cells = (coords == null) ? 0 : coords.length - 1;
+         if(cells <= 0) throw new IOException("empty glyph table " + file);
+         if(chars.length > cells) {
+            char[] trimmed = new char[cells];
+            System.arraycopy(chars, 0, trimmed, 0, cells);
+            chars = trimmed;
+         }
+         if(space <= 0) space = Math.max(1, img.getWidth() / Math.max(1, chars.length));
+      } catch (Throwable var3) {
+         // Callers check getFont()/img and show the startup error screen.
+         System.out.println("Font load failed: " + file);
+         img = null; selimg = null; actimg = null;
+         coords = null; chars = null; space = 4;
+      }
+   }
+
+    /** False when the .fnt ini or its glyph image could not be loaded. */
+    public boolean isValid() {
+        return img != null && coords != null && chars != null && chars.length > 0;
     }
 
     public int getCode(char ch) {
+        if(chars == null) return -1;
         for(int i=0; i<chars.length; i++) {
             if(chars[i] == ch) return i;
         }
@@ -81,7 +106,7 @@ public final class Font {
     public int charWidth(char ch) {
         if(ch == ' ') return space;
         int code = getCode(ch);
-        if(code == -1) return space;
+        if(code == -1 || coords == null || code + 1 >= coords.length) return space;
         int b = coords[code];
         int e = coords[code+1];
         return e-b;
@@ -109,6 +134,7 @@ public final class Font {
        drawString(g, str, x, y, anchor, 0);
    }
    public final void drawString(Graphics g, String str, int x, int y, int anchor, int col) {
+      if(str == null || g == null || img == null || coords == null) return;
       int var10004 = str.length();
       int var6 = y;
       y = var10004;
@@ -209,7 +235,7 @@ public final int widthOf(char ch) {
 
    // Высота шрифта в пикселях
    public final int height() {
-      return this.img.getHeight();
+      return this.img == null ? 12 : this.img.getHeight();
    }
 
    public final int height2(String str,Graphics g) {

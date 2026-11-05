@@ -45,7 +45,21 @@ public final class LoadingScreen extends GUIScreen {
           repaint();
       } else if(frames == 2) {
           
-            GameScreen gs = new GameScreen(this.main, lvl, null);
+            try {
+                GameScreen gs = new GameScreen(this.main, lvl, null);
+                startGame(gs, loadSave);
+            } catch(Throwable t) {
+                // Level data on the device can be missing or corrupt (damaged
+                // install, wrong build). Return to the menu with a message
+                // instead of leaving a blank screen / killed MIDlet.
+                t.printStackTrace();
+                Main.startupFailure = "level " + lvl + ": " + t;
+                Main.setCurrent(new Menu(main));
+            }
+      }
+   }
+
+   private void startGame(GameScreen gs, boolean loadSave) {
             
             if(loadSave) {
                 Main.loadGame(gs.player, getWidth(), getHeight(), gs.scene);
@@ -60,7 +74,6 @@ public final class LoadingScreen extends GUIScreen {
             gs.scene.removeKilledBots();
             
             Main.setCurrent(gs);
-      }
    }
 
 }

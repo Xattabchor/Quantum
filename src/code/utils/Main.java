@@ -6,6 +6,7 @@ import code.AI.misc.Splinter;
 import code.Math.Matrix;
 import code.Gameplay.Weapon;
 import code.HUD.SplashScreen;
+import code.HUD.StartupErrorScreen;
 import code.Gameplay.Shop;
 import code.HUD.Base.Font;
 import code.AI.Player;
@@ -128,7 +129,8 @@ public final class Main extends MIDlet {
     public static boolean isMusic = true;
     public static boolean isSounds = true;
     // isFootsteps removed (footstep sounds excised, kordos).
-    public static Sound musicPlayer = Sound.createMusicPlayer();
+    /** Created lazily: a static initializer must not touch optional MMAPI. */
+    private static Sound musicPlayer;
 
     public static boolean verticalShopScroll = false;
 
@@ -143,9 +145,45 @@ public final class Main extends MIDlet {
     public static boolean resizeWeapons = false;
     public static boolean symbian = false; // Autodetect
 
+    /** False when the JAR has no /setting.txt: reported on screen, not fatal. */
+    public static boolean settingsOk = true;
+    /** First startup failure, shown by StartupErrorScreen; null after a good boot. */
+    public static String startupFailure = null;
+
+    /** Packaged-resource stream. Absolute names first, then the slash-less form:
+     *  some CLDC loaders only resolve one of the two. Never throws. */
+    /**
+     * Single resource-lookup entry point for the game. Delegating to StringTools
+     * keeps one implementation (and one set of handset quirks) for every caller.
+     */
+    public static InputStream openResource(String file) {
+        return StringTools.openResource(file);
+    }
+
+    /** Same CP1251->UTF-8 decoding as StringTools, but null-safe on a missing file. */
+    public static String readTextResource(String file) {
+        InputStream is = openResource(file);
+        if(is == null) return null;
+        try {
+            StringBuffer str = new StringBuffer();
+            while(true) {
+                int ch = is.read();
+                if(ch == -1) break;
+                if(ch == '\r') continue;
+                if(ch >= 192 && ch <= 255) ch = ch + 848;
+                str.append((char) ch);
+            }
+            is.close();
+            return str.toString();
+        } catch(Throwable t) {
+            try { is.close(); } catch(Throwable ignore) {}
+            return null;
+        }
+    }
+
     public static boolean isExist(String file) {
         try {
-            InputStream is = file.getClass().getResourceAsStream(file);
+            InputStream is = openResource(file);
             if(is == null) {
                 return false;
             } else {
@@ -158,14 +196,51 @@ public final class Main extends MIDlet {
     }
 
     protected final void startApp() {
-        if(!run) init();
+        if(run) return;
+        try {
+            init();
+        } catch(Throwable t) {
+            // Never leave the handset on a black screen with no clue: show the
+            // real reason (missing resource, missing API, OOM, ...) on LCDUI.
+            run = true;
+            showStartupError(t);
+        }
+    }
+
+    private void showStartupError(Throwable t) {
+        startupFailure = t == null ? "unknown" : t.toString();
+        try {
+            t.printStackTrace();
+        } catch(Throwable ignore) {
+        }
+        try {
+            StartupErrorScreen screen = new StartupErrorScreen(this, t, settingsOk);
+            // Use the real Display: mainCanvas may not exist yet.
+            Display.getDisplay(this).setCurrent(screen);
+        } catch(Throwable ignore) {
+        }
+    }
+
+    private static Texture loadTextureSafe(String file) {
+        if(file == null) return null;
+        try {
+            Texture tex = Texture.createTexture(file);
+            return (tex == null || tex.rImg == null) ? null : tex;
+        } catch(Throwable t) {
+            System.out.println("No texture: " + file);
+            return null;
+        }
     }
 
     private void init() {
         run = true;
         //if(audio3D) Audio3DEngine.init();
 
-        settings = GameIni.createGameIniFromResource("/setting.txt", true);
+        // A JAR without setting.txt must still boot and say so, not die in the
+        // Hashtable parser with an empty screen.
+        String settingsText = readTextResource("/setting.txt");
+        settingsOk = settingsText != null;
+        settings = new GameIni(settingsOk ? settingsText : "", true);
 
         savename = settings.getDef("SAVE_NAME", "ZOMBIE");
         DeveloperMenu.debugMode = settings.getInt("DEBUG", 0) == 1;
@@ -185,11 +260,15 @@ public final class Main extends MIDlet {
         hidesight = settings.getInt("HIDESIGHT", 0) == 1;
         menuMusic = settings.getNoLang("MENU_MUSIC");
 
-        Splinter.texture = Texture.createTexture(settings.getNoLang("SPLINTER_SPRITE", "/splinter.png"));
-        Splinter.cache();
+        // Missing sprites must not kill startup: createTexture() of an absent
+        // file returns a placeholder RawImage, and cache()/Sprite can cope.
+        Splinter.texture = loadTextureSafe(settings.getNoLang("SPLINTER_SPRITE", "/splinter.png"));
+        if(Splinter.texture != null && Splinter.texture.rImg != null) {
+            try { Splinter.cache(); } catch(Throwable ignored) {}
+        }
 
         String bloodTexture = settings.getNoLang("BLOOD_SPRITE", "/blood.png");
-        if(bloodTexture != null) code.AI.misc.Blood.blood = Texture.createTexture(bloodTexture);
+        if(bloodTexture != null) code.AI.misc.Blood.blood = loadTextureSafe(bloodTexture);
 
         tmp = settings.getNoLang("TEXT_BCK");
         if(tmp != null) {
@@ -226,7 +305,7 @@ public final class Main extends MIDlet {
 
         playerHasInventory = settings.getInt("PLAYER_HAS_INVENTORY", 0) == 1;
         InventoryScreen.proportionalInventory = settings.getInt("INVENTORY_PROPORTIONAL", 1) == 1;
-        ItemsEngine.init();
+        if(isExist("/items.txt")) ItemsEngine.init();
 
         try {
             if(RmsUtils.hasStore(savename)) {
@@ -275,6 +354,10 @@ public final class Main extends MIDlet {
             defaultSettings();
         }
 
+        // Values restored from RMS come from whatever build wrote them: clamp
+        // everything the renderer/pipeline later divides by.
+        sanitizeSettings();
+
         loadRendererSettings();
 
         tmp = settings.getNoLang("OPEN_LEVELS");
@@ -291,10 +374,25 @@ public final class Main extends MIDlet {
 			langs = StringTools.cutOnStrings(langsList, ',');
 		}
 
+        // A language index saved by another build may not exist in this JAR.
+        if(langs == null || langs.length == 0) langs = new String[] {"ENGLISH"};
+        if(lang < -1 || lang >= langs.length) lang = -1;
+
         String path = "/languages/" + langs[lang == -1 ? 0 : lang].toLowerCase() + ".txt";
-        setLanguage(path);
+        if(!setLanguage(path)) {
+            // Missing language files (or their font) must not kill the MIDlet.
+            gameText = new IniFile("", true);
+            setLanguageOrFallback();
+        }
 
         Shop.initShop();
+
+        // Without /setting.txt this JAR has no game assets at all: booting into
+        // a black splash screen is worse than saying so. Every real build ships
+        // the file, so this only fires for a stripped or mispackaged JAR.
+        if(!settingsOk) {
+            throw new IllegalStateException("no /setting.txt in this JAR");
+        }
 
         mainCanvas = new MainCanvas(this);
         setCurrent(new SplashScreen(this));
@@ -365,6 +463,30 @@ public final class Main extends MIDlet {
         } catch(Exception e) { return def; }
     }
 
+    /** RMS values from older/foreign builds must never reach a divide-by-zero. */
+    private static void sanitizeSettings() {
+        displaySize = clamp(displaySize, 50, 100);
+        mouseSpeed = clamp(mouseSpeed, 0, 100);
+        music = clamp(music, 0, 100);
+        sounds = clamp(sounds, 0, 100);
+        pixelsQ = clamp(pixelsQ, 0, 2);
+        fogQ = clamp(fogQ, 0, 2);
+        setPersQ(clamp(persQ, 1, 4));
+        if(lastLevel < 0) lastLevel = 0;
+        if(lastLevel > 999) lastLevel = 999;
+        if(availableLevel < 1 || availableLevel > Math.max(1, lastLevel)) availableLevel = Math.max(1, lastLevel);
+        if(GameKeyboard.keyCodes != null && GameKeyboard.keyCodes.length != 48) {
+            // Layout changed between builds: fall back to the built-in one
+            // instead of indexing garbage from GameKeyboard.is*Key().
+            GameKeyboard.keyCodes = null;
+            GameKeyboard.hasKeyCodes = null;
+        }
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return value < min ? min : (value > max ? max : value);
+    }
+
     private static void defaultSettings() {
         music = 100;
         sounds = 100;
@@ -384,8 +506,11 @@ public final class Main extends MIDlet {
         resizeWeapons = settings.getIntNoLang("RESIZE_WEAPONS", 0) == 1;
 
         symbian = false;
-        String platform = System.getProperty("microedition.platform");
-        String osName = System.getProperty("os.name");
+        String platform = null;
+        String osName = null;
+        try { platform = System.getProperty("microedition.platform"); } catch(Throwable ignored) {}
+        try { osName = System.getProperty("os.name"); } catch(Throwable ignored) {}
+        if(platform == null) platform = "";
         if(osName != null) {
             osName = osName.toLowerCase();
             symbian = osName.equals("symbian");
@@ -460,9 +585,65 @@ public final class Main extends MIDlet {
         canvas.repaint();
     }
 
-    public final void setLanguage(String file) {
-        gameText = IniFile.createFromResource(file);
-        Main.font = new Font(gameText.get("FONT"));
+    /** Loads a language file; returns false when the text or its font is absent. */
+    public final boolean setLanguage(String file) {
+        try {
+            String text = readTextResource(file);
+            if(text == null) {
+                System.out.println("No language file: " + file);
+                return false;
+            }
+            IniFile ini = new IniFile(text, false);
+            String fontFile = ini.get("FONT");
+            if(fontFile == null || !isExist(fontFile)) {
+                System.out.println("No font for language: " + fontFile);
+                return false;
+            }
+            Font loaded = new Font(fontFile);
+            if(!loaded.isValid()) {
+                System.out.println("Broken font: " + fontFile);
+                return false;
+            }
+            gameText = ini;
+            Main.font = loaded;
+            return true;
+        } catch(Throwable t) {
+            System.out.println("Language load failed: " + t);
+            return false;
+        }
+    }
+
+    /**
+     * Last-resort text/font: a language file that exists, or the built-in
+     * English strings. Without a font the game cannot draw menus at all.
+     */
+    private void setLanguageOrFallback() {
+        String base = "/languages/";
+        String[] files = {"english.txt", "russian.txt"};
+        for(int i = 0; i < files.length; i++) {
+            try {
+                String text = readTextResource(base + files[i]);
+                if(text == null) continue;
+                IniFile ini = new IniFile(text, false);
+                String fontFile = ini.get("FONT");
+                if(fontFile == null || !isExist(fontFile)) continue;
+                Font loaded = new Font(fontFile);
+                if(!loaded.isValid()) continue;
+                gameText = ini;
+                font = loaded;
+                return;
+            } catch(Throwable ignored) {
+            }
+        }
+        // Every screen draws through this font; a JAR without one is broken
+        // rather than playable, so surface it on the LCDUI error screen.
+        throw new IllegalStateException("no usable language font in this JAR");
+    }
+
+    /** Never null, so screens can call it even if startup failed early. */
+    public static Sound getMusicPlayer() {
+        if(musicPlayer == null) musicPlayer = Sound.createMusicPlayer();
+        return musicPlayer;
     }
 
     public static final Font getFont() {

@@ -75,7 +75,8 @@ public class RawImage {
     }
     
     private static RawImage qctToRawImage(String path) {
-        InputStream is = (new Object()).getClass().getResourceAsStream(path);
+        InputStream is = code.utils.StringTools.openResource(path);
+        if(is == null) throw new IllegalStateException("image not found: " + path);
         DataInputStream dis = new DataInputStream(is);
         try {
             dis.skip(3); //format name

@@ -1533,14 +1533,17 @@ public class LightMapper implements Runnable {
     }
     
     public static void saveLightMap(Mesh[] meshes, String lightdataFile) {
+    OutputConnection con = null;
+    OutputStream out = null;
     try {
-          
-      OutputConnection con = (OutputConnection) Connector.open("file:///root/lightmap.vla", Connector.WRITE);
+      // Lightmap generation is a desktop authoring tool: on a phone JSR-75 may be
+      // absent or deny access. Fail quietly instead of leaving the thread stuck.
+      con = (OutputConnection) Connector.open("file:///root/lightmap.vla", Connector.WRITE);
 
       FileConnection fc = (FileConnection)con;
       if(!fc.exists()) fc.create();
 
-      OutputStream out = con.openOutputStream();
+      out = con.openOutputStream();
       DataOutputStream dos = new DataOutputStream(out);
 
       for(int i=0;i<meshes.length;i++) {
@@ -1605,17 +1608,20 @@ public class LightMapper implements Runnable {
       
           
             dos.close();
-            con.close();
-      } catch(Exception exc) {
+      } catch(Throwable exc) {
           print("Lightmap save error");
-          System.out.println(exc.getMessage());
+          System.out.println(exc.toString());
+      } finally {
+          if(out != null) { try { out.close(); } catch(Throwable ignored) {} }
+          if(con != null) { try { con.close(); } catch(Throwable ignored) {} }
       }
     }
     
     public static void loadLightMap(Mesh[] meshes, String lightdataFile) {
     try {
           
-      InputStream is = new Object().getClass().getResourceAsStream(lightdataFile);
+      InputStream is = code.utils.StringTools.openResource(lightdataFile);
+      if(is == null) return; // levels without a baked lightmap are valid
       DataInputStream dis = new DataInputStream(is);
       
       for(int i=0;i<meshes.length;i++) {
@@ -1688,9 +1694,14 @@ public class LightMapper implements Runnable {
 
     public void run() {
         if(!run) return;
-        generateLightMap(thouse,tmeshes);
-        saveLightMap(tmeshes,tpath);
-        print("lightmap saved!");
+        try {
+            generateLightMap(thouse,tmeshes);
+            saveLightMap(tmeshes,tpath);
+            print("lightmap saved!");
+        } catch(Throwable t) {
+            // Authoring-only path: an exception here must not take the MIDlet down.
+            print("lightmap failed: " + t);
+        }
         stop();
         thouse=null;
         tmeshes=null;

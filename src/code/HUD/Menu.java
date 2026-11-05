@@ -35,9 +35,9 @@ public final class Menu extends Selectable {
         
         if (Main.isMusic && Main.menuMusic!=null) {
             try {
-                Main.musicPlayer.loadFile(Main.menuMusic);
-                Main.musicPlayer.setVolume(Main.music);
-                Main.musicPlayer.start();
+                Main.getMusicPlayer().loadFile(Main.menuMusic);
+                Main.getMusicPlayer().setVolume(Main.music);
+                Main.getMusicPlayer().start();
             } catch (Exception e) {}
         }
 
@@ -95,7 +95,7 @@ public final class Menu extends Selectable {
 
     public final void destroy() {
         super.destroy();
-        Main.musicPlayer.destroy();
+        Main.getMusicPlayer().destroy();
         background = backgroundMain = null;
     }
 

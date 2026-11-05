@@ -7,6 +7,7 @@ import code.utils.Main;
 import code.utils.canvas.MyCanvas;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
+import java.util.Vector;
 
 public final class Setting extends Selectable {
 
@@ -24,12 +25,10 @@ public final class Setting extends Selectable {
         this.background = background;
 
         IniFile lang = Main.getGameText();
-		
-        String[] options = new String[itemCount()];
-        boolean[] center = new boolean[options.length];
-        set(Main.getFont(), options, null, lang.get("BACK"), center);
+
+        // setItems() builds the exact row array; no placeholder sizing needed.
         setItems();
-		
+
         list.left = true;
         list.scrollDown();
 
@@ -41,119 +40,104 @@ public final class Setting extends Selectable {
 		return !(menu instanceof PauseScreen) && Main.langs.length > 1;
 	}
 	
+	private int currentLangIndex() {
+		int index = Main.lang;
+		if(index < 0 || index >= Main.langs.length) index = 0;
+		return index;
+	}
+
 	private void applyLanguage() {
-		String path = "/languages/" + Main.langs[Main.lang].toLowerCase() + ".txt";
+		String path = "/languages/" + Main.langs[currentLangIndex()].toLowerCase() + ".txt";
 		main.setLanguage(path);
 		
 		if(menu instanceof Menu) ((Menu) menu).reloadText();
 		setRightSoft(Main.getGameText().get("BACK"));
 	}
 
-    private int itemCount() {
-        return 20+(hasLangSelect()?1:0);
-    }
-
     private static String langGetDef(IniFile lang, String key, String def) {
         String s = lang.get(key);
         return s == null || s.equals(key) ? def : s;
     }
 
-    private void setItems() {
+    /**
+     * Rows are built into a Vector and copied into the list in one go: the array
+     * can never be shorter or longer than what was filled. The previous
+     * fixed-size writer left an empty last row (and an array with a "spare" slot
+     * that the dispatcher still accepted as a pressable row).
+     */
+    protected final void setItems() {
         IniFile lang = Main.getGameText();
-        if(getItems().length!=itemCount()) {
-            int index=itemIndex();
-            boolean left=list.left;
-            String[] items=new String[itemCount()];
-            set(Main.getFont(),items,null,lang.get("BACK"),new boolean[items.length]);
-            list.left=left;
-            setItemIndex(Math.min(index,items.length-1));
+        Vector rows = new Vector();
+        Vector mids = new Vector();
+
+        addRow(rows, mids, lang.get("AUDIO") + ":", true);
+        addRow(rows, mids, lang.get("MUSIC_VOLUME") + ":" + lang.get("OFF"), false);
+        if(Main.music > 0 && Main.isMusic) {
+            rows.setElementAt(lang.get("MUSIC_VOLUME") + ":" + Main.music, rows.size() - 1);
         }
-        String[] var2;
-        int i = 0;
-        var2 = this.getItems();
-        boolean[] ms = this.list.midSel;
-        var2[i] = lang.get("AUDIO") + ":";
-        ms[i] = true;
-        i++;
-        var2[i] = lang.get("MUSIC_VOLUME") + ":" + lang.get("OFF");
-        ms[i] = false;
-        if(Main.music > 0 && Main.isMusic) var2[i] = lang.get("MUSIC_VOLUME") + ":" + Main.music;
-        ms[i] = false;
-        i++;
-        var2[i] = lang.get("SOUNDS_VOLUME") + ":" + lang.get("OFF");
-        ms[i] = false;
-        if(Main.sounds > 0 && Main.isSounds) var2[i] = lang.get("SOUNDS_VOLUME") + ":" + Main.sounds;
-        i++;
-
-        var2[i] = lang.get("CONTROLS") + ":";
-        i++;
-        ms[i - 1] = true;
-        var2[i] = lang.get("CAM_SPEED") + ":" + Main.mouseSpeed;
-        i++;
-        ms[i - 1] = false;
-        var2[i] = lang.get("CHANGE_KEYS");
-        i++;
-        ms[i - 1] = false;
-
-        var2[i] = lang.get("PERF") + ":";
-        i++;
-        ms[i - 1] = true;
-        var2[i] = langGetDef(lang, "M3G_VIEWPORT", "Viewport") + ":" + Main.m3gScreenScale + "%";
-        i++;
-        ms[i - 1] = false;
-
-        var2[i] = langGetDef(lang, "M3G_HWMIP", "HW mip") + ":"
-                + (Main.m3gLitMip == 1 ? lang.get("ON") : lang.get("OFF"));
-        ms[i] = false;
-        i++;
-
-        var2[i] = langGetDef(lang, "M3G_BAKED", "Baked light") + ":"
-                + (Main.m3gLitNoVertexColors ? lang.get("OFF") : lang.get("ON"));
-        ms[i] = false;
-        i++;
-        var2[i] = lang.get("CORPSES") + ":" + (Main.isCorpses() ? lang.get("ON") : lang.get("OFF"));
-        ms[i] = false;
-        i++;
-        var2[i] = lang.get("BLOOD") + ":" + (this.main.isBlood() ? lang.get("ON") : lang.get("OFF"));
-        ms[i] = false;
-        i++;
-        var2[i] = langGetDef(lang, "M3G_OMNI", "Omni flash") + ":"
-                + (Main.m3gWorldLighting == 1 ? lang.get("ON") : lang.get("OFF"));
-        ms[i] = false;
-        i++;
-        var2[i] = lang.get("FRAMESKIP") + ":" + (Main.isFrameskip() ? lang.get("ON") : lang.get("OFF"));
-        ms[i] = false;
-        i++;
-
-        var2[i] = lang.get("HUD") + ":";
-        ms[i] = true;
-        i++;
-		if(hasLangSelect()) {
-			String lng = Main.langs[Main.lang];
-			if(Main.settings.getNoLang(lng) != null) {
-				lng = Main.settings.getNoLang(lng);
-			} else if(lang.get(lng) != null) {
-				lng = lang.get(lng);
-			}
-			var2[i] = lang.get("LANG") + ":" + lng;
-			ms[i] = false;
-			i++;
-		}
-        var2[i] = lang.get("RESIZE_WEAPONS") + ":" + (Main.resizeWeapons ? lang.get("YES") : lang.get("NO"));
-        ms[i] = false;
-        i++;
-        var2[i] = lang.get("HIDEHUD") + ":" + (Main.hideHud ? lang.get("YES") : lang.get("NO"));
-        ms[i] = false;
-        i++;
-        var2[i] = lang.get("DEBUG") + ":" + (DeveloperMenu.debugMode ? lang.get("ON") : lang.get("OFF"));
-        ms[i] = false;
-        i++;
-        if(Main.renderer==DirectX7.M3G) {
-            String label=lang.get("M3G_PERSPECTIVE");
-            if(label==null) label="HW perspective";
-            var2[i]=label+": "+lang.get(Main.m3gPerspective?"ON":"OFF");
-            ms[i]=false;
+        addRow(rows, mids, lang.get("SOUNDS_VOLUME") + ":" + lang.get("OFF"), false);
+        if(Main.sounds > 0 && Main.isSounds) {
+            rows.setElementAt(lang.get("SOUNDS_VOLUME") + ":" + Main.sounds, rows.size() - 1);
         }
+
+        addRow(rows, mids, lang.get("CONTROLS") + ":", true);
+        addRow(rows, mids, lang.get("CAM_SPEED") + ":" + Main.mouseSpeed, false);
+        addRow(rows, mids, lang.get("CHANGE_KEYS"), false);
+
+        addRow(rows, mids, lang.get("PERF") + ":", true);
+        addRow(rows, mids, langGetDef(lang, "M3G_VIEWPORT", "Viewport") + ":" + Main.m3gScreenScale + "%", false);
+        addRow(rows, mids, langGetDef(lang, "M3G_HWMIP", "HW mip") + ":"
+                + (Main.m3gLitMip == 1 ? lang.get("ON") : lang.get("OFF")), false);
+        addRow(rows, mids, langGetDef(lang, "M3G_BAKED", "Baked light") + ":"
+                + (Main.m3gLitNoVertexColors ? lang.get("OFF") : lang.get("ON")), false);
+        addRow(rows, mids, lang.get("CORPSES") + ":"
+                + (Main.isCorpses() ? lang.get("ON") : lang.get("OFF")), false);
+        addRow(rows, mids, lang.get("BLOOD") + ":"
+                + (this.main.isBlood() ? lang.get("ON") : lang.get("OFF")), false);
+        addRow(rows, mids, langGetDef(lang, "M3G_OMNI", "Omni flash") + ":"
+                + (Main.m3gWorldLighting == 1 ? lang.get("ON") : lang.get("OFF")), false);
+        addRow(rows, mids, lang.get("FRAMESKIP") + ":"
+                + (Main.isFrameskip() ? lang.get("ON") : lang.get("OFF")), false);
+
+        addRow(rows, mids, lang.get("HUD") + ":", true);
+        if(hasLangSelect()) {
+            String lng = Main.langs[currentLangIndex()];
+            if(Main.settings.getNoLang(lng) != null) {
+                lng = Main.settings.getNoLang(lng);
+            } else if(lang.get(lng) != null) {
+                lng = lang.get(lng);
+            }
+            addRow(rows, mids, lang.get("LANG") + ":" + lng, false);
+        }
+        addRow(rows, mids, lang.get("RESIZE_WEAPONS") + ":"
+                + (Main.resizeWeapons ? lang.get("YES") : lang.get("NO")), false);
+        addRow(rows, mids, lang.get("HIDEHUD") + ":"
+                + (Main.hideHud ? lang.get("YES") : lang.get("NO")), false);
+        addRow(rows, mids, lang.get("DEBUG") + ":"
+                + (DeveloperMenu.debugMode ? lang.get("ON") : lang.get("OFF")), false);
+        if(Main.renderer == DirectX7.M3G) {
+            String label = lang.get("M3G_PERSPECTIVE");
+            if(label == null) label = "HW perspective";
+            addRow(rows, mids, label + ": " + lang.get(Main.m3gPerspective ? "ON" : "OFF"), false);
+        }
+
+        String[] items = new String[rows.size()];
+        boolean[] midSel = new boolean[rows.size()];
+        for(int i = 0; i < items.length; i++) {
+            items[i] = (String) rows.elementAt(i);
+            midSel[i] = ((Boolean) mids.elementAt(i)).booleanValue();
+        }
+
+        int index = this.list == null ? 0 : itemIndex();
+        boolean left = this.list != null && list.left;
+        set(Main.getFont(), items, null, lang.get("BACK"), midSel);
+        list.left = left;
+        setItemIndex(Math.min(index, items.length - 1));
+    }
+
+    private static void addRow(Vector rows, Vector mids, String text, boolean title) {
+        rows.addElement(text == null ? "" : text);
+        mids.addElement(title ? Boolean.TRUE : Boolean.FALSE);
     }
 
     protected final void paint(Graphics g) {
@@ -183,9 +167,14 @@ public final class Setting extends Selectable {
         onKey5();
     }
 
+    /** Index of the M3G perspective row, or -1 when the row is not shown. */
+    private int perspectiveRow() {
+        return Main.renderer == DirectX7.M3G ? getItems().length - 1 : -1;
+    }
+
     protected final void onKey5() {
         int var1 = this.itemIndex();
-        if(Main.renderer==DirectX7.M3G && var1==getItems().length-1) {
+        if(var1 == perspectiveRow()) {
             Main.m3gPerspective=!Main.m3gPerspective;
             setItems();repaint();return;
         }
@@ -211,9 +200,9 @@ public final class Setting extends Selectable {
         id++;
         id++;//Hud
         if(hasLangSelect()) id++;
-        id++;
-        id++;
-        id++;
+        id++;//RESIZE_WEAPONS
+        id++;//HIDEHUD
+        id++;//DEBUG
     }
 
     protected final void onKey4() {
@@ -227,7 +216,7 @@ public final class Setting extends Selectable {
                 if(Main.music > 100) Main.music = 100;
                 if(Main.music == 0) Main.isMusic = false;
             }
-            Main.musicPlayer.setVolume(Main.isMusic ? Main.music : 0);
+            Main.getMusicPlayer().setVolume(Main.isMusic ? Main.music : 0);
         }
         id++;
 
@@ -298,7 +287,7 @@ public final class Setting extends Selectable {
                 if(Main.music > 100) Main.music = 100;
             }
             if(!Main.isMusic) Main.isMusic = true;
-            Main.musicPlayer.setVolume(Main.isMusic ? Main.music : 0);
+            Main.getMusicPlayer().setVolume(Main.isMusic ? Main.music : 0);
         }
         id++;
 

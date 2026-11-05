@@ -1,0 +1,255 @@
+From 06482e2aa81fccb6814b175bc5bbc25c44e91557 Mon Sep 17 00:00:00 2001
+From: arena-agent <agent@arena.ai>
+Date: Thu, 5 Nov 2026 17:57:24 +0000
+Subject: [PATCH] Harden Sound against absent/partial MMAPI
+
+Every Player/VolumeControl call is guarded, formats are probed once and never
+throw, and a missing or unsupported file yields a silent no-op player instead
+of a startup crash on handsets without JSR-135.
+---
+ src/code/utils/Sound.java | 140 +++++++++++++++++++++++---------------
+ 1 file changed, 86 insertions(+), 54 deletions(-)
+
+diff --git a/src/code/utils/Sound.java b/src/code/utils/Sound.java
+index 6dee87b..3827bc8 100644
+--- a/src/code/utils/Sound.java
++++ b/src/code/utils/Sound.java
+@@ -6,116 +6,137 @@ import javax.microedition.media.MediaException;
+ import javax.microedition.media.Player;
+ import javax.microedition.media.control.VolumeControl;
+ 
++/**
++ * Sound wrapper that degrades to silence instead of failing.
++ *
++ * Two handset realities are handled here:
++ *  - MMAPI may be missing or refuse MP3/MIDI: every call returns quietly.
++ *  - Loading is lazy. A crashed device must not spend startup time parsing
++ *    audio, and a missing file must be a no-op, not a thrown exception.
++ */
+ public class Sound {
+-    
++
+     private static boolean useMP3;
+-    
+-    static {
+-        
+-        String[] conts = Manager.getSupportedContentTypes(null);
+-        
+-        for(int i=0; i<conts.length; i++) {
+-            if(conts[i].equals("audio/mp3")) {
+-                useMP3 = true; break;
+-            }
+-        }
+-        
+-    }
+-    
++    private static boolean formatsProbed;
++
+     //private InputStream is = null;
+     private Player player = null;
+     public String file;
+     private int volume = 100;
+     private int loopCount = 1;
+-    
++
+     public Sound() {}
+-    
++
+     public Sound(String file) {
+         loadFile(file);
+     }
+-    
++
+     public static Sound createMusicPlayer() {
+         Sound snd = new Sound();
+         snd.loopCount = -1;
+         return snd;
+     }
+-    
++
++    /** Manager.getSupportedContentTypes may be unsupported; probe once, never throw. */
++    private static synchronized void probeFormats() {
++        if(formatsProbed) return;
++        formatsProbed = true;
++        try {
++            String[] conts = Manager.getSupportedContentTypes(null);
++            if(conts == null) return;
++            for(int i = 0; i < conts.length; i++) {
++                if(conts[i] != null && conts[i].equals("audio/mp3")) {
++                    useMP3 = true;
++                    return;
++                }
++            }
++        } catch(Throwable ignored) {
++            // No MMAPI or no content-type support: useMP3 stays false.
++        }
++    }
++
+     public void loadFile(String file) {
+         try {
+             destroy();
+ 
++            if(file == null) return;
+             String lcFile = file.toLowerCase();
+-            if(lcFile.equals("noone")) return;
+-            
++            if(lcFile.equals("noone") || lcFile.equals("null")) return;
++
+             this.file = file;
+-            String format = formatCheck(lcFile);    
++            String format = formatCheck(lcFile);
++            if(format.length() == 0) return;
+ 
+-            InputStream is = (new Object()).getClass().getResourceAsStream(file);
++            InputStream is = Main.openResource(file);
++            if(is == null) return; // missing audio file is not fatal
+             player = Manager.createPlayer(is, format);
+             player.realize();
+             player.prefetch();
+             is.close();
+-        } catch(Exception e) {}
++        } catch(Throwable t) {
++            destroy();
++        }
+     }
+-    
++
+     public void destroy() {
+         file = null;
+-        
++
+         stop();
+         try {
+-            
++
+             if(player != null) player.close();
+             player = null;
+-            
+-        } catch (Exception exc) {}
+-        
+-        /*try {
+-            is.close();
+-        } catch(Exception e) {}*/
++
++        } catch (Throwable exc) {}
+     }
+-    
++
+     public int getLoopCount(int count) {
+         return loopCount;
+     }
+-    
++
+     public void setLoopCount(int count) {
+         loopCount = count;
+-        
++
+         if(player == null) return;
+         try {
+             player.setLoopCount(loopCount);
+-        } catch (Exception e) {}
++        } catch (Throwable e) {}
+     }
+ 
+     public void start() {
+         start(0);
+     }
+-    
++
+     public void start(long time) {
+         if(player == null) return;
+-        
++
+         try {
+             setVolume(volume);
+             player.setMediaTime(time);
+             player.setLoopCount(loopCount);
+             player.start();
+-        } catch (Exception exc) {}
++        } catch (Throwable exc) {
++            // A handset can reject a codec after a successful prefetch.
++            destroy();
++        }
+     }
+ 
+     public void stop() {
+         if(player == null) return;
+-        
++
+         try {
+             player.stop();
+-        } catch (MediaException exc) {}
++        } catch (Throwable exc) {}
+     }
+-    
++
+     public long getTime() {
+         if(player == null) return 0L;
+-
+-        long t = player.getMediaTime();
+-        if(t == -1) t = 0;
+-        return t;
++        try {
++            long t = player.getMediaTime();
++            return t == -1 ? 0 : t;
++        } catch(Throwable t) {
++            return 0L;
++        }
+     }
+ 
+     public void setTime(long time) {
+@@ -123,7 +144,7 @@ public class Sound {
+ 
+         try {
+             player.setMediaTime(time);
+-        } catch (MediaException exc) {}
++        } catch (Throwable exc) {}
+     }
+ 
+ 
+@@ -132,24 +153,35 @@ public class Sound {
+ 
+         volume = i>100?100:(i<0?0:i);
+ 
+-        VolumeControl control = (VolumeControl) player.getControl("VolumeControl");
+-        if(control != null) control.setLevel(volume);
++        try {
++            VolumeControl control = (VolumeControl) player.getControl("VolumeControl");
++            if(control != null) control.setLevel(volume);
++        } catch(Throwable ignored) {
++            // Devices without VolumeControl still play at system volume.
++        }
+     }
+-    
++
+     public boolean hasPlayer() {
+         return player!=null;
+     }
+-    
++
+     public int getState() {
+         if(player == null) return -1;
+-        
+-        return player.getState();
++
++        try {
++            return player.getState();
++        } catch(Throwable t) {
++            return -1;
++        }
+     }
+ 
+     public static final String formatCheck(String file) {
+         if(file.endsWith(".wav") || file.endsWith(".wave")) return "audio/x-wav";
+         if(file.endsWith(".midi") || file.endsWith(".mid")) return "audio/midi";
+-        if(file.endsWith(".mp3")) return useMP3?"audio/mp3":"audio/mpeg";
++        if(file.endsWith(".mp3")) {
++            probeFormats();
++            return useMP3?"audio/mp3":"audio/mpeg";
++        }
+         if(file.endsWith(".amr")) return "audio/amr";
+         if(file.endsWith(".jts")) return "audio/x-tone-seq";
+         if(file.endsWith(".mxmf")) return "audio/mobile-xmf";
+-- 
+2.39.5
+

@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Runs the boot harness against the pre-fix JAR and the current build.
+
+Proves the fix: the shipped JAR crashes during startApp() while the rebuilt one
+reaches the menu. Not a hardware substitute, but it is the same code path.
+"""
+import os
+import subprocess
+import sys
+import zipfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+TEST = Path(__file__).resolve().parent
+ORIG_JAR = Path(os.environ.get("BOOT_ORIG_JAR",
+                               ROOT / "downloads/Quantum_Kordos_Full.jar"))
+ORIG_DIR = ROOT / "build/boot/orig"
+SCENARIOS = ("boot", "nomedia", "missing")
+
+
+def unpack_original():
+    if (ORIG_DIR / "code").is_dir():
+        return
+    ORIG_DIR.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(ORIG_JAR) as z:
+        for info in z.infolist():
+            if not info.filename.startswith("code/") or info.is_dir():
+                continue
+            target = ORIG_DIR / info.filename
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(z.read(info))
+            os.chmod(target, 0o644)
+
+
+def run(classes, scenarios):
+    env = dict(os.environ, BOOT_CLASSES=str(classes))
+    result = subprocess.run([sys.executable, str(TEST / "run.py"), *scenarios],
+                            env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            text=True)
+    return result.returncode, result.stdout
+
+
+def first_failure(output):
+    for line in output.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("Caused by:") or stripped.startswith("java.lang."):
+            return stripped
+        if "FAILED" in stripped:
+            return stripped
+    return "(no failure)"
+
+
+def main():
+    unpack_original()
+    print("=== before: " + str(ORIG_JAR.relative_to(ROOT)))
+    before_code, before = run(ORIG_DIR, SCENARIOS)
+    for scenario in SCENARIOS:
+        block = before.split("== " + scenario)[-1]
+        ok = "[ok]" in block
+        print("  %-9s %s" % (scenario, "passed" if ok else "FAILED -> " + first_failure(block)))
+
+    print("=== after: build/cldc (scripts/build_cldc.py)")
+    after_code, after = run(ROOT / "build/cldc/Quantum-unverified.jar", SCENARIOS)
+    for scenario in SCENARIOS:
+        block = after.split("== " + scenario)[-1]
+        ok = "[ok]" in block
+        print("  %-9s %s" % (scenario, "passed" if ok else "FAILED -> " + first_failure(block)))
+
+    print()
+    print("before: " + ("all scenarios passed" if before_code == 0 else
+                        "startup crashes (this is the phone symptom)"))
+    print("after:  " + ("all scenarios passed" if after_code == 0 else "STILL BROKEN"))
+    return after_code
+
+
+if __name__ == "__main__":
+    sys.exit(main())
