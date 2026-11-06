@@ -275,3 +275,24 @@ as arguments and a failing state is recorded instead of hidden.
 
 `downloads/Quantum_FillTest.jar` is that build with `M3G_PROFILE=1` and the
 developer menu reachable, so the tables can be read straight away.
+
+### Distance culling
+
+`M3G_LIT_DIST` and `M3G_LIT_DYN` narrow the lit pass's distance cutoff; they
+can never widen it past the level's own `DIST`. Both were parsed from
+`setting.txt` and then silently discarded - the pass recomputed the cutoff from
+`DirectX7.drDist` immediately after reading them, so neither key ever had any
+effect.
+
+Place the key **above the first `[section]`** in `setting.txt`. Anything after a
+section header is read as a member of that section, not as a root key.
+
+Measured on level 1, one frame with `DIST=68500`:
+
+| key | triangles | culled |
+|---|---|---|
+| none | 476 / 826 | 0 |
+| `M3G_LIT_DIST=25000` | 70 / 69 | 1362 |
+
+Narrowing the cutoff draws less world, so this is a trade against visibility,
+not a free optimisation. The level's own `DIST` remains the default.

@@ -306,6 +306,12 @@ public final class M3GLitRenderer {
 
     public static void resetLitStats() {
         statsLit = 0; statsFail = 0; statsReason = 0;
+        // The cull counters are reported next to the lit counters (and by the
+        // measurement probe), so they have to follow the same lifetime. They
+        // were never cleared anywhere, so they only ever accumulated from
+        // startup and any reading of them described the whole session rather
+        // than the window it was printed in.
+        cullDist = 0; cullBehind = 0; cullMinPx = 0;
     }
 
     public void beginFrame(DirectX7 g) {
@@ -507,18 +513,25 @@ public final class M3GLitRenderer {
                     Math.max(Math.abs(y), Math.abs(z))));
         }
         if(behind) {cullBehind++; return true;} // entirely behind the eye plane
-        // Distance cull (M3G_LIT_DIST, or the live M3G_LIT_DYN value): drop
-        // polys entirely beyond the cutoff. Consumed-without-draw keeps the
-        // counter honest: L shows survivors.
-        // Level distance, not a fixed rung: the packed path drops at DirectX7.drDist
-        // (the level's DIST). A tighter M3G_LIT_DIST here would silently draw LESS
-        // world than the painter path it replaces, which is a geometry regression,
-        // not an optimisation.
-        int distLimit = Main.m3gLitDyn == 1 ? dynDist : Main.m3gLitDist;
-        // Mirror the packed path exactly: it drops when polygon depth exceeds
-        // DirectX7.drDist, regardless of any M3G_LIT_DIST rung. A tighter level
-        // rung here would draw LESS world than the path being replaced.
-        distLimit = DirectX7.drDist;
+        // Distance cull: drop polys entirely beyond the cutoff.
+        // Consumed-without-draw keeps the counter honest: L shows survivors.
+        // Start from the level's own limit so the lit pass can never draw less
+        // world than the packed path it replaces (DirectX7.drDist is the level's
+        // DIST). A tighter, explicitly configured rung may only ever narrow it.
+        //
+        // This used to read
+        //     int distLimit = Main.m3gLitDyn == 1 ? dynDist : Main.m3gLitDist;
+        //     distLimit = DirectX7.drDist;
+        // where the second assignment discarded the first on every pass, so
+        // M3G_LIT_DIST and M3G_LIT_DYN were parsed from setting.txt and then
+        // silently had no effect at all.
+        int distLimit = DirectX7.drDist;
+        if(Main.m3gLitDyn == 1 && dynDist > 0) {
+            if(distLimit <= 0 || dynDist < distLimit) distLimit = dynDist;
+        } else if(Main.m3gLitDist > 0
+                && (distLimit <= 0 || Main.m3gLitDist < distLimit)) {
+            distLimit = Main.m3gLitDist;
+        }
         // Flash-time cap (M3G_OMNI_CULL): two live lamps double per-vertex
         // lighting cost on software m3g; while the omni is on, don't feed it
         // geometry it can't visibly light anyway.
