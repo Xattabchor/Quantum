@@ -106,58 +106,20 @@ PLAYER_SHOP=OFF
 PLAYER_ZOOM=74,44,1
 //Minimal Zoom, Maximal Zoom, Ability to use zoom
 
-// Hardware-lit true-3D world pass (kordos-full build)
-// M3G_LIT master key removed: textures opt in via render mode 6 (WTEX).
-M3G_LIT_AMBIENT=64
-M3G_LIT_DIR=0
-M3G_OMNI_BASE=0
-M3G_OMNI_FLASH=204
-M3G_OMNI_HALFX=400
-// half = 4x screen step: visible far flashlight circle
-// pinpoint muzzle glow: halo ~0.5x screen step (~1.2k units)
-// minimum useful flashlight radius (visible spot ~2 half-widths)
-M3G_LIT_AMBCOL=255,255,255
-// ambient lamp R,G,B (whole-world base tint)
-M3G_LIT_DIRCOL=255,255,255
-// directional light R,G,B (only if M3G_LIT_DIR>0)
-M3G_OMNI_COL=255,255,255
-// omni flashlight R,G,B, e.g. warm bulb: 255,220,150
-M3G_OMNI_X=8
-M3G_OMNI_Y=-6
-M3G_OMNI_Z=-45
-M3G_LIT_FAR=40000
-// compromise: keeps close-range city, cuts distant forest; 10000 was too short
-M3G_LIT_SELFTEST=3
-M3G_LIT_AMBPULSE=0
-// 0 = NO global ambient boost on muzzle (was lighting the whole forest)
-M3G_OMNI_CULL=8000
-// while flash is live: cap distance cull here (2 lamps x far polys killed the fps on sw-m3g)
-M3G_LIT_MINPX=0
-// OFF: visible popping of subpixel polys rejected; key kept for tuning
-
-M3G_LIT_NOVCOL=0
-// 0 = baked vertex lightmap under HW lights (menu: Baked light ON/OFF)
-M3G_LIT_MIP=1
-M3G_LIT_NORMALVIZ=0
-M3G_LIT_FLIP=1
-M3G_LIT_DEBUG=0
-// 1 = white-silhouette probe, 0 = normal shaded lit pass
+// Baked lightmap pass (kordos-full build).
+// Mode 9 carries the whole baked lightmap in the vertex colours, so the lit
+// pass must not multiply anything else into it. Only the keys below describe
+// that presentation; every other M3G_* key tunes hardware lamps and is
+// documented in docs/m3g-light-keys.md instead of living here.
+M3G_LIT_WORLD9=1
+M3G_LIT_BAKED=1
+// Geometry, not lighting: 0 = CULL_NONE (double-sided, depth-sorted),
+// 1 = CULL_BACK. This was part of the verified kordos configuration and
+// changes what is drawn, so it stays here rather than in the lamp docs.
 M3G_LIT_CULL=0
-// 0 = CULL_NONE (double-sided, depth-sorted), 1 = CULL_BACK + normalize
-M3G_LIT_DIST=20000
-// static depth cull INSIDE the camera far (40000): hard cut of far polys before raster
-// drop lit polys fully beyond this view depth, 0 = off
-M3G_LIT_FLAT=1
-// 1 = SHADE_FLAT (faster on software m3g), 0 = SHADE_SMOOTH
-M3G_LIT_DYN=0
-// dyn fps culling OFF for now; static M3G_LIT_DIST=20000 applies (inside camera FAR=40000)
-// 1 = auto distance cull targeting M3G_LIT_FPS, 0 = static DIST
-M3G_LIT_FPS=20
-M3G_LIT_STATIC=1
-// 1 = cache static-poly attributes (world uv/colors/normals never change per frame)
-// 1 = lit fronts are CCW in NDC (geometry was fully back-face culled)
+
+// Screen-scale presentation, not lighting.
 M3G_SCREEN_SCALE=100
-WEAPON_SWAY=0
 
 [DROZH_ENEMY]
 //SPEED,SCALE,IMAGES
