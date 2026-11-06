@@ -51,12 +51,9 @@ public final class DirectX7 {
                    +(M3GLitRenderer.statsErr.length()>0
                        ?" "+M3GLitRenderer.statsErr.length()+":"+M3GLitRenderer.statsErr.substring(0,Math.min(28,M3GLitRenderer.statsErr.length()))
                        :"");
+           if(M3GSceneRenderer.profiling()) statsText += " | " + FrameProfile.hudLine();
            if(speedTest != null && speedTest.ranOk) {
-               statsText += " | ST:";
-               for(int m = 0; m <= 13; m++) {
-                   statsText += speedTest.resultsMs[m];
-                   if(m < 13) statsText += ',';
-               }
+               statsText += " | " + speedTest.resultsLine();
            }
            peakDraws=peakBarriers=peakUploads=0;statsNext=now+250;statsNative=active;
            M3GLitRenderer.resetLitStats();
@@ -417,7 +414,17 @@ this.buffer.resetTex();
    }
 
    private void drawBuffer() {
-       if(backgroundPending) drawQueue(backgroundBuffer);
+       // The background queue holds the sky, the main queue the world and the
+       // sprites. Splitting here is what separates "sky" from "world" in the
+       // profile; without the split every geometry pass lands in one bucket.
+       if(backgroundPending) {
+           if(M3GSceneRenderer.profiling()) FrameProfile.mark(FrameProfile.SKY);
+           drawQueue(backgroundBuffer);
+           if(M3GSceneRenderer.profiling()) {
+               FrameProfile.close(FrameProfile.SKY);
+               FrameProfile.mark(FrameProfile.WORLD);
+           }
+       }
        drawQueue(buffer);
    }
 
@@ -468,21 +475,29 @@ this.buffer.resetTex();
            if(imageOutput && opaqueFrameBackground()) discardFrameImage();
            else syncFrameImage();
            ensureNativeRenderer();
+           final boolean prof = M3GSceneRenderer.profiling();
+           if(prof) FrameProfile.frameStart();
            if(effects!=null) sceneRenderer.prepareEffects(this,effects);
            if(weather!=null) sceneRenderer.prepareWeather(this,weather);
+           if(prof) {FrameProfile.close(FrameProfile.SETUP);FrameProfile.mark(FrameProfile.WORLD);}
            // Refresh the true-3D lit-pass camera/lights (mode-6 polys) — without
            // this the hardware-lit pass never exists in the required path.
            if(sceneRenderer instanceof M3GSceneRenderer)
                ((M3GSceneRenderer)sceneRenderer).beginFrame(this);
            nativePass=true;
+           if(prof) {FrameProfile.close(FrameProfile.WORLD);FrameProfile.mark(FrameProfile.SPRITES);}
            drawBuffer();
+           if(prof) {FrameProfile.close(FrameProfile.SPRITES);FrameProfile.mark(FrameProfile.EFFECTS);}
            if(effects!=null) drawRenderObject(effects,null,false);
+           if(prof) {FrameProfile.close(FrameProfile.EFFECTS);FrameProfile.mark(FrameProfile.WEATHER);}
            if(weather!=null && weather.count>0 && !sceneRenderer.draw(this,weather,null,false))
                throw requiredFailure("unsupported native weather");
+           if(prof) {FrameProfile.close(FrameProfile.WEATHER);FrameProfile.mark(FrameProfile.FINISH);}
            if(imageOutput) {
                frameImage=sceneRenderer.finishImage(this);
                frameImageBuffer=frameImage==null?null:display;
            } else sceneRenderer.finish(this);
+           if(prof) {FrameProfile.close(FrameProfile.FINISH);FrameProfile.frameEnd(0);}
            return weather!=null;
        } catch(Exception ex) {
            throw requiredFailure(ex.toString());

@@ -239,3 +239,39 @@ This is not resource-dependent: it needs a level in which some bucket grows
 past a previously seen width. It stayed hidden because the decimated Kordos
 world produced the same widths on every run. A resource set with different
 geometry exposes it immediately.
+
+### Measuring a frame
+
+`M3G_PROFILE=1` splits a frame into its passes and prints each one's share
+every two seconds:
+
+```
+PROFILE 17f world=49%/1020ms sprites=8%/170ms sky=16%/340ms finish=20%/425ms
+        setup=4%/102ms | measured=2057ms of 17 frames
+```
+
+The same numbers appear on the perf HUD line, so it works without a console.
+
+Two things to keep in mind when reading it. CLDC has only
+`currentTimeMillis`, so a pass shorter than one clock tick contributes nothing;
+the figures are accumulated over the window and are a share of the MEASURED
+time, not of wall clock, and they need a multi-second run to mean anything.
+Second, the passes are serialised on one target, so a timestamp between two of
+them costs one clock read and is charged to the pass being closed.
+
+Ship builds leave `M3G_PROFILE` at 0: the hooks are one boolean test each.
+
+### The fill benchmark
+
+`Run M3G SpeedTest` in the developer menu times the same quad through six
+distinct fill states - opaque, decal, alpha cutout, cutout with fog, modulate,
+additive - and shows the table as `fill ms: opaque=.. decal=..` on the perf line.
+
+It used to be dishonest: the loop stepped a mode counter 0..13 that was never
+passed to the draw call, so all fourteen "modes" measured one REPLACE+MODULATE
+quad, and every exception inside the loop was swallowed, so a total failure
+still reported success with plausible numbers. The draw now takes the fill state
+as arguments and a failing state is recorded instead of hidden.
+
+`downloads/Quantum_FillTest.jar` is that build with `M3G_PROFILE=1` and the
+developer menu reachable, so the tables can be read straight away.

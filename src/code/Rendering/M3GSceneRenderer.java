@@ -295,6 +295,12 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
     }
 
+    /** M3G_PROFILE=1: split each frame into passes and print the shares.
+     *  Off in every shipped configuration; the hooks are one branch each.
+     *  Read live: a cached copy would be fixed at class-load time, which is
+     *  before Main parses setting.txt, and would then always read false. */
+    static boolean profiling() { return Main.m3gProfile == 1; }
+
     private boolean litBroken; // sticky: native side rejected the lit pass
 
     /** Weather rides the shared polygon batch now: nothing native to prepare. */
@@ -746,6 +752,19 @@ public final class M3GSceneRenderer implements SceneRenderer {
             Vertex a, int au, int av,
             Vertex b, int bu, int bv,
             Vertex c, int cu, int cv) {
+        paintM3GTriangle(g, texture, a, au, av, b, bu, bv, c, cu, cv,
+                CompositingMode.REPLACE, Texture2D.FUNC_MODULATE, false);
+    }
+
+    /** Same, but with the fill state chosen by the caller. The fill benchmark
+     *  needs this: the three-argument-per-vertex version always used REPLACE +
+     *  MODULATE, so timing it in a loop measured that one combination fourteen
+     *  times and called the samples "modes". */
+    public void paintM3GTriangle(DirectX7 g, Texture texture,
+            Vertex a, int au, int av,
+            Vertex b, int bu, int bv,
+            Vertex c, int cu, int cv,
+            int blending, int function, boolean fogged) {
         RawImage raw = texture.rImg;
         if(raw == null || raw.img == null || raw.img.length == 0) return;
         if(!powerOfTwo(raw.w) || !powerOfTwo(raw.h)) return;
@@ -755,11 +774,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
         if(nativeTexture == null) return;
 
         appearance.setTexture(0, nativeTexture);
-        nativeTexture.setBlending(Texture2D.FUNC_MODULATE);
-        composite.setBlending(CompositingMode.REPLACE);
+        nativeTexture.setBlending(function);
+        composite.setBlending(blending);
         composite.setAlphaThreshold(0);
         appearance.setCompositingMode(composite);
-        appearance.setFog(null);
+        appearance.setFog(fogged ? fog : null);
 
         short[] xyz = positions;
         xyz[0] = (short)a.sx; xyz[1] = (short)a.sy; xyz[2] = 0;

@@ -118,6 +118,7 @@ public final class Main extends MIDlet {
     public static boolean m3gLitCullNone = false; // CULL_BACK w/ per-poly winding normalization
     public static int m3gLitSelfTest = 0;
     public static int m3gLitMip = 0;      // 1: hw NEAREST_MIPMAP_NEAREST chains, 0: base level
+    public static int m3gProfile = 0;     // 1: per-pass frame profile on stdout
     public static boolean m3gLitNormalViz = false; // debug: paint geometry by its normals
     public static int m3gLitDebug = 0; // 1: unlit white-silhouette probe (geometry isolation)
     public static int m3gLitDist = 0;  // >0: drop lit polys fully beyond this view depth
@@ -437,6 +438,7 @@ public final class Main extends MIDlet {
         m3gLitCullNone = settings.getIntNoLang("M3G_LIT_CULL", 1) == 0;
         m3gLitSelfTest = settings.getIntNoLang("M3G_LIT_SELFTEST", 0);
         m3gLitMip = settings.getIntNoLang("M3G_LIT_MIP", 0);
+        m3gProfile = settings.getIntNoLang("M3G_PROFILE", 0);
         m3gLitNormalViz = settings.getIntNoLang("M3G_LIT_NORMALVIZ", 0) == 1;
         m3gLitDebug = settings.getIntNoLang("M3G_LIT_DEBUG", 0);
         m3gLitDist = settings.getIntNoLang("M3G_LIT_DIST", 0);
