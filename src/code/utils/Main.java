@@ -96,6 +96,12 @@ public final class Main extends MIDlet {
     // stays pending and is read only when CPU pixels are actually asked for
     // (getDisplay: pause snapshot, dev overlays). Full-screen presentation only.
     public static int m3gLazyReadback = 0;
+    // 1: mode 9 submits NO m3g lights at all and carries the baked lightmap in
+    // material EMISSIVE. Strictly correct per JSR-184 (emissive is never
+    // multiplied by light), unlike the white-ambient trick of M3G_LIT_BAKED.
+    // Requires M3G_LIT_WORLD9=1. Off by default: not every handset tracks
+    // vertex colours into EMISSIVE, and a runtime that ignores it renders black.
+    public static int m3gLitNoLights = 0;
     public static int m3gLitAmbient = 32;     // 0..255 ambient lamp strength (dark by default)
     public static int m3gLitAmbCol = 0xffffff; // ambient lamp RGB (M3G_LIT_AMBCOL=R,G,B)
     public static int m3gLitDirCol = 0xffffff; // directional RGB (M3G_LIT_DIRCOL)
@@ -439,6 +445,7 @@ public final class Main extends MIDlet {
         m3gLitWorld9 = settings.getIntNoLang("M3G_LIT_WORLD9", 0);
         m3gLitBaked = settings.getIntNoLang("M3G_LIT_BAKED", 0);
         m3gLazyReadback = settings.getIntNoLang("M3G_LAZY_READBACK", 0) == 1 ? 1 : 0;
+        m3gLitNoLights = settings.getIntNoLang("M3G_LIT_NO_LIGHTS", 0) == 1 ? 1 : 0;
         m3gLitFps = settings.getIntNoLang("M3G_LIT_FPS", 20);
         m3gLitStatic = settings.getIntNoLang("M3G_LIT_STATIC", 0);
         m3gOmniCull = settings.getIntNoLang("M3G_OMNI_CULL", 0);

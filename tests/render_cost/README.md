@@ -143,6 +143,32 @@ depth-free path. The probe reports the invariant directly:
 `worldAfterSprites: N violations in M frames that contain both` is 0/5 on
 level41 and 0/2 on level1.
 
+## M3G_LIT_NO_LIGHTS (mode 9 without any light)
+
+Mode 9 carries the whole baked lightmap in the vertex colours, so an m3g light
+has nothing left to compute. `M3G_LIT_BAKED` still submitted one white AMBIENT
+so the material would not multiply the colours away. `M3G_LIT_NO_LIGHTS=1`
+removes the light entirely and moves the lightmap into material EMISSIVE:
+
+```
+result = emissive + ambient*materialAmbient + sum(diffuse*materialDiffuse)
+```
+
+EMISSIVE is the only JSR-184 term never multiplied by light, so with zero
+lights in the scene and EMISSIVE tracking the per-vertex colour the result is
+exactly the lightmap. That is stricter than the white-ambient trick, which
+relies on the runtime folding ambient to 1.0.
+
+| config | lightSig |
+| --- | --- |
+| default | `ambient(i=0.2509804) sun=false` |
+| M3G_LIT_BAKED=1 | `neutralAmbient(i=1.0,c=ffffff)` |
+| M3G_LIT_NO_LIGHTS=1 | `none(emissive)` |
+
+Both bake variants need `M3G_LIT_WORLD9=1`. `NO_LIGHTS` is off by default and
+unverified on hardware: not every mobile runtime tracks vertex colours into
+EMISSIVE, and one that ignores it renders the world black.
+
 ## M3G_LAZY_READBACK (framebuffer readback)
 
 `finishImage()` copied the finished frame into `int[] display` on every frame

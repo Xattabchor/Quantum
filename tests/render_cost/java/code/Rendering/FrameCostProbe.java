@@ -337,6 +337,7 @@ public final class FrameCostProbe {
             Main.m3gLitWorld9 = settings.getIntNoLang("M3G_LIT_WORLD9", 0);
             Main.m3gLitBaked = settings.getIntNoLang("M3G_LIT_BAKED", 0);
             Main.m3gLazyReadback = settings.getIntNoLang("M3G_LAZY_READBACK", 0) == 1 ? 1 : 0;
+            Main.m3gLitNoLights = settings.getIntNoLang("M3G_LIT_NO_LIGHTS", 0) == 1 ? 1 : 0;
             Main.m3gLitAmbient = settings.getIntNoLang("M3G_LIT_AMBIENT", 32);
             Main.m3gLitDir = settings.getIntNoLang("M3G_LIT_DIR", 150);
             Main.m3gLitFar = settings.getIntNoLang("M3G_LIT_FAR", 600000);

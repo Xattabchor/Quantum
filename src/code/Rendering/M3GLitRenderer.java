@@ -207,10 +207,26 @@ public final class M3GLitRenderer {
         polygon.setWinding(PolygonMode.WINDING_CW);
         polygon.setShading(PolygonMode.SHADE_SMOOTH);
         owner.registerPolygonMode(polygon);
-        material.setColor(Material.DIFFUSE, 0xffffffff);
-        // JSR-184 default material AMBIENT is dark grey (0x333333-ish): it
-        // multiplies the ambient light down to ~nothing. Open it fully.
-        material.setColor(Material.AMBIENT, 0xffffffff);
+        // M3G_LIT_NO_LIGHTS: mode 9 carries the whole baked lightmap in the
+        // vertex colours, so the material must contribute nothing of its own.
+        // EMISSIVE is the only JSR-184 term that is never multiplied by light:
+        //   result = emissive + ambient*materialAmbient + sum(diffuse*materialDiffuse)
+        // With no lights in the scene the last two terms are zero, and emissive
+        // (tracking the per-vertex colour) is exactly the lightmap. That is
+        // strictly more faithful than the white-ambient trick of
+        // M3G_LIT_BAKED, which relies on the runtime folding ambient to 1.0.
+        boolean noLights = Main.m3gLitNoLights == 1 && Main.m3gLitWorld9 == 1;
+        if(noLights) {
+            material.setColor(Material.EMISSIVE, 0xffffffff);
+            material.setColor(Material.AMBIENT, 0x00000000);
+            material.setColor(Material.DIFFUSE, 0x00000000);
+        } else {
+            material.setColor(Material.EMISSIVE, 0x00000000);
+            material.setColor(Material.DIFFUSE, 0xffffffff);
+            // JSR-184 default material AMBIENT is dark grey (0x333333-ish): it
+            // multiplies the ambient light down to ~nothing. Open it fully.
+            material.setColor(Material.AMBIENT, 0xffffffff);
+        }
         material.setColor(Material.SPECULAR, 0xff000000); // specular off
         appearance.setPolygonMode(polygon);
         appearance.setMaterial(material);
@@ -384,6 +400,14 @@ public final class M3GLitRenderer {
         // and the muzzle pulse stay out; they are lighting, not the lightmap.
         // A live muzzle flash is real lighting and always plays, baked or not.
         boolean flashWanted = pulse > 0f && Main.m3gWorldLighting == 1;
+        // M3G_LIT_NO_LIGHTS: submit nothing at all. The material EMISSIVE carries
+        // the baked lightmap, so the scene needs no light node - not even the
+        // neutral white ambient. Dropping it removes one light submission per
+        // bind and the per-vertex ambient term the runtime would still compute.
+        if(Main.m3gLitNoLights == 1 && Main.m3gLitWorld9 == 1) {
+            lightSig = "none(emissive)";
+            return;
+        }
         boolean baked = Main.m3gLitBaked == 1 && Main.m3gLitWorld9 == 1 && !flashWanted;
         if(baked) {
             neutralAmbient.setMode(Light.AMBIENT);
