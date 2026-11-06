@@ -168,6 +168,7 @@ final class M3GSpriteRenderer {
             }
             drawBuffer=batchBuffer;drawIndices=batchIndices[count-1];
         }
+        M3GSceneRenderer.diagLast="sprite.render count="+count+" v="+(count*4);
         owner.bindInPlace(g);owner.restoreCamera(g);owner.renderNative(g,drawBuffer,drawIndices,appearance);
         image=null;
     }

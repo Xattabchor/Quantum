@@ -203,6 +203,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             projectionWidth=g.width;projectionHeight=g.height;projectionX=g.centreX;projectionY=g.centreY;
             projectionReady=true;
         }
+        diagLast="bindTarget";
         graphics.bindTarget(surface.getGraphics(), true, 0);
         bound = true;
         // Depth buffer now exists: every (re-)bind resets it so stale depth
@@ -212,8 +213,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
             depthClearBg.setColorClearEnable(false);
             depthClearBg.setDepthClearEnable(true);
         }
+        diagLast="clear(depth)";
         graphics.clear(depthClearBg);
+        diagLast="setViewport(bind)";
         graphics.setViewport(0, 0, surface.getWidth(), surface.getHeight());
+        diagLast="setCamera(world)";
         graphics.setCamera(camera, null);
         cameraInstalled = true;
         graphics.resetLights();
@@ -222,7 +226,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     void restoreCamera(DirectX7 g) {
         if(!bound || cameraInstalled) return;
+        diagLast="setViewport(restore)";
         graphics.setViewport(0,0,g.width,g.height);
+        diagLast="setCamera(restore)";
         graphics.setCamera(camera,null);
         cameraInstalled = true;
     }
@@ -327,22 +333,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
     static float diagScale = -1f;
     void renderNative(DirectX7 g,VertexBuffer vertices,TriangleStripArray indices,Appearance material) {
         g.frameDrawCalls++; // API attempts, including a call that throws.
-        int vc = vertices == null ? -1 : vertices.getVertexCount();
-        int ic = indices == null ? -1 : indices.getIndexCount();
-        int maxIdx = -1;
-        if(indices != null) {
-            int[] tmp = new int[ic];
-            indices.getIndices(tmp);
-            for(int i = 0; i < ic; i++) if(tmp[i] > maxIdx) maxIdx = tmp[i];
-        }
-        int cull = -1;
-        try {
-            if(material != null && material.getPolygonMode() != null)
-                cull = material.getPolygonMode().getCulling();
-        } catch(RuntimeException ignored) { }
-        diagLast = "render vc=" + vc + " ic=" + ic + " maxIdx=" + maxIdx
-                + " scale=" + diagScale + " cull=" + cull
-                + " tex=" + (material != null && material.getTexture(0) != null);
+        // The caller sets diagLast BEFORE submitting, so the marker names the
+        // call that actually threw. Do not overwrite it here.
         graphics.render(vertices,indices,material,null);
     }
 
@@ -1006,6 +998,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         int width=sprite?spriteDimension(image.w):image.w;
         int height=sprite?spriteDimension(image.h):image.h;
         int size = width * height;
+        diagLast="createTexture "+image.w+"x"+image.h+" kind="+kind;
         boolean mip = wantsMipChain(kind) && image.w > 1 && image.h > 1
                 && powerOfTwo(image.w) && powerOfTwo(image.h);
         // A chain occupies ~4/3 of the base level, not 1x: charge it honestly or
@@ -1086,6 +1079,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             cached.levelFilter = Texture2D.FILTER_NEAREST;
             cached.cost = cost;
         } else {
+            M3GSceneRenderer.diagLast="new Texture2D "+width+"x"+height+" kind="+kind;
             cached.texture = new Texture2D(uploadImage(g,Image2D.RGBA,width,height,rgba));
             cached.texture.setFiltering(Texture2D.FILTER_BASE_LEVEL, Texture2D.FILTER_NEAREST);
             cached.mipChain = false;
