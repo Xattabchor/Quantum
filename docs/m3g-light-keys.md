@@ -168,3 +168,27 @@ scene needed 44 draws and 987 triangles in its worst frame.
 The cache is also frame-aware now: eviction skips entries the current frame has
 already used. Replacing a live texture mid-frame hands the next polygon a new
 native object, which splits batches and re-uploads the same pixels.
+
+### The mip chain was never a valid chain
+
+`M3G_LIT_MIP` crashed the game with
+`M3G required: java.lang.IllegalArgumentException` (no message) the moment a
+world texture went through the chain upload, typically while turning. The cause
+was in the loader, not in the renderer, and it predates the shared-cache rework:
+
+```java
+RawImage rmImg1 = RawImage.createMipRawImage(rImg);   // 256 -> 128
+RawImage rmImg2 = RawImage.createMipRawImage(rImg);   // 256 -> 128 again (!)
+```
+
+Level 2 halved the BASE again instead of halving level 1, so every texture larger
+than 2x2 produced a chain like `[256,128,128]`. JSR-184 requires each level to be
+exactly half the previous one, and a runtime that enforces it throws
+`IllegalArgumentException` with an empty message from
+`Image2D(int format, Image[] levels)` - which is why the error screen showed a
+bare `IllegalArgumentException` instead of a diagnostic. The fallback also padded
+short chains by duplicating level 1 (`[2,1,1]`), the same defect at the small end.
+
+Both are fixed: level 2 is built from level 1, and a base too small for a second
+reduction ships a two-level chain instead of a padded one. Every texture in the
+bundle now produces a valid chain.

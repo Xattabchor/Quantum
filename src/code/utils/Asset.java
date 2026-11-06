@@ -189,12 +189,22 @@ public class Asset {
                 RawImage rmImg1 = RawImage.createMipRawImage(rImg);
                 if(rmImg1!=null) {
                     table.put("RIMGMIP1_" + file, rmImg1);
-                    RawImage rmImg2 = RawImage.createMipRawImage(rImg);
-                    if(rmImg2!=null) table.put("RIMGMIP2_" + file, rmImg2);
-                    else {
-                        rmImg2 = rmImg1;
+                    // Level 2 must halve LEVEL 1, not the base again: a chain
+                    // [256,128,128] is not a valid mip chain and a JSR-184
+                    // runtime rejects Image2D(RGBA, Image[]) with an
+                    // IllegalArgumentException that carries no message - the
+                    // crash surfaced as "M3G required: java.lang.
+                    // IllegalArgumentException" mid-game. [256,128,64] is valid.
+                    RawImage rmImg2 = RawImage.createMipRawImage(rmImg1);
+                    // No level 2 (base was 2x2, so level 1 is already 1x1):
+                    // ship a two-level chain. Duplicating level 1 to pad the
+                    // array is exactly the invalid chain this fix removes.
+                    if(rmImg2 != null) {
+                        table.put("RIMGMIP2_" + file, rmImg2);
+                        mips = new RawImage[] {rImg, rmImg1, rmImg2};
+                    } else {
+                        mips = new RawImage[] {rImg, rmImg1};
                     }
-                    mips = new RawImage[] {rImg,rmImg1,rmImg2};
                     table.put("MIPMAPS_" + file, mips);
                     rImg.mipChain = mips;
                 }
