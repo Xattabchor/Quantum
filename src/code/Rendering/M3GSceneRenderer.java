@@ -282,7 +282,19 @@ public final class M3GSceneRenderer implements SceneRenderer {
     public void beginFrame(DirectX7 g) {
         for(int i = 0; i < textures.size(); i++)
             ((CachedTexture)textures.elementAt(i)).live = false;
-        if(litBroken) return;
+        if(litBroken) {
+            // The latch exists so a runtime that genuinely cannot render lit
+            // geometry is not hammered every frame, but it must not be forever:
+            // on a real device one failure during the first frames (a texture
+            // still uploading, a target that just got bound) disabled hardware
+            // lighting for the whole session, which from the outside looks
+            // exactly like the build ignoring M3G_LIT_WORLD9. Retry on a slow
+            // cadence - cheap, and it lets the pass come back on its own.
+            if(++litRetryIn < LIT_RETRY_FRAMES) return;
+            litRetryIn = 0;
+            litBroken = false;
+            M3GLitRenderer.statsErr = "";
+        }
         if(Main.m3gWorldLighting == 0 && Main.m3gLitWorld9 == 0) return;
         try {
             if(litRenderer == null) litRenderer = new M3GLitRenderer(this, graphics);
@@ -301,7 +313,12 @@ public final class M3GSceneRenderer implements SceneRenderer {
      *  before Main parses setting.txt, and would then always read false. */
     static boolean profiling() { return Main.m3gProfile == 1; }
 
-    private boolean litBroken; // sticky: native side rejected the lit pass
+    private boolean litBroken; // native side rejected the lit pass; retried
+    private int litRetryIn;    // frames until the next attempt
+    /** ~10 s at 20 FPS: long enough to stop a truly broken runtime from being
+     *  hammered, short enough that a transient start-up failure heals while the
+     *  player is still on the level. */
+    private static final int LIT_RETRY_FRAMES = 200;
 
     /** Weather rides the shared polygon batch now: nothing native to prepare. */
     public void prepareWeather(DirectX7 g,ScreenLines weather) {
@@ -324,6 +341,21 @@ public final class M3GSceneRenderer implements SceneRenderer {
         flashBackground.setColor(0xff000000 | rgb);
         bind(g,false);
         graphics.clear(flashBackground);
+    }
+
+    /** Re-arm the true-3D pass. The sticky latch exists so a runtime that
+     *  really cannot render lit geometry is not hammered every frame, but it
+     *  used to be permanent: one failure at level start - a half-initialised
+     *  Graphics3D, a texture not yet resident - silently disabled hardware
+     *  lighting for the rest of the session, and on screen that is
+     *  indistinguishable from "the build ignores M3G_LIT_WORLD9". Called on
+     *  level change and by an explicit user retry. */
+    boolean isLitBroken() { return litBroken; }
+
+    void reloadLitPass() {
+        litBroken = false;
+        litRetryIn = 0;
+        M3GLitRenderer.statsErr = "";
     }
 
     void renderNative(DirectX7 g,VertexBuffer vertices,TriangleStripArray indices,Appearance material) {
@@ -522,7 +554,17 @@ public final class M3GSceneRenderer implements SceneRenderer {
                     litBroken = true;
                 }
             }
-            mode = 0;
+            // Fallback to the packed path, but KEEP mode 9. Demoting to 0 is
+            // what made a refused world look like "the build ignores the
+            // lightmap": setColors() replays the baked lightmap only for modes
+            // 9 and 13, so a demoted polygon was painted with uniform white
+            // vertex colours - no lightmap, no shading, no fog. Mode 9 already
+            // is the original painter path (textured REPLACE, MODULATE, lightmap
+            // in the colours), so leaving it alone restores exactly the pre-lit
+            // look for that polygon instead of blanking it.
+            // Mode 6 keeps its historical demotion to 0: its packed form is a
+            // plain textured quad and changing that would change a picture.
+            if(!world9) mode = 0;
         }
         materialMath.resetBounds();
         boolean fastPath = fast || (Main.persQ == 0 && !Main.mipMapping);

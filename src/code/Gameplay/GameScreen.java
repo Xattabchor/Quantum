@@ -123,6 +123,11 @@ public final class GameScreen extends MyCanvas {
                 // letting the next line NPE and kill the MIDlet.
                 throw new IllegalStateException("level failed to load: " + levelFile);
             }
+            // A new world means a new drawmode set, so the lit pass starts with a
+            // clean slate: a sticky failure latch left over from the previous
+            // level used to keep hardware lighting dead for the whole session,
+            // which looks exactly like the build ignoring M3G_LIT_WORLD9.
+            scene.getG3D().reloadLitPass();
             
             String path = Main.getGameText().getDef(Main.sight_icon, Main.sight_icon);
 

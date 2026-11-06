@@ -47,6 +47,9 @@ public final class DirectX7 {
            statsText=(active?"M3G ":"CPU ")+"D:"+peakDraws+" B:"+peakBarriers+" T:"+peakUploads
                    +" L:"+M3GLitRenderer.statsLit+" F:"+M3GLitRenderer.statsFail
                    +" r"+M3GLitRenderer.statsReason+" W"+code.utils.Main.m3gWorldLighting
+                   +(code.utils.Main.m3gLitWorld9==1
+                       ?(litBrokenFlag()?" LIT-DEAD":" LIT")+(M3GLitRenderer.statsErr.length()>0?"!":"")
+                       :" LIT-off")
                    +(M3GLitRenderer.statsDynDist>0?" v"+M3GLitRenderer.statsDynDist:"")
                    +(M3GLitRenderer.statsErr.length()>0
                        ?" "+M3GLitRenderer.statsErr.length()+":"+M3GLitRenderer.statsErr.substring(0,Math.min(28,M3GLitRenderer.statsErr.length()))
@@ -265,6 +268,13 @@ this.buffer.resetTex();
                Class.forName("code.Rendering.M3GSceneRenderer").newInstance();
    }
 
+   /** True when the true-3D pass gave up; the stats line says so out loud
+    *  instead of showing a healthy build with a blank world. */
+   private boolean litBrokenFlag() {
+       return sceneRenderer instanceof M3GSceneRenderer
+               && ((M3GSceneRenderer) sceneRenderer).isLitBroken();
+   }
+
    public int getRenderer() { return M3G; }
    public String getRendererError() { return rendererError; }
    public boolean isM3GActive() { return sceneRenderer != null && !rendererFailed; }
@@ -281,6 +291,15 @@ this.buffer.resetTex();
    }
 
    /** Also call after modifying a texture's public pixel array in place. */
+   /** Called when the world is replaced (level load/restart). The sticky
+    *  lit-pass latch must not survive into the next level: a runtime failure
+    *  while level 1 was starting used to leave hardware lighting dead for the
+    *  whole session, which looks exactly like the feature being ignored. */
+   public void reloadLitPass() {
+       if(sceneRenderer instanceof M3GSceneRenderer)
+           ((M3GSceneRenderer) sceneRenderer).reloadLitPass();
+   }
+
    public void releaseRenderer() {
        syncFrameImage();
        imagePresentationFailed=false;
