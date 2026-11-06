@@ -848,6 +848,7 @@ public final class M3GLitRenderer {
         // Cleared per frame so a reported failure always belongs to the frame
         // that is on screen now, not to one that has since been fixed.
         DIAG = "";
+        qLoop = -1;
         // Absolute-time water offset: no drift, one call per frame even with
         // several scroll buckets (river + future water textures).
         float offV = (float) (System.currentTimeMillis() % 4000000L) / 1000f;
@@ -867,12 +868,18 @@ public final class M3GLitRenderer {
                 try {
                     flushBucket(g, bk);
                 } catch(Throwable t) {
-                    // Name the stage that actually threw, and keep the frame
-                    // alive: the remaining buckets and the rest of the scene
-                    // still draw, and the label reaches the stats line.
+                    // Record which call threw, then rethrow. Swallowing it here
+                    // looked like a kindness and was a regression: the caller
+                    // only disables the lit pass and falls back to the packed
+                    // path when the exception reaches it, so eating it left the
+                    // pass "healthy" with an empty frame - the sky and the river
+                    // drew, every other object vanished.
                     String m = t.getMessage();
-                    DIAG = STAGE + (m == null ? "" : " " + m);
-                    continue;
+                    DIAG = STAGE + (m == null ? "" : " " + m)
+                            + (qLoop >= 0 ? "/i" + qLoop + "/v" + bk.verts : "");
+                    if(t instanceof RuntimeException) throw (RuntimeException) t;
+                    if(t instanceof Error) throw (Error) t;
+                    throw new RuntimeException(m);
                 }
             }
         }
@@ -912,10 +919,16 @@ public final class M3GLitRenderer {
         if(scale < 0.001f) scale = 0.001f;
         float inv = 1f / scale; // multiply beats divide per coordinate
         bk.xyz = growS(bk.xyz, bk.verts * 3);
+        // A per-iteration label is the only way to see a crash inside this loop:
+        // it names the index, so the reported number can be matched against the
+        // array length instead of guessed at.
         for(int i = 0; i < bk.verts * 3; i++) {
+            STAGE = "q.iv@";   // the index is appended by the catch below
+            qLoop = i;
             float f = bk.iv[i] * inv;
             bk.xyz[i] = (short) (int) (f + (f >= 0 ? 0.5f : -0.5f));
         }
+        STAGE = "q.scale";
         if(bk.vb == null || bk.posA.getVertexCount() < bk.verts) {
             int cap = 8; while(cap < bk.verts) cap *= 2;
             VertexBuffer vb = new VertexBuffer();
@@ -1063,6 +1076,8 @@ public final class M3GLitRenderer {
 
     /** Last diagnose() result, surfaced through statsErr. */
     public static String DIAG = "";
+    /** Loop index reached by the vertex-scale loop when a flush threw. */
+    static int qLoop = -1;
     /** A rebuilt Appearance was accepted where the shared one was not. */
     static boolean freshAppearance;
 }
