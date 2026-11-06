@@ -12,7 +12,8 @@ final class M3GPolygonBatch {
         boolean fogged,opaque;
     }
 
-    private static final int MAX_VERTICES=192; // 64 triangles / 32 quads
+    private static final int MAX_VERTICES=384; // 128 triangles / 64 quads: the point
+    // where extra capacity stops paying - 512 measures the same 7/39, 768 buys one call
     private final M3GSceneRenderer owner;
     private final Graphics3D graphics;
     private final short[] xyz=new short[MAX_VERTICES*3],uv=new short[MAX_VERTICES*2];
