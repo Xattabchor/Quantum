@@ -169,13 +169,18 @@ public final class FrameCostProbe {
         DRAW_MIX.put(key, value == null ? 1 : value + 1);
     }
 
-    private static void sample(House house, Skybox sky, int[] position, int yaw, int pitch, int fogDist) {
+    private static void sample(House house, Skybox sky, int[] position, int yaw, int pitch, int fogDist,
+            int levelDist, byte drawmode) {
         int draws = 0, triangles = 0, billboards = 0;
         // One renderer for the whole sample: in the game the M3G renderer and its
         // texture cache live across frames, so per-frame uploads must be measured
         // with the cache warm, not rebuilt by a fresh DirectX7 every frame.
         DirectX7 g = new DirectX7(240, 320);
         g.requireM3G();
+        // DirectX7 is a singleton whose constructor resets the per-level statics,
+        // so every scene renderer gets the level scalars re-applied here.
+        DirectX7.setDrDist(levelDist);
+        DirectX7.standartDrawmode = drawmode;
         Matrix rx = new Matrix(), ry = new Matrix(), camera = new Matrix();
         rx.setRotX(pitch);
         ry.setRotY(yaw);
@@ -335,6 +340,13 @@ public final class FrameCostProbe {
         set(sky, "matrix", new Matrix());
         house.setSkybox(sky);
         DirectX7.standartDrawmode = 9;
+        // DirectX7 is a singleton and HouseCreator.create() builds a new one,
+        // whose resize() resets these statics to their defaults. LevelLoader sets
+        // them once and then constructs Scene, so its values survive; a harness
+        // that sets them earlier silently measures the defaults instead.
+        DirectX7.setDrDist(level.getInt("DIST", Integer.MAX_VALUE));
+        DirectX7.standartDrawmode = (byte) level.getInt("DMODE", 0);
+        DirectX7.setFogDist(level.getInt("FOGD", 1));
 
         prepareSprites(Integer.getInteger("probe.sprites", 0),
                 Integer.getInteger("probe.spriteTextures", Integer.MAX_VALUE));
@@ -358,9 +370,12 @@ public final class FrameCostProbe {
                 + " fogDist=" + fogDist
                 + " sprites=" + (sprites == null ? 0 : sprites.length));
         for (int[] position : positions) {
+            String only = System.getProperty("probe.onlyView");
             for (int pitch : new int[]{0, 30, 60, 85}) {
                 for (int yaw = 0; yaw < 360; yaw += 45) {
-                    sample(house, sky, position, yaw, pitch, fogDist);
+                    if (only != null && !only.equals(yaw + "@" + pitch)) continue;
+                    sample(house, sky, position, yaw, pitch, fogDist,
+                            level.getInt("DIST", Integer.MAX_VALUE), (byte) level.getInt("DMODE", 0));
                 }
             }
         }
@@ -380,7 +395,14 @@ public final class FrameCostProbe {
         System.out.println("distinctTexturesInWorstFrame=" + TEXTURES.size());
         System.out.println("drawMix: " + mix);
         System.out.println("worstSplit: world + sprites = " + worstSplit);
-        System.out.println("lights: " + code.Rendering.M3GLitRenderer.lightSig);
+        System.out.println("lights: " + code.Rendering.M3GLitRenderer.lightSig
+                + " cull=" + (Main.m3gLitCullNone ? "NONE" : "BACK"));
+        System.out.println("litRejects: " + code.Rendering.M3GLitRenderer.statsFail);
+        System.out.println("culled: dist=" + code.Rendering.M3GLitRenderer.cullDist
+                + " (limit=" + code.Rendering.M3GLitRenderer.lastDistLimit
+                + ", levelDIST=" + DirectX7.drDist + ")"
+                + " behind=" + code.Rendering.M3GLitRenderer.cullBehind
+                + " minPx=" + code.Rendering.M3GLitRenderer.cullMinPx);
         System.out.println("lightMode: world9=" + Main.m3gLitWorld9 + " baked=" + Main.m3gLitBaked
                 + " ambient=" + Main.m3gLitAmbient + " dir=" + Main.m3gLitDir);
         System.out.println("worldAfterSprites: " + overlapFrames + " violations in " + bothFrames

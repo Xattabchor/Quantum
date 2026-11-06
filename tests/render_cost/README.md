@@ -143,6 +143,40 @@ depth-free path. The probe reports the invariant directly:
 `worldAfterSprites: N violations in M frames that contain both` is 0/5 on
 level41 and 0/2 on level1.
 
+## Geometry parity between the two paths
+
+The sorted pass must draw the same world the painter path draws, or it is a
+regression hiding behind a smaller call count. Two real mismatches were found
+and fixed:
+
+* `M3G_LIT_DIST` was a fixed rung (30000) while the packed path drops at the
+  level's `DIST` (30500), so the sorted pass silently drew **less** world.
+  The lit pass now uses `DirectX7.drDist`, exactly like the packed path.
+* The harness applied level scalars *before* `HouseCreator.create()`. `DirectX7`
+  is a singleton and its constructor calls `resize()`, which resets `drDist`
+  and `standartDrawmode` to defaults - so every earlier measurement ran with
+  `drDist=30000000`, i.e. with all distance culling disabled. `LevelLoader` sets
+  these keys before constructing `Scene` and they survive; the harness now
+  re-applies them per sample.
+
+After both fixes, identical view pins:
+
+| view | sorted pass | painter path |
+| --- | --- | --- |
+| 0@0 | 80 | 80 |
+| 90@60 | 24 | 24 |
+| 270@85 | 27 | 27 |
+| 45@30 | 117 | 116 |
+| 135@0 | 75 | 77 |
+| 225@30 | 53 | 51 |
+| 315@60 | 34 | 33 |
+| 180@30 | 50 | 49 |
+
+3 of 8 views are identical, the rest differ by 1-2 triangles out of ~50-117.
+`litRejects=0` and the far/behind/subpixel cull counters are 0, so the residual
+is not a cull: it is near-plane clipping, which the packed path does
+per-polygon in screen space and the sorted pass leaves to the engine.
+
 ## M3G_LIT_BAKED (lighting parity)
 
 The sorted pass lit with `M3G_LIT_*` lamps on top of the baked lightmap, so the

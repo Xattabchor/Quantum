@@ -261,6 +261,8 @@ public final class M3GLitRenderer {
     // reason: 1=exotic mode, 2=no/null texture or unsupported, 3=no view
     // record, 4=uv out of 16-bit range, 0=none.
     public static int statsLit, statsFail, statsReason;
+    public static int cullDist, cullBehind, cullMinPx; // why polys were dropped
+    public static int lastDistLimit, cullMode;
     /** Signature of the lights actually handed to the engine this frame. */
     public static String lightSig = "";
     public static int statsDynDist;     // live dyn-cull distance (M3G_LIT_DYN=1)
@@ -326,8 +328,8 @@ public final class M3GLitRenderer {
         float far = Main.m3gLitFar;
         camera.setPerspective(g.fovY > 0 ? g.fovY : 60,
                 (float) g.width / (float) g.height, near, far);
-        polygon.setCulling(Main.m3gLitCullNone
-                ? PolygonMode.CULL_NONE : PolygonMode.CULL_BACK);
+        cullMode = Main.m3gLitCullNone ? PolygonMode.CULL_NONE : PolygonMode.CULL_BACK;
+        polygon.setCulling(cullMode);
         // Flat shading reads dramatically cheaper on software m3g rasterizers;
         // normals are replicated per corner anyway, so the look is identical.
         polygon.setShading(Main.m3gLitFlat == 1
@@ -435,22 +437,31 @@ public final class M3GLitRenderer {
             maxAbs = Math.max(maxAbs, Math.max(Math.abs(x),
                     Math.max(Math.abs(y), Math.abs(z))));
         }
-        if(behind) return true; // entirely behind the eye plane
+        if(behind) {cullBehind++; return true;} // entirely behind the eye plane
         // Distance cull (M3G_LIT_DIST, or the live M3G_LIT_DYN value): drop
         // polys entirely beyond the cutoff. Consumed-without-draw keeps the
         // counter honest: L shows survivors.
+        // Level distance, not a fixed rung: the packed path drops at DirectX7.drDist
+        // (the level's DIST). A tighter M3G_LIT_DIST here would silently draw LESS
+        // world than the painter path it replaces, which is a geometry regression,
+        // not an optimisation.
         int distLimit = Main.m3gLitDyn == 1 ? dynDist : Main.m3gLitDist;
+        // Mirror the packed path exactly: it drops when polygon depth exceeds
+        // DirectX7.drDist, regardless of any M3G_LIT_DIST rung. A tighter level
+        // rung here would draw LESS world than the path being replaced.
+        distLimit = DirectX7.drDist;
         // Flash-time cap (M3G_OMNI_CULL): two live lamps double per-vertex
         // lighting cost on software m3g; while the omni is on, don't feed it
         // geometry it can't visibly light anyway.
         if(flashActive && Main.m3gOmniCull > 0
                 && (distLimit <= 0 || distLimit > Main.m3gOmniCull))
             distLimit = Main.m3gOmniCull;
+        lastDistLimit = distLimit;
         if(distLimit > 0) {
             boolean beyond = true;
             for(int i = 0; i < count; i++)
                 if(vertices[i].getViewDepth() > -distLimit) { beyond = false; break; }
-            if(beyond) return true;
+            if(beyond) {cullDist++; return true;}
         }
         // Subpixel cull (M3G_LIT_MINPX): a poly whose whole screen bbox fits
         // into MINPX x MINPX pixels costs a full light/shade round for a dot's
@@ -468,7 +479,7 @@ public final class M3GLitRenderer {
                 if(sy < minY) minY = sy; else if(sy > maxY) maxY = sy;
             }
             if(cull && maxX - minX < Main.m3gLitMinPx
-                    && maxY - minY < Main.m3gLitMinPx) return true;
+                    && maxY - minY < Main.m3gLitMinPx) {cullMinPx++; return true;}
         }
 
         // Static attribute cache (M3G_LIT_STATIC): world polys never change
