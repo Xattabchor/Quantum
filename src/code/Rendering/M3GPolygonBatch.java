@@ -181,17 +181,21 @@ final class M3GPolygonBatch {
         if(firstCount==0) return;
         int count=firstCount,vertices=size;TriangleStripArray indices=firstIndices;
         firstCount=0;size=0; // No retries of a partially failed native submission.
-        M3GSceneRenderer.diagLast="batch.ap.setPolygonMode";appearance.setPolygonMode(polygon);
-        M3GSceneRenderer.diagLast="batch.ap.setTexture";appearance.setTexture(0,texture);
-        M3GSceneRenderer.diagLast="batch.cm.setBlending";composite.setBlending(blend);
-        M3GSceneRenderer.diagLast="batch.cm.setAlphaThreshold";composite.setAlphaThreshold(threshold);
+        appearance.setPolygonMode(polygon);appearance.setTexture(0,texture);
+        composite.setBlending(blend);composite.setAlphaThreshold(threshold);
         if(texture!=null) {
-            M3GSceneRenderer.diagLast="batch.setBlending fn="+function;
             texture.setBlending(function);if(function==Texture2D.FUNC_BLEND) texture.setBlendColor(blendColor);
-            M3GSceneRenderer.diagLast="batch.setFiltering "+levelFilter+"/"+imageFilter;
-            texture.setFiltering(levelFilter,imageFilter);}
+            // DFiltering is NOT re-applied here. A cache entry already carries
+            // its filter from creation (createTexture sets it once and never
+            // changes it), and every caller of this batch passes exactly that
+            // same value back, so this call was a no-op that re-asserted the
+            // texture's own state. Worse, one runtime rejects it: the Nokia
+            // m3gcore inside J2ME-Loader raises M3G_INVALID_VALUE here, which
+            // surfaces as a message-less IllegalArgumentException and takes the
+            // game down on the error screen. Filtering is set where the texture
+            // is created; the flush path does not touch it.
+        }
         if(fogged) {
-            M3GSceneRenderer.diagLast="batch.fog.setMode "+fogMode;
             if(appliedFogMode!=fogMode) {fog.setMode(fogMode);appliedFogMode=fogMode;}
             fog.setColor(fogColor);
             if(fogMode==Fog.EXPONENTIAL) {
@@ -215,7 +219,6 @@ final class M3GPolygonBatch {
                 buffer=next;positions=nextPositions;coords=nextCoords;colors=nextColors;
                 capacity=nextCapacity;scaleReady=false;
             }
-            M3GSceneRenderer.diagLast="batch.VertexArray.set v="+vertices;
             positions.set(0,vertices,xyz);coords.set(0,vertices,uv);colors.set(0,vertices,rgba);
             // With no eye-space Fog, a common positive factor per polygon cancels
             // in projection and perspective interpolation. Keep each original
@@ -223,9 +226,7 @@ final class M3GPolygonBatch {
             // Native Fog still requires an EXACT common eye-space scale. Fog
             // packing now shares a binary depth lattice when representable.
             float positionScale=fogged?scale:1.0f;
-            M3GSceneRenderer.diagScale=positionScale;
             if(!scaleReady || appliedScale!=positionScale) {
-                M3GSceneRenderer.diagLast="batch.setPositions scale="+positionScale;
                 buffer.setPositions(positions,positionScale,null);
                 appliedScale=positionScale;scaleReady=true;
             }
@@ -235,7 +236,6 @@ final class M3GPolygonBatch {
                 indexCache[triangles-1]=new TriangleStripArray(0,lengths);
             }
             owner.bindInPlace(g);owner.restoreCamera(g);
-            M3GSceneRenderer.diagLast="batch.render t="+triangles;
             owner.renderNative(g,buffer,indexCache[triangles-1],appearance);
         }
         texture=null;polygon=null;firstOrder=null;firstIndices=null;

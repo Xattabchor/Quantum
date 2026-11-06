@@ -148,7 +148,9 @@ final class M3GSpriteRenderer {
         int count=pending;if(count==0) return;
         pending=0; // A failed native packet is recovered by full CPU replay.
         appearance.setTexture(0,image);image.setBlending(Texture2D.FUNC_MODULATE);
-        image.setFiltering(levelFilter,imageFilter);
+        // Filtering already sits on the cache entry (createTexture set it once);
+        // re-applying it per flush is a no-op that one runtime rejects with a
+        // message-less IllegalArgumentException. Left out on purpose.
         composite.setBlending(blend);composite.setAlphaThreshold(threshold);
         if(fogged) {fog.setLinear(1.0f,far);fog.setColor(fogColor);}
         appearance.setFog(fogged?fog:null);
@@ -168,7 +170,6 @@ final class M3GSpriteRenderer {
             }
             drawBuffer=batchBuffer;drawIndices=batchIndices[count-1];
         }
-        M3GSceneRenderer.diagLast="sprite.render count="+count+" v="+(count*4);
         owner.bindInPlace(g);owner.restoreCamera(g);owner.renderNative(g,drawBuffer,drawIndices,appearance);
         image=null;
     }

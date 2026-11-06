@@ -181,11 +181,8 @@ final class M3GSkyRenderer {
     private void flush(DirectX7 g) {
         if(size==0) return;
         int count=size; size=0; // Never retry a partially failed submission.
-        M3GSceneRenderer.diagLast="sky.set v="+count+" uvS="+batchUVScale;
         positions.set(0,count,packed); uv.set(0,count,coords);
-        M3GSceneRenderer.diagLast="sky.setPositions scale="+scale+" v="+count;
         buffer.setPositions(positions,scale,null);
-        M3GSceneRenderer.diagLast="sky.setTexCoords uvS="+batchUVScale;
         buffer.setTexCoords(0,uv,batchUVScale/256,null);
         int slot=count/3-1;
         if(indices[slot]==null) {
@@ -196,10 +193,8 @@ final class M3GSkyRenderer {
         boolean clear=clearBackground;clearBackground=false;
         if(clear) owner.clearSky(g,backgroundColor);
         else owner.bind(g);
-        M3GSceneRenderer.diagLast="sky.setCamera";
         graphics.setCamera(camera,null);
         owner.cameraDirty(); // replaced the world camera on the shared target
-        M3GSceneRenderer.diagLast="sky.render v="+count+" t="+count/3;
         owner.renderNative(g,buffer,indices[slot],appearance);
     }
 

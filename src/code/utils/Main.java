@@ -117,7 +117,6 @@ public final class Main extends MIDlet {
     public static boolean m3gLitFlipWinding = false; // rescue only: CW derived from pack()
     public static boolean m3gLitCullNone = false; // CULL_BACK w/ per-poly winding normalization
     public static int m3gLitSelfTest = 0;
-    public static int m3gDiag = 0; // DIAG ONLY: record the last native submission
     public static int m3gLitMip = 0;      // 1: hw NEAREST_MIPMAP_NEAREST chains, 0: base level
     public static boolean m3gLitNormalViz = false; // debug: paint geometry by its normals
     public static int m3gLitDebug = 0; // 1: unlit white-silhouette probe (geometry isolation)

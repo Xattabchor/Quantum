@@ -192,3 +192,31 @@ short chains by duplicating level 1 (`[2,1,1]`), the same defect at the small en
 Both are fixed: level 2 is built from level 1, and a base too small for a second
 reduction ships a two-level chain instead of a padded one. Every texture in the
 bundle now produces a valid chain.
+
+### The crash on texture filtering
+
+`M3G required: java.lang.IllegalArgumentException`, with no message, on camera
+turns and right after a level load. Both the packed batch, the lit pass and the
+sprite renderer called
+
+```java
+texture.setFiltering(levelFilter, imageFilter);
+```
+
+on **every flush**, for every texture. Both values are legal (208 and 210), and
+both legal per JSR-184. But it was a pure no-op: a cache entry gets its filter
+once, in `createTexture`, and never changes it, and every caller passed exactly
+that same value back - so the call re-asserted state the texture already had,
+hundreds of times a second.
+
+The Nokia m3gcore runtime that J2ME-Loader embeds raises `M3G_INVALID_VALUE` on
+it. Its JNI layer converts that to `IllegalArgumentException` **with an empty
+message** (`errorHandler` -> `SetErrorCode` -> `jsr184Exception`, whose default
+branch is a bare `java/lang/IllegalArgumentException`), which is why the error
+screen could only show the class name. Since the error code is cleared in
+`Lock()` before every call, the exception belongs to the call that raised it, not
+to a stale one.
+
+The call is gone from all three hot paths. Filtering is set where a texture is
+created and nowhere else. Nothing about the look changes: the value being
+re-asserted was always the value already stored.

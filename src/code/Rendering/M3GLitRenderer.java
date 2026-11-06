@@ -839,7 +839,6 @@ public final class M3GLitRenderer {
             bk.nrmA.set(0, bk.verts, bk.nrma);
         }
         if(bk.posScale != scale) {
-            M3GSceneRenderer.diagScale=scale;
             bk.vb.setPositions(bk.posA, scale, null);
             bk.posScale = scale;
         }
@@ -860,8 +859,11 @@ public final class M3GLitRenderer {
         compositing.setAlphaThreshold(threshold);
         compositing.setDepthTestEnable(true);
         bk.tex.setBlending(bk.func);
-        // Samples the nearest mip level for chain textures; BASE_LEVEL otherwise.
-        bk.tex.setFiltering(bk.levelFilter, Texture2D.FILTER_NEAREST);
+        // Filtering is not re-applied here: the shared cache entry already
+        // carries it (FILTER_NEAREST level for a mip chain, FILTER_BASE_LEVEL
+        // otherwise) and never changes it. Re-asserting it per flush buys
+        // nothing and one runtime raises M3G_INVALID_VALUE on it, which becomes
+        // a message-less IllegalArgumentException that kills the frame.
         // Unlit buckets go out with a NULL Material: JSR-184 then disables
         // lighting and uses the vertex colours verbatim (the baked lightmap),
         // instead of computing a colour from Material x lights.
