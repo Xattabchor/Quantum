@@ -71,10 +71,33 @@ public final class M3GLitRenderer {
     private final Transform identity = new Transform();
 
     private final VertexBuffer buffer = new VertexBuffer();
-    private final VertexArray posArray = new VertexArray(4, 3, 2);
-    private final VertexArray uvArray = new VertexArray(4, 2, 2);
-    private final VertexArray colorArray = new VertexArray(4, 4, 1);
-    private final VertexArray normalArray = new VertexArray(4, 3, 1);
+    // Sized for the widest polygon seen so far; recreated when a wider one
+    // arrives. A VertexArray cannot be resized, only replaced.
+    private VertexArray posArray = new VertexArray(8, 3, 2);
+    private VertexArray uvArray = new VertexArray(8, 2, 2);
+    private VertexArray colorArray = new VertexArray(8, 4, 1);
+    private int immediateCapacity = 8;
+
+    /** Make the probe buffers hold at least `count` vertices. */
+    private void reserveImmediate(int count) {
+        if(count <= immediateCapacity) return;
+        int cap = immediateCapacity;
+        while(cap < count) cap *= 2;
+        posArray = new VertexArray(cap, 3, 2);
+        uvArray = new VertexArray(cap, 2, 2);
+        colorArray = new VertexArray(cap, 4, 1);
+        normalArray = new VertexArray(cap, 3, 1);
+        // The VertexBuffer keeps references to the old arrays: re-install.
+        buffer.setNormals(normalArray);
+        buffer.setColors(colorArray);
+        buffer.setTexCoords(0, uvArray, 1.0f / 256, null);
+        posScale = -1f; // positions must be re-attached to the new array
+        immediateCapacity = cap;
+    }
+    // Fixed at 4 corners like the other probe arrays; it has to follow the
+    // polygon width or normalArray.set() overruns and the runtime rejects
+    // the buffer ("byte values too short", 294 bytes for 648 needed).
+    private VertexArray normalArray = new VertexArray(8, 3, 1);
     private final TriangleStripArray triStrip =
             new TriangleStripArray(new int[]{0, 1, 2}, new int[]{3});
     private final TriangleStripArray triStripRev =
@@ -84,10 +107,15 @@ public final class M3GLitRenderer {
     private final TriangleStripArray quadStripRev =
             new TriangleStripArray(new int[]{0, 3, 1, 1, 3, 2}, new int[]{3, 3});
 
-    private final short[] xyz = new short[12];
-    private final short[] uv = new short[8];
-    private final byte[] rgba = new byte[16];
-    private final byte[] nrm = new byte[12];
+    // Immediate-path scratch (white probe). These used to be fixed at four
+    // corners while the VertexArrays below were fixed at four vertices, so any
+    // polygon with more than four vertices wrote past BOTH: the short[] write
+    // threw ArrayIndexOutOfBounds and the native set() threw
+    // "byte values too short" from a runtime that validates it. Both now grow.
+    private short[] xyz = new short[12];
+    private short[] uv = new short[8];
+    private byte[] rgba = new byte[16];
+    private byte[] nrm = new byte[12];
 
     private float posScale = -1f;
     private Texture2D lastTex;
@@ -558,6 +586,16 @@ public final class M3GLitRenderer {
         // and then never reads the normals, so the cross product, the two sqrts
         // and the normalise are pure waste on every world polygon.
         // Normalviz needs the values after the block, unlit skips it entirely.
+        // Every scratch buffer below is indexed by corner count, and the
+        // VertexArrays are fixed-size once created, so grow them to this
+        // polygon BEFORE anything is written. They used to be fixed at four
+        // corners: a wider polygon overran the short[] and then handed the
+        // runtime a too-short vertex array ("byte values too short").
+        reserveImmediate(count);
+        xyz = growS(xyz, count * 3);
+        uv = growS(uv, count * 2);
+        rgba = growB(rgba, count * 4);
+        nrm = growB(nrm, count * 3);
         int bxN = 0, byN = 0, bzN = 126;
         if(at == null && !unlit) {
         long ax = (long) vertices[1].getViewX() - vertices[0].getViewX();
@@ -822,22 +860,25 @@ public final class M3GLitRenderer {
         bk.posA.set(0, bk.verts, bk.xyz);
         bk.uvA.set(0, bk.verts, bk.uva);
         bk.colA.set(0, bk.verts, bk.cola);
+        // The normal source must cover every vertex of the bucket before it is
+        // handed to the runtime, in BOTH branches. Only the unlit branch used to
+        // grow bk.nrma, so a lit bucket wider than the last one passed a short
+        // array and the runtime rejected the whole frame with
+        // "byte values too short" (294 bytes for 648 needed).
+        if(bk.nrma.length < bk.verts * 3) bk.nrma = growB(bk.nrma, bk.verts * 3);
         if(bk.unlit) {
             // Lighting is disabled for these submeshes (null Material), so the
             // normals are never read. The array still has to hold *something*
             // for runtimes that validate it: fill it once, never again.
             if(!bk.nrmPrimed) {
-                int n = bk.verts * 3;
-                while(bk.nrma.length < n) bk.nrma = growB(bk.nrma, n * 2);
+                int n = bk.nrma.length;
                 for(int i = 0; i < n; i += 3) {
                     bk.nrma[i] = 0; bk.nrma[i + 1] = 0; bk.nrma[i + 2] = 126;
                 }
                 bk.nrmPrimed = true;
             }
-            if(bk.nrmA != null) bk.nrmA.set(0, bk.verts, bk.nrma);
-        } else {
-            bk.nrmA.set(0, bk.verts, bk.nrma);
         }
+        bk.nrmA.set(0, bk.verts, bk.nrma);
         if(bk.posScale != scale) {
             bk.vb.setPositions(bk.posA, scale, null);
             bk.posScale = scale;

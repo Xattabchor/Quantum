@@ -220,3 +220,22 @@ to a stale one.
 The call is gone from all three hot paths. Filtering is set where a texture is
 created and nowhere else. Nothing about the look changes: the value being
 re-asserted was always the value already stored.
+
+### Buckets that outgrew their normal array
+
+A level whose lit bucket held more vertices than the previous one took the
+whole frame down with `M3G required: java.lang.IllegalArgumentException: byte
+values too short`. The bucket already grew `xyz`, `uva`, `cola` and the native
+`VertexArray`s on demand - but the normal source, `bk.nrma`, was grown **only**
+in the unlit branch. A lit bucket was handed whatever length the last unlit one
+left behind: 294 bytes for the 648 a 216-vertex bucket needs.
+
+Both branches now grow it before the upload. Two neighbours had the same
+defect and are fixed too: the immediate-path scratch arrays (`xyz`, `uv`,
+`rgba`, `nrm`) were fixed at four corners and the `VertexArray`s behind them at
+four vertices, so any polygon wider than a quad overran both.
+
+This is not resource-dependent: it needs a level in which some bucket grows
+past a previously seen width. It stayed hidden because the decimated Kordos
+world produced the same widths on every run. A resource set with different
+geometry exposes it immediately.

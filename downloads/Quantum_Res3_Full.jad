@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum Res3 FX
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: AE-MODS.RU
+MIDlet-1: Quantum Res3 FX,,code.utils.Main
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_Res3_Full.jar
+MIDlet-Jar-Size: 1792195
