@@ -972,6 +972,68 @@ public final class M3GLitRenderer {
         STAGE = "setFog";
         ap.setFog(bk.fogged ? fog : null);
         STAGE = "render";
-        owner.renderNative(g, bk.vb, strip, ap);
+        // The native core may refuse this submission. Rather than guess which
+        // ingredient it objects to, bisect the differences from the packed path
+        // that draws this same world on this same device, and report the first
+        // form that is still fatal. Each probe is one throwaway render(); a
+        // healthy frame never reaches here, so this costs nothing in normal use.
+        try {
+            owner.renderNative(g, bk.vb, strip, ap);
+        } catch(Throwable t) {
+            Appearance works = diagnose(g, bk, strip, ap);
+            // Nothing we tried helped. Rethrow as an Error so the caller's
+            // catch(Throwable) still sees a failure it can report: a plain
+            // throw of the caught Throwable is not allowed here, because this
+            // method does not declare it.
+            if(works == null) throw new Error();
+            owner.renderNative(g, bk.vb, strip, works);
+        }
     }
+
+    /** Which ingredient makes render() throw, narrowed on the device.
+     *  Returns a short tag for the stats line. */
+    private Appearance diagnose(DirectX7 g, LitBucket bk, TriangleStripArray strip,
+                            Appearance ap) {
+        // Probe A: identical call again. Distinguishes "this buffer is rejected"
+        // from "the first render() after bind() is rejected".
+        try {
+            owner.renderNative(g, bk.vb, strip, ap);
+            DIAG = "rep"; return ap;   // the repeat succeeded: transient
+        } catch(Throwable t) { /* still refused */ }
+        // Probe B: the painter's appearance, rebuilt from scratch - no Material,
+        // polygon mode and compositing re-created. Removes a poisoned shared
+        // Appearance object (the lit pass mutates one across the whole frame).
+        try {
+            Appearance fresh = new Appearance();
+            fresh.setPolygonMode(polygon);
+            fresh.setCompositingMode(compositing);
+            fresh.setFog(bk.fogged ? fog : null);
+            fresh.setTexture(0, bk.tex);
+            owner.renderNative(g, bk.vb, strip, fresh);
+            DIAG = "freshAp"; return fresh;
+        } catch(Throwable t) { /* still refused */ }
+        // Probe C: no texture. The painter always has one, so this only tells us
+        // whether the sampler is implicated at all.
+        try {
+            Appearance noTex = new Appearance();
+            noTex.setPolygonMode(polygon);
+            noTex.setCompositingMode(compositing);
+            owner.renderNative(g, bk.vb, strip, noTex);
+            DIAG = "noTex"; return noTex;
+        } catch(Throwable t) { /* still refused */ }
+        // Probe D: the smallest possible submission from this same buffer - one
+        // triangle, sequential indices. If even that dies, the problem is not
+        // this geometry's size or index layout.
+        try {
+            TriangleStripArray one = new TriangleStripArray(0, new int[]{3});
+            owner.renderNative(g, bk.vb, one, ap);
+            DIAG = "1tri"; return ap;
+        } catch(Throwable t) { /* still refused */ }
+        DIAG = "all-fail"; return null;
+    }
+
+    /** Last diagnose() result, surfaced through statsErr. */
+    public static String DIAG = "";
+    /** A rebuilt Appearance was accepted where the shared one was not. */
+    static boolean freshAppearance;
 }

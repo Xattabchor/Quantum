@@ -53,7 +53,10 @@ public final class DirectX7 {
            final int HUD_CHARS = 30;
            String marker = code.utils.Main.m3gLitWorld9 != 1 ? "LIT-off"
                    : litBrokenFlag() ? "LIT-DEAD" : "LIT";
-           String err = M3GLitRenderer.statsErr;
+           // A probe that rescued the draw names itself: that is the useful
+           // fact, and it is short enough to survive the 30-char trim.
+           String err = M3GLitRenderer.DIAG.length() > 0
+                   ? M3GLitRenderer.DIAG : M3GLitRenderer.statsErr;
            StringBuffer b = new StringBuffer(40);
            b.append(active ? "M3G " : "CPU ").append(marker);
            if(err.length() > 0) {
