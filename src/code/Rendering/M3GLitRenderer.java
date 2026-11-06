@@ -845,6 +845,9 @@ public final class M3GLitRenderer {
     void flushBuckets(DirectX7 g) {
         int n = buckets.size();
         if(n == 0) return;
+        // Cleared per frame so a reported failure always belongs to the frame
+        // that is on screen now, not to one that has since been fixed.
+        DIAG = "";
         // Absolute-time water offset: no drift, one call per frame even with
         // several scroll buckets (river + future water textures).
         float offV = (float) (System.currentTimeMillis() % 4000000L) / 1000f;
@@ -861,7 +864,16 @@ public final class M3GLitRenderer {
                     if(bk.scrollDir == 2) bk.tex.setTranslation(-o, 0f, 0f);
                     else bk.tex.setTranslation(0f, -o, 0f);
                 }
-                flushBucket(g, bk);
+                try {
+                    flushBucket(g, bk);
+                } catch(Throwable t) {
+                    // Name the stage that actually threw, and keep the frame
+                    // alive: the remaining buckets and the rest of the scene
+                    // still draw, and the label reaches the stats line.
+                    String m = t.getMessage();
+                    DIAG = STAGE + (m == null ? "" : " " + m);
+                    continue;
+                }
             }
         }
     }
@@ -890,6 +902,11 @@ public final class M3GLitRenderer {
 
     private void flushBucket(DirectX7 g, LitBucket bk) {
         if(bk.verts == 0) return;
+        // Every native call below is labelled. The trace is only useful if the
+        // label belongs to the call that actually throws: a stage left over
+        // from the previous call - or the previous bucket - reads exactly like
+        // a real one, and has sent this investigation to the wrong place twice.
+        STAGE = "q.start";
         // maxAbs was accumulated at append time: one float op total here.
         float scale = bk.maxAbs / 30000f;
         if(scale < 0.001f) scale = 0.001f;
@@ -902,6 +919,7 @@ public final class M3GLitRenderer {
         if(bk.vb == null || bk.posA.getVertexCount() < bk.verts) {
             int cap = 8; while(cap < bk.verts) cap *= 2;
             VertexBuffer vb = new VertexBuffer();
+            STAGE = "q.alloc";
             bk.posA = new VertexArray(cap, 3, 2);
             bk.uvA = new VertexArray(cap, 2, 2);
             bk.colA = new VertexArray(cap, 4, 1);
@@ -913,15 +931,15 @@ public final class M3GLitRenderer {
             // validating runtime, can reject the whole buffer from render()
             // with a message-less java.lang.Error.
             bk.nrmA = new VertexArray(cap, 3, 1);
-            if(!bk.unlit) vb.setNormals(bk.nrmA);
-            vb.setColors(bk.colA);
-            vb.setTexCoords(0, bk.uvA, 1.0f / 256, null);
+            if(!bk.unlit) { STAGE = "q.setNormals"; vb.setNormals(bk.nrmA); }
+            STAGE = "q.setColors"; vb.setColors(bk.colA);
+            STAGE = "q.setTexCoords"; vb.setTexCoords(0, bk.uvA, 1.0f / 256, null);
             bk.vb = vb;
             bk.posScale = -1f;
         }
-        bk.posA.set(0, bk.verts, bk.xyz);
-        bk.uvA.set(0, bk.verts, bk.uva);
-        bk.colA.set(0, bk.verts, bk.cola);
+        STAGE = "q.arrPos"; bk.posA.set(0, bk.verts, bk.xyz);
+        STAGE = "q.arrUV";  bk.uvA.set(0, bk.verts, bk.uva);
+        STAGE = "q.arrCol"; bk.colA.set(0, bk.verts, bk.cola);
         // Unlit buckets carry no normals stream at all (see the buffer setup):
         // with no Material the runtime must not read one, and the packed path
         // that works on the handset never supplies one either. Only the lit
@@ -929,21 +947,21 @@ public final class M3GLitRenderer {
         if(!bk.unlit) {
             if(bk.nrma.length < bk.verts * 3)
                 bk.nrma = growB(bk.nrma, bk.verts * 3);
-            STAGE = "nrmSet";
+            STAGE = "q.arrNrm";
             bk.nrmA.set(0, bk.verts, bk.nrma);
         }
         if(bk.posScale != scale) {
-            STAGE = "setPos";
+            STAGE = "q.setPos";
             bk.vb.setPositions(bk.posA, scale, null);
             bk.posScale = scale;
         }
         // Fresh strip object per flush: index sequences vary frame to frame.
-        STAGE = "strip";
+        STAGE = "q.strip";
         TriangleStripArray strip = new TriangleStripArray(
                 trim(bk.indices, bk.indexLen), trim(bk.strips, bk.stripCount));
         float threshold = bk.kind == M3GSceneRenderer.ALPHA_TEXTURE ? 0f : 0.5f;
         if(bk.kind == M3GSceneRenderer.OPAQUE_TEXTURE) {
-            STAGE = "comp";
+            STAGE = "q.comp";
             compositing.setBlending(CompositingMode.REPLACE);
             compositing.setDepthWriteEnable(true);
         } else if(bk.kind == M3GSceneRenderer.ADD_TEXTURE) {
@@ -955,7 +973,7 @@ public final class M3GLitRenderer {
         }
         compositing.setAlphaThreshold(threshold);
         compositing.setDepthTestEnable(true);
-        STAGE = "texBlend";
+        STAGE = "q.texBlend";
         bk.tex.setBlending(bk.func);
         // Filtering is not re-applied here: the shared cache entry already
         // carries it (FILTER_NEAREST level for a mip chain, FILTER_BASE_LEVEL
@@ -966,7 +984,7 @@ public final class M3GLitRenderer {
         // lighting and uses the vertex colours verbatim (the baked lightmap),
         // instead of computing a colour from Material x lights.
         Appearance ap = bk.unlit ? bakedAppearance : appearance;
-        STAGE = "setTex";
+        STAGE = "q.setTex";
         ap.setTexture(0, bk.tex);
         // bind(g) copies the entire framebuffer into the surface before drawing.
         // When the sky already covered every pixel with an opaque pass, those
@@ -975,15 +993,14 @@ public final class M3GLitRenderer {
         // here, and all of them copying a frame that the sky had already
         // replaced. bindInPlace still resets the depth buffer, which is what
         // the world actually depends on.
-        STAGE = "bind";
-        if(owner.isSurfaceOpaque()) owner.bindInPlace(g);
-        else owner.bind(g);
-        STAGE = "camera";
+        if(owner.isSurfaceOpaque()) { STAGE = "q.bindInPlace"; owner.bindInPlace(g); }
+        else { STAGE = "q.bind"; owner.bind(g); }
+        STAGE = "q.setCam";
         graphics.setCamera(camera, identity);
         owner.cameraDirty(); // replaced the world camera on the shared target
-        STAGE = "setFog";
+        STAGE = "q.setFog";
         ap.setFog(bk.fogged ? fog : null);
-        STAGE = "render";
+        STAGE = "q.render";
         // The native core may refuse this submission. Rather than guess which
         // ingredient it objects to, bisect the differences from the packed path
         // that draws this same world on this same device, and report the first
