@@ -311,7 +311,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
             litRenderer.beginFrame(g);
         } catch(Throwable t) {
             // Device/runtime rejected the lit pass: degrade to packed, not crash.
-            M3GLitRenderer.statsErr = t.toString();
+            String m = t.getMessage();
+            M3GLitRenderer.statsErr = "@" + M3GLitRenderer.STAGE
+                    + (m == null ? "" : " " + m);
             litRenderer = null;
             litBroken = true;
         }
@@ -559,7 +561,12 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 try {
                     if(litRenderer.draw(g, object, texture, mode, count, vertices, uv)) return true;
                 } catch(Throwable t) {
-                    M3GLitRenderer.statsErr = t.toString();
+                    // A message-less java.lang.Error from the native m3g core
+                    // carries no method name. The stage the pass reached is the
+                    // only way to know which call the device rejected.
+                    String m = t.getMessage();
+                    M3GLitRenderer.statsErr = "@" + M3GLitRenderer.STAGE
+                            + (m == null ? "" : " " + m);
                     litRenderer = null;
                     litBroken = true;
                 }

@@ -288,6 +288,10 @@ public final class M3GLitRenderer {
     public static String lightSig = "";
     public static int statsDynDist;     // live dyn-cull distance (M3G_LIT_DYN=1)
     public static String statsErr = ""; // last fatal lit-pass failure (nullable text)
+    /** Last JSR-184 call the lit pass reached. A message-less java.lang.Error
+     *  from the native core names no method, so the stage is the only way to
+     *  tell setPositions from render() on a handset. */
+    public static String STAGE = "?";
     private int frameLit, frameFail, frameReason;
     private int frameMaterial;      // draws this frame that went out WITH a Material
     private boolean lastFrameHadMaterial = true;
@@ -886,16 +890,20 @@ public final class M3GLitRenderer {
                 bk.nrmPrimed = true;
             }
         }
+        STAGE = "nrmSet";
         bk.nrmA.set(0, bk.verts, bk.nrma);
         if(bk.posScale != scale) {
+            STAGE = "setPos";
             bk.vb.setPositions(bk.posA, scale, null);
             bk.posScale = scale;
         }
         // Fresh strip object per flush: index sequences vary frame to frame.
+        STAGE = "strip";
         TriangleStripArray strip = new TriangleStripArray(
                 trim(bk.indices, bk.indexLen), trim(bk.strips, bk.stripCount));
         float threshold = bk.kind == M3GSceneRenderer.ALPHA_TEXTURE ? 0f : 0.5f;
         if(bk.kind == M3GSceneRenderer.OPAQUE_TEXTURE) {
+            STAGE = "comp";
             compositing.setBlending(CompositingMode.REPLACE);
             compositing.setDepthWriteEnable(true);
         } else if(bk.kind == M3GSceneRenderer.ADD_TEXTURE) {
@@ -907,6 +915,7 @@ public final class M3GLitRenderer {
         }
         compositing.setAlphaThreshold(threshold);
         compositing.setDepthTestEnable(true);
+        STAGE = "texBlend";
         bk.tex.setBlending(bk.func);
         // Filtering is not re-applied here: the shared cache entry already
         // carries it (FILTER_NEAREST level for a mip chain, FILTER_BASE_LEVEL
@@ -917,6 +926,7 @@ public final class M3GLitRenderer {
         // lighting and uses the vertex colours verbatim (the baked lightmap),
         // instead of computing a colour from Material x lights.
         Appearance ap = bk.unlit ? bakedAppearance : appearance;
+        STAGE = "setTex";
         ap.setTexture(0, bk.tex);
         // bind(g) copies the entire framebuffer into the surface before drawing.
         // When the sky already covered every pixel with an opaque pass, those
@@ -925,11 +935,15 @@ public final class M3GLitRenderer {
         // here, and all of them copying a frame that the sky had already
         // replaced. bindInPlace still resets the depth buffer, which is what
         // the world actually depends on.
+        STAGE = "bind";
         if(owner.isSurfaceOpaque()) owner.bindInPlace(g);
         else owner.bind(g);
+        STAGE = "camera";
         graphics.setCamera(camera, identity);
         owner.cameraDirty(); // replaced the world camera on the shared target
+        STAGE = "setFog";
         ap.setFog(bk.fogged ? fog : null);
+        STAGE = "render";
         owner.renderNative(g, bk.vb, strip, ap);
     }
 }
