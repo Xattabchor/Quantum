@@ -250,6 +250,15 @@ public final class M3GSceneRenderer implements SceneRenderer {
                 && (long)w*h<=CACHE_PIXELS && (long)raw.w*raw.h<=raw.img.length;
     }
 
+    /** True once the sky has painted every pixel of this frame with an opaque,
+     *  depth-free pass. Geometry submitted after that cannot be occluded by
+     *  anything that was in the surface before the frame started, so the
+     *  full-surface copy that bind(g,true) does before every native pass is
+     *  copying pixels nothing can see. Reset by every bind. */
+    private boolean surfaceOpaque;
+    void markSurfaceOpaque() {surfaceOpaque = true;}
+    boolean isSurfaceOpaque() {return surfaceOpaque;}
+
     private void flushPolygons(DirectX7 g) {if(batch!=null) batch.flush(g);}
     void flushBatch(DirectX7 g) {
         // M3G_LIT_WORLD9 defers the world into texture buckets that ARE depth
@@ -280,6 +289,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     /** Frame start (native passes): refresh true-3D lit-pass camera/lights. */
     public void beginFrame(DirectX7 g) {
+        surfaceOpaque = false; // a new frame: nothing has covered the surface yet
         for(int i = 0; i < textures.size(); i++)
             ((CachedTexture)textures.elementAt(i)).live = false;
         if(litBroken) {

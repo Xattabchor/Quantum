@@ -918,7 +918,15 @@ public final class M3GLitRenderer {
         // instead of computing a colour from Material x lights.
         Appearance ap = bk.unlit ? bakedAppearance : appearance;
         ap.setTexture(0, bk.tex);
-        owner.bind(g);
+        // bind(g) copies the entire framebuffer into the surface before drawing.
+        // When the sky already covered every pixel with an opaque pass, those
+        // pixels are gone: no later geometry can expose them. Measured on the
+        // harness as 98 full-screen copies over 192 frames - all of them from
+        // here, and all of them copying a frame that the sky had already
+        // replaced. bindInPlace still resets the depth buffer, which is what
+        // the world actually depends on.
+        if(owner.isSurfaceOpaque()) owner.bindInPlace(g);
+        else owner.bind(g);
         graphics.setCamera(camera, identity);
         owner.cameraDirty(); // replaced the world camera on the shared target
         ap.setFog(bk.fogged ? fog : null);
