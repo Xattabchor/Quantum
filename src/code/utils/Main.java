@@ -87,6 +87,11 @@ public final class Main extends MIDlet {
     // True-3D hardware-lit world pass (M3GLitRenderer). 0=off, 1=ambient+
     // directional+weapon omni flash, 2=ambient+directional only. Off keeps
     // every previous build/rasterizer bit-identical.
+    // NOT a menu item and not read from any ini: drawmode 6 on a texture is
+    // the only opt-in, and the omni flash rides along with it (M3GLitRenderer
+    // submits the lamp only on frames that contain a lit polygon). The field
+    // stays so the pass can still be disabled from code, and so the 4-byte
+    // M3GFx RMS record keeps its layout.
     public static int m3gWorldLighting = 1;
     // 1: drawmode 9 joins the sorted, depth-tested world pass instead of painter order.
     public static int m3gLitWorld9 = 0;
@@ -458,7 +463,10 @@ public final class Main extends MIDlet {
         byte[] fx = RmsUtils.openStore("Quantum.M3GFx");
         if(fx != null && fx.length >= 4) {
             // fx[0]/HW light: per-texture drawmode 6 owns the lit pass now;
-            // stale RMS lit bytes must not change that (layout kept).
+            // stale RMS lit bytes must not change that (layout kept). The menu
+            // no longer writes this slot either - drawmode 6 is the only opt-in
+            // and the omni flash follows it, so m3gWorldLighting is never
+            // persisted and can only come from the level ini.
             m3gLitMip = (fx[1] & 0xff) != 0 ? 1 : 0;
             m3gScreenScale = Math.max(25, Math.min(100, fx[2] & 0xff));
             m3gLitNoVertexColors = (fx[3] & 0xff) == 1;

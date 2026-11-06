@@ -94,8 +94,6 @@ public final class Setting extends Selectable {
                 + (Main.isCorpses() ? lang.get("ON") : lang.get("OFF")), false);
         addRow(rows, mids, lang.get("BLOOD") + ":"
                 + (this.main.isBlood() ? lang.get("ON") : lang.get("OFF")), false);
-        addRow(rows, mids, langGetDef(lang, "M3G_OMNI", "Omni flash") + ":"
-                + (Main.m3gWorldLighting == 1 ? lang.get("ON") : lang.get("OFF")), false);
         addRow(rows, mids, lang.get("FRAMESKIP") + ":"
                 + (Main.isFrameskip() ? lang.get("ON") : lang.get("OFF")), false);
 
@@ -248,8 +246,6 @@ public final class Setting extends Selectable {
         id++;
         if(var1 == id) Main.blood = false;
         id++;
-        if(var1 == id) { if(Main.m3gWorldLighting > 0) Main.m3gWorldLighting = 2; }
-        id++;
         if(var1 == id) Main.frameskip = false;
         id++;
         id++;//Hud
@@ -318,8 +314,6 @@ public final class Setting extends Selectable {
         if(var1 == id) Main.corpses = true;
         id++;
         if(var1 == id) Main.blood = true;
-        id++;
-        if(var1 == id) { if(Main.m3gWorldLighting > 0) Main.m3gWorldLighting = 1; }
         id++;
         if(var1 == id) Main.frameskip = true;
         id++;

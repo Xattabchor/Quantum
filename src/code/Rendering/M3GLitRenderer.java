@@ -408,7 +408,15 @@ public final class M3GLitRenderer {
         // combination that leaves the baked colour untouched. Directional, omni
         // and the muzzle pulse stay out; they are lighting, not the lightmap.
         // A live muzzle flash is real lighting and always plays, baked or not.
-        boolean flashWanted = pulse > 0f && Main.m3gWorldLighting == 1;
+        // The omni is the weapon flash of the true-3D pass: it belongs to the
+        // pass, not to a separate switch. A frame where nothing went out with a
+        // Material draws no lit polygons at all (every drawmode-6 poly is either
+        // absent or was degraded to the packed path), so handing the engine a
+        // third lamp there is pure per-vertex cost for nothing. In practice that
+        // makes the lamp automatic for level 6 geometry: it lights exactly the
+        // frames that contain drawmode-6 polys and stays out of every other one.
+        boolean flashWanted = pulse > 0f && Main.m3gWorldLighting == 1
+                && (lastFrameHadMaterial || frameMaterial > 0);
         // M3G_LIT_NO_LIGHTS: submit nothing at all. The material EMISSIVE carries
         // the baked lightmap, so the scene needs no light node - not even the
         // neutral white ambient. Dropping it removes one light submission per

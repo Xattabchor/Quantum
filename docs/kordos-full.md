@@ -126,11 +126,16 @@ store `Quantum.M3GFx` (4 bytes: light mode, hw mip, viewport scale, baked-flag):
 | `M3G_HWLIGHT` → "HW light:OFF/FULL/NO OMNI" | `Main.m3gWorldLighting` | 0 off, 1 full omni flash, 2 without omni |
 | `M3G_HWMIP` → "HW mip:ON/OFF" | `Main.m3gLitMip` | hardware NEAREST_MIPMAP chain for lit textures |
 | `M3G_BAKED` → "Baked light:ON/OFF" | `Main.m3gLitNoVertexColors` (inverted) | ON = vertex lightmap, OFF = pure hardware light |
-| `M3G_OMNI` → "Omni flash:ON/OFF" | `Main.m3gWorldLighting` 1↔2 quick toggle | only when light > 0 |
+| ~~`M3G_OMNI`~~ | *removed from the menu* | The omni is the flash of the true-3D pass and follows drawmode 6, so it needs no switch. Nothing writes `Main.m3gWorldLighting` now: the row was the only writer, and the value was never persisted or read from an ini, so it stayed 1 forever - the row showed ON and OFF on the same picture. |
+| ~~`M3G_HWLIGHT`~~ | *never existed in code* | This table listed a three-state "HW light" row that no build ever had; the RMS slot 0 it claimed to drive was already ignored on load. Kept here so the documentation matches the source. |
 
-Software rows removed from the menu (engine fields remain, no longer
-reachable from settings): DISPLAY_SIZE (legacy screen size), PERSQ, TEXQ,
-FOGQ, MIPMAPPING. CORPSES / BLOOD / FRAMESKIP and the trailing
+Rows removed from the menu (engine fields remain, no longer reachable from
+settings): DISPLAY_SIZE (legacy screen size), PERSQ, TEXQ, FOGQ, MIPMAPPING,
+and M3G_OMNI - the last one because drawmode 6 is the lit-pass opt-in and the
+omni flash is part of that pass, not an independent switch. The lamp is now
+submitted only on frames that actually contain a lit polygon, so it costs
+nothing when the level has no drawmode-6 textures and switches itself on when
+one appears. CORPSES / BLOOD / FRAMESKIP and the trailing
 M3G-only `M3G_PERSPECTIVE` item are unchanged.
 
 ## Lighting: normals hardening + dark ambient
