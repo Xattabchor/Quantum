@@ -185,7 +185,7 @@ final class M3GPolygonBatch {
         composite.setBlending(blend);composite.setAlphaThreshold(threshold);
         if(texture!=null) {
             texture.setBlending(function);if(function==Texture2D.FUNC_BLEND) texture.setBlendColor(blendColor);
-            // DFiltering is NOT re-applied here. A cache entry already carries
+            // Filtering is NOT re-applied here. A cache entry already carries
             // its filter from creation (createTexture sets it once and never
             // changes it), and every caller of this batch passes exactly that
             // same value back, so this call was a no-op that re-asserted the
