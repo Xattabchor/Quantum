@@ -316,6 +316,10 @@ public final class M3GLitRenderer {
 
     public void beginFrame(DirectX7 g) {
         frameId++;
+        // Per-frame stage tracing starts here. See beginBatch(): the label was
+        // previously only maintained by flushBucket, so any failure earlier in
+        // the frame was reported under the previous frame's last stage.
+        STAGE = "begin";
         depthCleared = false;
         flashActive = false;
         // Sweep untouched cache entries every ~10s (deleted polys / level
@@ -369,6 +373,7 @@ public final class M3GLitRenderer {
         }
         float near = Main.m3gLitNear > 0 ? Main.m3gLitNear : Math.max(16, g.distX);
         float far = Main.m3gLitFar;
+        STAGE = "persp";
         camera.setPerspective(g.fovY > 0 ? g.fovY : 60,
                 (float) g.width / (float) g.height, near, far);
         cullMode = Main.m3gLitCullNone ? PolygonMode.CULL_NONE : PolygonMode.CULL_BACK;
@@ -390,6 +395,7 @@ public final class M3GLitRenderer {
         // 1/(kc + kq*d^2): low constant floor (~6.7x peak) so the flash is
         // visible well before fine-tuning, kq gives 50% at half-distance.
         omni.setAttenuation(0.15f, 0f, 0.85f / (half * half));
+        STAGE = "omni";
         omniTransform.setIdentity();
         omniTransform.postTranslate(g.distX * Main.m3gOmniOffsetX / 100f,
                 g.distY * Main.m3gOmniOffsetY / 100f,
@@ -485,6 +491,7 @@ public final class M3GLitRenderer {
             int mode, int count, Vertex[] vertices, int[] uvIn) {
         // Keep exotic fill/fog and framebuffer-blend modes (7=X2, 8/10, 12) on the
         // certified scene-renderer path - the lit pass only composites REPLACE/ALPHA/ADD.
+        STAGE = "draw";
         if(mode == 7 || mode == 8 || mode == 10 || mode == 12) { frameFail++; frameReason = 1; return false; }
         // Mode 9 = baked monochrome lightmap in the vertex colours. Submit it
         // with NO Material so JSR-184 disables lighting and takes the vertex
@@ -592,6 +599,7 @@ public final class M3GLitRenderer {
             xyz[i * 3 + 1] = (short) (int) (y + (y >= 0 ? 0.5f : -0.5f));
             xyz[i * 3 + 2] = (short) (int) (z + (z >= 0 ? 0.5f : -0.5f));
         }
+        STAGE = "arrPos";
         posArray.set(0, count, xyz);
         if(posScale != scale) {
             buffer.setPositions(posArray, scale, null);
@@ -602,7 +610,8 @@ public final class M3GLitRenderer {
         if(Main.m3gLitDebug == 1) {
             // White-silhouette probe: skip normals/colors/uv/lights entirely.
             for(int i = 0; i < count * 4; i++) rgba[i] = (byte) 255;
-            colorArray.set(0, count, rgba);
+            STAGE = "arrCol";
+        colorArray.set(0, count, rgba);
             owner.flushBatch(g);
             owner.bind(g);
             graphics.setCamera(camera, identity);
@@ -677,6 +686,7 @@ public final class M3GLitRenderer {
             nrm[i * 3 + 1] = (byte) byN;
             nrm[i * 3 + 2] = (byte) bzN;
         }
+        STAGE = "arrNrm";
         normalArray.set(0, count, nrm);
         }
         boolean normalViz = Main.m3gLitNormalViz && !unlit;
@@ -693,6 +703,7 @@ public final class M3GLitRenderer {
             uv[i * 2] = (short) u;
             uv[i * 2 + 1] = (short) v;
         }
+        STAGE = "arrUV";
         uvArray.set(0, count, uv);
 
         if(normalViz) {
@@ -708,6 +719,7 @@ public final class M3GLitRenderer {
         } else if(Main.m3gLitNoVertexColors) {
             for(int i = 0; i < count * 4; i++) rgba[i] = (byte) 255;
         } else {
+            STAGE = "setColors";
             owner.setColors(g, object, count, mode);
             System.arraycopy(owner.colors, 0, rgba, 0, count * 4);
         }

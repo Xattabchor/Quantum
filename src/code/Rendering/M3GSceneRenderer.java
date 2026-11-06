@@ -212,12 +212,23 @@ public final class M3GSceneRenderer implements SceneRenderer {
             depthClearBg.setColorClearEnable(false);
             depthClearBg.setDepthClearEnable(true);
         }
+        // Every stage the lit pass reaches is recorded, including the ones that
+        // run before any polygon is drawn. Without these the trace reported the
+        // stage left over from the previous frame - "render" - for a failure
+        // that happened here, in the bind, and the label was a lie.
+        M3GLitRenderer.STAGE = "bind";
         graphics.clear(depthClearBg);
+        M3GLitRenderer.STAGE = "viewport";
         graphics.setViewport(0, 0, surface.getWidth(), surface.getHeight());
+        M3GLitRenderer.STAGE = "bindCam";
         graphics.setCamera(camera, null);
         cameraInstalled = true;
+        M3GLitRenderer.STAGE = "resetLights";
         graphics.resetLights();
-        if(litRenderer != null) litRenderer.applyLights(g);
+        if(litRenderer != null) {
+            M3GLitRenderer.STAGE = "lights";
+            litRenderer.applyLights(g);
+        }
     }
 
     void restoreCamera(DirectX7 g) {
