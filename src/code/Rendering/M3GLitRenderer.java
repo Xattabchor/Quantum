@@ -58,6 +58,7 @@ public final class M3GLitRenderer {
     private final Material material = new Material();
     private final Background depthClear = new Background();
 
+    private final Light neutralAmbient = new Light();
     private final Light ambient = new Light();
     private final Light sun = new Light();
     private final Light omni = new Light();
@@ -260,6 +261,8 @@ public final class M3GLitRenderer {
     // reason: 1=exotic mode, 2=no/null texture or unsupported, 3=no view
     // record, 4=uv out of 16-bit range, 0=none.
     public static int statsLit, statsFail, statsReason;
+    /** Signature of the lights actually handed to the engine this frame. */
+    public static String lightSig = "";
     public static int statsDynDist;     // live dyn-cull distance (M3G_LIT_DYN=1)
     public static String statsErr = ""; // last fatal lit-pass failure (nullable text)
     private int frameLit, frameFail, frameReason;
@@ -370,15 +373,36 @@ public final class M3GLitRenderer {
         // Ambient pulse isolates the muzzle event on hw: global light CANNOT
         // be invisible, so if the ambient flash shows but the omni does not,
         // the device's OMNI implementation (not the code path) is at fault.
-        ambient.setIntensity(Math.min(1f,
-                Main.m3gLitAmbient / 255f + Main.m3gLitAmbPulse / 255f * pulse));
-        graphics.addLight(ambient, identity);
-        if(Main.m3gLitDir > 0) graphics.addLight(sun, sunTransform);
-        if(Main.m3gWorldLighting == 1 && pulse > 0f) {
+        // M3G_LIT_BAKED=1: the world already carries its lightmap in the vertex
+        // colours (setColors replays it for mode 9/13), so the lit material must
+        // not multiply anything else into it. The JSR-184 equation is
+        //   emissive + ambient*materialAmbient + sum(diffuse*materialDiffuse),
+        // so a white AMBIENT light with a fully-open material AMBIENT is the only
+        // combination that leaves the baked colour untouched. Directional, omni
+        // and the muzzle pulse stay out; they are lighting, not the lightmap.
+        // A live muzzle flash is real lighting and always plays, baked or not.
+        boolean flashWanted = pulse > 0f && Main.m3gWorldLighting == 1;
+        boolean baked = Main.m3gLitBaked == 1 && Main.m3gLitWorld9 == 1 && !flashWanted;
+        if(baked) {
+            neutralAmbient.setMode(Light.AMBIENT);
+            neutralAmbient.setColor(0xffffff);
+            neutralAmbient.setIntensity(1f);
+            graphics.addLight(neutralAmbient, identity);
+            lightSig = "neutralAmbient(i=1.0,c=ffffff)";
+        } else {
+            ambient.setIntensity(Math.min(1f,
+                    Main.m3gLitAmbient / 255f + Main.m3gLitAmbPulse / 255f * pulse));
+            graphics.addLight(ambient, identity);
+            if(Main.m3gLitDir > 0) graphics.addLight(sun, sunTransform);
+            lightSig = "ambient(i=" + Math.min(1f, Main.m3gLitAmbient / 255f + Main.m3gLitAmbPulse / 255f * pulse)
+                    + ") sun=" + (Main.m3gLitDir > 0);
+        }
+        if(flashWanted && !baked) {
             flashActive = true; // cache bypass while dynamic light is live
             float flash = Main.m3gOmniBase / 255f + Main.m3gOmniFlash / 255f * pulse;
             omni.setIntensity(flash * 2.2f);
             graphics.addLight(omni, omniTransform);
+            lightSig = lightSig + " +omni";
         }
     }
 

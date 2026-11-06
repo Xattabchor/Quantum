@@ -143,8 +143,29 @@ depth-free path. The probe reports the invariant directly:
 `worldAfterSprites: N violations in M frames that contain both` is 0/5 on
 level41 and 0/2 on level1.
 
-The remaining caveat is lighting only: the lit material adds `M3G_LIT_*` lights
-on top of the baked lightmap, so the shading is not guaranteed identical yet.
+## M3G_LIT_BAKED (lighting parity)
+
+The sorted pass lit with `M3G_LIT_*` lamps on top of the baked lightmap, so the
+image could not match. `M3G_LIT_BAKED=1` removes that difference: with the
+lightmap already in the vertex colours, the only combination that leaves them
+untouched under the JSR-184 equation
+
+    emissive + ambient*materialAmbient + sum(diffuse*materialDiffuse)
+
+is a single white AMBIENT light at full intensity with the material's AMBIENT
+already fully open. Directional, omni and the ambient pulse stay out of the
+recipe. A live muzzle flash is real lighting, so it always plays regardless.
+
+The probe prints the light recipe actually submitted, so this is checked, not
+assumed:
+
+| bundle | lights submitted |
+| --- | --- |
+| before | `ambient(i=0.25) sun=false` |
+| `M3G_LIT_BAKED=1` | `neutralAmbient(i=1.0,c=ffffff)` |
+
+`M3G_LIT_BAKED` only takes effect together with `M3G_LIT_WORLD9`; on the legacy
+painter path the lit renderer is not used for the world at all.
 
 Note where `M3G_LIT_WORLD9` must go: `setting.txt` keys are read from the root
 table, so the line has to sit **before the first `[group]`**. Appending it to

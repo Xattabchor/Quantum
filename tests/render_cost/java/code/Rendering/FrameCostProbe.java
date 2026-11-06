@@ -289,6 +289,7 @@ public final class FrameCostProbe {
         if (settings != null) {
             Main.settings = settings;
             Main.m3gLitWorld9 = settings.getIntNoLang("M3G_LIT_WORLD9", 0);
+            Main.m3gLitBaked = settings.getIntNoLang("M3G_LIT_BAKED", 0);
             Main.m3gLitAmbient = settings.getIntNoLang("M3G_LIT_AMBIENT", 32);
             Main.m3gLitDir = settings.getIntNoLang("M3G_LIT_DIR", 150);
             Main.m3gLitFar = settings.getIntNoLang("M3G_LIT_FAR", 600000);
@@ -379,6 +380,9 @@ public final class FrameCostProbe {
         System.out.println("distinctTexturesInWorstFrame=" + TEXTURES.size());
         System.out.println("drawMix: " + mix);
         System.out.println("worstSplit: world + sprites = " + worstSplit);
+        System.out.println("lights: " + code.Rendering.M3GLitRenderer.lightSig);
+        System.out.println("lightMode: world9=" + Main.m3gLitWorld9 + " baked=" + Main.m3gLitBaked
+                + " ambient=" + Main.m3gLitAmbient + " dir=" + Main.m3gLitDir);
         System.out.println("worldAfterSprites: " + overlapFrames + " violations in " + bothFrames
                 + " frames that have both world and sprites");
         if (System.getProperty("probe.litPos") != null) {

@@ -87,7 +87,11 @@ public final class Main extends MIDlet {
     // True-3D hardware-lit world pass (M3GLitRenderer). 0=off, 1=ambient+
     // directional+weapon omni flash, 2=ambient+directional only. Off keeps
     // every previous build/rasterizer bit-identical.
-    public static int m3gWorldLighting = 1; // engine-side default; per-texture opt-in via drawmode 6
+    public static int m3gWorldLighting = 1;
+    // 1: drawmode 9 joins the sorted, depth-tested world pass instead of painter order.
+    public static int m3gLitWorld9 = 0;
+    // 1: the sorted pass lights nothing; vertex colours are the baked lightmap.
+    public static int m3gLitBaked = 0;
     public static int m3gLitAmbient = 32;     // 0..255 ambient lamp strength (dark by default)
     public static int m3gLitAmbCol = 0xffffff; // ambient lamp RGB (M3G_LIT_AMBCOL=R,G,B)
     public static int m3gLitDirCol = 0xffffff; // directional RGB (M3G_LIT_DIRCOL)
@@ -428,6 +432,8 @@ public final class Main extends MIDlet {
         m3gLitDist = settings.getIntNoLang("M3G_LIT_DIST", 0);
         m3gLitFlat = settings.getIntNoLang("M3G_LIT_FLAT", 0);
         m3gLitDyn = settings.getIntNoLang("M3G_LIT_DYN", 0);
+        m3gLitWorld9 = settings.getIntNoLang("M3G_LIT_WORLD9", 0);
+        m3gLitBaked = settings.getIntNoLang("M3G_LIT_BAKED", 0);
         m3gLitFps = settings.getIntNoLang("M3G_LIT_FPS", 20);
         m3gLitStatic = settings.getIntNoLang("M3G_LIT_STATIC", 0);
         m3gOmniCull = settings.getIntNoLang("M3G_OMNI_CULL", 0);
