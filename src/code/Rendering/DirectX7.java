@@ -44,16 +44,33 @@ public final class DirectX7 {
        peakUploads=Math.max(peakUploads,frameTextureUploads);
        boolean active=isM3GActive();
        if(statsText==null || now>=statsNext || now<statsNext-250 || active!=statsNative) {
-           statsText=(active?"M3G ":"CPU ")+"D:"+peakDraws+" B:"+peakBarriers+" T:"+peakUploads
-                   +" L:"+M3GLitRenderer.statsLit+" F:"+M3GLitRenderer.statsFail
-                   +" r"+M3GLitRenderer.statsReason+" W"+code.utils.Main.m3gWorldLighting
-                   +(code.utils.Main.m3gLitWorld9==1
-                       ?(litBrokenFlag()?" LIT-DEAD":" LIT")+(M3GLitRenderer.statsErr.length()>0?"!":"")
-                       :" LIT-off")
-                   +(M3GLitRenderer.statsDynDist>0?" v"+M3GLitRenderer.statsDynDist:"")
-                   +(M3GLitRenderer.statsErr.length()>0
-                       ?" "+M3GLitRenderer.statsErr.length()+":"+M3GLitRenderer.statsErr.substring(0,Math.min(28,M3GLitRenderer.statsErr.length()))
-                       :"");
+           // THE LINE IS 30 CHARACTERS WIDE. The HUD font is 8 px per glyph on
+           // a 240 px screen and the screen edge clips the rest silently, which
+           // is why the earlier version - marker appended to an already full
+           // line - appeared to print nothing at all. Everything here is ordered
+           // by what a dead lit pass needs first, and every part is trimmed to
+           // the space that is actually left.
+           final int HUD_CHARS = 30;
+           String marker = code.utils.Main.m3gLitWorld9 != 1 ? "LIT-off"
+                   : litBrokenFlag() ? "LIT-DEAD" : "LIT";
+           String err = M3GLitRenderer.statsErr;
+           StringBuffer b = new StringBuffer(40);
+           b.append(active ? "M3G " : "CPU ").append(marker);
+           if(err.length() > 0) {
+               // A failure message is worth more than the counters: it names the
+               // runtime call that threw. Give it the rest of the line.
+               b.append(' ');
+               int room = HUD_CHARS - b.length();
+               b.append(err.length() <= room ? err : err.substring(0, Math.max(0, room)));
+           } else {
+               b.append(" D:").append(peakDraws)
+                .append(" L:").append(M3GLitRenderer.statsLit)
+                .append(" F:").append(M3GLitRenderer.statsFail)
+                .append(" r").append(M3GLitRenderer.statsReason)
+                .append(" W").append(code.utils.Main.m3gWorldLighting);
+           }
+           String line = b.toString();
+           statsText = line.length() <= HUD_CHARS ? line : line.substring(0, HUD_CHARS);
            if(M3GSceneRenderer.profiling()) statsText += " | " + FrameProfile.hudLine();
            if(speedTest != null && speedTest.ranOk) {
                statsText += " | " + speedTest.resultsLine();
