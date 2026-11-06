@@ -40,6 +40,7 @@ public final class FrameCostProbe {
     private static final Set<String> TEXTURES = new LinkedHashSet<String>();
 
     private static int frameWorld, frameSprites, frameOptimal, frameTextures;
+    private static int overlapFrames, bothFrames;
     private static String worstSplit = "";
     private static int totalDraws, totalFrames, totalTriangles, billboardCalls;
     private static int worstDraws, worstTriangles, worstYaw, worstPitch;
@@ -221,6 +222,16 @@ public final class FrameCostProbe {
                     if (d.material == null && d.vertexCount <= 4) sDraws++; else wDraws++;
                 }
                 frameWorld = wDraws; frameSprites = sDraws;
+                // Did any depth-tested world submission land AFTER a sprite?
+                int lastLit = -1, firstSprite = -1;
+                for (int i = history; i < Graphics3D.history.size(); i++) {
+                    Graphics3D.Draw d = Graphics3D.history.elementAt(i);
+                    int k = i - history;
+                    if (d.material != null) lastLit = k;
+                    else if (d.vertexCount <= 4 && firstSprite < 0) firstSprite = k;
+                }
+                if (firstSprite >= 0 && lastLit >= 0) bothFrames++;
+                if (firstSprite >= 0 && lastLit > firstSprite) overlapFrames++;
                 billboards = 0;
                 for (int i = history; i < Graphics3D.history.size(); i++) {
                     Graphics3D.Draw draw = Graphics3D.history.elementAt(i);
@@ -368,6 +379,31 @@ public final class FrameCostProbe {
         System.out.println("distinctTexturesInWorstFrame=" + TEXTURES.size());
         System.out.println("drawMix: " + mix);
         System.out.println("worstSplit: world + sprites = " + worstSplit);
+        System.out.println("worldAfterSprites: " + overlapFrames + " violations in " + bothFrames
+                + " frames that have both world and sprites");
+        if (System.getProperty("probe.litPos") != null) {
+            int n = Graphics3D.history.size();
+            int lastSprite = -1, litAfterSprite = 0, totalLit = 0;
+            for (int i = 0; i < n; i++) {
+                Graphics3D.Draw d = Graphics3D.history.elementAt(i);
+                if (d.material == null && d.vertexCount <= 4) lastSprite = i;
+            }
+            for (int i = 0; i < n; i++) {
+                Graphics3D.Draw d = Graphics3D.history.elementAt(i);
+                if (d.material != null) { totalLit++; if (i > lastSprite) litAfterSprite++; }
+            }
+            System.out.println("litPos: totalLit=" + totalLit + " paintedAfterLastSprite=" + litAfterSprite);
+        }
+        if (System.getProperty("probe.order") != null) {
+            StringBuilder sb = new StringBuilder("drawOrder: ");
+            int n = Graphics3D.history.size();
+            for (int i = Math.max(0, n - 24); i < n; i++) {
+                Graphics3D.Draw d = Graphics3D.history.elementAt(i);
+                sb.append(d.material != null ? "LIT" : (d.vertexCount <= 4 ? "spr" : "PK"))
+                  .append("(").append(d.triangles).append(") ");
+            }
+            System.out.println(sb);
+        }
         house.destroy();
     }
 }

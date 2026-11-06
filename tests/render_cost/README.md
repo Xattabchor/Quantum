@@ -136,12 +136,15 @@ isolation and then together, level1 worst frame:
 
 level41 goes 7/39 -> 2/4 with the flag.
 
-**This bundle is opt-in, not a regression-free upgrade.** `M3G_LIT_WORLD9=1`
-still carries the two caveats above: the sorted world flushes after water, sky
-and sprites (so they lose to terrain regardless of depth), and the lit material
-adds `M3G_LIT_*` lights on top of the baked lightmap. The draw-call win is real
-and measured; the image is not yet guaranteed to match. Both are what the
-pipeline rework is for.
+Pass order is fixed: `flushBatch` now emits the sorted, depth-tested world
+buckets **first**, then the packed batch, then sprites. Before that the world was
+emitted last, so it painted over the water, sky and sprites that stay on the
+depth-free path. The probe reports the invariant directly:
+`worldAfterSprites: N violations in M frames that contain both` is 0/5 on
+level41 and 0/2 on level1.
+
+The remaining caveat is lighting only: the lit material adds `M3G_LIT_*` lights
+on top of the baked lightmap, so the shading is not guaranteed identical yet.
 
 Note where `M3G_LIT_WORLD9` must go: `setting.txt` keys are read from the root
 table, so the line has to sit **before the first `[group]`**. Appending it to

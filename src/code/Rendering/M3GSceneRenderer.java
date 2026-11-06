@@ -240,9 +240,15 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     private void flushPolygons(DirectX7 g) {if(batch!=null) batch.flush(g);}
     void flushBatch(DirectX7 g) {
+        // M3G_LIT_WORLD9 defers the world into texture buckets that ARE depth
+        // tested. Emitting them last painted the world over the water, sky and
+        // sprites, which stay on the depth-free packed path and therefore lose
+        // to terrain regardless of distance. The world is the deepest layer: it
+        // goes down first so everything queued after it composites on top.
+        if(Main.m3gLitWorld9 == 1 && litRenderer != null) litRenderer.flushBuckets(g);
         flushPolygons(g);
         if(spriteRenderer!=null) spriteRenderer.flush(g);
-        if(litRenderer!=null) litRenderer.flushBuckets(g); // deferred lit buckets
+        if(Main.m3gLitWorld9 != 1 && litRenderer != null) litRenderer.flushBuckets(g);
     }
 
     void bindCanvasTarget(javax.microedition.lcdui.Graphics target) {graphics.bindTarget(target,false,0);cameraInstalled=false;}
@@ -262,7 +268,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     /** Frame start (native passes): refresh true-3D lit-pass camera/lights. */
     public void beginFrame(DirectX7 g) {
-        if(Main.m3gWorldLighting == 0 || litBroken) return;
+        if(litBroken) return;
+        if(Main.m3gWorldLighting == 0 && Main.m3gLitWorld9 == 0) return;
         try {
             if(litRenderer == null) litRenderer = new M3GLitRenderer(this, graphics);
             litRenderer.beginFrame(g);
@@ -469,7 +476,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
         // polys enter the true-3D lit pass. When the pass is absent/broken or
         // refuses the poly, mode 6 degrades to a plain textured polygon.
         // A native-side failure disables the pass instead of killing the frame.
-        if(mode == 6) {
+        // M3G_LIT_WORLD9=1 also routes drawmode 9 through the same sorted,
+        // depth-tested pass. Mode 9 keeps its baked lightmap: setColors replays
+        // it for 9 and 13, so only the submission order changes.
+        boolean world9 = mode == 9 && Main.m3gLitWorld9 == 1;
+        if(mode == 6 || world9) {
             if(litRenderer != null) {
                 try {
                     if(litRenderer.draw(g, object, texture, mode, count, vertices, uv)) return true;
