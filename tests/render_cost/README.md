@@ -143,6 +143,33 @@ depth-free path. The probe reports the invariant directly:
 `worldAfterSprites: N violations in M frames that contain both` is 0/5 on
 level41 and 0/2 on level1.
 
+## bind() cost: what actually ate the frame
+
+`bind()` is called once per native submission, not once per frame: 607 bind
+entries per frame with 200 sprites. It did four things on the first bind of each
+transaction - and the expensive one was not the light.
+
+| part | only world | +50 sprites | +200 sprites |
+| --- | --- | --- | --- |
+| `drawRGB(g.display -> surface)` | 0.126 | 4.398 | **12.723** |
+| `bindTarget` | 0.023 | 0.032 | 0.069 |
+| `clear(depth)` | 0.0006 | 0.007 | 0.023 |
+| viewport+camera+resetLights+addLight | 0.037 | 0.057 | 0.133 |
+
+All values ms/frame. Sprites and the packed polygon batch draw *inside* the
+current transaction, so nothing had been composited into the CPU buffer since
+the target was bound: `preserve` had nothing to preserve, yet copied the whole
+240x320 framebuffer from `int[]` into the `Image` on every rebind - 604 copies
+per frame.
+
+`bindInPlace()` binds without that copy. Sprites and the polygon batch use it.
+Copies per frame drop 604 -> 4.2, `drawRGB` cost 12.72 -> 0.51 ms. Draw calls,
+triangles and lighting are unchanged.
+
+Two things this measurement settles: the white ambient light is not a frame cost
+(its whole bind sequence is 0.13 ms at 200 sprites), and the depth clear is not
+either (0.023 ms). The framebuffer copy was.
+
 ## M3G_LIT_NO_LIGHTS (mode 9 without any light)
 
 Mode 9 carries the whole baked lightmap in the vertex colours, so an m3g light

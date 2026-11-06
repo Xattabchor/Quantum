@@ -166,7 +166,15 @@ public final class M3GSceneRenderer implements SceneRenderer {
         batchState.function=value;if(!batchable) texture.setBlending(value);
     }
 
+
     void bind(DirectX7 g) { bind(g,true); }
+
+    /** For passes that draw INSIDE the current native transaction (sprites,
+     *  polygon batch): nothing has been composited into the CPU buffer since the
+     *  target was bound, so there is nothing to preserve. bind(g) would copy the
+     *  whole framebuffer from int[] into the Image first - measured at ~13 ms per
+     *  frame with 200 sprites, because it happens once per bind. */
+    void bindInPlace(DirectX7 g) { bind(g,false); }
 
     // M3G_SCREEN_SCALE: the world pass renders into a smaller viewport
     // surface (area cut), presentation blits centered (no upscale) at finishImage.

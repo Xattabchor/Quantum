@@ -168,7 +168,7 @@ final class M3GSpriteRenderer {
             }
             drawBuffer=batchBuffer;drawIndices=batchIndices[count-1];
         }
-        owner.bind(g);owner.restoreCamera(g);owner.renderNative(g,drawBuffer,drawIndices,appearance);
+        owner.bindInPlace(g);owner.restoreCamera(g);owner.renderNative(g,drawBuffer,drawIndices,appearance);
         image=null;
     }
 }

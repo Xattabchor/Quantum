@@ -220,7 +220,7 @@ final class M3GPolygonBatch {
                 int[] lengths=new int[triangles];for(int i=0;i<triangles;i++) lengths[i]=3;
                 indexCache[triangles-1]=new TriangleStripArray(0,lengths);
             }
-            owner.bind(g);owner.restoreCamera(g);
+            owner.bindInPlace(g);owner.restoreCamera(g);
             owner.renderNative(g,buffer,indexCache[triangles-1],appearance);
         }
         texture=null;polygon=null;firstOrder=null;firstIndices=null;
