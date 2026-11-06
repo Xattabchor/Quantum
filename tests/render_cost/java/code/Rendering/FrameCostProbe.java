@@ -45,7 +45,7 @@ public final class FrameCostProbe {
     private static int overlapFrames, bothFrames;
     private static String worstSplit = "";
     private static int totalDraws, totalFrames, totalTriangles, billboardCalls;
-    private static int worstDraws, worstTriangles, worstYaw, worstPitch;
+    private static int worstDraws, worstTriangles, worstYaw, worstPitch, worstBarriers;
     private static int queuedObjects;
 
     private static Sprite[] sprites;
@@ -209,7 +209,7 @@ public final class FrameCostProbe {
 
     private static void sample(House house, Skybox sky, int[] position, int yaw, int pitch, int fogDist,
             int levelDist, byte drawmode) {
-        int draws = 0, triangles = 0, billboards = 0;
+        int draws = 0, triangles = 0, billboards = 0, barriers = 0;
         // One renderer for the whole sample: in the game the M3G renderer and its
         // texture cache live across frames, so per-frame uploads must be measured
         // with the cache warm, not rebuilt by a fresh DirectX7 every frame.
@@ -227,6 +227,7 @@ public final class FrameCostProbe {
         g.setCamera(camera);
         for (int frame = 0; frame < 3; frame++) {
             g.beginFrameStats();
+            int barriersBefore = g.getM3GCpuBarriers();
             DirectX7.setFogDist(fogDist);
             int history = Graphics3D.history.size();
             beyondFar = countBeyondFar(house, 40000);
@@ -299,6 +300,7 @@ public final class FrameCostProbe {
             worstSplit = " (world=" + frameWorld + " sprites=" + frameSprites
                     + " | texture-sorted world would be " + frameOptimal + " calls over " + frameTextures + " textures)";
             worstDraws = draws;
+            worstBarriers = Math.max(worstBarriers, barriers);
             worstTriangles = triangles;
             worstYaw = yaw;
             worstPitch = pitch;
@@ -334,6 +336,7 @@ public final class FrameCostProbe {
             Main.settings = settings;
             Main.m3gLitWorld9 = settings.getIntNoLang("M3G_LIT_WORLD9", 0);
             Main.m3gLitBaked = settings.getIntNoLang("M3G_LIT_BAKED", 0);
+            Main.m3gLazyReadback = settings.getIntNoLang("M3G_LAZY_READBACK", 0) == 1 ? 1 : 0;
             Main.m3gLitAmbient = settings.getIntNoLang("M3G_LIT_AMBIENT", 32);
             Main.m3gLitDir = settings.getIntNoLang("M3G_LIT_DIR", 150);
             Main.m3gLitFar = settings.getIntNoLang("M3G_LIT_FAR", 600000);
@@ -440,6 +443,8 @@ public final class FrameCostProbe {
         System.out.println("distinctTexturesInWorstFrame=" + TEXTURES.size());
         System.out.println("drawMix: " + mix);
         System.out.println("worstSplit: world + sprites = " + worstSplit);
+        System.out.println("cpuBarriers: worst=" + worstBarriers
+                + " lazyReadback=" + Main.m3gLazyReadback);
         System.out.println("lights: " + code.Rendering.M3GLitRenderer.lightSig
                 + " cull=" + (Main.m3gLitCullNone ? "NONE" : "BACK"));
         System.out.println("litRejects: " + code.Rendering.M3GLitRenderer.statsFail);

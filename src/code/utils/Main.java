@@ -92,6 +92,10 @@ public final class Main extends MIDlet {
     public static int m3gLitWorld9 = 0;
     // 1: the sorted pass lights nothing; vertex colours are the baked lightmap.
     public static int m3gLitBaked = 0;
+    // 1: do not pull the finished frame back into int[] every frame. The image
+    // stays pending and is read only when CPU pixels are actually asked for
+    // (getDisplay: pause snapshot, dev overlays). Full-screen presentation only.
+    public static int m3gLazyReadback = 0;
     public static int m3gLitAmbient = 32;     // 0..255 ambient lamp strength (dark by default)
     public static int m3gLitAmbCol = 0xffffff; // ambient lamp RGB (M3G_LIT_AMBCOL=R,G,B)
     public static int m3gLitDirCol = 0xffffff; // directional RGB (M3G_LIT_DIRCOL)
@@ -434,6 +438,7 @@ public final class Main extends MIDlet {
         m3gLitDyn = settings.getIntNoLang("M3G_LIT_DYN", 0);
         m3gLitWorld9 = settings.getIntNoLang("M3G_LIT_WORLD9", 0);
         m3gLitBaked = settings.getIntNoLang("M3G_LIT_BAKED", 0);
+        m3gLazyReadback = settings.getIntNoLang("M3G_LAZY_READBACK", 0) == 1 ? 1 : 0;
         m3gLitFps = settings.getIntNoLang("M3G_LIT_FPS", 20);
         m3gLitStatic = settings.getIntNoLang("M3G_LIT_STATIC", 0);
         m3gOmniCull = settings.getIntNoLang("M3G_OMNI_CULL", 0);

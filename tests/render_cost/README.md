@@ -143,6 +143,24 @@ depth-free path. The probe reports the invariant directly:
 `worldAfterSprites: N violations in M frames that contain both` is 0/5 on
 level41 and 0/2 on level1.
 
+## M3G_LAZY_READBACK (framebuffer readback)
+
+`finishImage()` copied the finished frame into `int[] display` on every frame
+(`surface.getRGB(...)`, width*height*4 bytes) even though nothing in the hot
+path reads those pixels. `M3G_LAZY_READBACK=1` skips that copy:
+
+* full-screen presentation (`M3G_SCREEN_SCALE=100`) draws the `Image` straight
+  through `Graphics.drawImage`, so the CPU never touches the pixels;
+* `getDisplay()` still forces the copy, because it is the only caller that
+  actually wants CPU pixels (pause-screen snapshot, developer overlays);
+* `M3G_SCREEN_SCALE<100` is unaffected - that path builds its centered
+  presentation from its own readback and fills `display` itself.
+
+Default is 0 (old behaviour). The desktop harness cannot show the gain: its
+`renderGameFrameImage` path is already lazy, and on x86 a 300 KB copy measures
+0.012 ms. On ARM the same copy is a memory-bandwidth-bound stall on the driver,
+so this must be judged by FPS on the handset, not here.
+
 ## CHUNK_SIZE is not a free win on this level
 
 `Room.render` draws only the 3x3 block of chunks around the camera, so a chunk

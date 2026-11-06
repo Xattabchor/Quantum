@@ -336,8 +336,15 @@ public final class M3GSceneRenderer implements SceneRenderer {
         finally { bound = false; cameraInstalled = false; }
         int scale=targetScale();
         if(scale >= 100) {
-            // keep g.display in sync for direct display readers (pause snapshot, etc.)
-            surface.getRGB(g.display, 0, g.width, 0, 0, g.width, g.height);
+            // M3G_LAZY_READBACK: pulling the frame into int[] costs a full
+            // framebuffer copy per frame (width*height*4 bytes) and forces the
+            // driver to drain before CPU code may touch the result. The finished
+            // Image is drawn directly by DirectX7.flushFrame, so the copy is
+            // only needed when CPU pixels are actually read (getDisplay:
+            // pause snapshot, developer overlays). Default off = old behaviour.
+            if(Main.m3gLazyReadback != 1) {
+                surface.getRGB(g.display, 0, g.width, 0, 0, g.width, g.height);
+            }
             return surface;
         }
         int sw=surface.getWidth(), sh=surface.getHeight();
