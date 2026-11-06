@@ -320,8 +320,29 @@ public final class M3GSceneRenderer implements SceneRenderer {
         graphics.clear(flashBackground);
     }
 
+    /** DIAG (temporary): what the last native call was, so the runtime's
+     *  blank IllegalArgumentException can name its own call site. Always
+     *  recorded - the cost is a few field writes next to a native draw. */
+    public static String diagLast = "none";
+    static float diagScale = -1f;
     void renderNative(DirectX7 g,VertexBuffer vertices,TriangleStripArray indices,Appearance material) {
         g.frameDrawCalls++; // API attempts, including a call that throws.
+        int vc = vertices == null ? -1 : vertices.getVertexCount();
+        int ic = indices == null ? -1 : indices.getIndexCount();
+        int maxIdx = -1;
+        if(indices != null) {
+            int[] tmp = new int[ic];
+            indices.getIndices(tmp);
+            for(int i = 0; i < ic; i++) if(tmp[i] > maxIdx) maxIdx = tmp[i];
+        }
+        int cull = -1;
+        try {
+            if(material != null && material.getPolygonMode() != null)
+                cull = material.getPolygonMode().getCulling();
+        } catch(RuntimeException ignored) { }
+        diagLast = "render vc=" + vc + " ic=" + ic + " maxIdx=" + maxIdx
+                + " scale=" + diagScale + " cull=" + cull
+                + " tex=" + (material != null && material.getTexture(0) != null);
         graphics.render(vertices,indices,material,null);
     }
 
@@ -733,6 +754,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     }
 
     private void setPositionScale(int slot,float scale) {
+        diagScale = scale;
         if(positionScales[slot]!=scale) {
             buffers[slot].setPositions(posArrays[slot],scale,null);
             positionScales[slot]=scale;

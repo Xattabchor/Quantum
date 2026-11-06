@@ -215,6 +215,7 @@ final class M3GPolygonBatch {
             // Native Fog still requires an EXACT common eye-space scale. Fog
             // packing now shares a binary depth lattice when representable.
             float positionScale=fogged?scale:1.0f;
+            M3GSceneRenderer.diagScale=positionScale;
             if(!scaleReady || appliedScale!=positionScale) {
                 buffer.setPositions(positions,positionScale,null);
                 appliedScale=positionScale;scaleReady=true;

@@ -243,6 +243,14 @@ this.buffer.resetTex();
    }
 
    private IllegalStateException requiredFailure(String message) {
+       // DIAG (temporary): when the runtime throws an exception with no text,
+       // the only way to find the offending call is to name the last native
+       // submission ourselves. Cheap: only runs on the failure path.
+       try {
+           if(message != null && message.indexOf("IllegalArgumentException") >= 0
+                   && message.indexOf("render ") < 0)
+               message = message + " [" + M3GSceneRenderer.diagLast + "]";
+       } catch(Throwable ignored) { }
        if(!rendererFailed || rendererError==null) rendererError=message;
        rendererFailed=true;
        // A partially submitted image must never be shown or read back as a frame.

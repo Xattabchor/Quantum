@@ -839,6 +839,7 @@ public final class M3GLitRenderer {
             bk.nrmA.set(0, bk.verts, bk.nrma);
         }
         if(bk.posScale != scale) {
+            M3GSceneRenderer.diagScale=scale;
             bk.vb.setPositions(bk.posA, scale, null);
             bk.posScale = scale;
         }
