@@ -129,6 +129,15 @@ public final class M3GLitRenderer {
     // first, then the blended ones; depth buffer resolves interleavings.
     private final Vector buckets = new Vector();
 
+    /** Vertices per render() call. Same ceiling the packed world path uses
+     *  (M3GPolygonBatch.MAX_VERTICES), chosen there as the point where extra
+     *  capacity stops paying. It is also a hard limit on some runtimes: a
+     *  handset that accepts every vertex array can still reject the whole
+     *  buffer with a message-less java.lang.Error from render() when the batch
+     *  is simply too large. A world bucket can hold thousands of vertices, so
+     *  it is submitted in slices of this size. */
+    private static final int MAX_BATCH_VERTICES = 384;
+
     private static final class LitBucket {
         Texture2D tex; int kind; int func; boolean fogged;
         boolean unlit;   // baked mode 9: null Material, lighting off
@@ -735,11 +744,21 @@ public final class M3GLitRenderer {
         // Deferred batching: append into the (tex, kind, func) bucket; the
         // whole frame is emitted by flushBuckets() at the end of the native
         // transaction. Winding no longer matters (CULL_NONE).
+        // A bucket is capped at MAX_BATCH_VERTICES. Without the cap a whole
+        // world submesh lands in one render() call - thousands of vertices and
+        // well over a thousand strips - and a handset that accepts each vertex
+        // array separately can still reject that buffer outright with a
+        // message-less java.lang.Error (error 136 on an E65). The packed world
+        // path submits the same geometry 384 vertices at a time and works on
+        // that device; this pass now uses the same ceiling. Filling the current
+        // bucket only while the polygon still fits keeps the draw count close
+        // to the cap's worth of calls instead of one call per polygon.
         LitBucket bk = null;
         for(int i = 0; i < buckets.size(); i++) {
             LitBucket c = (LitBucket) buckets.elementAt(i);
             if(c.tex == tex && c.kind == kind && c.func == func && c.fogged == foggy
-                    && c.unlit == unlit && c.levelFilter == level) { bk = c; break; }
+                    && c.unlit == unlit && c.levelFilter == level
+                    && c.verts + count <= MAX_BATCH_VERTICES) { bk = c; break; }
         }
         if(bk == null) {
             bk = new LitBucket();
