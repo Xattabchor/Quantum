@@ -18,6 +18,8 @@ public class Graphics3D {
         public int fogColor, fogMode;
         public boolean fog;
         public Material material;
+        /** Depth-tested world submission: the lit/sorted pass, Material or not. */
+        public boolean depthTest;
         public Transform transform;
         public short[] positions;
         public byte[] colors;
@@ -120,7 +122,8 @@ public class Graphics3D {
             d.polygon = appearance.getPolygonMode();
             d.perspective = d.polygon == null || d.polygon.perspective;
             CompositingMode composite = appearance.getCompositingMode();
-            if (composite != null) { d.blend = composite.getBlending(); d.threshold = (int) composite.getAlphaThreshold(); }
+            if (composite != null) { d.blend = composite.getBlending(); d.threshold = (int) composite.getAlphaThreshold();
+                d.depthTest = composite.isDepthTestEnabled(); }
             Fog fog = appearance.getFog();
             if (fog != null) {
                 d.fog = true; d.fogColor = fog.getColor(); d.fogMode = fog.getMode();

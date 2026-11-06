@@ -53,6 +53,10 @@ public final class M3GLitRenderer {
 
     private final Camera camera = new Camera();
     private final Appearance appearance = new Appearance();
+    /** Baked mode 9: same as {@link #appearance} but with a NULL Material, so
+     * JSR-184 disables lighting and the vertex colours (the baked lightmap) are
+     * used verbatim instead of being recomputed from a material. */
+    private final Appearance bakedAppearance = new Appearance();
     private final CompositingMode compositing = new CompositingMode();
     private final PolygonMode polygon = new PolygonMode();
     private final Material material = new Material();
@@ -113,6 +117,7 @@ public final class M3GLitRenderer {
 
     private static final class LitBucket {
         Texture2D tex; int kind; int func; boolean fogged;
+        boolean unlit;   // baked mode 9: null Material, lighting off
         int scrollDir; float scrollSpeed; // water UV-scroll (0 = static tex)
         int verts, indexLen, stripCount, maxAbs = 1;
         int[] iv = new int[0];
@@ -125,6 +130,7 @@ public final class M3GLitRenderer {
         VertexArray posA, uvA, colA, nrmA;
         short[] xyz = new short[0];
         float posScale = -1f;
+        boolean nrmPrimed; // unlit bucket: normals uploaded once, never again
     }
 
     private static int[] grow(int[] a, int n) {
@@ -231,6 +237,20 @@ public final class M3GLitRenderer {
         appearance.setPolygonMode(polygon);
         appearance.setMaterial(material);
         appearance.setCompositingMode(compositing);
+        // Baked mode 9: NO Material at all. Per JSR-184 "lighting is disabled
+        // for a submesh if it has a null Material, and enabled otherwise. If
+        // lighting is disabled, the final vertex colour is taken from the
+        // associated VertexBuffer as such." That is exactly the baked lightmap.
+        //
+        // With a Material present, lighting is on and the colour is COMPUTED
+        // from the material and the lights instead. Vertex colour tracking is
+        // the only hook that feeds the buffer colours back into that equation,
+        // it is off by default in the API and this code never enabled it - so
+        // every vertex came out as the material's ambient term: flat white
+        // world, and a full per-vertex lighting equation per frame on top.
+        bakedAppearance.setPolygonMode(polygon);
+        bakedAppearance.setCompositingMode(compositing);
+        // deliberately no setMaterial(): a null Material disables lighting
         compositing.setAlphaThreshold(0);
 
         depthClear.setColorClearEnable(false);
@@ -284,6 +304,8 @@ public final class M3GLitRenderer {
     public static int statsDynDist;     // live dyn-cull distance (M3G_LIT_DYN=1)
     public static String statsErr = ""; // last fatal lit-pass failure (nullable text)
     private int frameLit, frameFail, frameReason;
+    private int frameMaterial;      // draws this frame that went out WITH a Material
+    private boolean lastFrameHadMaterial = true;
 
     public static void resetLitStats() {
         statsLit = 0; statsFail = 0; statsReason = 0;
@@ -304,6 +326,8 @@ public final class M3GLitRenderer {
         }
         if(frameLit > statsLit) statsLit = frameLit;
         if(frameFail > statsFail) { statsFail = frameFail; statsReason = frameReason; }
+        lastFrameHadMaterial = frameMaterial > 0;
+        frameMaterial = 0;
         frameLit = 0; frameFail = 0; frameReason = 0;
         for(int i = 0; i < buckets.size(); i++) {
             LitBucket bk = (LitBucket) buckets.elementAt(i);
@@ -408,6 +432,15 @@ public final class M3GLitRenderer {
             lightSig = "none(emissive)";
             return;
         }
+        // Mode 9 submissions carry a null Material, and JSR-184 only consults
+        // the lights when a Material is present - so when a frame draws nothing
+        // but baked mode 9 there is no reason to hand over a single light.
+        // Mode 6 polys still go out WITH a Material and do need them, hence the
+        // previous-frame test rather than an unconditional skip.
+        if(Main.m3gLitWorld9 == 1 && !lastFrameHadMaterial) {
+            lightSig = "none(mode9 has null Material)";
+            return;
+        }
         boolean baked = Main.m3gLitBaked == 1 && Main.m3gLitWorld9 == 1 && !flashWanted;
         if(baked) {
             neutralAmbient.setMode(Light.AMBIENT);
@@ -442,6 +475,13 @@ public final class M3GLitRenderer {
         // Keep exotic fill/fog and framebuffer-blend modes (7=X2, 8/10, 12) on the
         // certified scene-renderer path - the lit pass only composites REPLACE/ALPHA/ADD.
         if(mode == 7 || mode == 8 || mode == 10 || mode == 12) { frameFail++; frameReason = 1; return false; }
+        // Mode 9 = baked monochrome lightmap in the vertex colours. Submit it
+        // with NO Material so JSR-184 disables lighting and takes the vertex
+        // colour as-is; any Material turns the colour into a computed value and
+        // throws the lightmap away. M3G_LIT_NOVCOL is the opposite probe: it
+        // blanks the colours and asks the material+lights to shade instead.
+        boolean unlit = mode == 9 && !Main.m3gLitNoVertexColors
+                && Main.m3gLitNoLights == 0;
         RawImage raw = texture.rImg;
         // Water UV-scroll: pin the base frame (or the sole static texture) and
         // scroll its UV transform natively — one resident texture.
@@ -557,7 +597,12 @@ public final class M3GLitRenderer {
         // Flats: cross((b-a),(c-a)) in view space, auto-oriented toward the eye,
         // replicated for every corner (smooth shading interpolates to flat).
         // Skipped entirely on static-cache hits — nrm/uv/rgba come from Attr.
-        if(at == null) {
+        // Also skipped in baked mode: with no Material JSR-184 disables lighting
+        // and then never reads the normals, so the cross product, the two sqrts
+        // and the normalise are pure waste on every world polygon.
+        // Normalviz needs the values after the block, unlit skips it entirely.
+        int bxN = 0, byN = 0, bzN = 126;
+        if(at == null && !unlit) {
         long ax = (long) vertices[1].getViewX() - vertices[0].getViewX();
         long ay = (long) vertices[1].getViewY() - vertices[0].getViewY();
         long az = (long) vertices[1].getViewDepth() - vertices[0].getViewDepth();
@@ -586,7 +631,6 @@ public final class M3GLitRenderer {
                 pz = vertices[0].getViewDepth();
         if(nx * px + ny * py + nz * pz > 0) { nx = -nx; ny = -ny; nz = -nz; }
         double len = Math.sqrt((double) (nx * nx + ny * ny + nz * nz));
-        int bxN, byN, bzN;
         if(len > 0) {
             bxN = (int) (nx * 126.0 / len);
             byN = (int) (ny * 126.0 / len);
@@ -606,7 +650,8 @@ public final class M3GLitRenderer {
             nrm[i * 3 + 2] = (byte) bzN;
         }
         normalArray.set(0, count, nrm);
-        boolean normalViz = Main.m3gLitNormalViz;
+        }
+        boolean normalViz = Main.m3gLitNormalViz && !unlit;
 
         RawImage base = texture.mip != null && texture.mip.length > 0
                 && Main.m3gLitMip == 0 ? texture.mip[0] : raw;
@@ -639,7 +684,6 @@ public final class M3GLitRenderer {
             System.arraycopy(owner.colors, 0, rgba, 0, count * 4);
         }
         colorArray.set(0, count, rgba);
-        }
 
         int kind, func; Texture2D tex; boolean foggy;
         short[] uvs; byte[] cols, nrms;
@@ -687,11 +731,13 @@ public final class M3GLitRenderer {
         LitBucket bk = null;
         for(int i = 0; i < buckets.size(); i++) {
             LitBucket c = (LitBucket) buckets.elementAt(i);
-            if(c.tex == tex && c.kind == kind && c.func == func && c.fogged == foggy) { bk = c; break; }
+            if(c.tex == tex && c.kind == kind && c.func == func && c.fogged == foggy
+                    && c.unlit == unlit) { bk = c; break; }
         }
         if(bk == null) {
             bk = new LitBucket();
             bk.tex = tex; bk.kind = kind; bk.func = func; bk.fogged = foggy;
+            bk.unlit = unlit;
             bk.scrollDir = texture.uvScroll; bk.scrollSpeed = texture.uvScrollSpeed;
             buckets.addElement(bk);
         }
@@ -699,7 +745,7 @@ public final class M3GLitRenderer {
         bk.iv = grow(bk.iv, (vbase + count) * 3);
         bk.uva = growS(bk.uva, (vbase + count) * 2);
         bk.cola = growB(bk.cola, (vbase + count) * 4);
-        bk.nrma = growB(bk.nrma, (vbase + count) * 3);
+        if(!unlit) bk.nrma = growB(bk.nrma, (vbase + count) * 3);
         int mxq = bk.maxAbs;
         for(int i = 0; i < count; i++) {
             Vertex v = vertices[i];
@@ -716,8 +762,9 @@ public final class M3GLitRenderer {
         // Bulk copies instead of per-field stores — nothing else to compute here.
         System.arraycopy(uvs, 0, bk.uva, vbase * 2, count * 2);
         System.arraycopy(cols, 0, bk.cola, vbase * 4, count * 4);
-        System.arraycopy(nrms, 0, bk.nrma, vbase * 3, count * 3);
+        if(!unlit) System.arraycopy(nrms, 0, bk.nrma, vbase * 3, count * 3);
         bk.verts += count;
+        if(!unlit) frameMaterial++;
         if(count == 3) {
             bk.indices = grow(bk.indices, bk.indexLen + 3);
             bk.indices[bk.indexLen++] = vbase;
@@ -816,7 +863,22 @@ public final class M3GLitRenderer {
         bk.posA.set(0, bk.verts, bk.xyz);
         bk.uvA.set(0, bk.verts, bk.uva);
         bk.colA.set(0, bk.verts, bk.cola);
-        bk.nrmA.set(0, bk.verts, bk.nrma);
+        if(bk.unlit) {
+            // Lighting is disabled for these submeshes (null Material), so the
+            // normals are never read. The array still has to hold *something*
+            // for runtimes that validate it: fill it once, never again.
+            if(!bk.nrmPrimed) {
+                int n = bk.verts * 3;
+                while(bk.nrma.length < n) bk.nrma = growB(bk.nrma, n * 2);
+                for(int i = 0; i < n; i += 3) {
+                    bk.nrma[i] = 0; bk.nrma[i + 1] = 0; bk.nrma[i + 2] = 126;
+                }
+                bk.nrmPrimed = true;
+            }
+            if(bk.nrmA != null) bk.nrmA.set(0, bk.verts, bk.nrma);
+        } else {
+            bk.nrmA.set(0, bk.verts, bk.nrma);
+        }
         if(bk.posScale != scale) {
             bk.vb.setPositions(bk.posA, scale, null);
             bk.posScale = scale;
@@ -838,11 +900,15 @@ public final class M3GLitRenderer {
         compositing.setAlphaThreshold(threshold);
         compositing.setDepthTestEnable(true);
         bk.tex.setBlending(bk.func);
-        appearance.setTexture(0, bk.tex);
+        // Unlit buckets go out with a NULL Material: JSR-184 then disables
+        // lighting and uses the vertex colours verbatim (the baked lightmap),
+        // instead of computing a colour from Material x lights.
+        Appearance ap = bk.unlit ? bakedAppearance : appearance;
+        ap.setTexture(0, bk.tex);
         owner.bind(g);
         graphics.setCamera(camera, identity);
         owner.cameraDirty(); // replaced the world camera on the shared target
-        appearance.setFog(bk.fogged ? fog : null);
-        owner.renderNative(g, bk.vb, strip, appearance);
+        ap.setFog(bk.fogged ? fog : null);
+        owner.renderNative(g, bk.vb, strip, ap);
     }
 }

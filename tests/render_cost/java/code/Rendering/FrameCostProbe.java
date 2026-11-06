@@ -45,6 +45,7 @@ public final class FrameCostProbe {
     private static int overlapFrames, bothFrames;
     private static String worstSplit = "";
     private static int totalDraws, totalFrames, totalTriangles, billboardCalls;
+    private static long vcolSum; private static int vcolN, vcolNonWhite;
     private static int worstDraws, worstTriangles, worstYaw, worstPitch, worstBarriers;
     private static int queuedObjects;
 
@@ -250,7 +251,7 @@ public final class FrameCostProbe {
                 java.util.HashMap<Object,int[]> byTex = new java.util.HashMap<Object,int[]>();
                 for (int i = history; i < Graphics3D.history.size(); i++) {
                     Graphics3D.Draw d = Graphics3D.history.elementAt(i);
-                    if (d.material == null && d.vertexCount <= 4) continue;
+                    if (!worldOf(d)) continue;
                     int[] v = byTex.get(d.texture);
                     if (v == null) { v = new int[1]; byTex.put(d.texture, v); }
                     v[0] += d.triangles;
@@ -264,7 +265,7 @@ public final class FrameCostProbe {
                 int wDraws = 0, sDraws = 0;
                 for (int i = history; i < Graphics3D.history.size(); i++) {
                     Graphics3D.Draw d = Graphics3D.history.elementAt(i);
-                    if (d.material == null && d.vertexCount <= 4) sDraws++; else wDraws++;
+                    if (worldOf(d)) wDraws++; else if (d.vertexCount <= 4) sDraws++;
                 }
                 frameWorld = wDraws; frameSprites = sDraws;
                 // Did any depth-tested world submission land AFTER a sprite?
@@ -272,7 +273,7 @@ public final class FrameCostProbe {
                 for (int i = history; i < Graphics3D.history.size(); i++) {
                     Graphics3D.Draw d = Graphics3D.history.elementAt(i);
                     int k = i - history;
-                    if (d.material != null) lastLit = k;
+                    if (worldOf(d)) lastLit = k;
                     else if (d.vertexCount <= 4 && firstSprite < 0) firstSprite = k;
                 }
                 if (firstSprite >= 0 && lastLit >= 0) bothFrames++;
@@ -281,12 +282,21 @@ public final class FrameCostProbe {
                 for (int i = history; i < Graphics3D.history.size(); i++) {
                     Graphics3D.Draw draw = Graphics3D.history.elementAt(i);
                     triangles += draw.triangles;
-                    boolean billboard = draw.material == null && draw.vertexCount <= 4;
+                    if (worldOf(draw) && draw.colors != null) {
+                        for (int c = 0; c + 3 < draw.colors.length; c += 4) {
+                            vcolSum += draw.colors[c] & 255;
+                            vcolSum += (draw.colors[c + 1] & 255) * 3;
+                            vcolSum += (draw.colors[c + 2] & 255) * 7;
+                            vcolN++;
+                            if ((draw.colors[c] & 255) != 255) vcolNonWhite++;
+                        }
+                    }
+                    boolean billboard = !worldOf(draw) && draw.vertexCount <= 4;
                     if (billboard) billboards++;
 
                     TEXTURES.add(draw.texture == null ? "none"
                             : Integer.toString(System.identityHashCode(draw.texture)));
-                    count("lit=" + (draw.material != null) + " blend=" + draw.blend
+                    count("lit=" + worldOf(draw) + " mat=" + (draw.material != null) + " blend=" + draw.blend
                             + " persp=" + draw.perspective + " billboard=" + billboard);
                 }
             }
@@ -374,7 +384,33 @@ public final class FrameCostProbe {
 
         Room.chunkSize = 5000;
         Room.chunkSizeRender = Integer.getInteger("probe.chunkSize", level.getInt("CHUNK_SIZE", 0));
+        if (System.getProperty("probe.lm") != null) {
+            int lt = 0, cl = 0, pl = 0;
+            for (int i = 0; i < meshes.length; i++) {
+                code.Rendering.RenderObject[] objs = meshes[i].getPolygons();
+                for (int x = 0; x < objs.length; x++) {
+                    if (objs[x] instanceof code.Rendering.Meshes.LightedPolygon3V) lt++;
+                    else if (objs[x] instanceof code.Rendering.Meshes.ColorLightedPolygon3V) cl++;
+                    else if (objs[x] instanceof code.Rendering.Meshes.Polygon3V) pl++;
+                }
+            }
+            System.out.println("meshTypes: lighted3v=" + lt + " colorLighted=" + cl + " plain3v=" + pl
+                    + " dmode=" + DirectX7.standartDrawmode + " lightmap=" + level.get("LIGHTMAP"));
+        }
         House house = HouseCreator.create(meshes, false, level.get("LIGHTMAP"), true);
+        if (System.getProperty("probe.lm") != null) {
+            java.util.TreeMap<Integer,Integer> h = new java.util.TreeMap<Integer,Integer>();
+            for (int i = 0; i < meshes.length; i++) {
+                code.Rendering.RenderObject[] o2 = meshes[i].getPolygons();
+                for (int x = 0; x < o2.length; x++) {
+                    if (o2[x] instanceof code.Rendering.Meshes.LightedPolygon3V) {
+                        int v = ((code.Rendering.Meshes.LightedPolygon3V) o2[x]).la;
+                        Integer n = h.get(v); h.put(v, n == null ? 1 : n + 1);
+                    }
+                }
+            }
+            System.out.println("laValues: distinct=" + h.size() + " sample=" + h.headMap(256).toString().substring(0, Math.min(160, h.toString().length())));
+        }
 
         DirectX7.standartDrawmode = 0;
         image(level.get("SKYBOX_TEXTURE"));
@@ -456,6 +492,38 @@ public final class FrameCostProbe {
                 + " minPx=" + code.Rendering.M3GLitRenderer.cullMinPx);
         System.out.println("lightMode: world9=" + Main.m3gLitWorld9 + " baked=" + Main.m3gLitBaked
                 + " ambient=" + Main.m3gLitAmbient + " dir=" + Main.m3gLitDir);
+        if (System.getProperty("probe.vcol2") != null) {
+            int m0 = 0, m1 = 0; java.util.TreeMap<Integer,Integer> a = new java.util.TreeMap<Integer,Integer>();
+            java.util.TreeMap<Integer,Integer> b = new java.util.TreeMap<Integer,Integer>();
+            for (int i = 0; i < Graphics3D.history.size(); i++) {
+                Graphics3D.Draw d = Graphics3D.history.elementAt(i);
+                if (!worldOf(d) || d.colors == null) continue;
+                java.util.TreeMap<Integer,Integer> tgt = d.material == null ? a : b;
+                for (int c = 0; c + 3 < d.colors.length; c += 4) {
+                    Integer key = ((d.colors[c] & 255) << 16) | ((d.colors[c+1] & 255) << 8) | (d.colors[c+2] & 255);
+                    Integer n = tgt.get(key); tgt.put(key, n == null ? 1 : n + 1);
+                }
+                if (d.material == null) m0++; else m1++;
+            }
+            System.out.println("vcol_by_material: unlitDraws=" + m0 + " litDraws=" + m1);
+            System.out.println("  unlit colours: distinct=" + a.size() + " " + (a.size() <= 12 ? a.toString() : a.firstKey() + ".." + a.lastKey()));
+            System.out.println("  mat colours:   distinct=" + b.size() + " " + (b.size() <= 12 ? b.toString() : b.firstKey() + ".." + b.lastKey()));
+        }
+        if (System.getProperty("probe.vcol") != null) {
+            java.util.HashMap<Integer,Integer> hist = new java.util.HashMap<Integer,Integer>();
+            for (int i = 0; i < Graphics3D.history.size(); i++) {
+                Graphics3D.Draw d = Graphics3D.history.elementAt(i);
+                if (!worldOf(d) || d.colors == null) continue;
+                for (int c = 0; c + 3 < d.colors.length; c += 4) {
+                    Integer key = ((d.colors[c] & 255) << 16) | ((d.colors[c+1] & 255) << 8) | (d.colors[c+2] & 255);
+                    Integer n = hist.get(key); hist.put(key, n == null ? 1 : n + 1);
+                }
+            }
+            java.util.TreeMap<Integer,Integer> s = new java.util.TreeMap<Integer,Integer>(hist);
+            System.out.println("vcolHist: distinct=" + s.size() + " " + (s.size() <= 40 ? s.toString() : s.firstKey() + ".." + s.lastKey()));
+        }
+        System.out.println("vertexColours: sum=" + vcolSum + " verts=" + vcolN
+                + " nonWhite=" + vcolNonWhite);
         System.out.println("worldAfterSprites: " + overlapFrames + " violations in " + bothFrames
                 + " frames that have both world and sprites");
         if (System.getProperty("probe.litPos") != null) {
@@ -463,11 +531,11 @@ public final class FrameCostProbe {
             int lastSprite = -1, litAfterSprite = 0, totalLit = 0;
             for (int i = 0; i < n; i++) {
                 Graphics3D.Draw d = Graphics3D.history.elementAt(i);
-                if (d.material == null && d.vertexCount <= 4) lastSprite = i;
+                if (!worldOf(d) && d.vertexCount <= 4) lastSprite = i;
             }
             for (int i = 0; i < n; i++) {
                 Graphics3D.Draw d = Graphics3D.history.elementAt(i);
-                if (d.material != null) { totalLit++; if (i > lastSprite) litAfterSprite++; }
+                if (worldOf(d)) { totalLit++; if (i > lastSprite) litAfterSprite++; }
             }
             System.out.println("litPos: totalLit=" + totalLit + " paintedAfterLastSprite=" + litAfterSprite);
         }
@@ -476,11 +544,18 @@ public final class FrameCostProbe {
             int n = Graphics3D.history.size();
             for (int i = Math.max(0, n - 24); i < n; i++) {
                 Graphics3D.Draw d = Graphics3D.history.elementAt(i);
-                sb.append(d.material != null ? "LIT" : (d.vertexCount <= 4 ? "spr" : "PK"))
+                sb.append(worldOf(d) ? "LIT" : (d.vertexCount <= 4 ? "spr" : "PK"))
                   .append("(").append(d.triangles).append(") ");
             }
             System.out.println(sb);
         }
         house.destroy();
+    }
+
+    /** World geometry = the depth-tested submission. Baked mode 9 draws with a
+     * null Material on purpose (that is what disables lighting and preserves
+     * the vertex-colour lightmap), so a Material check would miscount it. */
+    private static boolean worldOf(Graphics3D.Draw d) {
+        return d.depthTest && d.vertexCount > 4;
     }
 }

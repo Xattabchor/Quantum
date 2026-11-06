@@ -104,3 +104,34 @@ These shape the lit pass itself, independent of lighting.
 | `M3G_SCREEN_SCALE` | `100` | World pass renders into a smaller viewport, presented centred without upscaling. `< 100` forces the CPU readback path. |
 | `M3G_LAZY_READBACK` | `0` | `1` skips the per-frame framebuffer copy into `int[]`; the image is drawn directly. Only applied at `SCREEN_SCALE=100`. |
 | `M3G_PERSPECTIVE` | `1` | Hardware perspective correction. |
+
+## M3G_LIT_WORLD9: the Material is the switch
+
+JSR-184 (class `Material`) is explicit: "Lighting is disabled for a submesh if
+it has a null Material, and enabled otherwise. If lighting is disabled, the
+final vertex colour is taken from the associated VertexBuffer as such. If
+lighting is enabled, the final colour is computed ... Finally, if vertex colour
+tracking is enabled, the AMBIENT and DIFFUSE material colours are replaced with
+the per-vertex colours."
+
+Mode 9 carries the whole baked lightmap in the vertex colours, so the only way
+to draw it unchanged is to give the submesh **no Material at all**. Vertex
+colour tracking is the one hook that feeds buffer colours into the lighting
+equation, it defaults to *false*, and this codebase never enabled it - so with
+a Material present the lightmap was discarded and every vertex came out as the
+material's ambient term (flat white world, plus a full per-vertex lighting
+equation paid on every frame).
+
+The lit pass therefore submits mode 9 with a null Material on a dedicated
+appearance. Mode 6 (hardware-lit opt-in) keeps its Material and its lights.
+`M3G_LIT_BAKED` and `M3G_LIT_NO_LIGHTS` only matter on the mode-6 path now.
+Measured: mode 9 alone produces 29 distinct grey levels from `kordod.vla`, while
+the packed path leaves only 0/255 on the same level, so the two are not
+interchangeable.
+
+### M3G_LIT_NO_LIGHTS semantics
+
+The flag was meant to put the lightmap into material EMISSIVE. It still exists
+for mode 6, but it is no longer needed anywhere: the null-Material path reaches
+the same result without depending on a runtime honouring EMISSIVE, and it also
+removes the normals work, since nothing reads normals when lighting is off.
