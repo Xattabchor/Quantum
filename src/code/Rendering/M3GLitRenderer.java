@@ -21,8 +21,6 @@ import code.utils.Main;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Vector;
-import javax.microedition.lcdui.Image;
-import javax.microedition.m3g.Image2D;
 
 /**
  * True-3D hardware-lit world pass for the M3G backend (M3G_LIT).
@@ -97,18 +95,6 @@ public final class M3GLitRenderer {
     private long frameId;
     private long selfTestStart;
 
-    // HW-mip texture stores (M3G_LIT_MIP=1): full Image2D mip chain per
-    // source Texture; filters {NEAREST, NEAREST} = NEAREST_MIPMAP_NEAREST,
-    // so no CPU-side mip picking or software interpolation is left.
-    private final Vector litTextures = new Vector();
-
-    private static final class LitTexture {
-        Texture source;
-        int kind;
-        int[] img0;
-        Texture2D texture;
-    }
-
     // Deferred per-signature buckets (FPS): the whole frame's lit polys go out
     // as ONE native draw per (texture, blend kind, texfunc) — D counter drops
     // from ~260 per-poly calls to ~15 bucket calls. Opaque buckets flush
@@ -118,6 +104,7 @@ public final class M3GLitRenderer {
     private static final class LitBucket {
         Texture2D tex; int kind; int func; boolean fogged;
         boolean unlit;   // baked mode 9: null Material, lighting off
+        int levelFilter; // NEAREST for a mip chain, BASE_LEVEL otherwise
         int scrollDir; float scrollSpeed; // water UV-scroll (0 = static tex)
         int verts, indexLen, stripCount, maxAbs = 1;
         int[] iv = new int[0];
@@ -155,47 +142,17 @@ public final class M3GLitRenderer {
         int[] b = new int[n]; System.arraycopy(a, 0, b, 0, n); return b;
     }
 
+    /** Textures for the lit pass. They come from the SHARED cache, so a world
+     * texture exists exactly once: with M3G_LIT_MIP=1 the scene renderer uploads
+     * that single entry as a mip chain and hands back the same object here.
+     *
+     * This used to keep its own parallel store (`litTextures`) and build a
+     * second, chain-only copy of every world texture. Nothing ever evicted those
+     * copies and they were never counted against the cache budget, so with
+     * HW mip on the world's textures lived twice: over the texture budget,
+     * thrashing the rasteriser, ~4x slower. The store is gone; so is the leak. */
     private Texture2D litTexture(DirectX7 g, Texture texture, RawImage raw, int kind) {
-        boolean hwMip = Main.m3gLitMip == 1
-                && texture.mip != null && texture.mip.length > 0 && texture.mip[0] != null;
-        if(!hwMip) return owner.texture(g, raw, kind);
-        int[] live0 = texture.mip[0].img;
-        for(int i = 0; i < litTextures.size(); i++) {
-            LitTexture lt = (LitTexture) litTextures.elementAt(i);
-            // Animated sources (river water) swap pixel arrays in place:
-            // react to identity changes by rebuilding the chain.
-            if(lt.source == texture && lt.kind == kind && lt.img0 == live0)
-                return lt.texture;
-        }
-        try {
-            int levels = Math.min(3, texture.mip.length);
-            Image[] chain = new Image[levels];
-            for(int l = 0; l < levels; l++) {
-                RawImage m = texture.mip[l];
-                int size = m.w * m.h;
-                int[] px = new int[size];
-                boolean alpha = kind == M3GSceneRenderer.ALPHA_TEXTURE;
-                for(int p = 0; p < size; p++) {
-                    int rgb = m.img[p];
-                    int a = alpha ? (rgb >>> 24) : (rgb != 0 ? 255 : 0);
-                    px[p] = (a << 24) | (rgb & 0xffffff);
-                }
-                chain[l] = Image.createRGBImage(px, m.w, m.h, true);
-            }
-            Texture2D tex = new Texture2D(new Image2D(Image2D.RGBA, chain));
-            tex.setFiltering(Texture2D.FILTER_NEAREST, Texture2D.FILTER_NEAREST);
-            tex.setWrapping(Texture2D.WRAP_REPEAT, Texture2D.WRAP_REPEAT);
-            LitTexture lt = new LitTexture();
-            lt.source = texture; lt.kind = kind; lt.texture = tex;
-            lt.img0 = live0;
-            litTextures.addElement(lt);
-            g.frameTextureUploads++;
-            return tex;
-        } catch(Exception e) {
-            return owner.texture(g, raw, kind); // device without mip chains
-        } catch(Error e) {
-            return owner.texture(g, raw, kind);
-        }
+        return owner.texture(g, raw, kind);
     }
 
     public M3GLitRenderer(M3GSceneRenderer owner, Graphics3D graphics) {
@@ -685,10 +642,10 @@ public final class M3GLitRenderer {
         }
         colorArray.set(0, count, rgba);
 
-        int kind, func; Texture2D tex; boolean foggy;
+        int kind, func, level = Texture2D.FILTER_BASE_LEVEL; Texture2D tex; boolean foggy;
         short[] uvs; byte[] cols, nrms;
         if(at != null) {
-            kind = at.kind; func = at.func; foggy = at.fogged;
+            kind = at.kind; func = at.func; foggy = at.fogged; level = at.level;
             uvs = at.uvc; cols = at.colc; nrms = at.nrmc;
             at.touched = frameId;
             // Animated textures (river): CPU-side updateAnimation() swaps
@@ -709,11 +666,12 @@ public final class M3GLitRenderer {
             // no native Fog. Mode 3 keeps the linear Fog (its only CPU meaning).
             foggy = frameFogOn && mode == 3;
             uvs = uv; cols = rgba; nrms = nrm;
+            level = owner.textureLevelFilter();
             if(useStatic) {
                 at = new Attr();
                 at.tex = texture; at.t2d = tex; at.mode = mode; at.count = count;
                 at.x = vertices[0].x; at.y = vertices[0].y; at.z = vertices[0].z;
-                at.kind = kind; at.func = func; at.fogged = foggy;
+                at.kind = kind; at.func = func; at.fogged = foggy; at.level = level;
                 at.uvc = new short[count * 2];
                 System.arraycopy(uv, 0, at.uvc, 0, count * 2);
                 at.colc = new byte[count * 4];
@@ -732,12 +690,13 @@ public final class M3GLitRenderer {
         for(int i = 0; i < buckets.size(); i++) {
             LitBucket c = (LitBucket) buckets.elementAt(i);
             if(c.tex == tex && c.kind == kind && c.func == func && c.fogged == foggy
-                    && c.unlit == unlit) { bk = c; break; }
+                    && c.unlit == unlit && c.levelFilter == level) { bk = c; break; }
         }
         if(bk == null) {
             bk = new LitBucket();
             bk.tex = tex; bk.kind = kind; bk.func = func; bk.fogged = foggy;
             bk.unlit = unlit;
+            bk.levelFilter = level;
             bk.scrollDir = texture.uvScroll; bk.scrollSpeed = texture.uvScrollSpeed;
             buckets.addElement(bk);
         }
@@ -826,7 +785,7 @@ public final class M3GLitRenderer {
 
     private static final class Attr {
         Object tex; Texture2D t2d;
-        int mode, kind, func, count, x, y, z;
+        int mode, kind, func, count, x, y, z, level;
         boolean fogged;
         short[] uvc; byte[] colc; byte[] nrmc;
         long touched;
@@ -900,6 +859,8 @@ public final class M3GLitRenderer {
         compositing.setAlphaThreshold(threshold);
         compositing.setDepthTestEnable(true);
         bk.tex.setBlending(bk.func);
+        // Samples the nearest mip level for chain textures; BASE_LEVEL otherwise.
+        bk.tex.setFiltering(bk.levelFilter, Texture2D.FILTER_NEAREST);
         // Unlit buckets go out with a NULL Material: JSR-184 then disables
         // lighting and uses the vertex colours verbatim (the baked lightmap),
         // instead of computing a colour from Material x lights.

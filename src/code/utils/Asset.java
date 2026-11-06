@@ -196,6 +196,7 @@ public class Asset {
                     }
                     mips = new RawImage[] {rImg,rmImg1,rmImg2};
                     table.put("MIPMAPS_" + file, mips);
+                    rImg.mipChain = mips;
                 }
             }
         }

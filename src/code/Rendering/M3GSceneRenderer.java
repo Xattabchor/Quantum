@@ -85,6 +85,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
         int kind, cost;
         Texture2D texture;
         int filter=Texture2D.FILTER_NEAREST;
+        int levelFilter=Texture2D.FILTER_BASE_LEVEL;
+        boolean mipChain;   // texture was uploaded as a mip chain, not a base level
+        boolean live;       // already used in the CURRENT frame
         float cutoutThreshold;
     }
 
@@ -153,7 +156,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
     // upload material/vertex state only when the ordered packet is submitted.
     private void setTexture(Texture2D texture) {
         batchState.texture=texture;
-        if(texture==null) {batchState.function=0;batchState.imageFilter=Texture2D.FILTER_NEAREST;}
+        if(texture==null) {batchState.function=0;batchState.imageFilter=Texture2D.FILTER_NEAREST;
+            batchState.levelFilter=Texture2D.FILTER_BASE_LEVEL;}
         if(!batchable) appearance.setTexture(0,texture);
     }
     private void setFog(Fog value) {
@@ -276,6 +280,8 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     /** Frame start (native passes): refresh true-3D lit-pass camera/lights. */
     public void beginFrame(DirectX7 g) {
+        for(int i = 0; i < textures.size(); i++)
+            ((CachedTexture)textures.elementAt(i)).live = false;
         if(litBroken) return;
         if(Main.m3gWorldLighting == 0 && Main.m3gLitWorld9 == 0) return;
         try {
@@ -398,6 +404,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
             polygonModes.removeAllElements();polygonModes.addElement(polygon);polygonModes.addElement(screenPolygon);
             textures.removeAllElements();lastTexture=null;
             cachedPixels = 0;
+            // The lit pass no longer owns a texture store of its own: it draws
+            // through this cache. Dropping the reference is enough, and the
+            // stale buckets must not survive into the next level either.
+            litRenderer = null;
+            litBroken = false;
         }
     }
 
@@ -600,6 +611,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
         Texture2D nativeTexture = texture(g, raw, kind);
         CachedTexture nativeEntry=lastTexture;
         batchState.imageFilter=nativeEntry.filter;
+        batchState.levelFilter=nativeEntry.levelFilter;
         batchState.opaque=kind==OPAQUE_TEXTURE && nativeEntry.cutoutThreshold==0;
         int slot = count - 3;
         if(!batchable) posArrays[slot].set(0, count, positions);
@@ -885,14 +897,31 @@ public final class M3GSceneRenderer implements SceneRenderer {
 
     private static boolean powerOfTwo(int n) { return n > 0 && (n & (n - 1)) == 0; }
 
+    /** M3G_LIT_MIP: world textures the lit pass draws may carry a full mip
+     * chain, but they must live in ONE cache entry. A parallel store here was
+     * the bug: every world texture existed twice (once as a base level for the
+     * packed path, once as a chain for the lit path), nothing ever evicted the
+     * chains, and they were never counted against CACHE_PIXELS. Sprites stay on
+     * base level: the sprite renderer applies its own filtering, and a chain
+     * would just be dead memory. */
+    private boolean wantsMipChain(int kind) {
+        return Main.m3gLitMip == 1 && Main.m3gLitWorld9 == 1
+                && kind == OPAQUE_TEXTURE;
+    }
+
     private Texture2D findTexture(RawImage image, int kind) {
+        // mipChain is NOT part of the key on purpose. A texture either has a
+        // chain or it does not, and that never changes for a given image; if it
+        // does not, the base level is the correct fallback. Matching on it made
+        // entries that failed to build a chain unmatchable, so they were rebuilt
+        // on every single lookup - a cache that silently did nothing.
         CachedTexture last=lastTexture;
         if(last!=null && last.image==image && last.pixels==image.img
-                && last.width==image.w && last.height==image.h && last.kind==kind) return last.texture;
+                && last.width==image.w && last.height==image.h && last.kind==kind) {last.live=true;return last.texture;}
         for(int i = 0; i < textures.size(); i++) {
             CachedTexture cached = (CachedTexture)textures.elementAt(i);
             if(cached.image == image && cached.pixels == image.img && cached.width == image.w
-                    && cached.height == image.h && cached.kind == kind) {lastTexture=cached;return cached.texture;}
+                    && cached.height == image.h && cached.kind == kind) {cached.live=true;lastTexture=cached;return cached.texture;}
         }
         return null;
     }
@@ -902,6 +931,52 @@ public final class M3GSceneRenderer implements SceneRenderer {
     // Capture immediately after texture(): a later lookup changes lastTexture.
     float textureCutoutThreshold() {return lastTexture.cutoutThreshold;}
     int textureImageFilter() {return lastTexture.filter;}
+    int textureLevelFilter() {return lastTexture.levelFilter;}
+
+
+    /** Levels below the base come from the loader's chain, rebuilt ONLY when the
+     * live base pixel array differs (animated water swaps it). Returns null when
+     * no usable chain exists, which keeps the plain base-level upload. */
+    private RawImage[] chainFor(RawImage base, int kind) {
+        // The loader caches chains per FILE, not per RawImage: find the chain
+        // whose level 0 is this very pixel array.
+        RawImage[] chain = base.mipChain;
+        if(chain == null || chain.length < 2 || chain[0] != base) return null;
+        int levels = Math.min(3, chain.length);
+        RawImage[] out = new RawImage[levels];
+        for(int l = 0; l < levels; l++) {
+            if(chain[l] == null || chain[l].w <= 0 || chain[l].h <= 0) return null;
+            out[l] = chain[l];
+        }
+        return out;
+    }
+
+    /** Same alpha/blend recipe as the base level, per chain level. No sprite
+     * reduction here: chains are only built for non-sprite world textures. */
+    private static byte[] convertLevel(RawImage m, int kind, boolean mul) {
+        int n = m.w * m.h;
+        byte[] out = new byte[n * 4];
+        for(int i = 0; i < n; i++) {
+            int pixel = m.img[i];
+            int rgb = mul ? DirectX7.spriteModulateSource(pixel, kind - SPRITE_MUL)
+                    : kind == ADD_TEXTURE ? pixel & 0xfefefe : pixel;
+            out[i * 4] = (byte)(rgb >> 16);
+            out[i * 4 + 1] = (byte)(rgb >> 8);
+            out[i * 4 + 2] = (byte)rgb;
+            out[i * 4 + 3] = kind == ALPHA_TEXTURE ? (byte)(pixel >>> 24)
+                    : (byte)(mul || kind == SPRITE_ADD || pixel != 0 ? 255 : 0);
+        }
+        return out;
+    }
+
+    private static int[] argbFrom(byte[] rgba, int pixels) {
+        int[] out = new int[pixels];
+        for(int i = 0; i < pixels; i++) {
+            out[i] = ((rgba[i * 4 + 3] & 255) << 24) | ((rgba[i * 4] & 255) << 16)
+                    | ((rgba[i * 4 + 1] & 255) << 8) | (rgba[i * 4 + 2] & 255);
+        }
+        return out;
+    }
 
     private Texture2D createTexture(DirectX7 g,RawImage image,int kind) {
         boolean mul=kind>=SPRITE_MUL && kind<=SPRITE_MUL+6;
@@ -909,11 +984,25 @@ public final class M3GSceneRenderer implements SceneRenderer {
         int width=sprite?spriteDimension(image.w):image.w;
         int height=sprite?spriteDimension(image.h):image.h;
         int size = width * height;
-        while(textures.size() > 0 && (textures.size() >= CACHE_ENTRIES || cachedPixels + size > CACHE_PIXELS)) {
-            CachedTexture oldest = (CachedTexture)textures.elementAt(0);
+        boolean mip = wantsMipChain(kind) && image.w > 1 && image.h > 1
+                && powerOfTwo(image.w) && powerOfTwo(image.h);
+        // A chain occupies ~4/3 of the base level, not 1x: charge it honestly or
+        // the cache under-counts exactly the textures that are the most expensive.
+        int cost = mip ? size + size / 3 : size;
+        while(textures.size() > 0 && (textures.size() >= CACHE_ENTRIES || cachedPixels + cost > CACHE_PIXELS)) {
+            // Prefer the oldest entry that this frame has not touched yet. A
+            // mid-frame eviction of a live texture is far worse than a slightly
+            // over-budget cache: the next polygon rebinds a NEW native object,
+            // which splits batches and uploads the same pixels again.
+            int victim = -1;
+            for(int i = 0; i < textures.size(); i++) {
+                if(!((CachedTexture)textures.elementAt(i)).live) {victim = i; break;}
+            }
+            if(victim < 0) victim = 0; // everything is live: fall back to oldest
+            CachedTexture oldest = (CachedTexture)textures.elementAt(victim);
             cachedPixels -= oldest.cost;
             if(lastTexture==oldest) lastTexture=null;
-            textures.removeElementAt(0);
+            textures.removeElementAt(victim);
         }
         byte[] rgba = new byte[size * 4];
         boolean opaque=true;
@@ -938,15 +1027,55 @@ public final class M3GSceneRenderer implements SceneRenderer {
         }
         CachedTexture cached = new CachedTexture();
         cached.image = image; cached.pixels = image.img; cached.width = image.w; cached.height = image.h;
-        cached.kind = kind;cached.cost=size;
-        cached.cutoutThreshold=opaque?0:0.5f;
-        cached.texture = new Texture2D(uploadImage(g,Image2D.RGBA,width,height,rgba));
-        cached.texture.setFiltering(Texture2D.FILTER_BASE_LEVEL, Texture2D.FILTER_NEAREST);
+        cached.kind = kind;cached.cutoutThreshold=opaque?0:0.5f;
+        Texture2D built = null;
+        if(mip) {
+            // Levels come from the mip chain the texture loader already built
+            // (texture.mip), skipped and refilled exactly like the base level so
+            // cutout and additive semantics stay identical on every level.
+            RawImage[] chain = chainFor(image, kind);
+            if(chain != null) {
+                try {
+                    Image[] images = new Image[chain.length];
+                    for(int l = 0; l < chain.length; l++) {
+                        byte[] lvl = l == 0 ? rgba : convertLevel(chain[l], kind, mul);
+                        images[l] = Image.createRGBImage(argbFrom(lvl, chain[l].w * chain[l].h),
+                                chain[l].w, chain[l].h, true);
+                    }
+                    built = new Texture2D(new Image2D(Image2D.RGBA, images));
+                    g.frameTextureUploads++;
+                    // JSR-184: FILTER_BASE_LEVEL means "use the base level ONLY",
+                    // i.e. it switches mipmapping off for that texture. A chain
+                    // uploaded with FILTER_BASE_LEVEL is dead weight: the whole
+                    // chain is resident and never sampled. NEAREST picks the
+                    // nearest level and point-samples inside it - mip filtering
+                    // without any bilinear change, which is what this flag means.
+                    built.setFiltering(Texture2D.FILTER_NEAREST, Texture2D.FILTER_NEAREST);
+                } catch(Exception e) {
+                    built = null; // runtime without mip chains: plain upload below
+                } catch(Error e) {
+                    built = null;
+                }
+            }
+        }
+        if(built != null) {
+            cached.texture = built;
+            cached.mipChain = true;
+            cached.levelFilter = Texture2D.FILTER_NEAREST;
+            cached.cost = cost;
+        } else {
+            cached.texture = new Texture2D(uploadImage(g,Image2D.RGBA,width,height,rgba));
+            cached.texture.setFiltering(Texture2D.FILTER_BASE_LEVEL, Texture2D.FILTER_NEAREST);
+            cached.mipChain = false;
+            cached.levelFilter = Texture2D.FILTER_BASE_LEVEL;
+            cached.cost = size;
+        }
         cached.texture.setWrapping(sprite?Texture2D.WRAP_CLAMP:Texture2D.WRAP_REPEAT,
                 sprite?Texture2D.WRAP_CLAMP:Texture2D.WRAP_REPEAT);
         cached.texture.setBlending(Texture2D.FUNC_MODULATE);
+        cached.live = true;
         lastTexture=cached;
-        textures.addElement(cached);cachedPixels += size;
+        textures.addElement(cached);cachedPixels += cached.cost;
         return cached.texture;
     }
 }

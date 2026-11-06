@@ -38,6 +38,7 @@ RENDER_SUBSET = [
     "src/code/Rendering/*.java",
     "src/code/Rendering/Meshes/*.java",
     "src/code/Math/Matrix.java",
+    "src/code/Math/MathUtils.java",
 ]
 
 

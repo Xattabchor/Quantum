@@ -8,6 +8,7 @@ final class M3GPolygonBatch {
         Texture2D texture;
         PolygonMode polygon;
         int blend,function,blendColor,imageFilter=Texture2D.FILTER_NEAREST,fogColor,fogMode=Fog.LINEAR;
+        int levelFilter=Texture2D.FILTER_BASE_LEVEL;
         float threshold,near,far,density;
         boolean fogged,opaque;
     }
@@ -53,7 +54,10 @@ final class M3GPolygonBatch {
             int[] order,TriangleStripArray indices,State source) {
         Texture2D tex=source.texture;PolygonMode poly=source.polygon;
         int blend=source.blend,function=source.function;
-        int level=Texture2D.FILTER_BASE_LEVEL,filter=source.imageFilter;
+        // Per-texture: a mip chain needs NEAREST (nearest level), a plain
+        // upload wants BASE_LEVEL. Forcing BASE_LEVEL here switched mipmapping
+        // off again on every flush, for every texture in the cache.
+        int level=source.levelFilter,filter=source.imageFilter;
         float threshold=source.threshold;
         boolean fogged=source.fogged;
         int color=fogged?source.fogColor:0;

@@ -135,3 +135,36 @@ The flag was meant to put the lightmap into material EMISSIVE. It still exists
 for mode 6, but it is no longer needed anywhere: the null-Material path reaches
 the same result without depending on a runtime honouring EMISSIVE, and it also
 removes the normals work, since nothing reads normals when lighting is off.
+
+### M3G_LIT_MIP: one texture, one chain
+
+`HW mip` in the menu is `M3G_LIT_MIP`. It used to be a serious bug, not a
+trade-off. The lit pass kept its OWN texture store (`litTextures`) and built a
+second, chain-only copy of every world texture. Nothing evicted that store and it
+was never counted against `CACHE_PIXELS`, so with the flag on every world
+texture was resident twice: over the rasteriser's texture budget, thrashing, and
+measured at 5 fps on hardware against 20 without it.
+
+There is now exactly one entry per texture, in the shared cache. When the flag is
+on that single entry is uploaded as a mip chain of the loader's levels and both
+paths draw from it; that includes the lit pass, which no longer owns textures at
+all.
+
+Two details decide whether the chain is actually sampled:
+
+- `Texture2D.setFiltering(levelFilter, imageFilter)` with `FILTER_BASE_LEVEL`
+  means *use the base level only* per JSR-184 - it switches mipmapping off. A
+  chain uploaded that way is resident and never read. The level filter must be
+  `FILTER_NEAREST` for a chain (with `FILTER_NEAREST` as the image filter, so
+  sampling stays point-sampled and nothing becomes bilinear).
+- The packed polygon batch used to force `FILTER_BASE_LEVEL` on every flush,
+  which re-disabled mipmapping on every texture it touched. It now carries each
+  texture's own level filter.
+
+Measured on `level1`: with the flag on, 85 textures upload as chains and the draw
+count is **identical** to the flag off (2 avg / 6 worst). Before the fix the same
+scene needed 44 draws and 987 triangles in its worst frame.
+
+The cache is also frame-aware now: eviction skips entries the current frame has
+already used. Replacing a live texture mid-frame hands the next polygon a new
+native object, which splits batches and re-uploads the same pixels.

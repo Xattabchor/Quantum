@@ -18,6 +18,9 @@ public class RawImage {
     public int widthBITmode10;
     public int W_UNIT;
     public boolean alphaMixing = false;
+    /** Chain built by Asset (level 0 == this image), or null. Kept on the image
+     * itself so the renderer can find the levels without a global lookup. */
+    public RawImage[] mipChain = null;
 
     static RawImage error = new RawImage(new int[]{0xff0000, 0xff0000, 0xff0000, 0xff0000}, 2, 2);
 

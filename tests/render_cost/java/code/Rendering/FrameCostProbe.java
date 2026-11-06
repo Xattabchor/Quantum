@@ -329,7 +329,10 @@ public final class FrameCostProbe {
 
         Main.pixelsQ = 2;
         Main.persQ = 4;
-        Main.mipMapping = false;
+        // The real game leaves this on, and Asset only BUILDS mip chains when
+        // it is on. Forcing it off here made the harness silently measure a
+        // build where M3G_LIT_MIP could do nothing at all.
+        Main.mipMapping = Integer.getInteger("probe.mipMapping", 1) == 1;
         Main.fogQ = 2;
         Main.floorOffsetSZ = 0;
         Main.m3gWorldLighting = Integer.getInteger("m3g.worldLighting", 1);
