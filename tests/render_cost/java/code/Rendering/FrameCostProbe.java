@@ -8,6 +8,8 @@ import code.Gameplay.Map.Room;
 import code.Gameplay.Map.Skybox;
 import code.Math.Matrix;
 import code.Rendering.Meshes.Mesh;
+import code.Rendering.Meshes.Polygon3V;
+import code.Rendering.Meshes.Polygon4V;
 import code.Rendering.Meshes.Sprite;
 import code.utils.GameIni;
 import code.utils.Main;
@@ -169,6 +171,42 @@ public final class FrameCostProbe {
         DRAW_MIX.put(key, value == null ? 1 : value + 1);
     }
 
+    private static int beyondFar;
+    private static int nearPolys;
+
+    /** World polys entirely past the M3G camera far plane draw nothing at all. */
+    private static int countBeyondFar(House house, int far) {
+        int n = 0;
+        nearPolys = 0;
+        Room[] rooms = house.getRooms();
+        if (rooms == null) return 0;
+        for (int i = 0; i < rooms.length; i++) {
+            Room room = rooms[i];
+            if (room == null) continue;
+            Mesh m = room.fullMesh;
+            if (m == null) continue;
+            RenderObject[] polys = m.getPolygons();
+            if (polys == null) continue;
+            for (int p = 0; p < polys.length; p++) {
+                Object o = polys[p];
+                Vertex[] v;
+                if (o instanceof Polygon4V) {
+                    Polygon4V q = (Polygon4V) o;
+                    v = new Vertex[]{q.a, q.b, q.c, q.d};
+                } else if (o instanceof Polygon3V) {
+                    Polygon3V q = (Polygon3V) o;
+                    v = new Vertex[]{q.a, q.b, q.c};
+                } else continue;
+                boolean all = true;
+                for (int k = 0; k < v.length; k++)
+                    if (v[k].getViewDepth() > -far) { all = false; break; }
+                if (all) n++;
+                else nearPolys++;
+            }
+        }
+        return n;
+    }
+
     private static void sample(House house, Skybox sky, int[] position, int yaw, int pitch, int fogDist,
             int levelDist, byte drawmode) {
         int draws = 0, triangles = 0, billboards = 0;
@@ -191,6 +229,7 @@ public final class FrameCostProbe {
             g.beginFrameStats();
             DirectX7.setFogDist(fogDist);
             int history = Graphics3D.history.size();
+            beyondFar = countBeyondFar(house, 40000);
             sky.addViewport(0, 0, g.width, g.height);
             sky.draw = true;
             sky.lighting = false;
@@ -312,7 +351,11 @@ public final class FrameCostProbe {
         DirectX7.setDrDist(level.getInt("DIST", Integer.MAX_VALUE));
         DirectX7.setFogDist(level.getInt("FOGD", 1));
 
-        String[] textureLines = StringTools.cutOnStrings(data[1], '\n');
+        // LevelLoader.cutLevelFile returns ONE element when the level has no
+        // WTEX block, and the game then simply has no texture list. Mirror that
+        // instead of indexing a missing element (L41 has no WTEX group).
+        String[] textureLines = data.length > 1
+                ? StringTools.cutOnStrings(data[1], '\n') : new String[0];
         for (int i = 0; i < textureLines.length; i++) {
             String line = textureLines[i].trim();
             int equals = line.indexOf('=');
@@ -388,6 +431,8 @@ public final class FrameCostProbe {
         System.out.println("avgDraws=" + (totalDraws / Math.max(1, totalFrames))
                 + " worstDraws=" + worstDraws
                 + " (yaw=" + worstYaw + " pitch=" + worstPitch + ")");
+        System.out.println("beyondFar: " + beyondFar + " polys fully past M3G_LIT_FAR=" + Main.m3gLitFar
+                + "; nearPolys=" + nearPolys);
         System.out.println("triangles: avg=" + (totalTriangles / Math.max(1, totalFrames))
                 + " worstFrame=" + worstTriangles);
         System.out.println("billboardCalls=" + billboardCalls + " frames=" + totalFrames);

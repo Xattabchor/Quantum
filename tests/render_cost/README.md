@@ -143,6 +143,27 @@ depth-free path. The probe reports the invariant directly:
 `worldAfterSprites: N violations in M frames that contain both` is 0/5 on
 level41 and 0/2 on level1.
 
+## CHUNK_SIZE is not a free win on this level
+
+`Room.render` draws only the 3x3 block of chunks around the camera, so a chunk
+size smaller than the level's view distance drops world the camera can still
+see. On the Kordosh level (`DIST=30500`, `M3G_LIT_FAR=30000`) the numbers are:
+
+| CONFIG | worst draws | tris avg/worst |
+| --- | --- | --- |
+| M3G_LIT_WORLD9=1, chunk off | 2/3 | 54/75 |
+| M3G_LIT_WORLD9=1, chunk 20000 | 2/3 | 52/75 |
+| M3G_LIT_WORLD9=1, chunk 10000 | 1/3 | 32/28 |
+
+Chunking buys **no draw calls at all** once the sorted world pass is on (off:
+3 worst, 20000: 3 worst) and it silently removes visible triangles. The sorted
+pass already collapses the whole world into one bucket, so chunking has nothing
+left to merge. Earlier readings of "7/39 -> 2/3 from chunking" were taken with
+`drDist=30000000` (the harness bug above), where distance culling was off.
+
+Conclusion: leave `CHUNK_SIZE` out of the shipped bundle for this level. It is
+not an optimisation here, it is a cropping knob.
+
 ## Geometry parity between the two paths
 
 The sorted pass must draw the same world the painter path draws, or it is a
