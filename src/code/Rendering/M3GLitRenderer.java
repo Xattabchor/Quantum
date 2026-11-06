@@ -145,7 +145,6 @@ public final class M3GLitRenderer {
         VertexArray posA, uvA, colA, nrmA;
         short[] xyz = new short[0];
         float posScale = -1f;
-        boolean nrmPrimed; // unlit bucket: normals uploaded once, never again
     }
 
     private static int[] grow(int[] a, int n) {
@@ -862,8 +861,15 @@ public final class M3GLitRenderer {
             bk.posA = new VertexArray(cap, 3, 2);
             bk.uvA = new VertexArray(cap, 2, 2);
             bk.colA = new VertexArray(cap, 4, 1);
+            // Normals are installed per bucket only when the bucket is LIT.
+            // The packed world path - the one that works on the handset - never
+            // calls setNormals at all, and an unlit bucket has no Material, so
+            // JSR-184 disables lighting and never reads a normal. Shipping a
+            // normals stream anyway costs a third vertex array and, on a
+            // validating runtime, can reject the whole buffer from render()
+            // with a message-less java.lang.Error.
             bk.nrmA = new VertexArray(cap, 3, 1);
-            vb.setNormals(bk.nrmA);
+            if(!bk.unlit) vb.setNormals(bk.nrmA);
             vb.setColors(bk.colA);
             vb.setTexCoords(0, bk.uvA, 1.0f / 256, null);
             bk.vb = vb;
@@ -872,26 +878,16 @@ public final class M3GLitRenderer {
         bk.posA.set(0, bk.verts, bk.xyz);
         bk.uvA.set(0, bk.verts, bk.uva);
         bk.colA.set(0, bk.verts, bk.cola);
-        // The normal source must cover every vertex of the bucket before it is
-        // handed to the runtime, in BOTH branches. Only the unlit branch used to
-        // grow bk.nrma, so a lit bucket wider than the last one passed a short
-        // array and the runtime rejected the whole frame with
-        // "byte values too short" (294 bytes for 648 needed).
-        if(bk.nrma.length < bk.verts * 3) bk.nrma = growB(bk.nrma, bk.verts * 3);
-        if(bk.unlit) {
-            // Lighting is disabled for these submeshes (null Material), so the
-            // normals are never read. The array still has to hold *something*
-            // for runtimes that validate it: fill it once, never again.
-            if(!bk.nrmPrimed) {
-                int n = bk.nrma.length;
-                for(int i = 0; i < n; i += 3) {
-                    bk.nrma[i] = 0; bk.nrma[i + 1] = 0; bk.nrma[i + 2] = 126;
-                }
-                bk.nrmPrimed = true;
-            }
+        // Unlit buckets carry no normals stream at all (see the buffer setup):
+        // with no Material the runtime must not read one, and the packed path
+        // that works on the handset never supplies one either. Only the lit
+        // bucket uploads normals.
+        if(!bk.unlit) {
+            if(bk.nrma.length < bk.verts * 3)
+                bk.nrma = growB(bk.nrma, bk.verts * 3);
+            STAGE = "nrmSet";
+            bk.nrmA.set(0, bk.verts, bk.nrma);
         }
-        STAGE = "nrmSet";
-        bk.nrmA.set(0, bk.verts, bk.nrma);
         if(bk.posScale != scale) {
             STAGE = "setPos";
             bk.vb.setPositions(bk.posA, scale, null);
