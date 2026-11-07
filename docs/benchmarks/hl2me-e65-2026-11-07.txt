@@ -1,0 +1,84 @@
+hl2me-bench 0.2.1
+
+== Device info ==
+microedition.platform = NokiaE65-1/0633.74.00
+com.sonyericsson.java.platform = null
+microedition.configuration = CLDC-1.1
+microedition.profiles = MIDP-2.0
+microedition.locale = en
+microedition.encoding = ISO-8859-1
+microedition.m3g.version = 1.0
+microedition.io.file.FileConnection.version = 1.0
+microedition.media.version = 1.1
+microedition.amms.version = null
+microedition.sensor.version = null
+microedition.location.version = 1.0
+supports.mixing = true
+[yes] javax.microedition.m3g.Graphics3D
+[ no] com.mascotcapsule.micro3d.v3.Graphics3D
+[yes] javax.microedition.io.file.FileConnection
+[yes] javax.microedition.media.Manager
+[ no] javax.microedition.amms.GlobalManager
+[ no] javax.microedition.sensor.SensorManager
+[yes] javax.microedition.lcdui.game.GameCanvas
+fullscreen canvas: 240x320, colors 16777216, alpha levels 256, doubleBuffered true
+heap at start: total 500 KB, free 121 KB
+M3G properties:
+  supportAntialiasing = false
+  supportDithering = false
+  maxTransformsPerVertex = 4
+  maxLights = 8
+  supportMipmapping = true
+  maxSpriteCropDimension = 256
+  supportTrueColor = false
+  numTextureUnits = 2
+  maxTextureDimension = 256
+  m3gRelease = 04_wk49
+  supportPerspectiveCorrection = true
+  maxViewportDimension = 1024
+  supportLocalCameraLighting = false
+fileconn.dir.memorycard = file:///E:/
+fileconn.dir.private = file:///c:/private/102033e6/midlets/[10150117]/scratch/
+file roots: Phone memory/ C:/ Memory card/ E:/
+
+== CPU (Java) ==
+int mul/add/xor: 2000000 it, 242 ms, 8.2 M/s
+int div: 500000 it, 554 ms, 0.9 M/s
+fixed 16.16 mul (long): 1000000 it, 127 ms, 7.8 M/s
+float mul/add: 500000 it, 532 ms, 0.9 M/s
+virtual call: 1000000 calls, 370 ms, 2.7 M/s
+int[] fill 240x320 x20: 128 ms, 12.0 M/s px
+arraycopy screen x20: 84 ms, 18.2 M/s px
+drawRGB fullscreen + flush: 20 frames, 396 ms, 19.8 ms/frame
+Mascot Capsule v3 not available
+
+== Texture memory ==
+M3G 64x64 x32: heap +7 KB (230 B each, image 12288 B), 1685 ms
+M3G 128x128 x8: heap +-19 KB (-2443 B each, image 49152 B), 459 ms
+
+== Heap max test ==
+before: total 500 KB, free 149 KB
+allocated: 14.0 MB in 2768 ms (OutOfMemoryError)
+max total seen: 14.4 MB
+after gc: total 500 KB, free 146 KB
+
+== M3G benchmark ==
+screen 240x320, texture units 2, maxTextureDimension 256
+warmup 800 ms, measure 3000 ms per test
+room 500 tex64: 23.0 fps, frame 43.4 ms (41..46), 3d 33.8 ms, tris 432, 9 ktri/s
+room 1000 tex64: 21.2 fps, frame 47.0 ms (45..60), 3d 37.2 ms, tris 972, 20 ktri/s
+room 2000 tex64: 19.3 fps, frame 51.6 ms (49..54), 3d 42.0 ms, tris 2028, 39 ktri/s
+room 4000 tex64: 16.1 fps, frame 61.8 ms (58..87), 3d 52.4 ms, tris 3888, 62 ktri/s
+room 2000 vcolor (no tex): 22.3 fps, frame 44.6 ms (42..47), 3d 34.3 ms, tris 2028, 45 ktri/s
+room 2000 tex64+lightmap: 7.0 fps, frame 141.2 ms (138..143), 3d 130.9 ms, tris 2028, 14 ktri/s
+room 2000 tex64 persp-corr: 18.6 fps, frame 53.5 ms (50..57), 3d 43.2 ms, tris 2028, 37 ktri/s
+room 2000 tex64 linear: 9.0 fps, frame 110.7 ms (108..114), 3d 100.6 ms, tris 2028, 18 ktri/s
+room 2000 tex256: 15.4 fps, frame 64.8 ms (57..70), 3d 55.1 ms, tris 2028, 31 ktri/s
+room 2000 tex64 half-res: 32.4 fps, frame 30.8 ms (28..33), 3d 20.3 ms, tris 2028, 65 ktri/s, viewport 120x160
+room 2000 tex64 x26 calls: 15.4 fps, frame 64.8 ms (61..68), 3d 54.4 ms, tris 2028, 31 ktri/s, calls 26
+room 2000 tex64 no color clear: 20.2 fps, frame 49.3 ms (47..52), 3d 38.7 ms, tris 2028, 41 ktri/s
+room 2000 tex64 viewport: 21.0 fps, frame 47.4 ms (45..50), 3d 37.1 ms, tris 2028, 42 ktri/s, viewport 240x256
+fill x1: 27.6 fps, frame 36.1 ms (29..142), 3d 22.2 ms, 2.1 Mpix/s
+fill x2: 22.2 fps, frame 44.8 ms (43..46), 3d 35.9 ms, 3.4 Mpix/s
+fill x4: 13.6 fps, frame 73.3 ms (72..75), 3d 64.4 ms, 4.1 Mpix/s
+benchmark total time: 66 s
