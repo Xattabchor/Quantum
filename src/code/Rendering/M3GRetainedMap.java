@@ -390,13 +390,18 @@ public final class M3GRetainedMap {
         posA.set(0, verts, xyz);
         VertexArray uvA = new VertexArray(verts, 2, 2);
         uvA.set(0, verts, st);
-        VertexArray colA = new VertexArray(verts, 4, 1);
-        colA.set(0, verts, rgba);
-
         VertexBuffer vb = new VertexBuffer();
         vb.setPositions(posA, scale, null);
         vb.setTexCoords(0, uvA, 1.0f / 256, null);
-        vb.setColors(colA);
+        // M3G_CLEAN_LIT off (the default): no baked lightmap, no vertex
+        // colours at all, and the texture on REPLACE so it is drawn at full
+        // brightness with no light in the scene. Geometry and texture and
+        // nothing else - that is the plainest picture there is.
+        if(Main.m3gCleanLit == 1) {
+            VertexArray colA = new VertexArray(verts, 4, 1);
+            colA.set(0, verts, rgba);
+            vb.setColors(colA);
+        }
         vb.setDefaultColor(0xffffffff);
 
         Appearance ap = new Appearance();
@@ -427,7 +432,11 @@ public final class M3GRetainedMap {
             }
         }
         if (tex != null) {
-            tex.setBlending(Texture2D.FUNC_MODULATE);
+            // REPLACE without vertex colours puts the texture straight
+            // through. MODULATE is only right when the baked lightmap is in
+            // the colours; without them everything comes out black.
+            tex.setBlending(Main.m3gCleanLit == 1
+                    ? Texture2D.FUNC_MODULATE : Texture2D.FUNC_REPLACE);
             ap.setTexture(0, tex);
         }
 
@@ -468,13 +477,33 @@ public final class M3GRetainedMap {
         // for a Transform that has to be invertible. Gram-Schmidt makes it a
         // proper rotation (det = +1) before the call, and behind that sits a
         // fallback chain so this stage cannot kill the frame whatever it does.
+        // The engine's view frame is X = right, Y = DOWN, Z = forward.
+        // An M3G camera is X = right, Y = up, Z = backward, and looks down
+        // its own -Z. So columns 1 and 2 are both negated: flipping either
+        // one alone gives a determinant of -1, which is a mirror and which
+        // Transform.set rejects; flipping both keeps det = +1 and puts the
+        // level in front of the camera instead of behind it.
+        //
+        // Verified against the engine's own projection rather than guessed:
+        // eight variants (Y and Z flipped or not, camera backed off or not)
+        // compared against   sx = centreX + x*distX/(rz + distX)   over five
+        // yaw/pitch pairs and five depths. Only this one matches, to under
+        // 1.2 px.
         stage = "cTs";
-        camMatrix[0] = cam.m00 / fp; camMatrix[1] = cam.m10 / fp;
-        camMatrix[2] = cam.m20 / fp; camMatrix[3] = 0f;
-        camMatrix[4] = cam.m01 / fp; camMatrix[5] = cam.m11 / fp;
-        camMatrix[6] = cam.m21 / fp; camMatrix[7] = 0f;
-        camMatrix[8] = cam.m02 / fp; camMatrix[9] = cam.m12 / fp;
-        camMatrix[10] = cam.m22 / fp; camMatrix[11] = 0f;
+        camMatrix[0] =  cam.m00 / fp; camMatrix[1] =  cam.m10 / fp;
+        camMatrix[2] =  cam.m20 / fp; camMatrix[3] =  0f;
+        camMatrix[4] = -cam.m01 / fp; camMatrix[5] = -cam.m11 / fp;
+        camMatrix[6] = -cam.m21 / fp; camMatrix[7] =  0f;
+        camMatrix[8] = -cam.m02 / fp; camMatrix[9] = -cam.m12 / fp;
+        camMatrix[10] = -cam.m22 / fp; camMatrix[11] =  0f;
+
+        // The engine divides by (rz + distX), not by rz, so its eye sits
+        // distX behind the position it reports and the M3G camera has to be
+        // placed there too, or everything near the camera is drawn about 30%
+        // too large. Backing off along local +Z is backing off along the
+        // view direction once column 2 has been negated above.
+        float back = g.distX > 0 ? g.distX : 0f;
+
         // The translation is NOT in fixed point. Matrix.mul() scales the
         // rotation by FP (16384) but setPosition writes world units raw, and
         // the engine's own transform adds m03/m13/m23 after the >>fp shift:
@@ -482,8 +511,10 @@ public final class M3GRetainedMap {
         // Dividing it here put the camera 16384x too close to the origin -
         // inside the level, moving 1/16384 as far as it should. Which is what
         // "the camera only moves the raindrops" looked like.
-        camMatrix[12] = cam.m03; camMatrix[13] = cam.m13;
-        camMatrix[14] = cam.m23; camMatrix[15] = 1f;
+        camMatrix[12] = cam.m03 + back * camMatrix[8];
+        camMatrix[13] = cam.m13 + back * camMatrix[9];
+        camMatrix[14] = cam.m23 + back * camMatrix[10];
+        camMatrix[15] = 1f;
         for(int i = 0; i < 16; i++) {
             float v = camMatrix[i];
             if(v != v || v == Float.POSITIVE_INFINITY || v == Float.NEGATIVE_INFINITY)

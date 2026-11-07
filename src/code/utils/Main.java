@@ -138,6 +138,9 @@ public final class Main extends MIDlet {
      *  emitted a quad as two triangles - but the model is uniform and the
      *  lightmap is computed per triangle instead of per quad. */
     public static int m3gSplitQuads = 1;
+    /** Clean loader: 1 keeps the baked lightmap in the vertex colours,
+     *  0 (default) draws the texture alone with no lighting at all. */
+    public static int m3gCleanLit = 0;
     public static boolean m3gLitNoVertexColors = false; // 1 strips baked lightmap
     public static boolean m3gLitFlipWinding = false; // rescue only: CW derived from pack()
     public static boolean m3gLitCullNone = false; // CULL_BACK w/ per-poly winding normalization
@@ -462,6 +465,7 @@ public final class Main extends MIDlet {
         m3gLitSplit = settings.getIntNoLang("M3G_LIT_SPLIT", 0);
         m3gClean = settings.getIntNoLang("M3G_CLEAN", 0);
         m3gSplitQuads = settings.getIntNoLang("M3G_SPLIT_QUADS", 1);
+        m3gCleanLit = settings.getIntNoLang("M3G_CLEAN_LIT", 0);
         m3gLitNoVertexColors = settings.getIntNoLang("M3G_LIT_NOVCOL", 0) == 1;
         m3gLitFlipWinding = settings.getIntNoLang("M3G_LIT_FLIP", 0) == 1;
         m3gLitCullNone = settings.getIntNoLang("M3G_LIT_CULL", 1) == 0;
