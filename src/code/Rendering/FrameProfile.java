@@ -20,15 +20,15 @@ package code.Rendering;
 final class FrameProfile {
 
     static final int WORLD = 0, SPRITES = 1, SKY = 2, EFFECTS = 3,
-            WEATHER = 4, FINISH = 5, SETUP = 6, PASSES = 7;
+            WEATHER = 4, FINISH = 5, SETUP = 6, LIT = 7, PASSES = 8;
 
     static final String[] NAMES = {
-        "world", "sprites", "sky", "effects", "wx", "finish", "setup"
+        "world", "sprites", "sky", "effects", "wx", "finish", "setup", "lit"
     };
 
     private static final long WINDOW_MS = 2000L;
 
-    private static long[] last = new long[8];
+    private static long[] last = new long[PASSES];
     private static long[] total = new long[PASSES];
     private static long[] frames = new long[PASSES];
     private static long windowStart;
@@ -52,9 +52,33 @@ final class FrameProfile {
         long now = System.currentTimeMillis();
         long d = now - last[pass];
         last[pass] = now;
-        if (d <= 0 || d > 500) return; // a stall is not a pass cost
+        // The cutoff separates "this pass is slow" from "the phone stalled" -
+        // a debugger pause, an incoming call. 500 ms was chosen when a frame
+        // was ~40 ms and any pass over that was obviously a hiccup; at the
+        // frame rates this profile exists to diagnose a pass really does take
+        // most of a second, and throwing those frames away is exactly why the
+        // report can come back empty. 5 s is far past any real pass.
+        if (d <= 0 || d > 5000) return; // a stall is not a pass cost
         total[pass] += d;
         frames[pass]++;
+    }
+
+    /**
+     * Credit time measured inside the world pass to the lit sub-pass.
+     * <p>
+     * The lit bucket flush runs between {@code mark(WORLD)} and
+     * {@code close(WORLD)}, so simply adding it to its own bucket would count
+     * the same milliseconds twice and make every share wrong. Pushing
+     * {@code last[WORLD]} forward by the same amount removes them from the
+     * world pass: world is then charged from its mark to the start of the lit
+     * flush, plus from the end of the flush to its close, which is what
+     * "everything in the world pass except the lit geometry" means.
+     */
+    static void addLit(long d) {
+        if (d <= 0) return;
+        last[WORLD] += d;
+        total[LIT] += d;
+        frames[LIT]++;
     }
 
     static void frameStart() {
@@ -102,13 +126,20 @@ final class FrameProfile {
         long sum = 0;
         for (int i = 0; i < PASSES; i++) sum += total[i];
         if (sum <= 0) return "profile: waiting for measurable time";
+        // Three biggest, not the first three in pass order: the pass that
+        // matters is whichever is expensive, and that is not a fixed index -
+        // the lit sub-pass sits last in the array and is routinely the answer.
         StringBuffer sb = new StringBuffer("profile ");
-        int shown = 0;
-        for (int i = 0; i < PASSES && shown < 3; i++) {
-            if (total[i] <= 0) continue;
-            sb.append(NAMES[i]).append('=')
-              .append((int) (total[i] * 100 / sum)).append("% ");
-            shown++;
+        boolean[] used = new boolean[PASSES];
+        for (int shown = 0; shown < 3; shown++) {
+            int best = -1;
+            for (int i = 0; i < PASSES; i++)
+                if (!used[i] && total[i] > 0
+                        && (best < 0 || total[i] > total[best])) best = i;
+            if (best < 0) break;
+            used[best] = true;
+            sb.append(NAMES[best]).append('=')
+              .append((int) (total[best] * 100 / sum)).append("% ");
         }
         return sb.toString();
     }

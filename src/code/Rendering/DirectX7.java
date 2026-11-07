@@ -20,7 +20,14 @@ public final class DirectX7 {
    private int[] frameImageBuffer;
    private boolean imagePresentationFailed;
    int frameDrawCalls,frameCpuBarriers,frameTextureUploads;
+   /** Wall-clock cost of the last M3G frame, in milliseconds. Read by the
+    *  stats line; zero until the first frame completes. */
+   private int frameMs;
    private int peakDraws,peakBarriers,peakUploads;
+   /** Slowest M3G frame inside the current stats window, in milliseconds.
+    *  Peak, not average: the frame the player stumbles on is the worst one,
+    *  and an average over a 250 ms window at 1 FPS is a single frame anyway. */
+   private int peakFrameMs;
    private long statsNext;
    private String statsText;
    private boolean statsNative;
@@ -42,6 +49,7 @@ public final class DirectX7 {
        peakDraws=Math.max(peakDraws,frameDrawCalls);
        peakBarriers=Math.max(peakBarriers,frameCpuBarriers);
        peakUploads=Math.max(peakUploads,frameTextureUploads);
+       peakFrameMs=Math.max(peakFrameMs,frameMs);
        boolean active=isM3GActive();
        if(statsText==null || now>=statsNext || now<statsNext-250 || active!=statsNative) {
            // THE LINE IS 30 CHARACTERS WIDE. The HUD font is 8 px per glyph on
@@ -66,11 +74,19 @@ public final class DirectX7 {
                int room = HUD_CHARS - b.length();
                b.append(err.length() <= room ? err : err.substring(0, Math.max(0, room)));
            } else {
-               b.append(" D:").append(peakDraws)
-                .append(" L:").append(M3GLitRenderer.statsLit)
-                .append(" F:").append(M3GLitRenderer.statsFail)
-                .append(" r").append(M3GLitRenderer.statsReason)
-                .append(" W").append(code.utils.Main.m3gWorldLighting);
+               // LOWER CASE = a count, UPPER CASE = milliseconds:
+               //   d  native draw calls       F  whole M3G frame, ms
+               //   l  lit polygons            T  lit bucket flush, ms
+               // f/r/u are appended only when non-zero: they cost characters
+               // every single frame and only mean anything when they fire.
+               b.append(" d").append(peakDraws)
+                .append(" l").append(M3GLitRenderer.statsLit)
+                .append(" F").append(peakFrameMs)
+                .append(" T").append(M3GLitRenderer.statsLitMs);
+               if(M3GLitRenderer.statsFail > 0)
+                   b.append(" f").append(M3GLitRenderer.statsFail)
+                    .append(" r").append(M3GLitRenderer.statsReason);
+               if(peakUploads > 0) b.append(" u").append(peakUploads);
            }
            String line = b.toString();
            statsText = line.length() <= HUD_CHARS ? line : line.substring(0, HUD_CHARS);
@@ -78,7 +94,7 @@ public final class DirectX7 {
            if(speedTest != null && speedTest.ranOk) {
                statsText += " | " + speedTest.resultsLine();
            }
-           peakDraws=peakBarriers=peakUploads=0;statsNext=now+250;statsNative=active;
+           peakDraws=peakBarriers=peakUploads=peakFrameMs=0;statsNext=now+250;statsNative=active;
            M3GLitRenderer.resetLitStats();
        }
        return statsText;
@@ -506,6 +522,7 @@ this.buffer.resetTex();
    /** Required gameplay transaction: no backup, CPU dispatch, or whole-frame
     * replay. CPU resource barriers/readback for partial frames remain allowed. */
    private boolean renderRequired(boolean allowM3G,FrameEffects effects,ScreenLines weather,boolean imageOutput) {
+       long frameStartMs = System.currentTimeMillis();
        try {
            checkRequiredState(allowM3G);
            lx=camera.m03;ly=camera.m13;lz=camera.m23;
@@ -545,6 +562,11 @@ this.buffer.resetTex();
        } catch(OutOfMemoryError ex) {
            throw requiredFailure("not enough memory for M3G");
        } finally {
+           // Measured after resetQueues(): it is part of the frame the player
+           // waits for, and a cost that survives the frame is exactly the kind
+           // of thing this number exists to expose. Two clock reads per frame
+           // are nothing next to even a healthy 40 ms frame.
+           frameMs=(int)(System.currentTimeMillis()-frameStartMs);
            nativePass=false;
            resetQueues();
        }

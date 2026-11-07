@@ -411,7 +411,14 @@ public final class M3GSceneRenderer implements SceneRenderer {
     public void finish(DirectX7 g) {
         // finishImage also fills g.display directly when the viewport is scaled
         // (centered native-resolution blit with black bars, no upscale).
-        Image result=finishImage(g);
+        // readback=false: this method copies the surface into g.display itself
+        // two lines below, so letting finishImage do it first read the very
+        // same Image into the very same int[] twice per frame - a 240x320x4
+        // copy each time, on the critical path of every frame, for no pixels
+        // that differ. finishImage (the image-presentation path) still copies,
+        // because there the Image is the product and g.display may never be
+        // touched by anyone else.
+        Image result=finishImage(g,false);
         cameraInstalled = false;
         if(result!=null && targetScale()>=100) result.getRGB(g.display,0,g.width,0,0,g.width,g.height);
     }
@@ -420,7 +427,11 @@ public final class M3GSceneRenderer implements SceneRenderer {
      * Scaled viewport (M3G_SCREEN_SCALE<100) is blitted centered on screen at
      * native resolution (no upscale), surrounded by black bars, both into
      * g.display and into a reusable full-size presentation image. */
-    public Image finishImage(DirectX7 g) {
+    public Image finishImage(DirectX7 g) { return finishImage(g, true); }
+
+    /** @param readback copy the finished surface into g.display. The direct
+     *  presentation path does that itself and passes false. */
+    public Image finishImage(DirectX7 g,boolean readback) {
         flushBatch(g);
         if(!bound) return null;
         try { graphics.releaseTarget(); }
@@ -433,7 +444,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
             // Image is drawn directly by DirectX7.flushFrame, so the copy is
             // only needed when CPU pixels are actually read (getDisplay:
             // pause snapshot, developer overlays). Default off = old behaviour.
-            if(Main.m3gLazyReadback != 1) {
+            if(readback && Main.m3gLazyReadback != 1) {
                 surface.getRGB(g.display, 0, g.width, 0, 0, g.width, g.height);
             }
             return surface;

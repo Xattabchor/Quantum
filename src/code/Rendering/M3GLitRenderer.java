@@ -285,6 +285,9 @@ public final class M3GLitRenderer {
     // reason: 1=exotic mode, 2=no/null texture or unsupported, 3=no view
     // record, 4=uv out of 16-bit range, 0=none.
     public static int statsLit, statsFail, statsReason;
+    /** Slowest lit-bucket flush in the window, ms - the native half of the
+     *  frame, so F minus T in the stats line is what everything else costs. */
+    public static int statsLitMs;
     public static int cullDist, cullBehind, cullMinPx; // why polys were dropped
     public static int lastDistLimit, cullMode;
     /** Signature of the lights actually handed to the engine this frame. */
@@ -296,6 +299,9 @@ public final class M3GLitRenderer {
      *  tell setPositions from render() on a handset. */
     public static String STAGE = "?";
     private int frameLit, frameFail, frameReason;
+    /** Wall clock inside flushBuckets this frame: the native submissions plus
+     *  the per-bucket buffer uploads that feed them. */
+    private int frameLitMs;
     private int frameMaterial;      // draws this frame that went out WITH a Material
     private boolean lastFrameHadMaterial = true;
 
@@ -328,10 +334,11 @@ public final class M3GLitRenderer {
             }
         }
         if(frameLit > statsLit) statsLit = frameLit;
+        if(frameLitMs > statsLitMs) statsLitMs = frameLitMs;
         if(frameFail > statsFail) { statsFail = frameFail; statsReason = frameReason; }
         lastFrameHadMaterial = frameMaterial > 0;
         frameMaterial = 0;
-        frameLit = 0; frameFail = 0; frameReason = 0;
+        frameLit = 0; frameFail = 0; frameReason = 0; frameLitMs = 0;
         for(int i = 0; i < buckets.size(); i++) {
             LitBucket bk = (LitBucket) buckets.elementAt(i);
             bk.verts = 0; bk.indexLen = 0; bk.stripCount = 0; bk.maxAbs = 1;
@@ -846,6 +853,8 @@ public final class M3GLitRenderer {
         // Absolute-time water offset: no drift, one call per frame even with
         // several scroll buckets (river + future water textures).
         float offV = (float) (System.currentTimeMillis() % 4000000L) / 1000f;
+        long bucketStartMs = System.currentTimeMillis();
+        try {
         for(int phase = 0; phase < 2; phase++) {
             for(int bi = 0; bi < n; bi++) {
                 LitBucket bk = (LitBucket) buckets.elementAt(bi);
@@ -884,6 +893,14 @@ public final class M3GLitRenderer {
                     throw new RuntimeException(m);
                 }
             }
+        }
+        } finally {
+            // Recorded even when a bucket throws: a frame that dies halfway
+            // through its buckets still spent the time, and that cost is
+            // exactly what decides whether the pass is affordable at all.
+            int d = (int) (System.currentTimeMillis() - bucketStartMs);
+            if(d > frameLitMs) frameLitMs = d;
+            if(M3GSceneRenderer.profiling()) FrameProfile.addLit(d);
         }
     }
 
