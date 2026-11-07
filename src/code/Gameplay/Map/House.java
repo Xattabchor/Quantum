@@ -10,6 +10,8 @@ import code.Rendering.Texture;
 import code.Math.Vector3D;
 import java.util.Vector;
 import javax.microedition.lcdui.Graphics;
+import code.Rendering.M3GSceneRenderer;
+import code.Rendering.M3GRetainedMap;
 
 public final class House {
     public static boolean l2dRoomRendering;
@@ -297,7 +299,15 @@ public final class House {
     }
 
     public final int render(Graphics g, DirectX7 g3d, int part[], int cx, int cz) {
-        renderSkybox(g,g3d);
+                renderSkybox(g,g3d);
+        if(code.utils.Main.m3gClean == 1) {
+            M3GSceneRenderer sr = g3d.m3g();
+            if(sr != null) {
+                M3GRetainedMap rm = sr.retained();
+                if(!rm.isBuilt()) rm.build(g3d, sr, rooms);
+                if(rm.isBuilt()) { sr.drawRetained(g3d, rm); return 0; }
+            }
+        }
         if(part.length == 0) return 0;
         
         roomsToRender.removeAllElements();
@@ -321,7 +331,15 @@ public final class House {
     }
 
     public final int render(Graphics g, DirectX7 g3d, int part, int cx, int cz) {
-        renderSkybox(g,g3d);
+                renderSkybox(g,g3d);
+        if(code.utils.Main.m3gClean == 1) {
+            M3GSceneRenderer sr = g3d.m3g();
+            if(sr != null) {
+                M3GRetainedMap rm = sr.retained();
+                if(!rm.isBuilt()) rm.build(g3d, sr, rooms);
+                if(rm.isBuilt()) { sr.drawRetained(g3d, rm); return 0; }
+            }
+        }
         if(part == -1) return 0;
 
         roomsToRender.removeAllElements();

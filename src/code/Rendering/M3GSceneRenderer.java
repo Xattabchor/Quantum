@@ -305,6 +305,27 @@ public final class M3GSceneRenderer implements SceneRenderer {
         canvasImages.draw(g,images,target);
     }
 
+    private M3GRetainedMap retainedMap;
+
+    /** The retained-mode level, built lazily on the first frame that wants it. */
+    public M3GRetainedMap retained() {
+        if(retainedMap == null) retainedMap = new M3GRetainedMap();
+        return retainedMap;
+    }
+
+    /** Draw the whole level with one render(World) call. Everything the
+     *  immediate path pays per frame - per-bucket scale loop, VertexArray.set
+     *  on four arrays, a fresh TriangleStripArray, seven binds and seven
+     *  renders - is either done once at build time or handed to the
+     *  implementation, which is where culling and clipping belong. */
+    public void drawRetained(DirectX7 g, M3GRetainedMap rm) {
+        flushPolygons(g);
+        flushBatch(g);
+        bind(g, true);   // keep the skybox that renderBackground just drew
+        restoreCamera(g);
+        rm.render(g, this);
+    }
+
     public void prepareEffects(DirectX7 g,FrameEffects effects) {
         if(frameEffects==null) frameEffects=new M3GFrameEffects(this,graphics,maxTexture);
         frameEffects.prepare(g,effects);

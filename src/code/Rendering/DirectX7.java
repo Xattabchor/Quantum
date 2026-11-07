@@ -75,7 +75,14 @@ public final class DirectX7 {
                    ? M3GLitRenderer.DIAG : M3GLitRenderer.statsErr;
            StringBuffer b = new StringBuffer(40);
            b.append(marker);
-           if(code.utils.Main.m3gLitSplit == 1) {
+           if(code.utils.Main.m3gClean == 1) {
+               M3GSceneRenderer sr = m3g();
+               if(sr != null) {
+                   M3GRetainedMap rm = sr.retained();
+                   b.append(" RM").append(rm.drawables()).append('/').append(rm.triangles())
+                    .append(" b").append(rm.buildMs());
+               }
+           } else if(code.utils.Main.m3gLitSplit == 1) {
                // Stage split of the lit flush: u = Java-side per-bucket prep
                // (scale loop + VertexArray.set + setPositions), s = building
                // the TriangleStripArray, b = bind/setCamera/setFog, r = the
@@ -480,6 +487,11 @@ this.buffer.resetTex();
 
    /** Keep sky as an ordered prefix, never mixed into world depth sorting.
     * Software/debug/alpha retain the original immediate sky pass. */
+   /** The M3G renderer, or null when M3G is not driving this frame. */
+   public final M3GSceneRenderer m3g() {
+       return sceneRenderer instanceof M3GSceneRenderer ? (M3GSceneRenderer) sceneRenderer : null;
+   }
+
    public void renderBackground() {
        if(!canRenderM3G() || backgroundPending) {render();return;}
        if(buffer.getSize()==0) return; // CPU gradient already painted its pixels.

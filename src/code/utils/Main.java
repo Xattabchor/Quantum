@@ -128,6 +128,10 @@ public final class Main extends MIDlet {
     /** 1 = the M3G stats line reports where the lit flush goes (u/s/b/r per
      *  stage) instead of the flush and worst-bucket totals. Diagnostic only. */
     public static int m3gLitSplit = 0;
+    /** 1 = draw the level as ONE retained-mode M3G scene graph (M3GRetainedMap)
+     *  instead of the per-polygon immediate path. Built once, drawn with a
+     *  single Graphics3D.render(World) per frame. */
+    public static int m3gClean = 0;
     public static boolean m3gLitNoVertexColors = false; // 1 strips baked lightmap
     public static boolean m3gLitFlipWinding = false; // rescue only: CW derived from pack()
     public static boolean m3gLitCullNone = false; // CULL_BACK w/ per-poly winding normalization
@@ -450,6 +454,7 @@ public final class Main extends MIDlet {
         m3gLitFar = settings.getIntNoLang("M3G_LIT_FAR", 600000);
         m3gLitMaxSpan = settings.getIntNoLang("M3G_LIT_MAXSPAN", 2);
         m3gLitSplit = settings.getIntNoLang("M3G_LIT_SPLIT", 0);
+        m3gClean = settings.getIntNoLang("M3G_CLEAN", 0);
         m3gLitNoVertexColors = settings.getIntNoLang("M3G_LIT_NOVCOL", 0) == 1;
         m3gLitFlipWinding = settings.getIntNoLang("M3G_LIT_FLIP", 0) == 1;
         m3gLitCullNone = settings.getIntNoLang("M3G_LIT_CULL", 1) == 0;
