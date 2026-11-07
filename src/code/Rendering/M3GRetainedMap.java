@@ -77,6 +77,20 @@ public final class M3GRetainedMap {
     private String failed;
     private String stage = "";
 
+    /** The HUD clips at 30 glyphs, and "java.lang.IllegalArgumentException"
+     *  does not fit - which is how a failure got reported as "java.lang.I" and
+     *  stopped. Short tags for the ones this path can actually raise. */
+    private static String tag(Throwable t) {
+        if(t instanceof IllegalArgumentException) return "IAX";
+        if(t instanceof IllegalStateException) return "ISX";
+        if(t instanceof NullPointerException) return "NPX";
+        if(t instanceof IndexOutOfBoundsException) return "IOX";
+        if(t instanceof OutOfMemoryError) return "OOM";
+        String n = t.getClass().getName();
+        int dot = n.lastIndexOf('.');
+        return dot >= 0 ? n.substring(dot + 1) : n;
+    }
+
     public String failure() { return failed; }
     public String stage() { return stage; }
 
@@ -108,8 +122,7 @@ public final class M3GRetainedMap {
         try {
             buildUnsafe(g, owner, rooms);
         } catch(Throwable t) {
-            failed = "@build." + stage + (t.getMessage() == null
-                    ? " " + t.getClass().getName() : " " + t.getMessage());
+            failed = "@b." + stage + " " + tag(t);
             built = false;
         }
     }
@@ -368,32 +381,62 @@ public final class M3GRetainedMap {
         try {
             renderUnsafe(g, owner);
         } catch(Throwable t) {
-            failed = "@render." + stage + (t.getMessage() == null
-                    ? " " + t.getClass().getName() : " " + t.getMessage());
+            failed = "@" + stage + " " + tag(t);
             built = false;
         }
     }
 
     private void renderUnsafe(DirectX7 g, M3GSceneRenderer owner) {
         Graphics3D g3d = Graphics3D.getInstance();
-        stage = "camera";
         Matrix cam = g.getCamera();
         float fp = (float) Matrix.FP;
         // Row-major in the engine, column-major in M3G.
+        //
+        // Matrix.mul() only ever writes m00..m23 - the bottom row is whatever
+        // the constructor left there - and Transform.set() rejects a matrix it
+        // cannot invert. So the affine row is forced and any non-finite value
+        // is zeroed before the call; a rotation that still comes out singular
+        // falls back to a pure translation, which loses the view direction but
+        // keeps the level on screen instead of killing the frame.
+        stage = "camT";
         camMatrix[0] = cam.m00 / fp; camMatrix[1] = cam.m10 / fp;
-        camMatrix[2] = cam.m20 / fp; camMatrix[3] = cam.m30 / fp;
+        camMatrix[2] = cam.m20 / fp; camMatrix[3] = 0f;
         camMatrix[4] = cam.m01 / fp; camMatrix[5] = cam.m11 / fp;
-        camMatrix[6] = cam.m21 / fp; camMatrix[7] = cam.m31 / fp;
+        camMatrix[6] = cam.m21 / fp; camMatrix[7] = 0f;
         camMatrix[8] = cam.m02 / fp; camMatrix[9] = cam.m12 / fp;
-        camMatrix[10] = cam.m22 / fp; camMatrix[11] = cam.m32 / fp;
+        camMatrix[10] = cam.m22 / fp; camMatrix[11] = 0f;
         camMatrix[12] = cam.m03 / fp; camMatrix[13] = cam.m13 / fp;
-        camMatrix[14] = cam.m23 / fp; camMatrix[15] = cam.m33 / fp;
-        camTransform.set(camMatrix);
+        camMatrix[14] = cam.m23 / fp; camMatrix[15] = 1f;
+        boolean bad = false;
+        for(int i = 0; i < 16; i++) {
+            float v = camMatrix[i];
+            if(v != v || v == Float.POSITIVE_INFINITY || v == Float.NEGATIVE_INFINITY) {
+                camMatrix[i] = i == 15 ? 1f : 0f;
+                bad = true;
+            }
+        }
+        if(bad) { camMatrix[0] = camMatrix[5] = camMatrix[10] = 1f; }
+        try {
+            camTransform.set(camMatrix);
+        } catch(Throwable t) {
+            for(int i = 0; i < 16; i++) camMatrix[i] = 0f;
+            camMatrix[0] = camMatrix[5] = camMatrix[10] = camMatrix[15] = 1f;
+            camMatrix[12] = cam.m03 / fp; camMatrix[13] = cam.m13 / fp;
+            camMatrix[14] = cam.m23 / fp;
+            camTransform.set(camMatrix);
+        }
         camera.setTransform(camTransform);
+        // setPerspective rejects fovy outside (0,180), aspect <= 0 and
+        // near >= far, and every one of those is a value we take from the
+        // renderer's live state rather than compute.
+        stage = "camP";
         float fovY = g.fovY > 0 ? g.fovY : 60;
+        if(fovY >= 180) fovY = 60;
+        float aspect = g.height > 0 ? (float) g.width / (float) g.height : 0.75f;
         float near = Math.max(16, g.distX);
-        camera.setPerspective(fovY, (float) g.width / (float) g.height,
-                near, Main.m3gLitFar);
+        float far = Main.m3gLitFar;
+        if(far <= near) far = near * 100f;
+        camera.setPerspective(fovY, aspect, near, far);
         stage = "render";
         g.frameDrawCalls++;
         g3d.render(world);
