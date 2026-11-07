@@ -97,10 +97,23 @@ public final class DirectX7 {
                // and a fixed layout pushed the profile tail - the part that
                // names the expensive pass - off the edge on exactly the frames
                // that were slow enough to make it interesting.
+               // D/B/T is the documented convention for this very HUD
+               // (docs/m3g.md): D = Graphics3D.render calls, B = intermediate
+               // native->CPU barriers on a bound target, T = native Image2D
+               // created on a cache miss. A healthy frame reads B=0 and T=0
+               // with D ~20-60, so B and T are ALARMS and only spend glyphs
+               // when they fire, while D is context and always worth two.
+               // Reworking the line dropped all three, which threw away the
+               // one counter that names a per-frame readback (B) and the one
+               // that names a texture rebuild (T) - the two failures this
+               // port is documented to fall into.
+               if(b.length() + 4 <= HUD_CHARS) b.append(" D").append(peakDraws);
+               if(peakBarriers > 0 && b.length() + 4 <= HUD_CHARS)
+                   b.append(" B").append(peakBarriers);
+               if(peakUploads > 0 && b.length() + 4 <= HUD_CHARS)
+                   b.append(" T").append(peakUploads);
                if(M3GLitRenderer.statsLit > 0 && b.length() + 6 <= HUD_CHARS)
                    b.append(" l").append(M3GLitRenderer.statsLit);
-               if(peakUploads > 0 && b.length() + 4 <= HUD_CHARS)
-                   b.append(" u").append(peakUploads);
                if(M3GLitRenderer.statsFail > 0 && b.length() + 8 <= HUD_CHARS)
                    b.append(" f").append(M3GLitRenderer.statsFail)
                     .append(" r").append(M3GLitRenderer.statsReason);
