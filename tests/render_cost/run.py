@@ -71,7 +71,12 @@ def main(argv):
         render = []
         for pattern in RENDER_SUBSET:
             render += sorted(ROOT.glob(pattern))
-        sources = [p for p in render if p.name != "Vector3D.java"]
+        sources = [p for p in render
+                   if p.name != "Vector3D.java"
+                   # Retained mode (World, Camera.setTransform) is not in the
+                   # recording doubles - and draw-call accounting does not need
+                   # it, because it never runs with M3G_CLEAN=1.
+                   and p.name != "M3GRetainedMap.java"]
         sources.append(TEST / "java/code/Rendering/FrameCostProbe.java")
         run([JAVA, "-jar", ECJ, "-8", "-proc:none", "-nowarn",
              "-classpath", os.pathsep.join([str(stubs), str(APP), str(API)]),
