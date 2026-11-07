@@ -5,4 +5,4 @@ MIDlet-1: Quantum Res3 CLEAN,,code.utils.Main
 MicroEdition-Configuration: CLDC-1.1
 MicroEdition-Profile: MIDP-2.0
 MIDlet-Jar-URL: Quantum_Clean_Full.jar
-MIDlet-Jar-Size: 1806754
+MIDlet-Jar-Size: 1808283

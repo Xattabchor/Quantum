@@ -132,6 +132,12 @@ public final class Main extends MIDlet {
      *  instead of the per-polygon immediate path. Built once, drawn with a
      *  single Graphics3D.render(World) per frame. */
     public static int m3gClean = 0;
+    /** 1 = the level's quads are split into two triangles at load time, on the
+     *  diagonal the renderer already drew (baseQuad = {0,1,3, 1,2,3}, so
+     *  (a,b,d) and (b,c,d)). Draw cost does not change - every path already
+     *  emitted a quad as two triangles - but the model is uniform and the
+     *  lightmap is computed per triangle instead of per quad. */
+    public static int m3gSplitQuads = 1;
     public static boolean m3gLitNoVertexColors = false; // 1 strips baked lightmap
     public static boolean m3gLitFlipWinding = false; // rescue only: CW derived from pack()
     public static boolean m3gLitCullNone = false; // CULL_BACK w/ per-poly winding normalization
@@ -455,6 +461,7 @@ public final class Main extends MIDlet {
         m3gLitMaxSpan = settings.getIntNoLang("M3G_LIT_MAXSPAN", 2);
         m3gLitSplit = settings.getIntNoLang("M3G_LIT_SPLIT", 0);
         m3gClean = settings.getIntNoLang("M3G_CLEAN", 0);
+        m3gSplitQuads = settings.getIntNoLang("M3G_SPLIT_QUADS", 1);
         m3gLitNoVertexColors = settings.getIntNoLang("M3G_LIT_NOVCOL", 0) == 1;
         m3gLitFlipWinding = settings.getIntNoLang("M3G_LIT_FLIP", 0) == 1;
         m3gLitCullNone = settings.getIntNoLang("M3G_LIT_CULL", 1) == 0;

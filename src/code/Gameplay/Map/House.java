@@ -304,8 +304,12 @@ public final class House {
             M3GSceneRenderer sr = g3d.m3g();
             if(sr != null) {
                 M3GRetainedMap rm = sr.retained();
-                if(!rm.isBuilt()) rm.build(g3d, sr, rooms);
-                if(rm.isBuilt()) { sr.drawRetained(g3d, rm); return 0; }
+                if(rm.failure() == null) {
+                    if(!rm.isBuilt()) rm.build(g3d, sr, rooms);
+                    if(rm.isBuilt()) { sr.drawRetained(g3d, rm); return 0; }
+                }
+                // Retained mode failed: fall through to the immediate path so
+                // the level still draws and the HUD can report why.
             }
         }
         if(part.length == 0) return 0;
@@ -336,8 +340,12 @@ public final class House {
             M3GSceneRenderer sr = g3d.m3g();
             if(sr != null) {
                 M3GRetainedMap rm = sr.retained();
-                if(!rm.isBuilt()) rm.build(g3d, sr, rooms);
-                if(rm.isBuilt()) { sr.drawRetained(g3d, rm); return 0; }
+                if(rm.failure() == null) {
+                    if(!rm.isBuilt()) rm.build(g3d, sr, rooms);
+                    if(rm.isBuilt()) { sr.drawRetained(g3d, rm); return 0; }
+                }
+                // Retained mode failed: fall through to the immediate path so
+                // the level still draws and the HUD can report why.
             }
         }
         if(part == -1) return 0;

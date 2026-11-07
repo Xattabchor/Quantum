@@ -809,7 +809,20 @@ public class Room {
             pols4v[i].tex = (byte) mat;
         }
 
-        RenderObject[] var30 = new RenderObject[pols3v.length + pols4v.length];
+        RenderObject[] var30;
+        if(code.utils.Main.m3gSplitQuads == 1) {
+            // Quads go out as the two triangles every path already drew. See
+            // splitQuad for why the diagonal matters.
+            var30 = new RenderObject[pols3v.length + pols4v.length * 2];
+            int pols = 0;
+            for(int i = 0; i < pols3v.length; ++i) var30[pols++] = pols3v[i];
+            for(int i = 0; i < pols4v.length; ++i) {
+                RenderObject[] two = splitQuad(pols4v[i]);
+                var30[pols++] = two[0];
+                var30[pols++] = two[1];
+            }
+        } else {
+        var30 = new RenderObject[pols3v.length + pols4v.length];
         int pols = 0;
 
         for(int i = 0; i < pols3v.length; ++i) {
@@ -821,9 +834,66 @@ public class Room {
             var30[pols] = pols4v[i];
             pols++;
         }
+        }
 
         System.out.println("Mesh [" + file + "] вершин: " + verts.length + " полигонов: " + var30.length);
         return new Mesh(verts, var30, mt);
+    }
+
+
+    /** Split one quad into the TWO triangles the renderer was already drawing.
+     *
+     *  Nothing about the picture moves, because nothing about the geometry
+     *  does: every path in this build already emitted a Polygon4V as two
+     *  triangles. The packed path uses baseQuad = {0,1,3, 1,2,3} over the
+     *  polygon's stored fields (a,b,c,d), so the diagonal is b-d and the two
+     *  triangles are (a,b,d) and (b,c,d). Split on the other diagonal and the
+     *  shading changes: 281 of kordos' 1974 quads are non-planar enough
+     *  (ratio > 0.05) for the two diagonals to disagree.
+     *
+     *  The normal is copied rather than recomputed for the same reason.
+     *  LightMapper runs after this and fills the corner values, so the two
+     *  triangles are lit directly instead of through the quad's four corners;
+     *  with the normal and the corners unchanged that is the same lightmap
+     *  triangle by triangle. */
+    private static RenderObject[] splitQuad(Polygon4V q) {
+        RenderObject[] out = new RenderObject[2];
+        if(q instanceof LightedPolygon4V) {
+            LightedPolygon4V p = (LightedPolygon4V) q;
+            LightedPolygon3V t1 = new LightedPolygon3V(
+                    p.a, p.b, p.d, (byte) p.au, (byte) p.av,
+                    (byte) p.bu, (byte) p.bv, (byte) p.du, (byte) p.dv);
+            LightedPolygon3V t2 = new LightedPolygon3V(
+                    p.b, p.c, p.d, (byte) p.bu, (byte) p.bv,
+                    (byte) p.cu, (byte) p.cv, (byte) p.du, (byte) p.dv);
+            out[0] = t1; out[1] = t2;
+        } else if(q instanceof ColorLightedPolygon4V) {
+            ColorLightedPolygon4V p = (ColorLightedPolygon4V) q;
+            ColorLightedPolygon3V t1 = new ColorLightedPolygon3V(
+                    p.a, p.b, p.d, (byte) p.au, (byte) p.av,
+                    (byte) p.bu, (byte) p.bv, (byte) p.du, (byte) p.dv);
+            ColorLightedPolygon3V t2 = new ColorLightedPolygon3V(
+                    p.b, p.c, p.d, (byte) p.bu, (byte) p.bv,
+                    (byte) p.cu, (byte) p.cv, (byte) p.du, (byte) p.dv);
+            out[0] = t1; out[1] = t2;
+        } else {
+            Polygon3V t1 = new Polygon3V(
+                    q.a, q.b, q.d, (byte) q.au, (byte) q.av,
+                    (byte) q.bu, (byte) q.bv, (byte) q.du, (byte) q.dv);
+            Polygon3V t2 = new Polygon3V(
+                    q.b, q.c, q.d, (byte) q.bu, (byte) q.bv,
+                    (byte) q.cu, (byte) q.cv, (byte) q.du, (byte) q.dv);
+            out[0] = t1; out[1] = t2;
+        }
+        // Same texture, same normal, same sort key as the quad they replace.
+        // tex lives on Polygon3V, not on RenderObject, and is a byte there
+        // where Polygon4V widened it to an int.
+        for(int i = 0; i < 2; i++) {
+            RenderObject t = out[i];
+            ((Polygon3V) t).tex = (byte) q.tex;
+            t.nx = q.nx; t.ny = q.ny; t.nz = q.nz; t.sz = q.sz;
+        }
+        return out;
     }
 
     public void paint(Graphics g, int x, int y) {

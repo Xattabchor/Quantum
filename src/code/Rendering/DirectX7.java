@@ -77,8 +77,15 @@ public final class DirectX7 {
            b.append(marker);
            if(code.utils.Main.m3gClean == 1) {
                M3GSceneRenderer sr = m3g();
-               if(sr != null) {
-                   M3GRetainedMap rm = sr.retained();
+               M3GRetainedMap rm = sr == null ? null : sr.retained();
+               // A failure outranks the counters: it names the call that threw,
+               // and the clean branch used to hide it behind RM n/n.
+               if(rm != null && rm.failure() != null) {
+                   b.append(' ');
+                   String fe = rm.failure();
+                   int room = HUD_CHARS - b.length();
+                   b.append(fe.length() <= room ? fe : fe.substring(0, Math.max(0, room)));
+               } else if(rm != null) {
                    b.append(" RM").append(rm.drawables()).append('/').append(rm.triangles())
                     .append(" b").append(rm.buildMs());
                }

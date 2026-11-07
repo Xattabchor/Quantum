@@ -1,0 +1,8 @@
+MIDlet-Name: Quantum Res3 QUADS
+MIDlet-Version: 1.0.0
+MIDlet-Vendor: AE-MODS.RU
+MIDlet-1: Quantum Res3 QUADS,,code.utils.Main
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Jar-URL: Quantum_Quads_Full.jar
+MIDlet-Jar-Size: 1808289

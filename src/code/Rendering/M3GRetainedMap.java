@@ -70,6 +70,15 @@ public final class M3GRetainedMap {
     private int triangles;
     private int drawables;
     private long buildMs;
+    /** Set once the retained path has thrown. Reported on the HUD and used to
+     *  fall back to the immediate path, so a failure here costs the frame
+     *  instead of the game. Without this the clean branch of the stats line
+     *  outranked the error branch and swallowed the one fact that mattered. */
+    private String failed;
+    private String stage = "";
+
+    public String failure() { return failed; }
+    public String stage() { return stage; }
 
     public boolean isBuilt() { return built; }
     public int triangles() { return triangles; }
@@ -94,11 +103,23 @@ public final class M3GRetainedMap {
     }
 
     public void build(DirectX7 g, M3GSceneRenderer owner, Room[] rooms) {
-        long t0 = System.currentTimeMillis();
         built = false;
+        failed = null;
+        try {
+            buildUnsafe(g, owner, rooms);
+        } catch(Throwable t) {
+            failed = "@build." + stage + (t.getMessage() == null
+                    ? " " + t.getClass().getName() : " " + t.getMessage());
+            built = false;
+        }
+    }
+
+    private void buildUnsafe(DirectX7 g, M3GSceneRenderer owner, Room[] rooms) {
+        long t0 = System.currentTimeMillis();
         triangles = 0;
         drawables = 0;
 
+        stage = "bounds";
         // Pass 1: bounds, so the grid is over the world that is actually there.
         int minX = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
@@ -119,6 +140,7 @@ public final class M3GRetainedMap {
         if (total == 0) return;
         int spanX = Math.max(1, maxX - minX), spanZ = Math.max(1, maxZ - minZ);
 
+        stage = "bin";
         // Pass 2: bin every polygon corner.
         Hashtable bins = new Hashtable();
         for (int r = 0; r < rooms.length; r++) {
@@ -162,12 +184,14 @@ public final class M3GRetainedMap {
             }
         }
 
+        stage = "mesh";
         // Pass 3: one M3G Mesh per non-empty bin.
         for (java.util.Enumeration e = bins.keys(); e.hasMoreElements();) {
             Integer key = (Integer) e.nextElement();
             Bin bin = (Bin) bins.get(key);
             if (bin.idxLen < 3) continue;
             Mesh node = makeMesh(g, owner, bin);
+            stage = "mesh@" + (bin.posLen / 3) + "v/" + (bin.idxLen / 3) + "t";
             if (node == null) continue;
             root.addChild(node);
             drawables++;
@@ -341,7 +365,18 @@ public final class M3GRetainedMap {
      *  the camera node takes the un-inverted one. */
     public void render(DirectX7 g, M3GSceneRenderer owner) {
         if (!built) return;
+        try {
+            renderUnsafe(g, owner);
+        } catch(Throwable t) {
+            failed = "@render." + stage + (t.getMessage() == null
+                    ? " " + t.getClass().getName() : " " + t.getMessage());
+            built = false;
+        }
+    }
+
+    private void renderUnsafe(DirectX7 g, M3GSceneRenderer owner) {
         Graphics3D g3d = Graphics3D.getInstance();
+        stage = "camera";
         Matrix cam = g.getCamera();
         float fp = (float) Matrix.FP;
         // Row-major in the engine, column-major in M3G.
@@ -359,6 +394,7 @@ public final class M3GRetainedMap {
         float near = Math.max(16, g.distX);
         camera.setPerspective(fovY, (float) g.width / (float) g.height,
                 near, Main.m3gLitFar);
+        stage = "render";
         g.frameDrawCalls++;
         g3d.render(world);
     }
