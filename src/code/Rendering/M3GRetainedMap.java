@@ -91,6 +91,38 @@ public final class M3GRetainedMap {
         return dot >= 0 ? n.substring(dot + 1) : n;
     }
 
+
+    /** Turn the 3x3 basis in a column-major 4x4 into a proper rotation.
+     *
+     *  Fixed-point mul() leaves the columns neither unit length nor mutually
+     *  orthogonal, and Transform.set() rejects what it cannot invert. X is
+     *  normalised, Y is orthogonalised against X and normalised, Z is rebuilt
+     *  as X cross Y so the handedness - and therefore the determinant +1 -
+     *  is right by construction rather than by luck. */
+    private static void orthonormalise(float[] m) {
+        float x0 = m[0], x1 = m[1], x2 = m[2];
+        float xl = (float) Math.sqrt(x0 * x0 + x1 * x1 + x2 * x2);
+        if(!(xl > 1e-6f)) { x0 = 1f; x1 = 0f; x2 = 0f; xl = 1f; }
+        x0 /= xl; x1 /= xl; x2 /= xl;
+        float y0 = m[4], y1 = m[5], y2 = m[6];
+        float d = y0 * x0 + y1 * x1 + y2 * x2;
+        y0 -= d * x0; y1 -= d * x1; y2 -= d * x2;
+        float yl = (float) Math.sqrt(y0 * y0 + y1 * y1 + y2 * y2);
+        if(!(yl > 1e-6f)) {
+            // Y parallel to X: any perpendicular will do.
+            y0 = -x1; y1 = x0; y2 = 0f;
+            yl = (float) Math.sqrt(y0 * y0 + y1 * y1 + y2 * y2);
+            if(!(yl > 1e-6f)) { y0 = 0f; y1 = 1f; y2 = 0f; yl = 1f; }
+        }
+        y0 /= yl; y1 /= yl; y2 /= yl;
+        float z0 = x1 * y2 - x2 * y1;
+        float z1 = x2 * y0 - x0 * y2;
+        float z2 = x0 * y1 - x1 * y0;
+        m[0] = x0; m[1] = x1; m[2] = x2;
+        m[4] = y0; m[5] = y1; m[6] = y2;
+        m[8] = z0; m[9] = z1; m[10] = z2;
+    }
+
     public String failure() { return failed; }
     public String stage() { return stage; }
 
@@ -390,15 +422,21 @@ public final class M3GRetainedMap {
         Graphics3D g3d = Graphics3D.getInstance();
         Matrix cam = g.getCamera();
         float fp = (float) Matrix.FP;
-        // Row-major in the engine, column-major in M3G.
+        // Row-major in the engine, column-major in M3G:
+        //   camMatrix[0..2]  = column 0 = the camera's local X in world
+        //   camMatrix[4..6]  = column 1 = local Y
+        //   camMatrix[8..10] = column 2 = local Z
+        //   camMatrix[12..14] = translation
         //
-        // Matrix.mul() only ever writes m00..m23 - the bottom row is whatever
-        // the constructor left there - and Transform.set() rejects a matrix it
-        // cannot invert. So the affine row is forced and any non-finite value
-        // is zeroed before the call; a rotation that still comes out singular
-        // falls back to a pure translation, which loses the view direction but
-        // keeps the level on screen instead of killing the frame.
-        stage = "camT";
+        // The device rejects this matrix with IAX even with the affine row
+        // forced to (0,0,0,1), so what it objects to is the rotation itself.
+        // Matrix.mul() only ever writes m00..m23 and does its arithmetic in
+        // fixed point, so the basis it hands over is neither normalised nor
+        // guaranteed orthogonal - close enough to draw with, not close enough
+        // for a Transform that has to be invertible. Gram-Schmidt makes it a
+        // proper rotation (det = +1) before the call, and behind that sits a
+        // fallback chain so this stage cannot kill the frame whatever it does.
+        stage = "cTs";
         camMatrix[0] = cam.m00 / fp; camMatrix[1] = cam.m10 / fp;
         camMatrix[2] = cam.m20 / fp; camMatrix[3] = 0f;
         camMatrix[4] = cam.m01 / fp; camMatrix[5] = cam.m11 / fp;
@@ -407,25 +445,37 @@ public final class M3GRetainedMap {
         camMatrix[10] = cam.m22 / fp; camMatrix[11] = 0f;
         camMatrix[12] = cam.m03 / fp; camMatrix[13] = cam.m13 / fp;
         camMatrix[14] = cam.m23 / fp; camMatrix[15] = 1f;
-        boolean bad = false;
         for(int i = 0; i < 16; i++) {
             float v = camMatrix[i];
-            if(v != v || v == Float.POSITIVE_INFINITY || v == Float.NEGATIVE_INFINITY) {
+            if(v != v || v == Float.POSITIVE_INFINITY || v == Float.NEGATIVE_INFINITY)
                 camMatrix[i] = i == 15 ? 1f : 0f;
-                bad = true;
-            }
         }
-        if(bad) { camMatrix[0] = camMatrix[5] = camMatrix[10] = 1f; }
+        orthonormalise(camMatrix);
+        boolean set = false;
         try {
             camTransform.set(camMatrix);
-        } catch(Throwable t) {
+            set = true;
+        } catch(Throwable t) { set = false; }
+        if(!set) {
+            // Pure translation: loses the view direction, keeps the level up.
             for(int i = 0; i < 16; i++) camMatrix[i] = 0f;
             camMatrix[0] = camMatrix[5] = camMatrix[10] = camMatrix[15] = 1f;
             camMatrix[12] = cam.m03 / fp; camMatrix[13] = cam.m13 / fp;
             camMatrix[14] = cam.m23 / fp;
-            camTransform.set(camMatrix);
+            try { camTransform.set(camMatrix); set = true; } catch(Throwable t) { set = false; }
         }
-        camera.setTransform(camTransform);
+        if(set) {
+            stage = "cTn";
+            try { camera.setTransform(camTransform); }
+            catch(Throwable t) { set = false; }
+        }
+        if(!set) {
+            // Last resort: setTranslation cannot throw. Orientation is lost,
+            // which is a visible bug, but the frame survives and the stage
+            // name says exactly where it gave up.
+            stage = "cTr";
+            camera.setTranslation(cam.m03 / fp, cam.m13 / fp, cam.m23 / fp);
+        }
         // setPerspective rejects fovy outside (0,180), aspect <= 0 and
         // near >= far, and every one of those is a value we take from the
         // renderer's live state rather than compute.

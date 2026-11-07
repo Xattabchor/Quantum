@@ -378,10 +378,20 @@ public final class GameScreen extends MyCanvas {
                 scene.render(g, partsMass, player);
             } else scene.render(g, renderFrom, player);
 
+            if(code.utils.Main.m3gClean == 1) {
+                // Clean loader: level plus skybox and nothing else. No
+                // weather, no vignette or damage overlay, no per-frame texture
+                // animation - Room.render, which drives updateAnimation, is
+                // skipped along with the rest of the immediate path. The point
+                // is an FPS figure for the retained world on its own.
+                nativeWeather=g3d.renderGameFrameImage(null,false,false,
+                        scene.getHouse(),renderFrom,null);
+            } else {
             nativeWeather=g3d.renderGameFrameImage(vignette,playerDied,player.isDamaged(),
                     scene.getHouse(),renderFrom,wg==null?null:wg.prepareM3G(g3d));
             if(wg!=null && !nativeWeather)
                 throw new IllegalStateException("native weather was not submitted");
+            }
             g3d.shootIntensity -= QFPS.frameTime;
             if(g3d.shootIntensity < 0) g3d.shootIntensity = 0;
             
