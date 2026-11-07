@@ -243,7 +243,18 @@ public final class M3GRetainedMap {
         }
 
         world.addChild(root);
-        world.setActiveCamera(camera);
+        // render(World) needs the active camera to be IN the scene graph, not
+        // merely referenced by it - the World is what supplies it with a
+        // transform to walk up. Setting it without adding it leaves render()
+        // to fail with IllegalStateException on the device, which is exactly
+        // what it did.
+        world.addChild(camera);
+        try {
+            world.setActiveCamera(camera);
+        } catch(Throwable t) {
+            // An implementation that refuses the camera outright is told so
+            // at render time instead; the node is in the graph either way.
+        }
         buildMs = (int) (System.currentTimeMillis() - t0);
         built = drawables > 0;
     }
@@ -487,6 +498,11 @@ public final class M3GRetainedMap {
         float far = Main.m3gLitFar;
         if(far <= near) far = near * 100f;
         camera.setPerspective(fovY, aspect, near, far);
+        // This API exposes render(World) only - there is no render(World,
+        // Camera) overload to fall back on - so the active camera has to be a
+        // child of the World. build() arranges that; if it is ever not, the
+        // one thing this can throw is IllegalStateException, and there is
+        // nothing to do about it here.
         stage = "render";
         g.frameDrawCalls++;
         g3d.render(world);
