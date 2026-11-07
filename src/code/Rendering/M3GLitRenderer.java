@@ -302,7 +302,7 @@ public final class M3GLitRenderer {
      *  buckets reads the same either way, and only one of them is fixable
      *  without rewriting the pass. */
     public static int statsLitBucketMs;
-    public static int cullDist, cullBehind, cullMinPx; // why polys were dropped
+    public static int cullDist, cullBehind, cullMinPx, cullNear; // why polys were dropped
     public static int lastDistLimit, cullMode;
     /** Signature of the lights actually handed to the engine this frame. */
     public static String lightSig = "";
@@ -334,7 +334,7 @@ public final class M3GLitRenderer {
         // were never cleared anywhere, so they only ever accumulated from
         // startup and any reading of them described the whole session rather
         // than the window it was printed in.
-        cullDist = 0; cullBehind = 0; cullMinPx = 0;
+        cullDist = 0; cullBehind = 0; cullMinPx = 0; cullNear = 0;
     }
 
     public void beginFrame(DirectX7 g) {
@@ -547,6 +547,31 @@ public final class M3GLitRenderer {
                     Math.max(Math.abs(y), Math.abs(z))));
         }
         if(behind) {cullBehind++; return true;} // entirely behind the eye plane
+        // Near-plane straddlers are the one case a software rasteriser cannot
+        // absorb. A polygon crossing z = -near has at least one vertex behind
+        // the eye, so after projection its screen-space bounding box runs to
+        // hundreds of viewports: in a world whose polygons are thousands of
+        // units across (kordos: median edge 2880, max 23407 world units) one
+        // wall the player stands against reaches roughly 700x the viewport per
+        // axis, and an implementation without a guard band pays for the whole
+        // unclipped extent, not for the pixels that land on screen. Measured
+        // on the harness at ~1 straddler per frame carrying 57-99 screens of
+        // UNCLIPPED projected area against 0.7 screens of visible fill - and
+        // at ~14 ms per screen of fill (hl2me benchmark) that is the whole
+        // multi-second frame.
+        //
+        // Handing them to the packed path is not a workaround: that path clips
+        // in software (worldClip) and is the certified route for geometry the
+        // lit pass cannot carry. It is also cheap - the straddler is typically
+        // a single polygon per frame, not a class of them.
+        float nearPlane = Main.m3gLitNear > 0 ? Main.m3gLitNear
+                : Math.max(16, g.distX);
+        boolean nearOk = false, nearClipped = false;
+        for(int i = 0; i < count; i++) {
+            if(vertices[i].getViewDepth() <= -nearPlane) nearOk = true;
+            else nearClipped = true;
+        }
+        if(nearOk && nearClipped) { cullNear++; return false; }
         // Distance cull: drop polys entirely beyond the cutoff.
         // Consumed-without-draw keeps the counter honest: L shows survivors.
         // Start from the level's own limit so the lit pass can never draw less
