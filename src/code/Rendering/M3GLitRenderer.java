@@ -135,6 +135,10 @@ public final class M3GLitRenderer {
         int levelFilter; // NEAREST for a mip chain, BASE_LEVEL otherwise
         int scrollDir; float scrollSpeed; // water UV-scroll (0 = static tex)
         int verts, indexLen, stripCount, maxAbs = 1;
+        /** This bucket has already failed once. Retrying it every frame only
+         *  repaints the same error line and re-throws the same exception, and
+         *  it is what made one bad bucket look like a permanently dead pass. */
+        boolean doomed;
         int[] iv = new int[0];
         short[] uva = new short[0];
         byte[] cola = new byte[0];
@@ -311,6 +315,7 @@ public final class M3GLitRenderer {
         // previously only maintained by flushBucket, so any failure earlier in
         // the frame was reported under the previous frame's last stage.
         STAGE = "begin";
+        flushPass = 0;
         depthCleared = false;
         flashActive = false;
         // Sweep untouched cache entries every ~10s (deleted polys / level
@@ -837,6 +842,7 @@ public final class M3GLitRenderer {
         // that is on screen now, not to one that has since been fixed.
         DIAG = "";
         qLoop = -1;
+        flushPass++;
         // Absolute-time water offset: no drift, one call per frame even with
         // several scroll buckets (river + future water textures).
         float offV = (float) (System.currentTimeMillis() % 4000000L) / 1000f;
@@ -853,9 +859,11 @@ public final class M3GLitRenderer {
                     if(bk.scrollDir == 2) bk.tex.setTranslation(-o, 0f, 0f);
                     else bk.tex.setTranslation(0f, -o, 0f);
                 }
+                if(bk.doomed) continue;
                 try {
                     flushBucket(g, bk);
                 } catch(Throwable t) {
+                    bk.doomed = true;
                     // Record which call threw, then rethrow. Swallowing it here
                     // looked like a kindness and was a regression: the caller
                     // only disables the lit pass and falls back to the packed
@@ -863,8 +871,14 @@ public final class M3GLitRenderer {
                     // pass "healthy" with an empty frame - the sky and the river
                     // drew, every other object vanished.
                     String m = t.getMessage();
-                    DIAG = STAGE + (m == null ? "" : " " + m)
-                            + (qLoop >= 0 ? "/i" + qLoop + "/v" + bk.verts : "");
+                    // Keep it SHORT. The HUD clips at 30 glyphs and the
+                    // previous format ran off the edge mid-token: the trailing
+                    // vertex count was invisible and only its slash survived.
+                    // The flush pass number is the fact that matters - it says
+                    // whether this bucket is being emitted for the first time in
+                    // the frame or again, which decides between "the device
+                    // refused this buffer" and "we submit it twice".
+                    DIAG = STAGE + " f" + flushPass;
                     if(t instanceof RuntimeException) throw (RuntimeException) t;
                     if(t instanceof Error) throw (Error) t;
                     throw new RuntimeException(m);
@@ -1066,6 +1080,8 @@ public final class M3GLitRenderer {
     public static String DIAG = "";
     /** Loop index reached by the vertex-scale loop when a flush threw. */
     static int qLoop = -1;
+    /** Which flushBuckets() run of this frame is in progress. */
+    static int flushPass;
     /** A rebuilt Appearance was accepted where the shared one was not. */
     static boolean freshAppearance;
 }
