@@ -149,6 +149,15 @@ public final class M3GLitRenderer {
         VertexArray posA, uvA, colA, nrmA;
         short[] xyz = new short[0];
         float posScale = -1f;
+        /** Last Texture2D/func pair handed to setBlending. Re-asserting an
+         *  unchanged texture parameter every frame is not free: it dirties
+         *  native texture state, and on a runtime that reacts by re-validating
+         *  or re-uploading, one call per bucket per frame is one full texture
+         *  per bucket per frame. Identity of the Texture2D is part of the key
+         *  because a cache eviction swaps in a different object that has never
+         *  been given the value. */
+        Texture2D blendTex;
+        int blendFunc = -1;
     }
 
     private static int[] grow(int[] a, int n) {
@@ -288,6 +297,11 @@ public final class M3GLitRenderer {
     /** Slowest lit-bucket flush in the window, ms - the native half of the
      *  frame, so F minus T in the stats line is what everything else costs. */
     public static int statsLitMs;
+    /** Slowest SINGLE bucket in the window, ms. The flush total alone cannot
+     *  tell an evenly expensive pass from one pathological bucket: 3 s over 7
+     *  buckets reads the same either way, and only one of them is fixable
+     *  without rewriting the pass. */
+    public static int statsLitBucketMs;
     public static int cullDist, cullBehind, cullMinPx; // why polys were dropped
     public static int lastDistLimit, cullMode;
     /** Signature of the lights actually handed to the engine this frame. */
@@ -302,6 +316,14 @@ public final class M3GLitRenderer {
     /** Wall clock inside flushBuckets this frame: the native submissions plus
      *  the per-bucket buffer uploads that feed them. */
     private int frameLitMs;
+    /** Slowest single bucket this frame, ms. */
+    private int frameLitBucketMs;
+    /** The lit camera is already bound on the target. Every bucket re-ran
+     *  setCamera(camera, identity) with the same camera - seven times per
+     *  frame, each one a full view-projection rebuild - because nothing
+     *  recorded that the previous bucket had already installed it. Cleared by
+     *  any target bind, which puts the world camera back. */
+    private boolean litCamLive;
     private int frameMaterial;      // draws this frame that went out WITH a Material
     private boolean lastFrameHadMaterial = true;
 
@@ -335,10 +357,12 @@ public final class M3GLitRenderer {
         }
         if(frameLit > statsLit) statsLit = frameLit;
         if(frameLitMs > statsLitMs) statsLitMs = frameLitMs;
+        if(frameLitBucketMs > statsLitBucketMs) statsLitBucketMs = frameLitBucketMs;
         if(frameFail > statsFail) { statsFail = frameFail; statsReason = frameReason; }
         lastFrameHadMaterial = frameMaterial > 0;
         frameMaterial = 0;
-        frameLit = 0; frameFail = 0; frameReason = 0; frameLitMs = 0;
+        frameLit = 0; frameFail = 0; frameReason = 0; frameLitMs = 0; frameLitBucketMs = 0;
+        litCamLive = false;
         for(int i = 0; i < buckets.size(); i++) {
             LitBucket bk = (LitBucket) buckets.elementAt(i);
             bk.verts = 0; bk.indexLen = 0; bk.stripCount = 0; bk.maxAbs = 1;
@@ -928,6 +952,8 @@ public final class M3GLitRenderer {
 
     private void flushBucket(DirectX7 g, LitBucket bk) {
         if(bk.verts == 0) return;
+        final long bucketT0 = System.currentTimeMillis();
+        try {
         // Every native call below is labelled. The trace is only useful if the
         // label belongs to the call that actually throws: a stage left over
         // from the previous call - or the previous bucket - reads exactly like
@@ -1006,7 +1032,10 @@ public final class M3GLitRenderer {
         compositing.setAlphaThreshold(threshold);
         compositing.setDepthTestEnable(true);
         STAGE = "q.texBlend";
-        bk.tex.setBlending(bk.func);
+        if(bk.blendTex != bk.tex || bk.blendFunc != bk.func) {
+            bk.tex.setBlending(bk.func);
+            bk.blendTex = bk.tex; bk.blendFunc = bk.func;
+        }
         // Filtering is not re-applied here: the shared cache entry already
         // carries it (FILTER_NEAREST level for a mip chain, FILTER_BASE_LEVEL
         // otherwise) and never changes it. Re-asserting it per flush buys
@@ -1025,11 +1054,14 @@ public final class M3GLitRenderer {
         // here, and all of them copying a frame that the sky had already
         // replaced. bindInPlace still resets the depth buffer, which is what
         // the world actually depends on.
-        if(owner.isSurfaceOpaque()) { STAGE = "q.bindInPlace"; owner.bindInPlace(g); }
-        else { STAGE = "q.bind"; owner.bind(g); }
+        if(owner.isSurfaceOpaque()) { STAGE = "q.bindInPlace"; owner.bindInPlace(g); litCamLive = false; }
+        else { STAGE = "q.bind"; owner.bind(g); litCamLive = false; }
         STAGE = "q.setCam";
-        graphics.setCamera(camera, identity);
-        owner.cameraDirty(); // replaced the world camera on the shared target
+        if(!litCamLive) {
+            graphics.setCamera(camera, identity);
+            owner.cameraDirty(); // replaced the world camera on the shared target
+            litCamLive = true;
+        }
         STAGE = "q.setFog";
         ap.setFog(bk.fogged ? fog : null);
         STAGE = "q.render";
@@ -1048,6 +1080,10 @@ public final class M3GLitRenderer {
             // method does not declare it.
             if(works == null) throw new Error();
             owner.renderNative(g, bk.vb, strip, works);
+        }
+        } finally {
+            int bd = (int) (System.currentTimeMillis() - bucketT0);
+            if(bd > frameLitBucketMs) frameLitBucketMs = bd;
         }
     }
 

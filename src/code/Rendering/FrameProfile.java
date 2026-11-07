@@ -121,6 +121,32 @@ final class FrameProfile {
         System.out.println(sb.toString());
     }
 
+    /** One letter per pass, for a HUD that clips at 30 glyphs: the spelled-out
+     *  names never survived the trim, so the caller could not read the shares
+     *  at all. Deliberately distinct from the millisecond readings. */
+    private static final char[] LETTERS = { 'w','s','k','e','x','f','u','q' };
+
+    /** Compact HUD tail: "|" plus the three dominant passes. No spaces - every
+     *  glyph past 30 is invisible on a 240 px screen at 8 px per glyph. */
+    static String hudLineCompact() {
+        long sum = 0;
+        for (int i = 0; i < PASSES; i++) sum += total[i];
+        if (sum <= 0) return "|?";
+        StringBuffer sb = new StringBuffer("|");
+        boolean[] used = new boolean[PASSES];
+        for (int shown = 0; shown < 3; shown++) {
+            int best = -1;
+            for (int i = 0; i < PASSES; i++)
+                if (!used[i] && total[i] > 0
+                        && (best < 0 || total[i] > total[best])) best = i;
+            if (best < 0) break;
+            used[best] = true;
+            sb.append(LETTERS[best])
+              .append((int) (total[best] * 100 / sum));
+        }
+        return sb.toString();
+    }
+
     /** One line for the HUD: the three passes that dominate. */
     static String hudLine() {
         long sum = 0;

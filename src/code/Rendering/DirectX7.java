@@ -74,15 +74,17 @@ public final class DirectX7 {
                int room = HUD_CHARS - b.length();
                b.append(err.length() <= room ? err : err.substring(0, Math.max(0, room)));
            } else {
-               // LOWER CASE = a count, UPPER CASE = milliseconds:
-               //   d  native draw calls       F  whole M3G frame, ms
-               //   l  lit polygons            T  lit bucket flush, ms
-               // f/r/u are appended only when non-zero: they cost characters
-               // every single frame and only mean anything when they fire.
-               b.append(" d").append(peakDraws)
-                .append(" l").append(M3GLitRenderer.statsLit)
-                .append(" F").append(peakFrameMs)
-                .append(" T").append(M3GLitRenderer.statsLitMs);
+               // POSITIONAL, not letter-coded. The previous form labelled the
+               // two millisecond readings F and T and came back transcribed
+               // twice with them the wrong way round - a diagnostic that can
+               // be read two ways costs more than it saves. The order is
+               // always: whole frame / lit flush, then the worst single
+               // bucket. Draw calls are gone: they were the least informative
+               // number here and the line was already at the 30-glyph clip.
+               b.append(" l").append(M3GLitRenderer.statsLit)
+                .append(' ').append(peakFrameMs).append('/')
+                .append(M3GLitRenderer.statsLitMs)
+                .append(" b").append(M3GLitRenderer.statsLitBucketMs);
                if(M3GLitRenderer.statsFail > 0)
                    b.append(" f").append(M3GLitRenderer.statsFail)
                     .append(" r").append(M3GLitRenderer.statsReason);
@@ -90,7 +92,7 @@ public final class DirectX7 {
            }
            String line = b.toString();
            statsText = line.length() <= HUD_CHARS ? line : line.substring(0, HUD_CHARS);
-           if(M3GSceneRenderer.profiling()) statsText += " | " + FrameProfile.hudLine();
+           if(M3GSceneRenderer.profiling()) statsText += FrameProfile.hudLineCompact();
            if(speedTest != null && speedTest.ranOk) {
                statsText += " | " + speedTest.resultsLine();
            }
