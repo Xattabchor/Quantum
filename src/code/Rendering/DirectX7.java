@@ -59,14 +59,22 @@ public final class DirectX7 {
            // by what a dead lit pass needs first, and every part is trimmed to
            // the space that is actually left.
            final int HUD_CHARS = 30;
-           String marker = code.utils.Main.m3gLitWorld9 != 1 ? "LIT-off"
-                   : litBrokenFlag() ? "LIT-DEAD" : "LIT";
+           // "M3G " / "CPU " cost four glyphs of a thirty-glyph line and were
+           // the first thing to push the useful half off the edge. The marker
+           // now names the renderer itself: LIT / LIT-off / LIT-DEAD when M3G
+           // is driving, CPU / CPU-off / CPU-DEAD when it is not. Same two
+           // facts, four characters cheaper - which is what buys back the
+           // lit-poly count and lets the profile tail survive the clip.
+           String marker = code.utils.Main.m3gLitWorld9 != 1
+                   ? (active ? "LIT-off" : "CPU-off")
+                   : litBrokenFlag() ? (active ? "LIT-DEAD" : "CPU-DEAD")
+                   : (active ? "LIT" : "CPU");
            // A probe that rescued the draw names itself: that is the useful
            // fact, and it is short enough to survive the 30-char trim.
            String err = M3GLitRenderer.DIAG.length() > 0
                    ? M3GLitRenderer.DIAG : M3GLitRenderer.statsErr;
            StringBuffer b = new StringBuffer(40);
-           b.append(active ? "M3G " : "CPU ").append(marker);
+           b.append(marker);
            if(err.length() > 0) {
                // A failure message is worth more than the counters: it names the
                // runtime call that threw. Give it the rest of the line.
@@ -81,18 +89,33 @@ public final class DirectX7 {
                // always: whole frame / lit flush, then the worst single
                // bucket. Draw calls are gone: they were the least informative
                // number here and the line was already at the 30-glyph clip.
-               b.append(" l").append(M3GLitRenderer.statsLit)
-                .append(' ').append(peakFrameMs).append('/')
+               b.append(' ').append(peakFrameMs).append('/')
                 .append(M3GLitRenderer.statsLitMs)
                 .append(" b").append(M3GLitRenderer.statsLitBucketMs);
-               if(M3GLitRenderer.statsFail > 0)
+               // Everything below is optional and buys its glyphs: with four
+               // digit millisecond readings the core is already 18 characters,
+               // and a fixed layout pushed the profile tail - the part that
+               // names the expensive pass - off the edge on exactly the frames
+               // that were slow enough to make it interesting.
+               if(M3GLitRenderer.statsLit > 0 && b.length() + 6 <= HUD_CHARS)
+                   b.append(" l").append(M3GLitRenderer.statsLit);
+               if(peakUploads > 0 && b.length() + 4 <= HUD_CHARS)
+                   b.append(" u").append(peakUploads);
+               if(M3GLitRenderer.statsFail > 0 && b.length() + 8 <= HUD_CHARS)
                    b.append(" f").append(M3GLitRenderer.statsFail)
                     .append(" r").append(M3GLitRenderer.statsReason);
-               if(peakUploads > 0) b.append(" u").append(peakUploads);
            }
            String line = b.toString();
            statsText = line.length() <= HUD_CHARS ? line : line.substring(0, HUD_CHARS);
-           if(M3GSceneRenderer.profiling()) statsText += FrameProfile.hudLineCompact();
+           if(M3GSceneRenderer.profiling()) {
+               // Give the pass breakdown whatever is left rather than a
+               // fixed slice: a clipped tail that still names the worst pass
+               // beats a complete tail that never reaches the screen.
+               String tail = FrameProfile.hudLineCompact();
+               int room = HUD_CHARS - statsText.length();
+               if(room > 0)
+                   statsText += tail.length() <= room ? tail : tail.substring(0, room);
+           }
            if(speedTest != null && speedTest.ranOk) {
                statsText += " | " + speedTest.resultsLine();
            }
