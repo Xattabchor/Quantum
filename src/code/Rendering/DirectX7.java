@@ -87,7 +87,8 @@ public final class DirectX7 {
                    b.append(fe.length() <= room ? fe : fe.substring(0, Math.max(0, room)));
                } else if(rm != null) {
                    b.append(" RM").append(rm.drawables()).append('/').append(rm.triangles())
-                    .append(" b").append(rm.buildMs());
+                    .append(' ').append(rm.camStage())
+                    .append(' ').append(rm.camGridX()).append('/').append(rm.camGridZ());
                }
            } else if(code.utils.Main.m3gLitSplit == 1) {
                // Stage split of the lit flush: u = Java-side per-bucket prep

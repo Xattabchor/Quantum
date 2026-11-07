@@ -63,6 +63,26 @@ public final class M3GRetainedMap {
     private final World world = new World();
     private final Group root = new Group();
     private final Camera camera = new Camera();
+
+    /** One quantisation scale for the whole world, not one per chunk.
+     *
+     *  Per-chunk scaling made the error proportional to the chunk's distance
+     *  from the origin: a bin at x=500000 quantised in steps of ~16 world
+     *  units while its neighbour quantised in steps of ~0.01, and the seams
+     *  between them are not straight. A single scale makes the error uniform
+     *  across the level. */
+    private float worldScale = 1f;
+
+    /** Which camera path actually ran, and the translation it was given.
+     *  Reported on the HUD so a camera that silently fell back to the
+     *  translation-only stage is visible rather than inferred. */
+    private String camStage = "-";
+    private int camPX, camPY, camPZ;
+
+    public String camStage() { return camStage; }
+    /** Camera position in world units, scaled down to stay readable. */
+    public int camGridX() { return camPX >> 10; }
+    public int camGridZ() { return camPZ >> 10; }
     private final Transform camTransform = new Transform();
     private final float[] camMatrix = new float[16];
 
@@ -184,6 +204,13 @@ public final class M3GRetainedMap {
         }
         if (total == 0) return;
         int spanX = Math.max(1, maxX - minX), spanZ = Math.max(1, maxZ - minZ);
+        // Largest magnitude in the whole level, so every chunk quantises with
+        // the same step. The bounds pass already walks every vertex.
+        int worldMaxAbs = Math.max(Math.max(Math.abs(minX), Math.abs(maxX)),
+                          Math.max(Math.abs(minZ), Math.abs(maxZ)));
+        if (worldMaxAbs < 1) worldMaxAbs = 1;
+        worldScale = worldMaxAbs / 30000f;
+        if (worldScale < 0.001f) worldScale = 0.001f;
 
         stage = "bin";
         // Pass 2: bin every polygon corner.
@@ -337,13 +364,7 @@ public final class M3GRetainedMap {
 
     private Mesh makeMesh(DirectX7 g, M3GSceneRenderer owner, Bin bin) {
         int verts = bin.posLen / 3;
-        int maxAbs = 1;
-        for (int i = 0; i < bin.posLen; i++) {
-            int a = bin.pos[i] < 0 ? -bin.pos[i] : bin.pos[i];
-            if (a > maxAbs) maxAbs = a;
-        }
-        float scale = maxAbs / 30000f;
-        if (scale < 0.001f) scale = 0.001f;
+        float scale = worldScale;
 
         short[] xyz = new short[bin.posLen];
         for (int i = 0; i < bin.posLen; i++) {
@@ -498,6 +519,8 @@ public final class M3GRetainedMap {
         float far = Main.m3gLitFar;
         if(far <= near) far = near * 100f;
         camera.setPerspective(fovY, aspect, near, far);
+        camStage = stage;
+        camPX = cam.m03; camPY = cam.m13; camPZ = cam.m23;
         // This API exposes render(World) only - there is no render(World,
         // Camera) overload to fall back on - so the active camera has to be a
         // child of the World. build() arranges that; if it is ever not, the
