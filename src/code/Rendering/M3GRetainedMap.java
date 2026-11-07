@@ -475,8 +475,15 @@ public final class M3GRetainedMap {
         camMatrix[6] = cam.m21 / fp; camMatrix[7] = 0f;
         camMatrix[8] = cam.m02 / fp; camMatrix[9] = cam.m12 / fp;
         camMatrix[10] = cam.m22 / fp; camMatrix[11] = 0f;
-        camMatrix[12] = cam.m03 / fp; camMatrix[13] = cam.m13 / fp;
-        camMatrix[14] = cam.m23 / fp; camMatrix[15] = 1f;
+        // The translation is NOT in fixed point. Matrix.mul() scales the
+        // rotation by FP (16384) but setPosition writes world units raw, and
+        // the engine's own transform adds m03/m13/m23 after the >>fp shift:
+        //   sx = (x*m00 + y*m01 + z*m02) >> fp  +  m03
+        // Dividing it here put the camera 16384x too close to the origin -
+        // inside the level, moving 1/16384 as far as it should. Which is what
+        // "the camera only moves the raindrops" looked like.
+        camMatrix[12] = cam.m03; camMatrix[13] = cam.m13;
+        camMatrix[14] = cam.m23; camMatrix[15] = 1f;
         for(int i = 0; i < 16; i++) {
             float v = camMatrix[i];
             if(v != v || v == Float.POSITIVE_INFINITY || v == Float.NEGATIVE_INFINITY)
@@ -492,8 +499,8 @@ public final class M3GRetainedMap {
             // Pure translation: loses the view direction, keeps the level up.
             for(int i = 0; i < 16; i++) camMatrix[i] = 0f;
             camMatrix[0] = camMatrix[5] = camMatrix[10] = camMatrix[15] = 1f;
-            camMatrix[12] = cam.m03 / fp; camMatrix[13] = cam.m13 / fp;
-            camMatrix[14] = cam.m23 / fp;
+            camMatrix[12] = cam.m03; camMatrix[13] = cam.m13;
+            camMatrix[14] = cam.m23;
             try { camTransform.set(camMatrix); set = true; } catch(Throwable t) { set = false; }
         }
         if(set) {
@@ -506,7 +513,7 @@ public final class M3GRetainedMap {
             // which is a visible bug, but the frame survives and the stage
             // name says exactly where it gave up.
             stage = "cTr";
-            camera.setTranslation(cam.m03 / fp, cam.m13 / fp, cam.m23 / fp);
+            camera.setTranslation(cam.m03, cam.m13, cam.m23);
         }
         // setPerspective rejects fovy outside (0,180), aspect <= 0 and
         // near >= far, and every one of those is a value we take from the
