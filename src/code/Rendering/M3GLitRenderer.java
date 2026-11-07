@@ -50,6 +50,8 @@ public final class M3GLitRenderer {
     private final Graphics3D graphics;
 
     private final Camera camera = new Camera();
+    /** f/aspect and f, for the frame's perspective camera. See projFX in beginFrame. */
+    private float projFX = 1f, projFY = 1f;
     private final Appearance appearance = new Appearance();
     /** Baked mode 9: same as {@link #appearance} but with a NULL Material, so
      * JSR-184 disables lighting and the vertex colours (the baked lightmap) are
@@ -309,6 +311,10 @@ public final class M3GLitRenderer {
      *  without rewriting the pass. */
     public static int statsLitBucketMs;
     public static int cullDist, cullBehind, cullMinPx, cullNear; // why polys were dropped
+    /** Lit polys dropped by the screen-extent guard: cullOffscreen never had a
+     *  pixel on screen, cullWide ran so far past the edges that the clipping
+     *  packed path is the cheaper route. */
+    public static int cullOffscreen, cullWide;
     public static int lastDistLimit, cullMode;
     /** Signature of the lights actually handed to the engine this frame. */
     public static String lightSig = "";
@@ -341,6 +347,7 @@ public final class M3GLitRenderer {
         // startup and any reading of them described the whole session rather
         // than the window it was printed in.
         cullDist = 0; cullBehind = 0; cullMinPx = 0; cullNear = 0;
+        cullOffscreen = 0; cullWide = 0;
     }
 
     public void beginFrame(DirectX7 g) {
@@ -407,6 +414,11 @@ public final class M3GLitRenderer {
         STAGE = "persp";
         camera.setPerspective(g.fovY > 0 ? g.fovY : 60,
                 (float) g.width / (float) g.height, near, far);
+        // Same projection the camera above will apply, kept as two factors so
+        // the screen-extent guard is two multiplies per vertex instead of a
+        // tan() per polygon.
+        projFY = (float) (1.0 / Math.tan((g.fovY > 0 ? g.fovY : 60) * Math.PI / 360.0));
+        projFX = projFY * (float) g.height / (float) g.width;
         cullMode = Main.m3gLitCullNone ? PolygonMode.CULL_NONE : PolygonMode.CULL_BACK;
         polygon.setCulling(cullMode);
         // Flat shading reads dramatically cheaper on software m3g rasterizers;
@@ -576,6 +588,53 @@ public final class M3GLitRenderer {
             else nearClipped = true;
         }
         if(nearOk && nearClipped) { cullNear++; return false; }
+        // Screen-extent guard.
+        //
+        // This runtime pays the UNCLIPPED projected bounding box of what the
+        // lit pass submits. Measured on the harness for the worst of 64 views:
+        // 71.5 screens of bounding box against 1.48 screens of fill that can
+        // actually land on screen, and 68.1 of those 71.5 carried by THREE
+        // triangles out of 150. They are ordinary walls in a world whose
+        // polygons run to 23407 units (kordos): one of them projects to a box
+        // 1654x1425 px of which a 2x145 px sliver is on screen, a 7600x
+        // overshoot. Priced against the device - 2794 ms of lit flush over
+        // those 71.5 screens is ~39 ms per screen, in line with the hl2me
+        // fill series - that is the whole multi-second frame.
+        //
+        // Two routes out, both picture-preserving:
+        //   * the box misses the viewport entirely, so the poly contributes no
+        //     pixel and dropping it cannot change anything;
+        //   * the box runs far past the edges, so hand the poly to the packed
+        //     path, which clips it in software (WorldClipGeometry) and draws
+        //     the same pixels. That is already the established route for
+        //     geometry the lit pass cannot carry - the near-plane straddler
+        //     above does exactly this, and it is ~3 polys per frame here.
+        if(Main.m3gLitMaxSpan > 0) {
+            int gx0 = Integer.MAX_VALUE, gx1 = Integer.MIN_VALUE;
+            int gy0 = Integer.MAX_VALUE, gy1 = Integer.MIN_VALUE;
+            boolean unbounded = false;
+            for(int i = 0; i < count; i++) {
+                Vertex v = vertices[i];
+                double wd = -(double) v.getViewDepth(); // > 0 in front of the eye
+                if(wd <= 0) { unbounded = true; break; } // at or behind the eye
+                double px = (projFX * v.getViewX() / wd * 0.5 + 0.5) * g.width;
+                double py = (0.5 - projFY * v.getViewY() / wd * 0.5) * g.height;
+                int ix = px > 1e6f ? Integer.MAX_VALUE : (px < -1e6f ? Integer.MIN_VALUE : (int) px);
+                int iy = py > 1e6f ? Integer.MAX_VALUE : (py < -1e6f ? Integer.MIN_VALUE : (int) py);
+                if(ix < gx0) gx0 = ix;
+                if(ix > gx1) gx1 = ix;
+                if(iy < gy0) gy0 = iy;
+                if(iy > gy1) gy1 = iy;
+            }
+            if(!unbounded && (gx1 < 0 || gx0 > g.width || gy1 < 0 || gy0 > g.height)) {
+                cullOffscreen++; return true; // shows nothing: drop it
+            }
+            if(unbounded
+                    || (gx1 - gx0) > Main.m3gLitMaxSpan * g.width
+                    || (gy1 - gy0) > Main.m3gLitMaxSpan * g.height) {
+                cullWide++; return false; // let the packed path clip it
+            }
+        }
         // Distance cull: drop polys entirely beyond the cutoff.
         // Consumed-without-draw keeps the counter honest: L shows survivors.
         // Start from the level's own limit so the lit pass can never draw less

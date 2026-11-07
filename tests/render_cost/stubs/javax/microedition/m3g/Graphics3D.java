@@ -22,6 +22,17 @@ public class Graphics3D {
         public boolean depthTest;
         public Transform transform;
         public short[] positions;
+        public float[] bias;
+        /** Camera in force at the moment of the call - the lit pass installs a
+         *  real perspective camera per bucket, the packed path a screen-space
+         *  one, which is the only thing that tells the two apart. */
+        public Camera camera;
+        public int vw, vh;
+        /** The strips as submitted. The vertex arrays are grown to a capacity
+         *  and only partly rewritten each frame, so the indices - not
+         *  getVertexCount(), which is the capacity - say what was drawn. */
+        public int[] indices;
+        public int[] lengths;
         public byte[] colors;
         public boolean perspective;
         public String key() {
@@ -118,6 +129,13 @@ public class Graphics3D {
         d.positions = vertices.positions == null ? null : vertices.positions.shorts;
         d.colors = vertices.colors == null ? null : vertices.colors.bytes;
         d.scale = vertices.positionScale[0];
+        d.bias = vertices.positionBias;
+        d.camera = camera;
+        d.vw = viewportW; d.vh = viewportH;
+        if (indices instanceof TriangleStripArray) {
+            TriangleStripArray ts = (TriangleStripArray) indices;
+            d.indices = ts.indices; d.lengths = ts.lengths;
+        }
         if (appearance != null) {
             d.polygon = appearance.getPolygonMode();
             d.perspective = d.polygon == null || d.polygon.perspective;

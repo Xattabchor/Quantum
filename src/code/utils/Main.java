@@ -118,6 +118,13 @@ public final class Main extends MIDlet {
     public static int m3gLitAmbPulse = 64;    // ambient flash boost (0..255->dI)
     public static int m3gOmniOffsetX = 8, m3gOmniOffsetY = -6, m3gOmniOffsetZ = -45; // % of focal
     public static int m3gLitNear = -1, m3gLitFar = 600000; // -1: auto = 1*distX (anti z-fight)
+    /** Lit polys whose projected bounding box spans more than this many
+     *  viewports per axis are handed to the clipping packed path instead. The
+     *  runtime pays the UNCLIPPED box, so a wall whose box runs 7x the screen
+     *  while a sliver of it is visible costs 7600x its fill. Measured knee: at
+     *  2 the guard moves 3 triangles per frame and removes 68.1 of 71.5
+     *  screens of lit fill. 0 disables the guard. */
+    public static int m3gLitMaxSpan = 2;
     public static boolean m3gLitNoVertexColors = false; // 1 strips baked lightmap
     public static boolean m3gLitFlipWinding = false; // rescue only: CW derived from pack()
     public static boolean m3gLitCullNone = false; // CULL_BACK w/ per-poly winding normalization
@@ -438,6 +445,7 @@ public final class Main extends MIDlet {
         m3gOmniOffsetZ = settings.getIntNoLang("M3G_OMNI_Z", -45);
         m3gLitNear = settings.getIntNoLang("M3G_LIT_NEAR", -1);
         m3gLitFar = settings.getIntNoLang("M3G_LIT_FAR", 600000);
+        m3gLitMaxSpan = settings.getIntNoLang("M3G_LIT_MAXSPAN", 2);
         m3gLitNoVertexColors = settings.getIntNoLang("M3G_LIT_NOVCOL", 0) == 1;
         m3gLitFlipWinding = settings.getIntNoLang("M3G_LIT_FLIP", 0) == 1;
         m3gLitCullNone = settings.getIntNoLang("M3G_LIT_CULL", 1) == 0;

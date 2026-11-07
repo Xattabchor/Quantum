@@ -26,6 +26,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import javax.imageio.ImageIO;
+import javax.microedition.m3g.Camera;
 import javax.microedition.m3g.Graphics3D;
 
 /**
@@ -46,7 +47,41 @@ public final class FrameCostProbe {
     private static String worstSplit = "";
     private static int totalDraws, totalFrames, totalTriangles, billboardCalls;
     private static long vcolSum; private static int vcolN, vcolNonWhite;
+    // Same vertex-colour census over EVERY geometry draw, lit or packed. The
+    // lit-only number moves whenever a poly changes path; this one only moves
+    // if the geometry or its colours actually change, so it is the check that
+    // a hand-off drew the same thing by a different route.
+    private static long allSum; private static int allN, allNonWhite;
     private static int worstDraws, worstTriangles, worstYaw, worstPitch, worstBarriers;
+
+    // ---- projected fill of the lit pass -----------------------------------
+    // The device says the lit flush is ~2.8 s of a ~3.8 s frame, with B=0 and
+    // T=0 - no barriers, no texture rebuilds. That leaves rasterisation, and
+    // rasterisation is priced in SCREENS of filled area (~14 ms each, from the
+    // hl2me fill series). So the question "why is the lit pass slow" becomes
+    // "how many screens does it cover", which is arithmetic on the vertices it
+    // actually submitted - not a guess about which call is expensive.
+    //
+    // raw   = bounding box of the projected vertices, with w clamped at the
+    //         near plane. A lower bound on what a rasteriser without clipping
+    //         pays: a vertex walking towards the eye sends the extent to
+    //         infinity, and clamping at `near` is the smallest it can get.
+    // clip  = the same box intersected with the viewport: the honest fill.
+    // raw/clip is the multiple being paid for pixels that never land.
+    private static double worstRaw, worstClip, worstDrawArea;
+    private static int worstBehind, worstAtEye, worstWide, worstAreaPolys, worstAreaDraws;
+    private static String worstAreaView = "";
+    private static boolean probeDepth = System.getProperty("probe.depth") != null;
+
+    /** Bbox span, in viewports, above which a lit poly could be handed to the
+     *  clipping packed path instead. Area above each rung is the fill a
+     *  hand-off at that rung would remove. */
+    private static final double[] SPANS = {1, 2, 4, 8, 16, 32};
+    private static final double[] overRaw = new double[SPANS.length];
+    private static final int[] overTris = new int[SPANS.length];
+    private static final int[] worstOverTris = new int[SPANS.length];
+    private static final double[] worstOverRaw = new double[SPANS.length];
+    private static double offscreenRaw, worstOffscreenRaw;
     private static int queuedObjects;
 
     private static Sprite[] sprites;
@@ -208,6 +243,99 @@ public final class FrameCostProbe {
         return n;
     }
 
+    private static String one(double v) {
+        if (v >= 1000) return Long.toString(Math.round(v));
+        if (v >= 100) return Double.toString(Math.round(v) / 1.0);
+        if (v >= 10) return Double.toString(Math.round(v * 10) / 10.0);
+        return Double.toString(Math.round(v * 100) / 100.0);
+    }
+
+    /** Screens of projected fill the lit pass asked for, for one frame.
+     *
+     *  Measured per TRIANGLE, because that is the unit a rasteriser works on,
+     *  and driven by the strip indices because the vertex arrays are grown to a
+     *  capacity and only partly rewritten each frame - getVertexCount() is the
+     *  capacity, not what this frame wrote.
+     */
+    private static void measureArea(int history, String view) {
+        double raw = 0, clip = 0, worst = 0;
+        int behindNear = 0, atEye = 0, wide = 0, tris = 0, draws = 0;
+        for (int b = 0; b < overRaw.length; b++) { overRaw[b] = 0; overTris[b] = 0; }
+        offscreenRaw = 0;
+        for (int i = history; i < Graphics3D.history.size(); i++) {
+            Graphics3D.Draw d = Graphics3D.history.elementAt(i);
+            // Only the lit pass: it is the one that installs a real perspective
+            // camera. The packed path feeds an already-screen-space camera.
+            if (d.camera == null || d.camera.type != Camera.PERSPECTIVE) continue;
+            if (d.positions == null || d.indices == null) continue;
+            float[] bias = d.bias == null ? new float[3] : d.bias;
+            double f = 1.0 / Math.tan(Math.toRadians(d.camera.fovy) / 2.0);
+            double aspect = d.camera.aspect > 0 ? d.camera.aspect : 0.75;
+            double fa = f / aspect;
+            double W = d.vw > 0 ? d.vw : 240, H = d.vh > 0 ? d.vh : 320;
+            float near = d.camera.near > 0 ? d.camera.near : 1;
+            draws++;
+            int[] idx = d.indices, len = d.lengths;
+            int base = 0;
+            for (int s = 0; s < len.length; s++) {
+                for (int k = 0; k + 2 < len[s]; k++) {
+                    int i0 = idx[base + k], i1 = idx[base + k + 1], i2 = idx[base + k + 2];
+                    double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE;
+                    double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
+                    boolean bad = false, eye = false;
+                    for (int t = 0; t < 3; t++) {
+                        int vi = t == 0 ? i0 : (t == 1 ? i1 : i2);
+                        double x = d.scale * d.positions[vi * 3] + bias[0];
+                        double y = d.scale * d.positions[vi * 3 + 1] + bias[1];
+                        double z = d.scale * d.positions[vi * 3 + 2] + bias[2];
+                        double w = -z;
+                        if (w <= 0) { w = near; eye = true; bad = true; }
+                        else if (w < near) { w = near; bad = true; }
+                        double sx = (fa * x / w * 0.5 + 0.5) * W;
+                        double sy = (0.5 - f * y / w * 0.5) * H;
+                        if (sx < minX) minX = sx;
+                        if (sx > maxX) maxX = sx;
+                        if (sy < minY) minY = sy;
+                        if (sy > maxY) maxY = sy;
+                    }
+                    tris++;
+                    if (bad) behindNear++;
+                    if (eye) atEye++;
+                    double rw = Math.max(0, maxX - minX), rh = Math.max(0, maxY - minY);
+                    double aRaw = rw * rh / (W * H);
+                    double cx1 = Math.max(0, Math.min(W, maxX)), cx0 = Math.max(0, Math.min(W, minX));
+                    double cy1 = Math.max(0, Math.min(H, maxY)), cy0 = Math.max(0, Math.min(H, minY));
+                    double aClip = Math.max(0, cx1 - cx0) * Math.max(0, cy1 - cy0) / (W * H);
+                    raw += aRaw; clip += aClip;
+                    if (aRaw > worst) worst = aRaw;
+                    if (rw > 4 * W || rh > 4 * H) wide++;
+                    if (aClip <= 0) offscreenRaw += aRaw;
+                    double span = Math.max(rw / W, rh / H);
+                    for (int b = 0; b < SPANS.length; b++) if (span > SPANS[b]) { overRaw[b] += aRaw; overTris[b]++; }
+                    if (probeDepth && aRaw > 1)
+                        System.out.println("  litTri raw=" + one(aRaw) + " clip=" + one(aClip)
+                                + " near=" + one(near) + " eye=" + eye + " band=" + bad
+                                + " x=[" + one(minX) + "," + one(maxX) + "]"
+                                + " y=[" + one(minY) + "," + one(maxY) + "]"
+                                + " vp=" + one(W) + "x" + one(H));
+                }
+                base += len[s];
+            }
+        }
+        if (System.getProperty("probe.areas") != null)
+            System.out.println("  area " + view + " raw=" + one(raw) + " clip=" + one(clip)
+                    + " tris=" + tris + " draws=" + draws + " wide=" + wide);
+        if (raw > worstRaw) {
+            System.arraycopy(overRaw, 0, worstOverRaw, 0, overRaw.length);
+            System.arraycopy(overTris, 0, worstOverTris, 0, overTris.length);
+            worstOffscreenRaw = offscreenRaw;
+            worstRaw = raw; worstClip = clip; worstDrawArea = worst;
+            worstBehind = behindNear; worstAtEye = atEye; worstWide = wide;
+            worstAreaPolys = tris; worstAreaDraws = draws;
+            worstAreaView = view;
+        }
+    }
+
     private static void sample(House house, Skybox sky, int[] position, int yaw, int pitch, int fogDist,
             int levelDist, byte drawmode) {
         int draws = 0, triangles = 0, billboards = 0, barriers = 0;
@@ -268,6 +396,7 @@ public final class FrameCostProbe {
                     if (worldOf(d)) wDraws++; else if (d.vertexCount <= 4) sDraws++;
                 }
                 frameWorld = wDraws; frameSprites = sDraws;
+                measureArea(history, yaw + "@" + pitch);
                 // Did any depth-tested world submission land AFTER a sprite?
                 int lastLit = -1, firstSprite = -1;
                 for (int i = history; i < Graphics3D.history.size(); i++) {
@@ -289,6 +418,15 @@ public final class FrameCostProbe {
                             vcolSum += (draw.colors[c + 2] & 255) * 7;
                             vcolN++;
                             if ((draw.colors[c] & 255) != 255) vcolNonWhite++;
+                        }
+                    }
+                    if (draw.colors != null && !(!worldOf(draw) && draw.vertexCount <= 4)) {
+                        for (int c = 0; c + 3 < draw.colors.length; c += 4) {
+                            allSum += draw.colors[c] & 255;
+                            allSum += (draw.colors[c + 1] & 255) * 3;
+                            allSum += (draw.colors[c + 2] & 255) * 7;
+                            allN++;
+                            if ((draw.colors[c] & 255) != 255) allNonWhite++;
                         }
                     }
                     boolean billboard = !worldOf(draw) && draw.vertexCount <= 4;
@@ -327,6 +465,9 @@ public final class FrameCostProbe {
         String[] data = (String[]) cut.invoke(null, text(levelFile));
         GameIni level = new GameIni(data[0], false);
 
+        // A/B the screen-extent guard without a rebuild: setting.txt inside the
+        // resource JAR is not the copy this harness reads.
+        Main.m3gLitMaxSpan = Integer.getInteger("probe.maxSpan", Main.m3gLitMaxSpan);
         Main.pixelsQ = 2;
         Main.persQ = 4;
         // The real game leaves this on, and Asset only BUILDS mip chains when
@@ -483,6 +624,28 @@ public final class FrameCostProbe {
         System.out.println("distinctTexturesInWorstFrame=" + TEXTURES.size());
         System.out.println("drawMix: " + mix);
         System.out.println("worstSplit: world + sprites = " + worstSplit);
+        System.out.println("litFill: draws=" + worstAreaDraws + " tris=" + worstAreaPolys
+                + " raw=" + one(worstRaw) + " screens"
+                + " clip=" + one(worstClip) + " screens"
+                + " ratio=" + (worstClip > 0 ? one(worstRaw / worstClip) : "inf") + "x"
+                + " worstDraw=" + one(worstDrawArea) + " screens"
+                + " trisInNearBand=" + worstBehind + " trisAtEye=" + worstAtEye
+                + " widerThan4x=" + worstWide
+                + " (worst view " + worstAreaView + ")");
+        {
+            StringBuilder sb = new StringBuilder("litFillBySpan: total=" + one(worstRaw) + " screens");
+            for (int b = 0; b < SPANS.length; b++)
+                sb.append("  >").append(one(SPANS[b])).append("vp=").append(one(worstOverRaw[b]))
+                  .append("scr/").append(worstOverTris[b]).append("tri");
+            System.out.println(sb.toString());
+            System.out.println("litFillOffscreen: " + one(worstOffscreenRaw)
+                    + " screens of bbox for triangles that show no pixels at all");
+        }
+        System.out.println("litFillCost: raw x 14ms/screen = " + one(worstRaw * 14) + " ms"
+                + "  clip x 14ms/screen = " + one(worstClip * 14) + " ms"
+                + "  (device lit flush: 2794 ms)");
+        System.out.println("allColours: sum=" + allSum + " verts=" + allN + " nonWhite=" + allNonWhite
+                + "   (lit+packed: moves only if geometry or colours change)");
         System.out.println("cpuBarriers: worst=" + worstBarriers
                 + " lazyReadback=" + Main.m3gLazyReadback);
         System.out.println("lights: " + code.Rendering.M3GLitRenderer.lightSig
@@ -492,9 +655,13 @@ public final class FrameCostProbe {
                 + " (limit=" + code.Rendering.M3GLitRenderer.lastDistLimit
                 + ", levelDIST=" + DirectX7.drDist + ")"
                 + " behind=" + code.Rendering.M3GLitRenderer.cullBehind
+                + " near=" + code.Rendering.M3GLitRenderer.cullNear
                 + " minPx=" + code.Rendering.M3GLitRenderer.cullMinPx);
         System.out.println("lightMode: world9=" + Main.m3gLitWorld9 + " baked=" + Main.m3gLitBaked
-                + " ambient=" + Main.m3gLitAmbient + " dir=" + Main.m3gLitDir);
+                + " ambient=" + Main.m3gLitAmbient + " dir=" + Main.m3gLitDir
+                + " maxSpan=" + Main.m3gLitMaxSpan
+                + " cullWide=" + code.Rendering.M3GLitRenderer.cullWide
+                + " cullOffscreen=" + code.Rendering.M3GLitRenderer.cullOffscreen);
         if (System.getProperty("probe.vcol2") != null) {
             int m0 = 0, m1 = 0; java.util.TreeMap<Integer,Integer> a = new java.util.TreeMap<Integer,Integer>();
             java.util.TreeMap<Integer,Integer> b = new java.util.TreeMap<Integer,Integer>();
