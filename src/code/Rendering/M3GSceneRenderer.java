@@ -277,10 +277,22 @@ public final class M3GSceneRenderer implements SceneRenderer {
         // sprites, which stay on the depth-free packed path and therefore lose
         // to terrain regardless of distance. The world is the deepest layer: it
         // goes down first so everything queued after it composites on top.
+        //
+        // The buckets are emitted AT MOST ONCE per frame. flushBatch runs more
+        // than once in a single frame - the world queue flushes through it, and
+        // finishImage flushes again before releasing the target - and the
+        // buckets are only cleared at the next beginFrame(). Emitting them on
+        // every call therefore submitted the same already-drawn geometry a
+        // second time, which is what the device refused (the trace showed
+        // 'q.scale f2': the second flush of the frame). Submitting a buffer
+        // that was already consumed is at best wasted work and at worst a
+        // native rejection, and it doubled the cost of the whole world pass.
+        if(litBucketsFlushed) { flushPolygons(g); if(spriteRenderer!=null) spriteRenderer.flush(g); return; }
         if(Main.m3gLitWorld9 == 1 && litRenderer != null) litRenderer.flushBuckets(g);
         flushPolygons(g);
         if(spriteRenderer!=null) spriteRenderer.flush(g);
         if(Main.m3gLitWorld9 != 1 && litRenderer != null) litRenderer.flushBuckets(g);
+        litBucketsFlushed = true;
     }
 
     void bindCanvasTarget(javax.microedition.lcdui.Graphics target) {graphics.bindTarget(target,false,0);cameraInstalled=false;}
@@ -301,6 +313,7 @@ public final class M3GSceneRenderer implements SceneRenderer {
     /** Frame start (native passes): refresh true-3D lit-pass camera/lights. */
     public void beginFrame(DirectX7 g) {
         surfaceOpaque = false; // a new frame: nothing has covered the surface yet
+        litBucketsFlushed = false; // a new frame may emit the world again
         for(int i = 0; i < textures.size(); i++)
             ((CachedTexture)textures.elementAt(i)).live = false;
         if(litBroken) {
@@ -336,6 +349,9 @@ public final class M3GSceneRenderer implements SceneRenderer {
      *  before Main parses setting.txt, and would then always read false. */
     static boolean profiling() { return Main.m3gProfile == 1; }
 
+    /** The lit buckets for this frame have been emitted already. Cleared in
+     *  beginFrame(), which is the only place a frame actually starts. */
+    private boolean litBucketsFlushed;
     private boolean litBroken; // native side rejected the lit pass; retried
     private int litRetryIn;    // frames until the next attempt
     /** ~10 s at 20 FPS: long enough to stop a truly broken runtime from being

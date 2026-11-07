@@ -1080,7 +1080,9 @@ public final class M3GLitRenderer {
     public static String DIAG = "";
     /** Loop index reached by the vertex-scale loop when a flush threw. */
     static int qLoop = -1;
-    /** Which flushBuckets() run of this frame is in progress. */
+    /** Which flushBuckets() run of this frame is in progress. Must stay 1:
+     *  the buckets are emitted once per frame, so anything higher means the
+     *  world is being submitted twice and that is the bug, not a symptom. */
     static int flushPass;
     /** A rebuilt Appearance was accepted where the shared one was not. */
     static boolean freshAppearance;
