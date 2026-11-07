@@ -75,7 +75,17 @@ public final class DirectX7 {
                    ? M3GLitRenderer.DIAG : M3GLitRenderer.statsErr;
            StringBuffer b = new StringBuffer(40);
            b.append(marker);
-           if(err.length() > 0) {
+           if(code.utils.Main.m3gLitSplit == 1) {
+               // Stage split of the lit flush: u = Java-side per-bucket prep
+               // (scale loop + VertexArray.set + setPositions), s = building
+               // the TriangleStripArray, b = bind/setCamera/setFog, r = the
+               // graphics.render() call. Sums to the flush total the normal
+               // line reports.
+               b.append(" u").append(M3GLitRenderer.statsPrepMs)
+                .append(" s").append(M3GLitRenderer.statsStripMs)
+                .append(" b").append(M3GLitRenderer.statsBindMs)
+                .append(" r").append(M3GLitRenderer.statsRenderMs);
+           } else if(err.length() > 0) {
                // A failure message is worth more than the counters: it names the
                // runtime call that threw. Give it the rest of the line.
                b.append(' ');

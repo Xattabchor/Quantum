@@ -299,6 +299,17 @@ public final class M3GLitRenderer {
     /** Slowest lit-bucket flush in the window, ms - the native half of the
      *  frame, so F minus T in the stats line is what everything else costs. */
     public static int statsLitMs;
+    /** Where the lit flush actually goes, per stage, for the frame: prep = the
+     *  Java-side per-bucket work (scale loop, VertexArray.set, setPositions),
+     *  strip = building the TriangleStripArray, bind = bind/setCamera/setFog,
+     *  render = the graphics.render() call itself. Added because removing 95%
+     *  of the lit pass's projected fill changed the device's flush by nothing
+     *  at all (2794 -> 2941 ms with l180 -> l179), which falsifies fill and
+     *  leaves only "which stage" as the open question. Peaked at the flush,
+     *  never in resetLitStats - that runs several times per frame and is what
+     *  made an earlier generation of these counters read zero. */
+    public static int statsPrepMs, statsStripMs, statsBindMs, statsRenderMs;
+    private static int framePrepMs, frameStripMs, frameBindMs, frameRenderMs;
     /** Peaked where they are measured, not once per frame in beginFrame:
      *  the HUD resets these on every stats-line rebuild, and several rebuilds
      *  can land inside one frame, so a value refreshed only in beginFrame got
@@ -966,6 +977,7 @@ public final class M3GLitRenderer {
         // several scroll buckets (river + future water textures).
         float offV = (float) (System.currentTimeMillis() % 4000000L) / 1000f;
         long bucketStartMs = System.currentTimeMillis();
+        framePrepMs = 0; frameStripMs = 0; frameBindMs = 0; frameRenderMs = 0;
         try {
         for(int phase = 0; phase < 2; phase++) {
             for(int bi = 0; bi < n; bi++) {
@@ -1013,6 +1025,10 @@ public final class M3GLitRenderer {
             int d = (int) (System.currentTimeMillis() - bucketStartMs);
             if(d > frameLitMs) frameLitMs = d;
             if(d > statsLitMs) statsLitMs = d;
+            if(framePrepMs > statsPrepMs) statsPrepMs = framePrepMs;
+            if(frameStripMs > statsStripMs) statsStripMs = frameStripMs;
+            if(frameBindMs > statsBindMs) statsBindMs = frameBindMs;
+            if(frameRenderMs > statsRenderMs) statsRenderMs = frameRenderMs;
             if(M3GSceneRenderer.profiling()) FrameProfile.addLit(d);
         }
     }
@@ -1042,12 +1058,14 @@ public final class M3GLitRenderer {
     private void flushBucket(DirectX7 g, LitBucket bk) {
         if(bk.verts == 0) return;
         final long bucketT0 = System.currentTimeMillis();
+        long tA = 0, tB = 0, tC = 0, tD = 0;
         try {
         // Every native call below is labelled. The trace is only useful if the
         // label belongs to the call that actually throws: a stage left over
         // from the previous call - or the previous bucket - reads exactly like
         // a real one, and has sent this investigation to the wrong place twice.
         STAGE = "q.start";
+        tA = System.currentTimeMillis();
         // maxAbs was accumulated at append time: one float op total here.
         float scale = bk.maxAbs / 30000f;
         if(scale < 0.001f) scale = 0.001f;
@@ -1102,6 +1120,8 @@ public final class M3GLitRenderer {
             bk.vb.setPositions(bk.posA, scale, null);
             bk.posScale = scale;
         }
+        tB = System.currentTimeMillis();
+        framePrepMs += (int) (tB - tA);
         // Fresh strip object per flush: index sequences vary frame to frame.
         STAGE = "q.strip";
         TriangleStripArray strip = new TriangleStripArray(
@@ -1143,6 +1163,8 @@ public final class M3GLitRenderer {
         // here, and all of them copying a frame that the sky had already
         // replaced. bindInPlace still resets the depth buffer, which is what
         // the world actually depends on.
+        tC = System.currentTimeMillis();
+        frameStripMs += (int) (tC - tB);
         if(owner.isSurfaceOpaque()) { STAGE = "q.bindInPlace"; owner.bindInPlace(g); litCamLive = false; }
         else { STAGE = "q.bind"; owner.bind(g); litCamLive = false; }
         STAGE = "q.setCam";
@@ -1153,6 +1175,8 @@ public final class M3GLitRenderer {
         }
         STAGE = "q.setFog";
         ap.setFog(bk.fogged ? fog : null);
+        tD = System.currentTimeMillis();
+        frameBindMs += (int) (tD - tC);
         STAGE = "q.render";
         // The native core may refuse this submission. Rather than guess which
         // ingredient it objects to, bisect the differences from the packed path
@@ -1171,6 +1195,7 @@ public final class M3GLitRenderer {
             owner.renderNative(g, bk.vb, strip, works);
         }
         } finally {
+            frameRenderMs += (int) (System.currentTimeMillis() - tD);
             int bd = (int) (System.currentTimeMillis() - bucketT0);
             if(bd > frameLitBucketMs) frameLitBucketMs = bd;
             if(bd > statsLitBucketMs) statsLitBucketMs = bd;
