@@ -297,6 +297,12 @@ public final class M3GLitRenderer {
     /** Slowest lit-bucket flush in the window, ms - the native half of the
      *  frame, so F minus T in the stats line is what everything else costs. */
     public static int statsLitMs;
+    /** Peaked where they are measured, not once per frame in beginFrame:
+     *  the HUD resets these on every stats-line rebuild, and several rebuilds
+     *  can land inside one frame, so a value refreshed only in beginFrame got
+     *  cleared after being recorded and read back 0. Same scheme as the
+     *  whole-frame peak, which never showed the problem for that reason. */
+    public static int statsLitBucketMs0;
     /** Slowest SINGLE bucket in the window, ms. The flush total alone cannot
      *  tell an evenly expensive pass from one pathological bucket: 3 s over 7
      *  buckets reads the same either way, and only one of them is fixable
@@ -356,8 +362,6 @@ public final class M3GLitRenderer {
             }
         }
         if(frameLit > statsLit) statsLit = frameLit;
-        if(frameLitMs > statsLitMs) statsLitMs = frameLitMs;
-        if(frameLitBucketMs > statsLitBucketMs) statsLitBucketMs = frameLitBucketMs;
         if(frameFail > statsFail) { statsFail = frameFail; statsReason = frameReason; }
         lastFrameHadMaterial = frameMaterial > 0;
         frameMaterial = 0;
@@ -949,6 +953,7 @@ public final class M3GLitRenderer {
             // exactly what decides whether the pass is affordable at all.
             int d = (int) (System.currentTimeMillis() - bucketStartMs);
             if(d > frameLitMs) frameLitMs = d;
+            if(d > statsLitMs) statsLitMs = d;
             if(M3GSceneRenderer.profiling()) FrameProfile.addLit(d);
         }
     }
@@ -1109,6 +1114,7 @@ public final class M3GLitRenderer {
         } finally {
             int bd = (int) (System.currentTimeMillis() - bucketT0);
             if(bd > frameLitBucketMs) frameLitBucketMs = bd;
+            if(bd > statsLitBucketMs) statsLitBucketMs = bd;
         }
     }
 
