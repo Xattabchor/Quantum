@@ -31,6 +31,14 @@ public final class Weapon {
 
     private static final Splinter splinter = new Splinter();
     private static final Ray ray = new Ray();
+    // дешёвый разброс: ключ weapons.txt SPREAD (0=нет, 500≈3.5°)
+    public int spread = 0;
+    private static int spreadSeed = 0x9E3779B9;
+    private static int spreadRand(int spread) {
+        spreadSeed = spreadSeed * 1103515245 + 12345;
+        int r = (spreadSeed >> 16) & 0x7FFF;
+        return r % (spread * 2 + 1) - spread;
+    }
 
     private final short damageValue; // Урон от выстрела
     private final short delay; // Задержка между выстрелами
@@ -340,6 +348,13 @@ public final class Weapon {
             Vector3D end = ray.getDir();
             start.set(mat.m03, mat.m13 + ((Player)player).getEyesHeight(), mat.m23);
             end.set(-mat.m02 << 1, -mat.m12 << 1, -mat.m22 << 1);
+            if (spread != 0) {
+                int sx = spreadRand(spread);
+                int sy = spreadRand(spread);
+                end.x += (mat.m00 * sx >> 12) + (mat.m01 * sy >> 12);
+                end.y += (mat.m10 * sx >> 12) + (mat.m11 * sy >> 12);
+                end.z += (mat.m20 * sx >> 12) + (mat.m21 * sy >> 12);
+            }
             ray.reset();
             house.rayCast(player.getPart(), ray, true);
             if (ray.isCollision()) end.setLengthFast(ray.getDistance());

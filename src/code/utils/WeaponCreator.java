@@ -84,7 +84,11 @@ public class WeaponCreator {
 				wp.ammoBundled = obj.getInt("AMMO_BUNDLED", wp.ammoBundled);
 				wp.ammoInShop = obj.getInt("AMMO_IN_SHOP", wp.ammoInShop);
 				
-				wp.lowPatronAmount = obj.getInt("LOW_PATRON_AMOUNT", wp.lowPatronAmount);
+                wp.lowPatronAmount = obj.getInt("LOW_PATRON_AMOUNT", wp.lowPatronAmount);
+
+                if(obj.get("SPREAD") != null) wp.spread = obj.getInt("SPREAD", 0);
+                else if(obj.get("DISPERSION") != null) wp.spread = obj.getInt("DISPERSION", 0);
+                if(wp.spread < 0) wp.spread = 0;
                 
                 return wp;
             }
