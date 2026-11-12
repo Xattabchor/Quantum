@@ -421,7 +421,7 @@ public final class NPC extends Bot {
                 
                 if(target != null) {
 					walkingToEnemy = getPart() == target.getPart();
-                    
+                    if (onLift && target == enemy && (walkingToEnemy || isTargetVisibleRaycast(house, target))) { liftPoses=null; liftTime=null; }
 					if(walkingToEnemy) {
                         Matrix mat = target.getCharacter().getTransform();
                         dir.set(mat.m03, mat.m13, mat.m23);
