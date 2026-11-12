@@ -2078,3 +2078,38 @@ DMODE 13 хранит лайтмапу в цвете (`ColorLightedPolygon3V/4V`
 
 * `docs/verify/test_vla.py`: часть 1 `TestVla` 9 кейсов (`gray-rt`, `gray-color-size`, `color-gray`, `cross-*`, `rnd-rt`, `err-*`) - все OK, `ALL OK`; часть 2 сборка VlaConverter тем же `build-vlaconv.sh` (4 класса после preverify, `check-jar.py` зелёный).
 * Основная игра не затронута: `build-j2me.sh` без изменений, 16 прежних тестов PASS, `QuantumOptimize.jar` 387 792 Б.
+
+## 28. NPC-транспорт: дешевый лифт/платформа через патруль (имитация физики)
+
+### 28.1 Задача
+
+Мешу нужен путь лифта/транспорта без физики: патрульный NPC с тем же мешем едет по рельсам и при этом атакует игрока, как обычный бот. Требование - ARM9-дешево: без `float`/`double`, без `long`-делений на кадр, без аллокаций, без нового класса.
+
+### 28.2 Формат level.ini
+
+Те же ключи, что у `MeshObject` (см. `LIFT_POS` etc.), но для `NPC`/`Bot`:
+
+```
+LIFT_POS=100,0,200; 200,0,200; 200,0,400   ; точки после стартовой POS, через ;
+LIFT_TIMER=1000,1000,1500               ; опционально, мс на отрезок; иначе LIFT_SPEED
+LIFT_SPEED=800                          ; скорость для автодавки таймера (дефолт 800)
+LIFT_LOOP=0|1                           ; зацикливание
+LIFT_REUSE=0|1                          ; можно ехать обратно
+LIFT_CAN_BE_PAUSED=0|1                  ; пауза на активации
+LIFT_SMOOTH_ROTATE=0|1                  ; поворот по направлению движения
+LIFT_DISACTIVABLE_ON_END=0|1
+ACTIVABLE/CLICKABLE=0|1                 ; активация как у мешей (E)
+```
+
+Без `LIFT_POS` NPC ведет себя как раньше. С ним стартует в `DRIVE` (автопатруль), при `LIFT_LOOP=1` зацикливается, атака (`Bot.findBot`/`attack`) работает параллельно.
+
+### 28.3 Реализация
+
+* `NPC.java`: поля `liftPoses/liftTime/liftState/liftPaused/liftCycled/...` + `liftTmp` буфер; `getLiftPos()` - копия `MeshObject.getNewPos()` (int `*1000/1000` lerp, одно `int`-деление на смену отрезка); `updateLift()` вызывается в начале `action()` до `super.update()` физики; поворот - через `lookAt` (резкий вариант как `MeshObject.lookAtDirect`). `activate()` - пауза/рестарт как у мешей, через `lastActivate/timeToReset`.
+* `LevelLoader.loadNPC()`: парсер `LIFT_POS`/`LIFT_TIMER`/`LIFT_SPEED`/... аналогичен мешам, без `lvl` (NPC грузится вне `loadLevel`). Флоат `Math.sqrt` только на загрузке для таймера.
+* Цена: один `int`-div на смену отрезка (в `getLiftPos`), иначе `int` add/mul 8.2 M/s; без `float`/`long`-div на кадр; без аллокаций (буфер `liftTmp`).
+
+### 28.4 Проверки
+
+* ECJ 1.4 + ProGuard microedition: `QuantumOptimize.jar` собирается, `check-jar.py` зеленый.
+* Пример уровня: `MODEL=lift.3d POS=0,0,0 LIFT_POS=0,0,200;0,0,400 LIFT_SPEED=800 LIFT_LOOP=1`, NPC атакует при `ATTACK`/`ENEMYREACTION` как обычно.

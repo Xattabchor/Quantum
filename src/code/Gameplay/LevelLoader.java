@@ -1258,6 +1258,41 @@ public class LevelLoader {
             t.muzzleFlashTimer = getInt("MUZZLE_FLASH_TIMER", obj, Main.settings, key);
         }
         
+        // --- LIFT / транспорт-имитация патруля (дешево для ARM9) ---
+        str = getString("LIFT_POS", obj, Main.settings, key, "NULL");
+        if (!str.equals("NULL")) {
+            String[] poses2 = StringTools.cutOnStrings(str, ';');
+            t.liftPoses = new Vector3D[poses2.length + 1];
+            t.liftPoses[0] = new Vector3D(ps);
+            for (int i = 0; i < poses2.length; i++) {
+                int[] ps2 = StringTools.cutOnInts(poses2[i], ',');
+                t.liftPoses[i + 1] = new Vector3D(ps2);
+            }
+            t.liftCycled = getBoolean("LIFT_LOOP", obj, Main.settings, key, false);
+            String tmp2 = getString("LIFT_TIMER", obj, Main.settings, key, "NULL");
+            if (!tmp2.equals("NULL")) {
+                t.liftTime = StringTools.cutOnInts(tmp2, ',');
+            } else {
+                int speed = getInt("LIFT_SPEED", obj, Main.settings, key, 800);
+                t.liftTime = new int[t.liftPoses.length - (t.liftCycled ? 0 : 1)];
+                for (int i = 0; i < t.liftTime.length; i++) {
+                    int i2 = i + 1; if (i2 >= t.liftPoses.length) i2 = 0;
+                    Vector3D a = t.liftPoses[i]; Vector3D b = t.liftPoses[i2];
+                    t.liftTime[i] = (int) (Math.sqrt((double)(a.x-b.x)*(a.x-b.x)+(double)(a.y-b.y)*(a.y-b.y)+(double)(a.z-b.z)*(a.z-b.z))*1000/speed);
+                    if (t.liftTime[i] < 1) t.liftTime[i] = 1;
+                }
+            }
+            t.liftReUse = getInt("LIFT_REUSE", obj, Main.settings, key, 1) == 1;
+            t.liftCanBePaused = getInt("LIFT_CAN_BE_PAUSED", obj, Main.settings, key, 0) == 1;
+            t.liftRotateToMove = getInt("LIFT_SMOOTH_ROTATE", obj, Main.settings, key, 0) == 1;
+            t.liftDisactivateOnEnd = getInt("LIFT_DISACTIVABLE_ON_END", obj, Main.settings, key, 0) == 1;
+            // автостарт патруля
+            t.liftState = 1; t.liftStartTime = 0; t.liftPauseTime = 0;
+            // если указан ACTIVABLE=0 лифт не реагирует на E, иначе как у MeshObject
+            t.activable = getInt("ACTIVABLE", obj, Main.settings, key, 1) == 1;
+            t.clickable = getInt("CLICKABLE", obj, Main.settings, key, 1) == 1;
+        }
+
         str = getString("ON_DEATH", obj, Main.settings, key);
         if(str != null) t.onDeath = loadScriptFromFile(str);
 

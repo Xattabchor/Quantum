@@ -14,6 +14,7 @@ import code.Rendering.Meshes.MeshImage;
 import code.Rendering.Meshes.Sprite;
 import code.Rendering.MultyTexture;
 import code.Rendering.Vertex;
+import code.Gameplay.GameScreen;
 import code.utils.FrameClock;
 import java.util.Vector;
 
@@ -60,6 +61,95 @@ public final class NPC extends Bot {
     public int[] friendlyFire;
     
     public String[] onDeath;
+
+    // --- LIFT / транспорт-имитация патруля (дешево для ARM9) ---
+    public Vector3D[] liftPoses;
+    public int[] liftTime;
+    public int liftState = 0; // 0=STAY_BEGIN,1=DRIVE,2=STAY_END,3=DRIVE_BACK
+    public long liftStartTime;
+    public long liftPauseTime;
+    public long liftPauseBegin;
+    public boolean liftPaused;
+    public boolean liftCycled;
+    public boolean liftReUse = true;
+    public boolean liftCanBePaused;
+    public boolean liftRotateToMove = true;
+    public boolean liftDisactivateOnEnd;
+    private final Vector3D liftTmp = new Vector3D();
+
+    private static final int LIFT_STAY_BEGIN = 0, LIFT_DRIVE = 1, LIFT_STAY_END = 2, LIFT_DRIVE_BACK = 3;
+
+    private void getLiftPos(Vector3D out, long coof, int summ) {
+        int a = 0; int sub = 0;
+        while (coof > summ && liftCycled) coof -= summ;
+        while (coof < 0 && liftCycled) coof += summ;
+        if (coof > summ) coof = summ;
+        if (coof < 0) coof = 0;
+        for (int i = 0; i < liftTime.length; i++) { sub += liftTime[i]; if (coof >= sub) a++; }
+        if (a >= liftPoses.length && liftCycled) a = 0;
+        if (a >= liftPoses.length) a = liftPoses.length - 1;
+        if (a < 0) a = 0;
+        int b = a + 1;
+        if (b >= liftPoses.length && liftCycled) b = 0;
+        if (b >= liftPoses.length) b = liftPoses.length - 1;
+        if (b < 0) b = 0;
+        sub = 0;
+        if (a >= liftTime.length) a = liftTime.length - 1;
+        for (int i = 0; i < a; i++) sub += liftTime[i];
+        int c = (int) ((coof - sub) * 1000 / liftTime[a]);
+        int d = 1000 - c;
+        out.set((liftPoses[a].x * d + liftPoses[b].x * c) / 1000,
+                (liftPoses[a].y * d + liftPoses[b].y * c) / 1000,
+                (liftPoses[a].z * d + liftPoses[b].z * c) / 1000);
+    }
+
+    private void updateLift() {
+        if (liftPoses == null || liftTime == null) return;
+        if (liftState == LIFT_STAY_BEGIN) { character.getTransform().setPosition(liftPoses[0]); return; }
+        if (liftState == LIFT_STAY_END) { character.getTransform().setPosition(liftPoses[liftPoses.length - 1]); return; }
+        if (liftState != LIFT_DRIVE && liftState != LIFT_DRIVE_BACK) return;
+        if (liftPaused) { liftPauseTime += GameScreen.time - liftPauseBegin; liftPauseBegin = GameScreen.time; return; }
+        int summ = 0; for (int i = 0; i < liftTime.length; i++) summ += liftTime[i];
+        long coof = GameScreen.time - liftPauseTime - liftStartTime;
+        if (coof >= summ && liftCycled) { coof -= summ; liftStartTime += summ; }
+        if (liftState == LIFT_DRIVE && coof >= summ) { liftState = LIFT_STAY_END; if (liftDisactivateOnEnd) activable = false; return; }
+        if (liftState == LIFT_DRIVE_BACK && coof >= summ) { liftState = LIFT_STAY_BEGIN; return; }
+        if (liftState == LIFT_DRIVE_BACK) coof = summ - coof;
+        getLiftPos(liftTmp, coof, summ);
+        character.getTransform().setPosition(liftTmp);
+        if (liftRotateToMove) {
+            Vector3D nxt = new Vector3D(); getLiftPos(nxt, coof + 120, summ);
+            if (nxt.x != liftTmp.x || nxt.z != liftTmp.z) lookAt(nxt.x, nxt.z);
+        }
+    }
+
+    // резкий поворот как в MeshObject.lookAtDirect
+    private void lookAtDirect(int x, int z) {
+        Matrix pos = getCharacter().getTransform();
+        dir.set(pos.m03 - x, 0, pos.m23 - z);
+        dir.setLengthFast(-Matrix.FP);
+        pos.setDir(dir.x, 0, dir.z);
+        // side/up пересчитает Character, достаточно setDir
+        Vector3D side = new Vector3D(); side.cross(new Vector3D(0, Matrix.FP, 0), dir, Matrix.fp); side.setLengthFast(Matrix.FP);
+        if (dir.lengthSquared() != 0 && side.lengthSquared() != 0) {
+            pos.setSide(side.x, side.y, side.z);
+            pos.setUp(0, Matrix.FP, 0);
+        }
+    }
+
+    public final void activate(code.Gameplay.Map.House house, Player player, code.Gameplay.GameScreen gs) {
+        if (liftPoses != null && liftPoses.length > 1) {
+            if (lastActivate >= 0 && lastActivate + timeToReset > GameScreen.time) return;
+            if (liftState == LIFT_DRIVE || liftState == LIFT_DRIVE_BACK) {
+                if (liftCanBePaused) { liftPaused = !liftPaused; liftPauseBegin = GameScreen.time; }
+            } else if (liftState == LIFT_STAY_BEGIN || liftState == LIFT_STAY_END) {
+                liftStartTime = GameScreen.time; liftPauseTime = 0;
+                if (liftState == LIFT_STAY_BEGIN) liftState = LIFT_DRIVE;
+                else if (liftState == LIFT_STAY_END && liftReUse) liftState = LIFT_DRIVE_BACK;
+            }
+        }
+        super.activate(house, player, gs);
+    }
 
     private GameObject enemy;
     private GameObject follower;
@@ -239,7 +329,11 @@ public final class NPC extends Bot {
     }
 
     protected final void action(Scene scene) {
+        if (liftPoses != null) updateLift();
         if (FrameClock.time() - lastDamage < damageSleepTime) return;
+        
+        // LIFT-транспорт: если едет по рельсам, AI движения не нужен — только атака
+        final boolean onLift = liftPoses != null && (liftState == LIFT_DRIVE || liftState == LIFT_DRIVE_BACK || liftState == LIFT_STAY_BEGIN || liftState == LIFT_STAY_END);
         
         // AI-LOD: далёкому боту искать цель и перестраивать маршрут достаточно
         // вдвое реже - на экране он занимает несколько пикселов, а этот блок
@@ -337,7 +431,7 @@ public final class NPC extends Bot {
                         if(portal != null) computeCentre(portal, dir);
                     }
 
-                    lookAt(dir.x, dir.z);
+                    if (!onLift || target == enemy) lookAt(dir.x, dir.z);
 
                     long dist = character.distance(target.getCharacter());
                     if (walkingToEnemy && 
@@ -345,14 +439,14 @@ public final class NPC extends Bot {
                         if(target == enemy) state = whenEnemyIsNear;
                         
                     } else {
-                        if (character.isCollision()) character.jump(jumpheight, jumpspeed);
+                        if (!onLift) { if (character.isCollision()) character.jump(jumpheight, jumpspeed); }
                         state = whenEnemyIsFar;
                     }
                 }
             }
         }
         
-        if (state == WALK_STATE) walk(speed);
+        if (state == WALK_STATE && !onLift) walk(speed);
         
         if (state == attackState && getFrameInterDiv() % attacktimer == 0 && enemy != null && walkingToEnemy) 
             attack(scene, enemy, damage);
@@ -375,7 +469,7 @@ public final class NPC extends Bot {
         
         en.damage(this, dam);
         setSprite(attackFront, attackSide, attackBack);
-        if(muzzleFlash!=null) lastAttack=System.currentTimeMillis();
+        if(muzzleFlash!=null) lastAttack=FrameClock.time();
         
         if(inPlayerTeam && wasAlive && en.isDead()) {
             if(en instanceof NPC) {
