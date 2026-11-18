@@ -5,4 +5,4 @@ MIDlet-1: River BVH HUD,,code.Rendering.RiverMapBvhHudPreview
 MicroEdition-Configuration: CLDC-1.1
 MicroEdition-Profile: MIDP-2.0
 MIDlet-Jar-URL: Quantum_RiverMap_BvhHud.jar
-MIDlet-Jar-Size: 819268
+MIDlet-Jar-Size: 819502

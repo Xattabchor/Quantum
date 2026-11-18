@@ -21,7 +21,7 @@ public final class RiverMapBvhHudPreview extends MIDlet {
         private static final int HUD_FULL=0,HUD_MIN=1,HUD_OFF=2;
         private final RiverMapBvhHudPreview app;
         private final Font font=Font.getFont(Font.FACE_SYSTEM,Font.STYLE_PLAIN,Font.SIZE_SMALL);
-        private volatile boolean running,closed,visible,ready,resetRequested=true,bvh=true;
+        private volatile boolean running,closed,visible,ready,resetRequested=true,bvh=false;
         private volatile Thread worker;
         private StaticRoomBvhMesh nativeRoom;
         private MultyTexture materials;
