@@ -19,6 +19,10 @@ FINISH=-132710,-661,1936
 
 DIST=68500
 
+// GRID render culling: 4x4 world chunks (map spans ~176k), player cell +-1
+// covers 150k world units, safely beyond the 68.5k far plane.
+CHUNK_SIZE=50000
+
 DMODE=9
 
 MUSIC=/music/wth.mp3
