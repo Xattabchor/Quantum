@@ -32,4 +32,14 @@ if [ ! -f "$ROOT/build/sdk/proguard/lib/proguard.jar" ]; then
     mv j2me-build-tools-master/lib "$ROOT/build/sdk/lib"
     mv j2me-build-tools-master/proguard "$ROOT/build/sdk/proguard"
 fi
+
+# Portable OpenJDK 8 (klaxons1/tools_linux_jdk8) — canonical build JDK:
+# javac -source/-target 1.5 + ProGuard -microedition preverify.
+if [ ! -x "$ROOT/build/tools/jdk8/bin/javac" ]; then
+    [ -f jdk8.zip ] || wget -q https://codeload.github.com/klaxons1/tools_linux_jdk8/zip/refs/heads/master -O jdk8.zip
+    unzip -q -o jdk8.zip
+    rm -rf "$ROOT/build/tools/jdk8"
+    mv tools_linux_jdk8-master "$ROOT/build/tools/jdk8"
+    chmod +x "$ROOT/build/tools/jdk8/bin/"*
+fi
 echo "toolchain OK"

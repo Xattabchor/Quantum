@@ -140,11 +140,12 @@ def stage_resources() -> None:
           f'({sum(len(v) for v in stage.values()) / 1e6:.2f} MB unpacked)')
 
 
-def run_build(java: str) -> None:
+def run_build(java: str, javac: str) -> None:
     if OUT.exists():
         shutil.rmtree(OUT)
     cmd = [sys.executable, str(ROOT / 'scripts/build_cldc.py'),
            '--java', java,
+           '--javac', javac,
            '--ecj-jar', str(ROOT / 'build/tools/package/server/plugins/org.eclipse.jdt.core_3.16.0.v20181004-1305.jar'),
            '--api-dir', str(ROOT / 'build/sdk/lib'),
            '--proguard-jar', str(ROOT / 'build/sdk/proguard/lib/proguard.jar'),
@@ -172,9 +173,11 @@ def patch_manifest(jar_path: Path, app_name='Quantum Kordos FX') -> None:
 
 
 def main() -> None:
-    java = os.environ.get('JAVA', str(ROOT / 'build/tools/jdk4py/jdk4py/java-runtime/bin/java'))
+    jdk8 = Path(os.environ.get('JDK8', str(ROOT / 'build/tools/jdk8')))
+    java = os.environ.get('JAVA', str(jdk8 / 'bin/java'))
+    javac = os.environ.get('JAVAC', str(jdk8 / 'bin/javac'))
     stage_resources()
-    run_build(java)
+    run_build(java, javac)
     jar = OUT / 'Quantum.jar'
     print(f'jar: {jar} ({jar.stat().st_size} B)')
     patch_manifest(jar)

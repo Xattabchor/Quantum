@@ -164,6 +164,9 @@ def overlay_resources(resources, directory):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--java", default="java")
+    parser.add_argument("--javac", default=None,
+                        help="Path to a JDK8 javac (klaxons1/tools_linux_jdk8). "
+                             "When given, javac -source/-target 1.5 replaces ECJ.")
     parser.add_argument("--ecj-jar", type=Path, required=True)
     parser.add_argument("--api-dir", type=Path, required=True)
     parser.add_argument("--proguard-jar", type=Path, required=True)
@@ -214,6 +217,20 @@ def main():
                     if name.endswith(".class") and name not in seen:
                         merged.writestr(name, jar.read(name))
                         seen.add(name)
+        # JDK8 javac emits StringBuilder concatenation for -source 1.5; the
+        # CLDC 1.1 API collection lacks it, so compile repo API stubs in.
+        stubs = sorted((ROOT / "tools/api-stubs/src").rglob("*.java"))
+        if args.javac and stubs:
+            stub_classes = work / "api-stub-classes"
+            stub_classes.mkdir(exist_ok=True)
+            run([args.javac, "-source", "1.5", "-target", "1.5", "-nowarn",
+                 "-d", str(stub_classes)] + [str(s) for s in stubs],
+                "api-stubs.log")
+            for path in sorted(stub_classes.rglob("*.class")):
+                name = path.relative_to(stub_classes).as_posix()
+                if name not in seen:
+                    merged.write(path, name)
+                    seen.add(name)
     sources = sorted(p for d in source_dirs for p in d.rglob("*.java"))
     if args.profile_frame:
         sources = prepare_sources(ROOT, sources, work / "frame-profile-src")
@@ -223,10 +240,16 @@ def main():
         classes = Path(temp)
         source_args = work / "sources.args"
         source_args.write_text("\n".join('"' + str(p) + '"' for p in sources), encoding="utf-8")
-        run([args.java, "-cp", str(ecj), "org.eclipse.jdt.internal.compiler.batch.Main",
-             "-source", "1.3", "-target", "1.3", "-encoding", "UTF-8", "-proc:none",
-             "-nowarn", "-bootclasspath", str(work / "api.jar"), "-d", str(classes),
-             "@" + str(source_args)], "compile.log")
+        if args.javac:
+            run([args.javac, "-source", "1.5", "-target", "1.5",
+                 "-encoding", "UTF-8", "-nowarn",
+                 "-bootclasspath", str(work / "api.jar"), "-d", str(classes),
+                 "@" + str(source_args)], "compile.log")
+        else:
+            run([args.java, "-cp", str(ecj), "org.eclipse.jdt.internal.compiler.batch.Main",
+                 "-source", "1.3", "-target", "1.3", "-encoding", "UTF-8", "-proc:none",
+                 "-nowarn", "-bootclasspath", str(work / "api.jar"), "-d", str(classes),
+                 "@" + str(source_args)], "compile.log")
         app_name = "Quantum Profile" if args.profile_frame else "Quantum"
         manifest = ("Manifest-Version: 1.0\r\nMIDlet-Name: " + app_name + "\r\n"
                     "MIDlet-Version: 1.0.0\r\nMIDlet-Vendor: AE-MODS.RU\r\n"
