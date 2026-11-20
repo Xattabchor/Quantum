@@ -1,0 +1,17 @@
+[project]
+name = "quantum_level41_devsound_caps_diag"
+kind = "e32-import"
+architecture = "armv5t"
+cmake_preset = "symbian-pic"
+uid3 = 0xe000a030
+
+[package]
+uid = 0xe000a031
+name = "Quantum E65 DevSound Capabilities Probe"
+vendor = "Quantum native port"
+executable_name = "quantum_level41_devsound_caps_diag.exe"
+version = [1, 0, 0]
+
+[application]
+caption = "E65 DevSound Probe"
+short_caption = "Audio Probe"

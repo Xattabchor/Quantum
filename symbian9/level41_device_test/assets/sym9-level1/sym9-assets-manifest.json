@@ -1,0 +1,148 @@
+{
+  "source_archive": {
+    "name": "sym9.zip",
+    "sha256": "eb81090003338a3333aa2d5b1c25c586cdabff0c446ed9664da132ca82e7b60b",
+    "selection": "Kordos Level 1 map textures, lightmap, model, and the configured daytime sky; unrelated maps, weapons, and game code were not imported"
+  },
+  "runtime_assets": {
+    "L3D_new.3d": {
+      "archive_member": "maps/kordos/kordos.3d",
+      "size_bytes": 56544,
+      "sha256": "00cf889f495aa5b8fe6bc058c022ef16f49a8761c2d30b7d084fa43eec088ad9"
+    },
+    "lightmap.vla": {
+      "archive_member": "lightmap/kordos.vla",
+      "size_bytes": 10032,
+      "sha256": "b62c6b46df7b60e50d3cced9e5fe4f73d32b21d45521273932c5a53e0bfad53e"
+    },
+    "skybox8.3d": {
+      "archive_member": "skies/sky.3d",
+      "size_bytes": 484,
+      "sha256": "e7fe2edc8d7132808f3ea15ab55dc7663ba3263de25a007f7c576f58c8ad9e1f"
+    },
+    "forestOrigy.png": {
+      "archive_member": "maps/kordos/forestOrigy.png",
+      "size_bytes": 17278,
+      "sha256": "9e540b2d0af59f19bdcd1e78834213be91c4d27927ccbb9d686594e00326760a"
+    },
+    "map-selo1.png": {
+      "archive_member": "maps/kordos/map-selo1.png",
+      "size_bytes": 150308,
+      "sha256": "8785d527b769c5d880e64f7343dd36da0e14763672f5fb27019be545d33496d2"
+    },
+    "skuy.png": {
+      "archive_member": "skies/skuy.png",
+      "size_bytes": 93717,
+      "sha256": "1d2ddff273c9ac8af4c3dae3621619c3eca1eaea583280c6d75643ba2ea30962"
+    },
+    "skun.png": {
+      "archive_member": "skies/skun.png",
+      "size_bytes": 103363,
+      "sha256": "5ca271141546c66e6e3e419002db4c42fb80092d0fa10155948a3032368ef085"
+    },
+    "river0.bmp": {
+      "archive_member": "maps/kordos/river0.bmp",
+      "size_bytes": 3210,
+      "sha256": "5b56d101a28f64752a6aefab4acd265d3c09de8abd7d945004aa69d5aa87a4ee"
+    },
+    "river0.png": {
+      "archive_member": "maps/kordos/river0.png",
+      "size_bytes": 1586,
+      "sha256": "425e5f55405b98ef592e391246c77f09d730408597435cbe0679f4a3e75a6e6d"
+    },
+    "river1.bmp": {
+      "archive_member": "maps/kordos/river1.bmp",
+      "size_bytes": 3210,
+      "sha256": "bae2c765b599c866bef6e5d19ae4ba7af10609eae64db05acebf08a4b2fab44f"
+    },
+    "river1.png": {
+      "archive_member": "maps/kordos/river1.png",
+      "size_bytes": 1621,
+      "sha256": "63178deaff222d3fef4a3b369a8f3482b484ef657dbac07775ec1ecb2c848599"
+    },
+    "river2.bmp": {
+      "archive_member": "maps/kordos/river2.bmp",
+      "size_bytes": 3210,
+      "sha256": "2b7e27e686fe92e8be5b92c957b1a053ff52fe7d49ec2ddff5de69bd8f299d5c"
+    },
+    "river2.png": {
+      "archive_member": "maps/kordos/river2.png",
+      "size_bytes": 1596,
+      "sha256": "ddebac198d990915aedfa56c50ede7384dab62508971dc22a7fc9b91199e0f4e"
+    },
+    "river3.bmp": {
+      "archive_member": "maps/kordos/river3.bmp",
+      "size_bytes": 3210,
+      "sha256": "b8317bb31b125190089220e77ab1b0b68e4dccdddc13871c38b8ec5dd16c62e7"
+    },
+    "river3.png": {
+      "archive_member": "maps/kordos/river3.png",
+      "size_bytes": 1537,
+      "sha256": "be3a0614cd9f9b4e8d31aabb361dec6629c1e7283c249e7a0b628a4fc7d28d94"
+    }
+  },
+  "qtx1_textures": {
+    "forest.qtx": {
+      "source": "forestOrigy.png",
+      "width": 128,
+      "height": 64,
+      "size_bytes": 32776,
+      "sha256": "29e1524bef7809d27aa93b7dab2b13d31c16e4b592fe10051f8b8a753059874c"
+    },
+    "map.qtx": {
+      "source": "map-selo1.png",
+      "width": 256,
+      "height": 256,
+      "size_bytes": 262152,
+      "sha256": "c963a1dc3f644cfd3e5ddf2991bfbaf446e6580e97a816b2b2c5785d2df16286"
+    },
+    "river.qtx": {
+      "source": "river0.bmp",
+      "width": 32,
+      "height": 32,
+      "size_bytes": 4104,
+      "sha256": "707a5e6fd572f4f9fc127ea325edc0df90292eb1f1dad925cd26dcf6a487a231"
+    },
+    "river0.qtx": {
+      "source": "river0.bmp",
+      "width": 32,
+      "height": 32,
+      "size_bytes": 4104,
+      "sha256": "707a5e6fd572f4f9fc127ea325edc0df90292eb1f1dad925cd26dcf6a487a231"
+    },
+    "river1.qtx": {
+      "source": "river1.bmp",
+      "width": 32,
+      "height": 32,
+      "size_bytes": 4104,
+      "sha256": "e11c978dfddc207e5668a62b4a7ee8a134c45afe7cce3f90b0b783cebc8c4b2e"
+    },
+    "river2.qtx": {
+      "source": "river2.bmp",
+      "width": 32,
+      "height": 32,
+      "size_bytes": 4104,
+      "sha256": "5b1fe47d0d81cdef19a46fa1007021f3c99de96c679614f91ef8ab9f4dcb73ec"
+    },
+    "river3.qtx": {
+      "source": "river3.bmp",
+      "width": 32,
+      "height": 32,
+      "size_bytes": 4104,
+      "sha256": "4a7ab3486209ce3fb6f3a27affdcc6c0adff739aa0d130041fdcd4eec0831b28"
+    },
+    "sky.qtx": {
+      "source": "skuy.png",
+      "width": 256,
+      "height": 256,
+      "size_bytes": 262152,
+      "sha256": "40125dacbfa69d2b2fb45e9810056e417ca970239846615332d6f29a99a43aa7"
+    }
+  },
+  "compatibility": {
+    "forest_texture": "sym9's 128x64 forestOrigy.png is supported in addition to the existing 256x128 profile",
+    "sky_texture": "skuy.png, selected by sym9.zip/level1.txt",
+    "river": "the interactive Level 1 target loads river0.qtx..river3.qtx at the configured 6 FPS; river.qtx remains for the separate fixed-scene target",
+    "runtime_verification": "none; this manifest records source conversion and packaging inputs only"
+  }
+}

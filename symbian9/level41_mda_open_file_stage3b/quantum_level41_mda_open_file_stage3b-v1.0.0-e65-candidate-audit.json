@@ -1,0 +1,175 @@
+{
+  "candidate": "quantum_level41_mda_open_file_stage3b-v1.0.0-e65-candidate.sisx",
+  "package": {
+    "format": "SISX",
+    "size_bytes": 51152,
+    "sha256": "8e12ed10263d8708d27ede7d5e0281fd08bf8f36ead135a3e8de2f67ef0a836e",
+    "package_uid": "0xE000A02F",
+    "executable_uid3": "0xE000A02E",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "signed": true,
+    "registered": true,
+    "files": [
+      {
+        "target": "!:\\sys\\bin\\quantum_level41_mda_open_file_stage3b.exe",
+        "size": 47012,
+        "sha1": "34622c9830c0dde573daba41eb07ca33989f23af"
+      },
+      {
+        "target": "!:\\private\\10003a3f\\import\\apps\\quantum_level41_mda_open_file_stage3b_reg.rsc",
+        "size": 157,
+        "sha1": "38dea09b73d5746dc70a5d5a9825710ce0521644"
+      },
+      {
+        "target": "!:\\resource\\apps\\quantum_level41_mda_open_file_stage3b_loc.rsc",
+        "size": 90,
+        "sha1": "40af94b5081f7b96dad5482ca2cf387f12951488"
+      },
+      {
+        "target": "!:\\data\\mda_open_file_probe.wav",
+        "size": 1644,
+        "sha1": "8a170ab6f01319d84876c789afaaba42203942a0"
+      }
+    ]
+  },
+  "e32": {
+    "size_bytes": 47012,
+    "sha256": "b8d9452f05384d693376dfd6f07a99e4b57247bdd5ef0a200691bc7311824055",
+    "architecture": "ARMv5T/EKA2",
+    "capabilities": 0,
+    "all_static_imports": "estlib.dll:18,estlib.dll:141,estlib.dll:168,estlib.dll:195,estlib.dll:205,estlib.dll:253,estlib.dll:154,estlib.dll:153,estlib.dll:275,euser.dll:196,euser.dll:652,euser.dll:430,euser.dll:428,euser.dll:85,euser.dll:960,euser.dll:1159,euser.dll:1794,euser.dll:1795,euser.dll:604,euser.dll:1799,euser.dll:1781,euser.dll:1787,euser.dll:953,euser.dll:120,euser.dll:1951,euser.dll:842,euser.dll:839,euser.dll:1169,euser.dll:973,euser.dll:587,euser.dll:1091,euser.dll:424,euser.dll:617,euser.dll:1090,euser.dll:426,euser.dll:1088,euser.dll:1311,euser.dll:1094,euser.dll:929,euser.dll:425,euser.dll:1308,euser.dll:649,euser.dll:1838,euser.dll:925,euser.dll:928,euser.dll:2128,euser.dll:1360,euser.dll:641,euser.dll:669,euser.dll:585,euser.dll:1955,euser.dll:665,euser.dll:1954,euser.dll:855,euser.dll:645,euser.dll:1213,euser.dll:674,euser.dll:1196,euser.dll:2103,euser.dll:644,euser.dll:1793,euser.dll:64,euser.dll:69,euser.dll:1953,euser.dll:1416,euser.dll:1415,euser.dll:1417,gdi.dll:169,mediaclientaudio.dll:35,ws32.dll:76,ws32.dll:70,ws32.dll:185,ws32.dll:184,ws32.dll:351,ws32.dll:348,ws32.dll:354,ws32.dll:68,ws32.dll:190,ws32.dll:158,ws32.dll:157,ws32.dll:278,ws32.dll:275,ws32.dll:224,ws32.dll:211,ws32.dll:277,ws32.dll:81,ws32.dll:107,ws32.dll:69,ws32.dll:1,ws32.dll:72,ws32.dll:7,ws32.dll:264,ws32.dll:73,ws32.dll:265,ws32.dll:276,ws32.dll:29",
+    "static_mda_import_ordinals": [
+      35
+    ],
+    "static_open_file_ordinal_42": false,
+    "dynamic_open_file_ordinal": 42,
+    "dynamic_lookup_api": "RLibrary::Load + RLibrary::Lookup",
+    "midi_imports": []
+  },
+  "runtime_scope": {
+    "call_order": [
+      "CMdaAudioPlayerUtility::NewL",
+      "RLibrary::Load",
+      "RLibrary::Lookup(42)",
+      "if found: call only OpenFileL on the packaged WAV",
+      "MapcInitComplete callback or leave/timeout/panic result"
+    ],
+    "ordinal_42_missing": "report and do not call OpenFileL",
+    "ordinal_42_found": "E65 report reached MapcInitComplete success; dynamic lookup and OpenFileL call succeeded",
+    "callback_wait_timeout_seconds": 15,
+    "play_called": false,
+    "midi_or_other_audio_paths": false,
+    "device_test_status": "E65 user-reported MapcInitComplete success; duration 100 ms"
+  },
+  "wav": {
+    "target": "!:\\data\\mda_open_file_probe.wav",
+    "size_bytes": 1644,
+    "sha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+    "channels": 1,
+    "sample_width_bytes": 2,
+    "sample_rate_hz": 8000,
+    "sample_frames": 800,
+    "duration_ms": 100,
+    "compression": "NONE",
+    "samples_silent": true
+  },
+  "registration_resource": {
+    "target_source": "registration.rss",
+    "preprocessed_size": 1660,
+    "size": 157,
+    "sha256": "579480f5373684f502e6a3ad41c5a71154b121788d48a1477dfc7962512197be",
+    "uid_header": {
+      "uid1": "0x101F4A6B",
+      "uid2": "0x101F8021",
+      "uid3": "0xE000A02E",
+      "uid_checksum": "0x9643F658"
+    }
+  },
+  "caption_resource": {
+    "target_source": "caption.rss",
+    "preprocessed_size": 1633,
+    "size": 90,
+    "sha256": "f3593613e5d4611c7b872145e9b5876aee6cf0b0a1e5140b73ae8d30c13fbfbd",
+    "uid_header": {
+      "uid1": "0x101F4A6B",
+      "uid2": "0x00000000",
+      "uid3": "0x00000000",
+      "uid_checksum": "0xE848FD19"
+    }
+  },
+  "signing_certificate": {
+    "subject": "CN = Quantum MDA OpenFile Stage 3B Diagnostic",
+    "issuer": "CN = Quantum MDA OpenFile Stage 3B Diagnostic",
+    "self_signed": true,
+    "signature_algorithm": "sha1WithRSAEncryption",
+    "public_key_algorithm": "RSA",
+    "public_key_bits": 1024,
+    "not_before": "Jan  1 00:00:00 2000 GMT",
+    "not_after": "Dec 31 23:59:59 2045 GMT",
+    "certificate_der_sha256": "462410819ef301473c38dc6f693e3823c0cdb75b1cb5fd239f9d02743eec85d1",
+    "certificate_verified_with_own_public_key": true,
+    "private_key_valid_before_signing": true,
+    "private_key_embedded": false
+  },
+  "signing_private_key_removed_after_signing": true,
+  "build": {
+    "sdk_version": "0.3.0",
+    "sdk_root": "/home/user/quantum-sdk-cache/symbian-sdk",
+    "sis_writer_sha256": "0d531dd598b79dda8a362022e140b00f99c4fd41fa183b0e96f48e89243d0eeb",
+    "upstream_symbian_platform_commit": "b105f752f84d1b5640052f64c4a703017810d7b8",
+    "abseil_commit": "5650e9cf76d3be4318d5fa3af38ee483ddfd5e4a",
+    "rcomp_source_commit": "d3c2eadd3ff7826bdf9e1d92f447c357571af18b",
+    "local_rcomp_sha256": "ead329d619a3ffa7a2fb68ef608b454941efe48dc4245b5f9ffe3a8f263e4ee5",
+    "local_uidcrc_sha256": "57336b5403f16ef811eb424804edd8f3f060eb980b7d2d734d952b8540133e9b",
+    "cmake": "3.31.6 (host PyPI wheel)",
+    "ninja": "1.11.1.1 (host PyPI wheel)",
+    "sdk_clang": "23.1.2",
+    "host_compiler_for_sis_and_resource_helpers": "g++ 12.2",
+    "host_glibc_workaround": "LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6 for SDK Clang and symbian-native",
+    "host_helper_archive": {
+      "name": "host-helper-binaries-linux-x86_64.tar.xz",
+      "md5": "ffeb2ec6268e9bb8e201904afe422d99",
+      "size_bytes": 1040676,
+      "extracted": true,
+      "inspected_contents": [
+        "host-gawk/bin/gawk",
+        "host-tools/bin/bison-version-check",
+        "host-tools/bin/patchelf"
+      ]
+    },
+    "cmake_project": "symbian9/level41_mda_open_file_stage3b",
+    "cmake_build_target": "quantum_level41_mda_open_file_stage3b_e32",
+    "source_sha256": "33868048724a7d3a223da4b0f99ce6eb817fdee2b6c39c47c6182b4a07f53cf2"
+  },
+  "distribution": {
+    "provider": "Google Drive",
+    "file_id": "1JiaxS0tybOnZ8w36iMwv0DeaZsWA_lx6",
+    "direct_download_url": "https://drive.google.com/uc?id=1JiaxS0tybOnZ8w36iMwv0DeaZsWA_lx6&export=download",
+    "web_view_url": "https://drive.google.com/file/d/1JiaxS0tybOnZ8w36iMwv0DeaZsWA_lx6/view?usp=drivesdk",
+    "public_link_access": false,
+    "drive_size_bytes": 51152,
+    "drive_md5": "d79b7e423943a660569acc5b8fe0e21a",
+    "drive_upload_matches_local_md5": true
+  },
+  "device_test": {
+    "device": "Nokia E65",
+    "status": "user-reported-success",
+    "raw_screen_report": "Mapcinitcomplete: sucess\n\nDuration 100 ms\n\nPackaged 100ms pcm wav\n\nC:\\data\\mda_open_file_probe.wav\n\nNo play; midi/other audio paths off",
+    "normalized_result": {
+      "callback": "MapcInitComplete",
+      "callback_success": true,
+      "duration_ms": 100,
+      "file": "C:\\data\\mda_open_file_probe.wav",
+      "play_called": false,
+      "midi_or_other_audio_paths": false
+    },
+    "dynamic_ordinal_42_resolved": true,
+    "open_file_call_made": true,
+    "interpretation": "The stage-3b code reaches this success screen only after RLibrary::Lookup(42) returns a function and the dynamically dispatched OpenFileL call triggers a successful initialization callback.",
+    "scope_limit": "Confirms file-open/initialization for the packaged WAV on this E65; does not test playback or audible output."
+  }
+}

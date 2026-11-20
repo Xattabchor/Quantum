@@ -1,0 +1,10 @@
+#ifndef QUANTUM_HRH
+#define QUANTUM_HRH
+
+/* Application command IDs; kept outside the Avkon/Eikon reserved ranges. */
+enum TQuantumCommandIds
+{
+    EQuantumCmdAbout = 0x7001
+};
+
+#endif // QUANTUM_HRH

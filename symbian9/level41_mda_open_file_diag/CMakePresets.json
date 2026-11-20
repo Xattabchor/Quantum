@@ -1,0 +1,14 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "symbian-pic",
+      "displayName": "Symbian ARMv5T E32 application",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/symbian-pic",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ]
+}

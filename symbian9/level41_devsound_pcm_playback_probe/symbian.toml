@@ -1,0 +1,17 @@
+[project]
+name = "quantum_level41_devsound_pcm_playback_probe"
+kind = "e32-import"
+architecture = "armv5t"
+cmake_preset = "symbian-pic"
+uid3 = 0xe000a032
+
+[package]
+uid = 0xe000a033
+name = "Quantum E65 PCM Playback Probe"
+vendor = "Quantum native port"
+executable_name = "quantum_level41_devsound_pcm_playback_probe.exe"
+version = [1, 0, 1]
+
+[application]
+caption = "E65 PCM Playback"
+short_caption = "PCM Play Test"

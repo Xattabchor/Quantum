@@ -1,0 +1,17 @@
+[project]
+name = "quantum_level41_mda_open_file_stage3b"
+kind = "e32-import"
+architecture = "armv5t"
+cmake_preset = "symbian-pic"
+uid3 = 0xe000a02e
+
+[package]
+uid = 0xe000a02f
+name = "Quantum MDA OpenFile Stage 3B Diagnostic"
+vendor = "Quantum native port"
+executable_name = "quantum_level41_mda_open_file_stage3b.exe"
+version = [1, 0, 0]
+
+[application]
+caption = "MDA OpenFile Stage 3B"
+short_caption = "MDA OpenFile 3B"

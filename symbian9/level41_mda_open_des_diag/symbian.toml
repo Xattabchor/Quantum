@@ -1,0 +1,17 @@
+[project]
+name = "quantum_level41_mda_open_des_diag"
+kind = "e32-import"
+architecture = "armv5t"
+cmake_preset = "symbian-pic"
+uid3 = 0xe000a02a
+
+[package]
+uid = 0xe000a02b
+name = "Quantum MDA OpenDes Diagnostic"
+vendor = "Quantum native port"
+executable_name = "quantum_level41_mda_open_des_diag.exe"
+version = [1, 0, 1]
+
+[application]
+caption = "MDA OpenDes Diagnostic"
+short_caption = "MDA OpenDes"

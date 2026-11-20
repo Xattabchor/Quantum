@@ -1,0 +1,17 @@
+[project]
+name = "quantum_level41_fastfp_probe"
+kind = "e32-import"
+architecture = "armv5t"
+cmake_preset = "symbian-pic"
+uid3 = 0xe000a026
+
+[package]
+uid = 0xe000a027
+name = "Level 41 Fastfp A/B Probe"
+vendor = "Quantum native port"
+executable_name = "quantum_level41_fastfp_probe.exe"
+version = [1, 0, 3]
+
+[application]
+caption = "Fastfp A/B Probe"
+short_caption = "Fastfp Probe"

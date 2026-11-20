@@ -1,0 +1,18 @@
+# MDA A/B probe v1.0.1 — corrected startup experiment
+
+This is a device diagnostic, not a game fix. In v1.0.0 both modes gave `E32USER-CBase 66` before OpenFileL, so no A/B comparison was possible. A missing trap around leaving startup calls was a strong, unconfirmed explanation. In v1.0.1 startup executes from `CBootstrap::RunL` under the active scheduler's trap harness; `RunError` records a leave and stops the scheduler. Added startup stage `S`. Scheduler panics are not suppressed. E65 mode 1 reached Play but panicked 46 without a periodic poller. A subsequent mode 2 attempt failed at thread creation with `-11`, but mode 2 run first also reached Play and panicked 46, with 21 periodic ticks. See `RUNTIME_RESULTS.md`.
+
+Each run creates a fresh worker and player with the same WAV. Mode 1 has no **periodic** audio-thread poller; mode 2 adds a 20 ms periodic RTimer active object. Both modes also have an 8-second one-shot watchdog, the same bootstrap and deferred-Play self-completed active objects, mutex-protected telemetry, and identical MDA code. Mode 2's tick counter adds mutex operations and changes timing, so results can suggest interaction but do not prove cause. This minimal worker lacks the game's command queue, music and reload.
+
+## Device procedure
+
+1. Uninstall **only MDA A B Probe v1.0.0**, not the game or other tests: v1.0.1 uses the same UID with a new self-signed certificate, so an upgrade is not guaranteed. Install to phone memory **C:**. The test uses its own `C:\data\q41_ab_shot.wav`. Stop if the phone rejects the certificate; do not weaken security.
+2. Start the app and confirm `v1.0.1`. Press **1**, listen and photograph the screen after it refreshes (three seconds). If the worker is still running, wait until at least 9 seconds from launch and press **0** to refresh; photograph again.
+3. Press **2**, listen and photograph the screen with the same procedure. Changes of mode are ignored while the preceding worker is still running; press 0 to refresh. If the entire app exits, relaunch it to test the other mode.
+4. Repeat each mode three times if practical, waiting for each worker to finish. Report number of audible shots in each mode, screenshots, panic or app exit. Every run is a new player, not a replay of the same player.
+
+`O`: OpenFileL requested; `I`: init error; `P`: Play calls entered/returned; `C`: completion callback count; `E`: completion error; `T`: periodic ticks; `TO`: watchdog fired; `R`: worker result, meaningful on normal exit or a caught leave; `S`: startup stage. S=1 bootstrap entered; S=2 about to load DLL; S=3 DLL loaded; S=4 about to call NewL; S=5 NewL returned; S=6 OpenFileL returned. Values 9999 mean no callback, not a Symbian error. The worker exit type/reason and panic category are separate from R. Screen refresh is not continuous. Forced worker termination after 10 seconds on app exit is a fallback if a synchronous MDA call blocks and the worker watchdog cannot run.
+
+## Build audit
+
+ARMv5T/EKA2, SDK 0.3.0, legacy runtime. E32 UID3 `0xE000A038`, package UID `0xE000A039`. SHA-256: E32 `c53c84fcd19b2675f8faec43d8cc5b7e9fbe58df9224582a4dd69ad282076ed3`, SISX `371f9ba3a0591894b46ad757277d2cd65d06d15d608e12221ac9c7bff370ec84`, WAV `99ef9989a3b17949a2bd4cfbadfa6b2f16d84f33b207a01b91b42d72c0e25d3b`. WAV is identical to v1.0.0. The writer reported signed, registered, four files, MDA static ordinal 35 and no MIDI imports; extracted E32/WAV match the build. The linked ELF contains `CBootstrap::RunL` and `RunError`. Self-signed RSA-1024/SHA-1 certificate valid 2000–2045, private key removed. These are static/package checks, not proof of E65 behavior.

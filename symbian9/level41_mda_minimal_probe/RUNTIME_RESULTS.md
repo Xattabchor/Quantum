@@ -1,0 +1,5 @@
+# E65 runtime result — MDA Minimal Probe v1.0.0
+
+User reported: `Mode 1 Start 0`, `Exit type 2 reason 46`, `E32USER-CBase`, `O:1 I:0 P:1/1`, `C:0 E:9999 T:0`, `TO:0 R:0 S:6`. Pressing 1 produces audible sound; 0 seems unresponsive.
+
+OpenFileL returned, init callback reported success, and Play was entered and returned. No completion callback was recorded before the worker panic. R=0 is only its initial value in this panic case. There is no periodic poller, worker watchdog or self-completed AO; a one-shot RTimer bootstrap, telemetry mutex, scheduler and MDA internal asynchronous machinery remain. This reproduces panic 46 under the reduced setup, not proof of its source. On follow-up the user confirmed repeated presses of 1 keep Start at 0 and sound works; the previous -11 did not recur in the reported repetitions. 0 only redraws current status and need not visibly change the screen when values are unchanged; actual key delivery was not independently verified. No fix to game audio is established.

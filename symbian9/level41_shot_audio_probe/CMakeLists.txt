@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.28)
+project(quantum_shot_audio_probe LANGUAGES CXX ASM)
+include(SymbianApp)
+symbian_add_executable(quantum_shot_audio_probe main.cc quantum_level41_audio.cpp)
+target_link_libraries(quantum_shot_audio_probe PRIVATE Symbian::EUser Symbian::WindowServer Symbian::Gdi Symbian::Audio)
+target_compile_features(quantum_shot_audio_probe PRIVATE cxx_std_20)
+symbian_publish_executable(quantum_shot_audio_probe UID3 0xe000a036)

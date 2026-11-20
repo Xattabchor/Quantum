@@ -1,0 +1,79 @@
+{
+  "source_archives": {
+    "level_archive": {
+      "name": "sym9.zip",
+      "drive_id": "1elEgbqUS3KhYfKuusXIwS1LaVF_o6bki",
+      "size_bytes": 985603,
+      "sha256": "eb81090003338a3333aa2d5b1c25c586cdabff0c446ed9664da132ca82e7b60b",
+      "level1_txt_sha256": "c5e4d59b7a33ad1f1e5e7ecea25a9f00a9717f8cbb06d517658a3f735f3f1861"
+    },
+    "props_archive": {
+      "name": "prop.zip",
+      "drive_id": "1zoSFEQQS7foZTrsDfb3pfpLv_RGCkeAp",
+      "size_bytes": 38906,
+      "sha256": "bbfb8d745e7ba42b95288e38ec30b7bfb9e75a188b2b74b057b6f65217aa6ceb",
+      "selection": "only prop/md.3d, prop/mdy.png, and prop/skl.png, because these are the only prop.zip files referenced by level1.txt's single [MESH] and single [SPRITE] entries"
+    }
+  },
+  "level_object_records": {
+    "MESH": {
+      "POS": "-73825,-3626,-113803",
+      "MODEL": "/prop/md.3d",
+      "TEX": "/prop/mdy.png",
+      "MODEL_SCALE": "2",
+      "COLLISION_SCALE_X": "0",
+      "COLLISION_SCALE_Y": "0",
+      "PHYSICS": "0"
+    },
+    "SPRITE": {
+      "POS": "-71400,-3368,-76270",
+      "TEX": "/prop/skl.png",
+      "SCALE": "34",
+      "FOG": "NONE",
+      "MODE": "NORMAL"
+    }
+  },
+  "runtime_manifest": {
+    "file": "level1-objects.txt",
+    "size_bytes": 214,
+    "sha256": "7fcb01e64d0c433c2197da2568dac30ca2ff2cdb91b3af58ff849c11c2a04afe",
+    "record_counts": {
+      "MESH": 1,
+      "SPRITE": 1
+    }
+  },
+  "source_prop_assets": {
+    "prop/md.3d": {
+      "archive_member": "prop/md.3d",
+      "size_bytes": 250,
+      "sha256": "8f078f7d719eed10801c3914db73b630662ebd5e1644a1f6ca2baf0bfa14c7fb"
+    },
+    "prop/mdy.png": {
+      "archive_member": "prop/mdy.png",
+      "size_bytes": 4027,
+      "sha256": "e78362d882a6d78f8665fe1757856326d40ee312e7081f1fd36cc356a33edf70"
+    },
+    "prop/skl.png": {
+      "archive_member": "prop/skl.png",
+      "size_bytes": 3997,
+      "sha256": "6d766bae12c0f1ee296b5561417c9782106356645c08c73b2bdb504f6caa6f0a"
+    }
+  },
+  "qtx1_textures": {
+    "prop/mdy.qtx": {
+      "source": "prop/mdy.png",
+      "width": 64,
+      "height": 64,
+      "size_bytes": 16392,
+      "sha256": "6bed460930280e716f66c20d079d59f67ca6be21acec24b4ae3eed0acbc3a474"
+    },
+    "prop/skl.qtx": {
+      "source": "prop/skl.png",
+      "width": 43,
+      "height": 64,
+      "size_bytes": 11016,
+      "sha256": "0d0134aad42f51d662e9402d705c40555cbc6d39375140d1144fe17dc798b477"
+    }
+  },
+  "scope": "No unreferenced weapon PNGs or other prop.zip entries are imported."
+}

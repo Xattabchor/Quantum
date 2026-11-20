@@ -1,0 +1,92 @@
+name: Symbian device render test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - arena/671096c5-quantum
+    paths:
+      - '.github/workflows/device-render-test.yml'
+      - 'symbian9/CMakeLists.txt'
+      - 'symbian9/device_render_test/**'
+      - 'symbian9/inc/quantum_integer.h'
+      - 'symbian9/inc/quantum_types.h'
+      - 'symbian9/inc/software_affine_rasterizer.h'
+      - 'symbian9/inc/software_perspective_rasterizer.h'
+      - 'symbian9/src/core/software_affine_rasterizer.cpp'
+      - 'symbian9/src/core/software_perspective_rasterizer.cpp'
+
+permissions:
+  contents: read
+
+jobs:
+  build-armv5t-sis:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out the current branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python for the SDK host tools
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Symbian Platform host tools
+        run: |
+          python -m venv "$RUNNER_TEMP/symbian-venv"
+          echo "$RUNNER_TEMP/symbian-venv/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/symbian-venv/bin/python" -m pip install --disable-pip-version-check symbian-platform==0.3.0
+
+      - name: Download and install the public native SDK
+        env:
+          SDK_ARCHIVE_URL: https://github.com/hpnkv/symbian-platform/releases/download/v0.3.0/symbian-sdk-0.3.0-linux-x86_64.tar.gz
+        run: |
+          curl --fail --location --retry 3 "$SDK_ARCHIVE_URL" --output "$RUNNER_TEMP/symbian-sdk.tar.gz"
+          symbian sdk install "$RUNNER_TEMP/symbian-sdk" --archive "$RUNNER_TEMP/symbian-sdk.tar.gz"
+
+      - name: Build ARMv5T E32 executable
+        run: |
+          set -o pipefail
+          SDK="$RUNNER_TEMP/symbian-sdk"
+          BUILD="$RUNNER_TEMP/quantum-render-build"
+          "$SDK/bin/cmake" \
+            -S "$GITHUB_WORKSPACE/symbian9" \
+            -B "$BUILD" \
+            -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$SDK/cmake/symbian-arm.cmake" \
+            -DSYMBIAN_SDK_PREFIX="$SDK" \
+            -DSYMBIAN_TARGET_ARCH=armv5t \
+            -DSYMBIAN_RUNTIME_LEGACY_EKA2=ON \
+            -DCMAKE_MAKE_PROGRAM="$SDK/bin/ninja" \
+            -DCMAKE_BUILD_TYPE=Release 2>&1 | tee "$RUNNER_TEMP/render-cmake-configure.log"
+          "$SDK/bin/cmake" --build "$BUILD" --parallel 2 2>&1 | tee "$RUNNER_TEMP/render-cmake-build.log"
+          test -s "$BUILD/device_render_test/e32/quantum_render_device_test.exe"
+
+      - name: Surface build diagnostics
+        if: failure()
+        run: |
+          for log in "$RUNNER_TEMP/render-cmake-configure.log" "$RUNNER_TEMP/render-cmake-build.log"; do
+            if [ -f "$log" ]; then
+              while IFS= read -r line; do
+                echo "::error title=Symbian render build::$line"
+              done < <(tail -n 30 "$log")
+            fi
+          done
+
+      - name: Package, sign and inspect SIS files
+        run: |
+          PROJECT="$GITHUB_WORKSPACE/symbian9/device_render_test"
+          BUILD="$RUNNER_TEMP/quantum-render-build"
+          PACKAGE="$RUNNER_TEMP/quantum-render-package"
+          mkdir -p "$PACKAGE"
+          symbian package \
+            --project "$PROJECT" \
+            --artifact "$BUILD/device_render_test/e32/quantum_render_device_test.exe" \
+            --output "$PACKAGE"
+          symbian inspect --format sis "$PACKAGE/quantum_render_device_test.sis"
+          symbian signing create --identity developer --common-name "Quantum Render Test"
+          symbian signing sign "$PACKAGE/quantum_render_device_test.sis" \
+            --identity developer \
+            --destination "$PACKAGE/quantum_render_device_test-signed.sis"
+          symbian inspect --format sis "$PACKAGE/quantum_render_device_test-signed.sis"

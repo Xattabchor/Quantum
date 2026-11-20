@@ -1,0 +1,38 @@
+diff --git a/cpp/symbian/e32/e32.cc b/cpp/symbian/e32/e32.cc
+index 5b2bfc0..dda82f9 100644
+--- a/cpp/symbian/e32/e32.cc
++++ b/cpp/symbian/e32/e32.cc
+@@ -1233,7 +1233,8 @@ absl::StatusOr<ImageInfo> InspectImage(std::string_view bytes) {
+       Read32(bytes, 124) != bytes.size() - header_size || base % 4 ||
+       size > UINT32_MAX - base || uid3 < 0xe0000000 || uid3 > 0xefffffff ||
+       Read32(bytes, 128) != uid3 || Read32(bytes, 24) != 0x00010000 ||
+-      Read32(bytes, 56) != 0x1000 || Read32(bytes, 60) != 0x100000 ||
++      Read32(bytes, 56) != 0x1000 ||
++      (Read32(bytes, 60) != 0x100000 && Read32(bytes, 60) != 0x200000) ||
+       Read32(bytes, 64) != 0x10000) {
+     return absl::DataLossError("Invalid experimental E32 layout/identity");
+   }
+diff --git a/cpp/symbian/sis/sis.cc b/cpp/symbian/sis/sis.cc
+index 220b1a1..3fc7a6f 100644
+--- a/cpp/symbian/sis/sis.cc
++++ b/cpp/symbian/sis/sis.cc
+@@ -982,6 +982,7 @@ absl::StatusOr<PackageInfo> InspectPackage(std::string_view bytes) {
+         "SIS fields are outside the canonical unsigned application package "
+         "profile");
+   }
++  result.executable_payload.assign(payloads[0]);
+   result.executable_uid = Read32(payloads[0], 8);
+   result.executable_size = result.files[0].size;
+   result.executable_sha1 = result.files[0].sha1;
+diff --git a/cpp/symbian/sis/sis.h b/cpp/symbian/sis/sis.h
+index 5cbbad7..d74dae5 100644
+--- a/cpp/symbian/sis/sis.h
++++ b/cpp/symbian/sis/sis.h
+@@ -24,6 +24,7 @@ struct PackageInfo {
+   uint32_t executable_uid = 0;
+   uint32_t executable_size = 0;
+   std::string executable_sha1;  // Hex digest of the verified embedded payload.
++  std::string executable_payload;  // Verified E32 payload bytes.
+   std::string target;
+ 
+   struct EmbeddedFile {

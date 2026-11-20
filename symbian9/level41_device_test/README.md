@@ -1,0 +1,318 @@
+# Quantum Level 41 device smoke test
+
+This is a separate, fixed-camera S60v3 test application for the native C++
+`SoftwareMeshRenderer`. It loads only the small Level 41 world mesh, grayscale
+lightmap, skybox mesh, and the textures required by the scene. It repeatedly
+renders a fixed-camera DMODE 9 view at the handset's native pixel dimensions
+when a bounded framebuffer can be allocated, with a 120x160 low-memory
+fallback. The GDI and DSA builds display a 10-second end-to-end FPS average,
+plus average/maximum time spent inside `SoftwareMeshRenderer::renderScene()`.
+The FPS includes framebuffer clear, software rendering, the selected presenter
+(bitmap-GDI or DSA), and frame scheduling; the mesh timing isolates the renderer
+call. Asset loading is done once before timing. After the sample, the final
+results remain on screen; any key exits. This is a renderer performance
+smoke-test for one Level 41 view, not a measure of the complete game or Java
+pixel-parity evidence.
+
+The raw WindowServer test originally compared key events against child window
+handle 2. WindowServer tags `EEventKey` with the focused window group's client
+handle 1, so no key reached the exit path. Version 1.0.7 uses the group handle
+for keyboard events and the child handle only for redraws. The main executable
+also used `RFs::Close()`; unlike the deferred probe, it still imported EFSRV
+ordinal 390, an export added later for tracing. Version
+1.0.8 closes through `RHandleBase::Close()` to avoid that import. Version 1.0.9
+added a stage label to asset/render failures. After the user confirmed that the
+self-contained GDI-only v1.0.3 renders on the E65 while the DSA-enabled full
+v1.0.9 exits after startup, v1.0.10 compiled DSA out of the main app and used
+the tested WindowServer GDI path. The user confirms v1.0.10 works on the E65.
+CI inspection confirms ordinal 390 and the `BitGdi` import are absent from
+v1.0.10; the EFSRV `RFile` imports remain. DSA remained disabled in the main
+candidate through v1.0.29; v1.0.30 re-enables it experimentally with the
+bitmap-GDI path retained as a startup/draw-error fallback.
+
+The user's E65 measurement of v1.0.12 was 0.3 end-to-end FPS, with 111/112 ms
+average/maximum inside `SoftwareMeshRenderer::renderScene()`, for 78 polygons
+and 148 triangles. This points to WindowServer presentation as the dominant
+cost in that build. Version 1.0.13 added a WindowServer GDI bitmap presenter:
+it writes RGB565 pixels into an `EColor64K` `CWsBitmap` and submits the frame
+with one `BitBlt`, while keeping the per-pixel GDI path as a fallback. The E65
+reported 5.6 FPS with `Presenter: bitmap/bitblt`; mesh time remained
+111/113 ms for the same 78 polygons and 148 triangles. The output change
+therefore produced a large measured end-to-end improvement, but this remains
+one fixed scene, not full-game FPS or renderer-path coverage. Bitmap access
+uses the legacy `LockHeap`/`UnlockHeap` API rather than the later
+`BeginDataAccess`/`EndDataAccess` calls; this is not a compatibility claim for
+OS 9.1.
+
+Version 1.0.14 adds an optional projected-vertex workspace to the native mesh
+renderer. The Level 41 benchmark supplies that scratch buffer for the
+visibility/queue pass. The E65 reported 5.7 FPS and 108/109 ms mesh
+average/maximum, with bitmap BitBlt still active. Review then found that the
+DirectX7 draw pass still recalculated projected positions for every polygon.
+Version 1.0.15 reuses the cached coordinates in that final draw pass as well;
+callers that omit the optional buffer retain the original projection path. A
+local differential check matched framebuffer output and renderer statistics
+with and without the cache on both projection paths. The E65 then reported
+5.8 FPS and 108/109 ms mesh average/maximum for the same scene. Version 1.0.16
+adds opt-in timing for validation, transform/projection, polygon queueing,
+sorting, and drawing/rasterization. Its E65 run reported 5.7 FPS and 108/110 ms
+mesh average/maximum, with phase averages of 5/7/17/0/79 ms respectively.
+Drawing/rasterization is the dominant measured phase (about 73% of mesh time).
+The added clock reads make this a diagnostic build; the phase times are
+approximate and its FPS may include a small profiling cost. The E65 measured
+v1.0.17 at 5.6 FPS and 109/111 ms mesh average/maximum, with the same 5/7/17/0/79
+ms phase breakdown. That short run did not show a measurable improvement in
+the dominant raster phase. Version 1.0.18 adds a branch-free mode-0 copy path
+for textures explicitly guaranteed not to contain the transparent-zero key;
+all other texture views retain the conservative behavior. The Level 41 asset
+loader can make that guarantee from its RGBA alpha bytes. Host tests pass, and
+the Level 41 host framebuffer is pixel-identical with and without the fast path.
+The user measured v1.0.18 on the E65 at 5.8 FPS and 106/107 ms mesh
+average/maximum, with phase averages of 5/7/17/0/76 ms (validation,
+transform/projection, cull/queue, sort, draw/raster). Compared with v1.0.17,
+that is a 0.2 FPS gain, 3 ms lower average mesh time, and 3 ms lower
+raster time in this same fixed-scene benchmark.
+
+Version 1.0.19 uses the successful untimed warm-up render to establish that
+Level 41's loaded mesh, material, and texture data passed full validation.
+Subsequent frames skip only the repeated per-polygon and texture-content
+validation loop; renderer envelope, pointer, capacity, and runtime option
+checks remain active. The optimization is opt-in in the general renderer and
+requires the caller to keep validated mesh/material/texture data immutable.
+The Level 41 host render produces a byte-identical framebuffer with and
+without prevalidation. A host renderer check also confirms that its envelope
+and capacity checks still reject an undersized workspace in prevalidated mode.
+The E65 reported v1.0.19 at 5.9 FPS and 100/101 ms mesh average/maximum,
+with bitmap BitBlt and phase averages of 0/7/17/0/76 ms. Validation fell from
+5 ms to 0 ms; draw/raster remained 76 ms, and average mesh time fell by 6 ms
+from v1.0.18.
+
+Version 1.0.20 extends the zero-key-free pixel specialization to mode-9
+shading in both affine and perspective rasterizers, but only when the texture
+view guarantees that no texel equals the transparent-zero key. The mode-9
+shading arithmetic is unchanged; texture views with the conservative default
+still perform the key test. A Level 41 host differential render using the
+opaque-texture guarantees is byte-identical to the conservative render.
+The E65 reported v1.0.20 at 5.9 FPS and 100/103 ms mesh average/maximum,
+with bitmap BitBlt and phase averages of 0/7/17/0/76 ms. This is no measurable
+change in FPS, average mesh time, or phase breakdown versus v1.0.19.
+
+Version 1.0.21 uses the projected-vertex workspace cache without constructing
+full temporary camera/projected vertices for every polygon in the cull/queue
+pass. The cached path gathers only camera depth and projected x/y coordinates
+needed for culling, sorting, and mip selection; callers without the optional
+cache retain the previous projection path. The 720x960 Level 41 host render
+with the cached path is byte-identical to the previous render. On the E65 it
+measured 6.3 FPS and 92/94 ms mesh average/maximum, with bitmap BitBlt and phase
+averages of 0/7/8/0/76 ms. Versus v1.0.20, average mesh time fell by 8 ms and
+cull/queue fell by 9 ms. At v1.0.21, draw/raster remained the largest phase at
+76 ms and became the next optimization target.
+
+Version 1.0.22 replaces the perspective rasterizer's signed 64-bit divide at
+span endpoints with an exact quotient decomposition: one unsigned 32-bit divide
+plus 12 remainder-doubling steps for the 12 fractional bits. The sign handling,
+truncation toward zero, and Java 32-bit narrowing/wraparound are preserved. The
+change targets ARMv5's software 64-bit division path; a host Level 41 render is
+byte-identical to v1.0.21. On the E65 it measured 7.0 FPS and 74/75 ms mesh
+average/maximum, with bitmap BitBlt and phase averages of 0/7/8/0/58 ms. Versus
+v1.0.21, FPS rose by 0.7, average mesh time fell by 18 ms, and draw/raster fell
+by 18 ms; draw/raster is still the largest phase at 58 ms.
+
+Version 1.0.23 tried sharing one exact reciprocal across each pair of
+perspective U/V divides with the same reciprocal depth. The E65 measured 7.0 FPS
+and 76/77 ms mesh average/maximum, with bitmap BitBlt and phases of
+0/7/8/0/60 ms. Versus v1.0.22, FPS was unchanged and average mesh and draw/raster
+were each 2 ms higher, so the experiment showed no measurable benefit and is
+removed in v1.0.24.
+
+Version 1.0.24 advances perspective scanline edges incrementally: after one
+initial fixed-point calculation at the clipped start, each row advances edge
+coordinates, reciprocal depth, UV-over-depth, and color by wrapped integer
+addition instead of recalculating slope times row offset. The lower edge still
+restarts at vertex B on the split scanline. This is algebraically identical in
+Java 32-bit arithmetic. Host Level 41 output is byte-identical. On the E65,
+v1.0.24 measured 7.1 FPS and 73/74 ms mesh average/maximum, with bitmap BitBlt
+and phase averages of 0/7/8/0/57 ms. Compared with v1.0.22, FPS rose by 0.1 and
+mesh average/maximum and draw/raster each fell by 1 ms; draw/raster remains the
+largest phase. The user reports that this improvement repeats on every run, so
+the incremental edge-stepping optimization is retained.
+
+Version 1.0.25 simplifies the perspective vertex-shading pixel loop by using
+unsigned 32-bit products and shifts for Java's wrapping color arithmetic,
+avoiding signed wrap-conversion helpers in the hot mode-9 shade path. The
+operation is bit-equivalent, and the host Level 41 frame remains byte-identical.
+E65 performance measurement is pending.
+
+The necessary Level 41 inputs are intentionally limited to the seven files in
+`assets/level41/`. No SDK, build tool, certificate, or private signing key is
+stored here. The host asset-preparation script converts the four PNG/JPEG
+textures to a small RGBA format; the E65 app reads those files and executes the
+native mesh traversal and rasterizer on the phone.
+
+The Level 41 CMake target is opt-in with
+`-DQUANTUM_BUILD_LEVEL41_DEVICE_TEST=ON`, so the earlier small renderer test
+continues to build independently. The GitHub Actions workflow enables that
+option, builds the ARMv5T/EKA2 executable, creates fresh registration resources
+and a standard SIS v9/SISX package, and publishes the resulting candidate in
+this directory. The package is self-signed for legacy Symbian testing; this
+does not bypass the handset's installation policy.
+
+The host Level 41 mesh-renderer smoke path remains separate: a successful host
+render or SIS build does not establish handset runtime compatibility.
+
+Current E65 feedback:
+
+- The minimal `level41_launch_probe` starts, and the deferred RFs Connect probe
+  v1.0.3 returns code 0 (`KErrNone`).
+- GDI-only v1.0.3 works on the E65, confirming the packaged assets and the
+  shared software-rendering/WindowServer GDI path.
+- DSA-enabled full v1.0.9 closes after showing its startup screen (`Starting
+  native renderer`). Since the GDI build works with the same renderer, DSA is
+  the remaining differentiating path.
+- Main v1.0.10 uses the tested GDI path with DSA compiled out; the user
+  confirms it works on the E65.
+- The v1.0.12 E65 baseline was 0.3 FPS, 111/112 ms mesh average/maximum,
+  78 polygons, and 148 triangles.
+- The v1.0.13 E65 run reported 5.6 FPS and 111/113 ms mesh average/maximum,
+  with `Presenter: bitmap/bitblt`; the polygon and triangle counts were
+  unchanged. This confirms a substantial output-path improvement on this
+  scene, not full-game performance.
+- The v1.0.14 E65 run reported 5.7 FPS and 108/109 ms mesh average/maximum,
+  with the bitmap BitBlt presenter; counts remained unchanged.
+- The v1.0.15 E65 run reported 5.8 FPS and 108/109 ms mesh average/maximum,
+  with bitmap BitBlt active; it rendered 78 polygons and 148 triangles.
+- The v1.0.16 E65 run reported 5.7 FPS, 108/110 ms mesh average/maximum,
+  bitmap BitBlt, and phase averages: validation 5 ms, transform/projection
+  7 ms, cull/queue 17 ms, sort 0 ms, draw/raster 79 ms. Rasterization is the
+  largest measured phase on this benchmark.
+- The v1.0.17 E65 run reported 5.6 FPS, 109/111 ms mesh average/maximum,
+  bitmap BitBlt, and phase averages: validation 5 ms, transform/projection
+  7 ms, cull/queue 17 ms, sort 0 ms, draw/raster 79 ms. It did not show a
+  measurable reduction in the dominant phase.
+- The v1.0.18 E65 run reported 5.8 FPS, 106/107 ms mesh average/maximum,
+  bitmap BitBlt, and phase averages: validation 5 ms, transform/projection
+  7 ms, cull/queue 17 ms, sort 0 ms, draw/raster 76 ms. Against v1.0.17,
+  FPS increased by 0.2 and both mesh average and draw/raster time fell by 3 ms.
+- The v1.0.19 E65 run reported 5.9 FPS, 100/101 ms mesh average/maximum,
+  bitmap BitBlt, and phase averages: validation 0 ms, transform/projection
+  7 ms, cull/queue 17 ms, sort 0 ms, draw/raster 76 ms. Validation fell from
+  5 ms to 0 ms and average mesh time fell by 6 ms versus v1.0.18; raster time
+  remained unchanged.
+- The v1.0.20 E65 run reported 5.9 FPS, 100/103 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/17/0/76 ms. This is no measurable change
+  versus v1.0.19 despite skipping mode-9 zero-key checks on opaque textures.
+- The v1.0.21 E65 run reported 6.3 FPS, 92/94 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/76 ms. Versus v1.0.20, average mesh
+  time fell by 8 ms and cull/queue by 9 ms; draw/raster remained at 76 ms.
+  The cached cull/queue path is host byte-identical to the prior render.
+- The v1.0.22 E65 run reported 7.0 FPS, 74/75 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/58 ms. Versus v1.0.21, average mesh
+  time and draw/raster each fell by 18 ms; the host Level 41 output remains
+  byte-identical after the exact perspective-division optimization.
+- The v1.0.23 E65 run reported 7.0 FPS, 76/77 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/60 ms. Versus v1.0.22, FPS was unchanged;
+  average mesh and draw/raster were each 2 ms higher, so the shared-reciprocal
+  experiment had no measurable benefit.
+- The v1.0.24 E65 run reported 7.1 FPS, 73/74 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/57 ms. Versus v1.0.22, FPS rose by 0.1
+  and mesh average/maximum and draw/raster each fell by 1 ms. The user confirms
+  the gain repeats; host output is byte-identical after edge stepping.
+- The v1.0.25 E65 run reported 7.1 FPS, 73/74 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/57 ms. This is unchanged from v1.0.24,
+  so the unsigned color-arithmetic optimization showed no measurable device
+  performance gain. Host Level 41 output remains byte-identical.
+- The v1.0.26 E65 run reported 7.1 FPS, 72/73 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/56 ms. Versus v1.0.25, FPS was unchanged;
+  mesh average/maximum and draw/raster each fell by 1 ms. Host output remains
+  byte-identical after the exact-quotient fast paths.
+- The v1.0.27 E65 run reported 7.1 FPS, 72/73 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/56 ms. This is unchanged from v1.0.26,
+  so the fractional-division iteration change showed no measurable device
+  performance gain. The host Level 41 framebuffer remains byte-identical.
+- The v1.0.28 E65 run reported 7.1 FPS, 71/72 ms mesh average/maximum,
+  bitmap BitBlt, and phases of 0/7/8/0/55 ms. Versus v1.0.27, FPS was unchanged;
+  mesh average/maximum and draw/raster each fell by 1 ms. The host Level 41
+  framebuffer remains byte-identical after the constant-step divisions.
+- The v1.0.29 candidate specializes the perspective copy-triangle path, which
+  does not consume vertex colors. It omits RGB slope divisions and RGB edge
+  setup/scanline updates while preserving the exact screen, depth, and UV
+  integer operations. Host tests pass (34,119 checks; 69 `.3d` assets), and the
+  Level 41 framebuffer remains byte-identical (SHA-256
+  `aa0a90263d5ffd434916aae78bfa134d58e27c7e3b187c071bd51ed3b228e7cd`). The
+  user reports no measurable E65 change versus v1.0.28.
+
+The user reports no measurable E65 gain from the v1.0.29-only perspective
+copy-triangle color-work optimization. At the user's request, v1.0.31 drops
+that optimization and restores `software_perspective_rasterizer.cpp` to the
+v1.0.28 state; the DSA experiment is kept separate from that renderer change.
+
+Version 1.0.31 re-enables Direct Screen Access in the main Level 41 candidate
+for a controlled E65 experiment. DSA uses the same EColor64K RGB565 bitmap
+conversion as the tested GDI presenter, then submits one `BitBlt` through the
+DSA graphics context instead of expanding source pixels into GDI rectangles.
+An active-object timer repeatedly runs the same 10-second render/present
+benchmark while DSA is active, and the overlay identifies DSA or reports its
+error code. If DSA setup or frame submission fails, the app returns to the
+existing bitmap-GDI BitBlt presenter and restarts timing after fallback setup.
+The `quantum_level41_no_dsa` companion remains available. Host tests and the
+Level 41 framebuffer hash are verified; DSA runtime is confirmed on the E65,
+but general S60 OS 9.1 compatibility remains unverified.
+
+The user measured v1.0.31 on the E65 at 7.1 FPS and 71/72 ms mesh
+average/maximum, with `DSA bitmap blit` active and phases of 0/6/8/0/56 ms.
+Compared with the v1.0.28 GDI result, FPS and mesh time were unchanged; the
+phase differences were within 1 ms, so DSA has not shown a measurable overall
+speedup yet. The user reports that v1.0.31's overlay text flickered during the
+10-second sample and became stable when the timer stopped. The v1.0.32 attempt
+to composite text with `CFbsBitmapDevice`/`CFbsBitGc` instead exits after
+"Starting renderer" on the E65, so that offscreen-GDI approach is
+removed in v1.0.33. The new candidate draws a small 5x7 diagnostic font
+straight into the locked RGB565 bitmap, then presents the complete frame and
+text with one DSA BitBlt; it adds no bitmap-device/context API imports. The
+software renderer remains at the v1.0.28 state. V1.0.33 E65 startup and
+flicker verification are pending.
+
+### Separate v1.0.28 static-import diagnostic
+
+The v1.0.28 ten-ordinal DRT-import SIS documented in
+[`../level41_walk_test/README.md`](../level41_walk_test/README.md) is a separate
+interactive-walk launch/import control, not the renderer-performance v1.0.28
+candidate described above. It has package UID `0xE000A021` and executable UID3
+`0xE000A020` (the renderer executable UID3 here is `0xE000A012`). Its E32
+imports only ordinals 135, 139, 140, 141, 142, 147, 148, 155, 157, and 221 from
+`drtaeabi.dll`; ordinals 222/223 and MDA/MIDI imports are absent. Playback is
+disabled. The user reports that this separate v1.0.28 package launched on the
+Nokia E65. That supports, but does not prove, the missing-ordinal hypothesis;
+local division-helper resolution and the custom proxy are additional build
+differences. See the separate
+[`import comparison matrix`](../level41_walk_test/output/IMPORT-PROBE-MATRIX.md)
+for the test history and interpretation limits.
+
+### Java room-object render path (host-tested; E65 runtime not tested)
+
+The native object loader parses the `[MESH]` and `[SPRITE]` records selected by
+`LevelLoader`, including multi-`POS` placements and preset/global/level setting
+resolution. Resource lookup and image/model decoding are supplied through
+callbacks; parsed state and morph/sprite work buffers are caller-owned. The
+scene bridge prepares each placed mesh animation and submits those meshes with
+the static scene meshes, while sprites and mesh polygons share the same painter
+queue. The renderer covers Java-style billboard projection, viewport/far
+culling, cutoff, texture-frame animation, flicker/color animation, per-object
+`ADDSZ`, morph interpolation and LOOP/OPEN/CLOSE frame calculation, plus
+keyed/add/multiply/alpha/fog compositing.
+
+The fixed-camera smoke fixture has no `LevelLoader` room-object manifest and
+continues to supply empty object arrays. Separately, the interactive-walk target
+now loads the pinned `sym9.zip/level1.txt` selection: exactly one `[MESH]` and
+one `[SPRITE]`, retaining their listed coordinates and settings. The mesh and
+sprite resource callbacks read only the corresponding `prop/md.3d` model and
+converted `prop/mdy.qtx` / `prop/skl.qtx` textures from the private asset cache.
+The production-asset host regression verifies the exact records, parses the real
+model/textures, and submits the two objects alongside the static meshes through
+the combined painter queue. Host suites are documented in
+[`../host_tests/README.md`](../host_tests/README.md).
+
+The ARMv5T/EKA2 E65-profile cross-build of the interactive target succeeded,
+but no E65 installation, launch, or runtime rendering test was performed.
+Host/build success does not prove device visibility, texture compositing, world
+placement, or Java pixel parity.

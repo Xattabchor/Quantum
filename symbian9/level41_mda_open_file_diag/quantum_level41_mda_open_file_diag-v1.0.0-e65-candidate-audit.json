@@ -1,0 +1,128 @@
+{
+  "audit_status": "passed-local-package-audit",
+  "runtime_status": "launch-failed-feature-not-supported",
+  "scope": {
+    "tests_newl": true,
+    "tests_openfilel_on_packaged_wav": true,
+    "calls_play": false,
+    "imports_or_calls_midi": false,
+    "claims_audible_playback": false
+  },
+  "candidate": {
+    "file": "quantum_level41_mda_open_file_diag-v1.0.0-e65-candidate.sisx",
+    "size_bytes": 116060,
+    "sha256": "38301845f6068c1eeff9b9f0f7b6d300ec1d3095b3f38068f4c8cbc9023e1a51",
+    "signed_package": true,
+    "application_registered": true,
+    "package_uid": "0xE000A02D",
+    "executable_uid3": "0xE000A02C",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "package_name": "Quantum MDA OpenFile Diagnostic",
+    "vendor": "Quantum native port"
+  },
+  "local_builder": {
+    "source": "local C++ helper; not GitHub Actions",
+    "helper_path": "/home/user/quantum-sdk-cache/stage3-sis-writer/build/stage3_sis_writer",
+    "helper_sha256": "9066a696ff6d5de645d631299f3a191ee4da311748efbc2b8f2ce324264f28bf",
+    "sdk_version": "0.3.0",
+    "sis_writer_upstream_commit": "b105f752f84d1b5640052f64c4a703017810d7b8",
+    "abseil_commit": "5650e9cf76d3be4318d5fa3af38ee483ddfd5e4a",
+    "additional_target_profile": "one safe filename under !:\\data\\"
+  },
+  "native_profile_equivalence_without_wav": {
+    "unsigned_byte_identical": true,
+    "signed_byte_identical": true,
+    "unsigned_size_bytes": 113440,
+    "unsigned_sha256": "31d6dedfc039a4d7d26acc4749a3aab7e8d281fca0d1513acbd6da2e95d2402f",
+    "signed_size_bytes": 114240,
+    "signed_sha256": "a70aad2245a6228b890db2e0f833611d6d695929699b211915c861cc99c392c9"
+  },
+  "signing_certificate": {
+    "subject": "CN = Quantum MDA OpenFile Stage 3 Test",
+    "issuer": "CN = Quantum MDA OpenFile Stage 3 Test",
+    "self_signed": true,
+    "not_before": "Jan  1 00:00:00 2000 GMT",
+    "not_after": "Dec 31 23:59:59 2045 GMT",
+    "public_key_algorithm": "RSA",
+    "public_key_bits": 1024,
+    "certificate_signature_algorithm": "sha1WithRSAEncryption",
+    "certificate_der_sha256": "8e701a6dd5719207514323213b655ab35b6b12507e532dc988cff848c950adeb",
+    "private_key_valid": true,
+    "private_key_embedded": false
+  },
+  "e32": {
+    "file": "quantum_level41_mda_open_file_diag.exe",
+    "size_bytes": 111964,
+    "sha256": "7bb04886ac972f254a347827821c0dec2d717697f3e6ab6c6cdcb2ae4d46f90f",
+    "uid3": "0xE000A02C",
+    "architecture": "armv5t",
+    "kernel": "eka2",
+    "capabilities": "0x00000000",
+    "mediaclientaudio_ordinals": [
+      35,
+      42
+    ],
+    "midi_imports": [],
+    "source_sha256": "5c6d3c4caae9a56b38980a5a42198dce167d39f5507bdda8511cb46ab552070a"
+  },
+  "wav": {
+    "target": "!:\\data\\mda_open_file_probe.wav",
+    "size_bytes": 1644,
+    "sha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+    "sha1": "8a170ab6f01319d84876c789afaaba42203942a0",
+    "channels": 1,
+    "sample_width_bytes": 2,
+    "sample_rate_hz": 8000,
+    "sample_frames": 800,
+    "compression": "NONE",
+    "samples_silent": true
+  },
+  "embedded_files": [
+    {
+      "target": "!:\\sys\\bin\\quantum_level41_mda_open_file_diag.exe",
+      "size": 111964,
+      "sha1": "ab6d552113a14b8d9245791640fd5b7f7b7433b7"
+    },
+    {
+      "target": "!:\\private\\10003a3f\\import\\apps\\quantum_level41_mda_open_file_diag_reg.rsc",
+      "size": 151,
+      "sha1": "0bb54896b2b58aae88ab03e52dc54ecebf61f13d"
+    },
+    {
+      "target": "!:\\resource\\apps\\quantum_level41_mda_open_file_diag_loc.rsc",
+      "size": 89,
+      "sha1": "0426c9f47dd0e29f023e750e3e84e5b0c3635aa6"
+    },
+    {
+      "target": "!:\\data\\mda_open_file_probe.wav",
+      "size": 1644,
+      "sha1": "8a170ab6f01319d84876c789afaaba42203942a0"
+    }
+  ],
+  "registration_icon_source_sha256": {},
+  "unsigned_with_wav": {
+    "size_bytes": 115260,
+    "sha256": "6149b422e2aeefc8cecf5ce8796ada4d9e555452d5b0db67b18d30b12c09db87"
+  },
+  "limitations": [
+    "Local package structure and RSA/SHA-1 signature were verified by the adapted v0.3.0 inspector.",
+    "The no-WAV baseline is byte-identical to the installed native builder and signer.",
+    "User reports no app screen and the message \"Menu: Feature not supported\"; no OpenFileL result was observed.",
+    "An unsupported/unresolved MDA import ordinal 42 is plausible but unconfirmed.",
+    "OpenFileL initialization success would not establish playback or audible output."
+  ],
+  "e65_result": {
+    "reported_by_user": true,
+    "launch_attempted_from": "Menu",
+    "reported_message": "Feature not supported",
+    "diagnostic_screen_reported": false,
+    "mapc_init_complete_reported": false,
+    "openfilel_execution_confirmed": false,
+    "interpretation": "User confirms no app UI appeared. The source draws the MDA diagnostic screen before starting the MDA worker, so failure before NewL/OpenFileL is plausible. Ordinal 42 is the salient new MDA import versus stage 2, but an unsupported or unresolved import is not proven by the message alone.",
+    "probe_screen_before_mda_worker": true
+  }
+}

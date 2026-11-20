@@ -1,0 +1,100 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "e65-level41-walk-asm",
+      "displayName": "E65 Level 41 walk — standard MDA audio, OMAP1710 ASM",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/e65-level41-walk-asm",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_TOOLCHAIN_FILE": "$env{QUANTUM_SDK_ROOT}/cmake/symbian-arm.cmake",
+        "CMAKE_MAKE_PROGRAM": "$env{QUANTUM_SDK_ROOT}/bin/ninja",
+        "SYMBIAN_SDK_PREFIX": "$env{QUANTUM_SDK_ROOT}",
+        "SYMBIAN_TARGET_ARCH": "armv5t",
+        "SYMBIAN_RUNTIME_LEGACY_EKA2": "ON",
+        "QUANTUM_BUILD_LEVEL41_DEVICE_TEST": "ON",
+        "QUANTUM_LEVEL41_INTERACTIVE_WALK": "ON",
+        "QUANTUM_LEVEL41_E65_ASM_OPTIMIZATIONS": "ON",
+        "QUANTUM_LEVEL41_OMAP1710_DSA_ARGB_BITMAP": "ON",
+        "QUANTUM_BUILD_LEVEL41_SNDDMA_ADAPTER": "OFF",
+        "QUANTUM_LEVEL41_SNDDMA_AUDIO": "OFF"
+      }
+    },
+    {
+      "name": "e65-level41-walk-no-weapon-sway-asm",
+      "displayName": "E65 Level 41 walk — MDA, walkSpeed=150, button 0 jump, movement sway off",
+      "inherits": "e65-level41-walk-asm",
+      "binaryDir": "${sourceDir}/build/e65-level41-walk-no-weapon-sway-asm",
+      "cacheVariables": {
+        "QUANTUM_LEVEL41_DISABLE_WEAPON_SWAY": "ON"
+      }
+    },
+    {
+      "name": "e65-level41-walk-turn-inertia-asm",
+      "displayName": "E65 Level 41 walk — MDA, walkSpeed=150, button 0 jump, weapon sway on, turn inertia",
+      "inherits": "e65-level41-walk-asm",
+      "binaryDir": "${sourceDir}/build/e65-level41-walk-turn-inertia-asm",
+      "cacheVariables": {
+        "QUANTUM_LEVEL41_DISABLE_WEAPON_SWAY": "OFF",
+        "QUANTUM_LEVEL41_TURN_INERTIA": "ON"
+      }
+    },
+    {
+      "name": "e65-level41-walk-asm-profile",
+      "displayName": "E65 Level 41 walk — raster and phase profiling",
+      "inherits": "e65-level41-walk-asm",
+      "binaryDir": "${sourceDir}/build/e65-level41-walk-asm-profile",
+      "cacheVariables": {
+        "QUANTUM_LEVEL41_PROFILE_RASTER_DETAILS": "ON"
+      }
+    },
+    {
+      "name": "e65-level41-walk-snddma-asm",
+      "displayName": "E65 Level 41 walk — experimental SNDDMA (not default)",
+      "inherits": "e65-level41-walk-asm",
+      "binaryDir": "${sourceDir}/build/e65-level41-walk-snddma-asm",
+      "cacheVariables": {
+        "QUANTUM_BUILD_LEVEL41_SNDDMA_ADAPTER": "ON",
+        "QUANTUM_LEVEL41_SNDDMA_AUDIO": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "build-e65-level41-walk-asm",
+      "configurePreset": "e65-level41-walk-asm",
+      "targets": ["quantum_level41_walk_test_e32"],
+      "jobs": 2
+    },
+    {
+      "name": "build-e65-level41-walk-no-weapon-sway-asm",
+      "configurePreset": "e65-level41-walk-no-weapon-sway-asm",
+      "targets": ["quantum_level41_walk_test_e32"],
+      "jobs": 2
+    },
+    {
+      "name": "build-e65-level41-walk-turn-inertia-asm",
+      "configurePreset": "e65-level41-walk-turn-inertia-asm",
+      "targets": ["quantum_level41_walk_test_e32"],
+      "jobs": 2
+    },
+    {
+      "name": "build-e65-level41-walk-asm-profile",
+      "configurePreset": "e65-level41-walk-asm-profile",
+      "targets": ["quantum_level41_walk_test_e32"],
+      "jobs": 2
+    },
+    {
+      "name": "build-e65-level41-walk-snddma-asm",
+      "configurePreset": "e65-level41-walk-snddma-asm",
+      "targets": ["quantum_level41_walk_test_e32"],
+      "jobs": 2
+    }
+  ]
+}
