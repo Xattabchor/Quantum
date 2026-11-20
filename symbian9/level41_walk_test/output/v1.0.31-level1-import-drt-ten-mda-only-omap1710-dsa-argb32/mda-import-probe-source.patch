@@ -1,0 +1,66 @@
+--- a/symbian9/level41_device_test/CMakeLists.txt
++++ b/symbian9/level41_device_test/CMakeLists.txt
+@@ -166 +166 @@
+-           "Add trapped, non-playing MDA import references to the Level 41 launch probe" OFF)
++           "Add a disabled-call MDA static-import probe without gameplay audio" OFF)
+@@ -176,2 +176 @@
+-        QUANTUM_LEVEL41_IMPORT_PROBE_DRT_LOOKUP OR
+-        QUANTUM_LEVEL41_IMPORT_PROBE_MDA))
++        QUANTUM_LEVEL41_IMPORT_PROBE_DRT_LOOKUP))
+@@ -179 +178 @@
+-            "The ten-ordinal DRT probe must run alone, without the full DRT proxy, dynamic lookup, native leaves, or MDA imports")
++            "The ten-ordinal DRT proxy cannot be combined with the full proxy, dynamic lookup, or native leaves")
+@@ -214,5 +212,0 @@
+-       NOT QUANTUM_LEVEL41_IMPORT_PROBE_NATIVE_LEAVES)
+-        message(FATAL_ERROR
+-            "The MDA import probe requires the native-leaves/DRT import probe")
+-    endif()
+-    if(QUANTUM_LEVEL41_IMPORT_PROBE_MDA AND
+@@ -417,0 +412,3 @@
++        # Keep only the MDA static import surface. The probe object's API
++        # references sit behind a false volatile gate; it is not compiled with
++        # native-leave/personality support and does not create/open/play audio.
+@@ -420,2 +416,0 @@
+-        list(APPEND QUANTUM_LEVEL41_NATIVE_LEAVE_SOURCES
+-            ../src/audio/mda_import_probe.cpp)
+--- a/symbian9/src/audio/mda_import_probe.cpp
++++ b/symbian9/src/audio/mda_import_probe.cpp
+@@ -25 +25,5 @@
+-void MdaImportProbeL()
++/* The function is retained solely so the E32 converter emits the selected
++   MDA imports. Its only caller is guarded by an unmodified volatile false
++   flag. No instance is created, no descriptor/path is opened, and Play is
++   never referenced by this probe. */
++void MdaImportReferencesOnlyL(const TDesC& aPath)
+@@ -28,16 +32,7 @@
+-    CMdaAudioPlayerUtility* player = 0;
+-    TRAPD(createError, player = CMdaAudioPlayerUtility::NewL(observer));
+-    if (createError != KErrNone || player == 0)
+-        {
+-        return;
+-        }
+-
+-    TFileName path;
+-    path.Copy(_L("C:\\private\\e000a020\\audio\\sounds\\wpn\\fn2000.wav"));
+-    TRAPD(openError, player->OpenFileL(path));
+-    if (openError == KErrNone)
+-        {
+-        const TTimeIntervalMicroSeconds start(0);
+-        TRAP_IGNORE(player->SetPosition(start));
+-        }
+-    TRAP_IGNORE(player->Close());
++    CMdaAudioPlayerUtility* player =
++        CMdaAudioPlayerUtility::NewL(observer);
++    if (player == 0) return;
++    player->OpenFileL(aPath);
++    const TTimeIntervalMicroSeconds start(0);
++    player->SetPosition(start);
++    player->Close();
+@@ -51,3 +45,0 @@
+-/* Remains EFalse in the launch-only probe. The trapped MDA references below
+-   are linked to test E32 import resolution; no player is opened and no audio
+-   call (especially Play) runs unless a diagnostic build explicitly arms it. */
+@@ -60 +52,2 @@
+-        TRAP_IGNORE(MdaImportProbeL());
++        _LIT(KMdaImportProbeEmptyPath, "");
++        MdaImportReferencesOnlyL(KMdaImportProbeEmptyPath);

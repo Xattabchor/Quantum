@@ -1,0 +1,97 @@
+{
+  "package_uid": "0xE000A021",
+  "executable_uid3": "0xE000A020",
+  "executable": "quantum_level41_walk_test.exe",
+  "executable_sha256": "8912a70334667622f914b829de3c2008940ca4eb2554e26347f39c112934caa1",
+  "heap_min": 4096,
+  "heap_max": 2097152,
+  "registration_icon_source_sha256": {},
+  "audio_asset_count": 3,
+  "files": [
+    {
+      "source": "L3D_new.3d",
+      "target": "!:\\private\\e000a020\\level41\\L3D_new.3d"
+    },
+    {
+      "source": "lightmap.vla",
+      "target": "!:\\private\\e000a020\\level41\\lightmap.vla"
+    },
+    {
+      "source": "skybox8.3d",
+      "target": "!:\\private\\e000a020\\level41\\skybox8.3d"
+    },
+    {
+      "source": "forest.qtx",
+      "target": "!:\\private\\e000a020\\level41\\forest.qtx"
+    },
+    {
+      "source": "map.qtx",
+      "target": "!:\\private\\e000a020\\level41\\map.qtx"
+    },
+    {
+      "source": "river.qtx",
+      "target": "!:\\private\\e000a020\\level41\\river.qtx"
+    },
+    {
+      "source": "sky.qtx",
+      "target": "!:\\private\\e000a020\\level41\\sky.qtx"
+    },
+    {
+      "source": "weather.txt",
+      "target": "!:\\private\\e000a020\\level41\\weather.txt"
+    },
+    {
+      "source": "weapon.qtx",
+      "target": "!:\\private\\e000a020\\level41\\weapon.qtx"
+    },
+    {
+      "source": "weapon-fire.qtx",
+      "target": "!:\\private\\e000a020\\level41\\weapon-fire.qtx"
+    },
+    {
+      "source": "weapon-sight-weapon.qtx",
+      "target": "!:\\private\\e000a020\\level41\\weapon-sight-weapon.qtx"
+    },
+    {
+      "source": "weapon-gameplay.qwg",
+      "target": "!:\\private\\e000a020\\level41\\weapon-gameplay.qwg"
+    },
+    {
+      "source": "weapon-catalog.qwc",
+      "target": "!:\\private\\e000a020\\level41\\weapon-catalog.qwc"
+    },
+    {
+      "source": "audio/music/wth.mp3",
+      "target": "!:\\private\\e000a020\\audio\\music\\wth.mp3"
+    },
+    {
+      "source": "audio/sounds/wpn/fn2000.wav",
+      "target": "!:\\private\\e000a020\\audio\\sounds\\wpn\\fn2000.wav"
+    },
+    {
+      "source": "audio/sounds/wpn/r.wav",
+      "target": "!:\\private\\e000a020\\audio\\sounds\\wpn\\r.wav"
+    }
+  ],
+  "package_version": "1.0.30",
+  "variant": {
+    "drtaeabi_static_ordinals": [
+      135,
+      139,
+      140,
+      141,
+      142,
+      147,
+      148,
+      155,
+      157,
+      221,
+      223
+    ],
+    "additional_import": {
+      "ordinal": 223,
+      "symbol": "__aeabi_uidiv"
+    },
+    "other_division_helper_resolution": "local SDK legacy EKA2 runtime"
+  }
+}

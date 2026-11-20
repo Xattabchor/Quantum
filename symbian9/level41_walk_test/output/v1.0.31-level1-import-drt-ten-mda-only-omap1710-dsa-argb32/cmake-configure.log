@@ -1,0 +1,11 @@
+-- The CXX compiler identification is Clang 23.1.2
+-- The ASM compiler identification is Clang with GNU-like command-line
+-- Found assembler: /home/user/quantum-sdk-cache/extracted/bin/clang++
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /home/user/quantum-sdk-cache/extracted/bin/clang++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (14.7s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/quantum-audio-mda-31/build

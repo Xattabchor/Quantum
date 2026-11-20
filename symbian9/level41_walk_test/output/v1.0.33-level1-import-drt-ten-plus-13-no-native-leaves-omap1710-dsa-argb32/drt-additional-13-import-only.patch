@@ -1,0 +1,193 @@
+--- a/symbian9/level41_device_test/CMakeLists.txt
++++ b/symbian9/level41_device_test/CMakeLists.txt
+@@ -159,7 +159,9 @@
+     option(QUANTUM_LEVEL41_IMPORT_PROBE_DRT_DLL
+            "Link the complete drtaeabi.dll import proxy without native-leave/personality support" OFF)
+     option(QUANTUM_LEVEL41_IMPORT_PROBE_DRT_TEN_ORDINALS
+-           "Link only the ten drtaeabi.dll ordinals resolved by the v1.0.27 E65 lookup" OFF)
++           "Link the ten drtaeabi.dll ordinals resolved by the v1.0.27 E65 lookup" OFF)
++    option(QUANTUM_LEVEL41_IMPORT_PROBE_DRT_ADDITIONAL_13
++           "Add static references to the 13 DRT ordinals seen with native-leave support, without linking that support" OFF)
+     option(QUANTUM_LEVEL41_IMPORT_PROBE_DRT_LOOKUP
+            "Dynamically load drtaeabi.dll and look up the v1.0.25 helper ordinals at launch" OFF)
+     option(QUANTUM_LEVEL41_IMPORT_PROBE_MDA
+@@ -177,6 +179,16 @@
+         QUANTUM_LEVEL41_IMPORT_PROBE_MDA))
+         message(FATAL_ERROR
+             "The ten-ordinal DRT probe must run alone, without the full DRT proxy, dynamic lookup, native leaves, or MDA imports")
++    endif()
++    if(QUANTUM_LEVEL41_IMPORT_PROBE_DRT_ADDITIONAL_13 AND
++       (NOT QUANTUM_LEVEL41_IMPORT_PROBE_DRT_TEN_ORDINALS OR
++        QUANTUM_LEVEL41_IMPORT_PROBE_NATIVE_LEAVES OR
++        QUANTUM_LEVEL41_IMPORT_PROBE_DRT_DLL OR
++        QUANTUM_LEVEL41_IMPORT_PROBE_DRT_LOOKUP OR
++        QUANTUM_LEVEL41_IMPORT_PROBE_MDA OR
++        QUANTUM_LEVEL41_ENABLE_SYMBIAN_AUDIO))
++        message(FATAL_ERROR
++            "The additional DRT ordinal control requires the ten-ordinal proxy base and must run without native leaves, the full proxy, dynamic lookup, MDA, or gameplay audio")
+     endif()
+     if(QUANTUM_LEVEL41_IMPORT_PROBE_DRT_LOOKUP AND
+        (QUANTUM_LEVEL41_IMPORT_PROBE_NATIVE_LEAVES OR
+@@ -248,6 +260,15 @@
+     if(QUANTUM_LEVEL41_IMPORT_PROBE_DRT_LOOKUP)
+         list(APPEND QUANTUM_LEVEL41_WALK_SOURCES
+             ../src/audio/drt_lookup_import_probe.cpp)
++    endif()
++    if(QUANTUM_LEVEL41_IMPORT_PROBE_DRT_ADDITIONAL_13)
++        list(APPEND QUANTUM_LEVEL41_WALK_SOURCES
++            ../src/audio/drt_additional_ordinal_import_probe.cpp
++            ../src/audio/drt_class_typeinfo_import_probe.cpp)
++        set_source_files_properties(
++            ../src/audio/drt_additional_ordinal_import_probe.cpp
++            ../src/audio/drt_class_typeinfo_import_probe.cpp
++            PROPERTIES COMPILE_OPTIONS "-fPIC")
+     endif()
+     symbian_add_executable(
+         quantum_level41_walk_test ${QUANTUM_LEVEL41_WALK_SOURCES})
+@@ -282,6 +303,15 @@
+         target_compile_definitions(quantum_level41_walk_test PRIVATE
+             QUANTUM_LEVEL41_IMPORT_PROBE_DRT_LOOKUP=1)
+     endif()
++    if(QUANTUM_LEVEL41_IMPORT_PROBE_DRT_ADDITIONAL_13)
++        target_compile_definitions(quantum_level41_walk_test PRIVATE
++            QUANTUM_LEVEL41_IMPORT_PROBE_DRT_ADDITIONAL_13=1)
++        # Retain data-only DRT GOT slots and preserve the class_type_info
++        # vtable as a DLL data import; no added helper call relocations are used.
++        target_link_options(quantum_level41_walk_test PRIVATE
++            "SHELL:-z nocopyreloc"
++            --undefined=quantumDrtAdditional13AddressRetentionProbe)
++    endif()
+     if(QUANTUM_LEVEL41_ORIGINAL_VIEWPORT_80_EXPERIMENT)
+         target_compile_definitions(quantum_level41_walk_test PRIVATE
+             QUANTUM_LEVEL41_ORIGINAL_VIEWPORT_80_EXPERIMENT=1)
+@@ -347,6 +377,22 @@
+             __aeabi_uidivmod
+             __aeabi_uldivmod
+             abort)
++        if(QUANTUM_LEVEL41_IMPORT_PROBE_DRT_ADDITIONAL_13)
++            list(APPEND _drt_ten_symbols
++                _ZTVN10__cxxabiv117__class_type_infoE
++                __aeabi_unwind_cpp_pr0
++                __aeabi_unwind_cpp_pr1
++                __aeabi_unwind_cpp_pr2
++                __cxa_begin_catch
++                __cxa_begin_cleanup
++                __cxa_end_catch
++                __cxa_end_cleanup
++                _ZN23TCppRTExceptionsGlobalsC1Ev
++                _ZSt9terminatev
++                __cxa_type_match
++                _Unwind_VRS_Get
++                _Unwind_VRS_Set)
++        endif()
+         set(_drt_ten_proxy_source_args
+             proxy-sources
+             --definition "${CMAKE_CURRENT_SOURCE_DIR}/drtaeabi_ten_ordinals.def"
+--- a/symbian9/level41_device_test/level41_main.cc
++++ b/symbian9/level41_device_test/level41_main.cc
+@@ -39,6 +39,12 @@
+ #endif
+ #if defined(QUANTUM_LEVEL41_IMPORT_PROBE_MDA)
+ extern "C" void quantumMdaImportProbeMaybeRun();
++#endif
++#if defined(QUANTUM_LEVEL41_IMPORT_PROBE_DRT_ADDITIONAL_13)
++extern "C" {
++extern volatile int quantumDrtAdditional13ImportProbeEnabled;
++void quantumDrtClassTypeInfoImportProbeMaybeRun();
++}
+ #endif
+ #if defined(QUANTUM_LEVEL41_IMPORT_PROBE_DRT_LOOKUP)
+ extern "C" {
+@@ -4281,4 +4287,8 @@
+ int main()
+ {
++#if defined(QUANTUM_LEVEL41_IMPORT_PROBE_DRT_ADDITIONAL_13)
++    if (quantumDrtAdditional13ImportProbeEnabled)
++        quantumDrtClassTypeInfoImportProbeMaybeRun();
++#endif
+     CTrapCleanup* cleanup = CTrapCleanup::New();
+     if (cleanup == 0) return KErrNoMemory;
+--- a/symbian9/level41_device_test/drtaeabi_ten_ordinals.def
++++ b/symbian9/level41_device_test/drtaeabi_ten_ordinals.def
+@@ -9,3 +9,17 @@
+ __aeabi_uidivmod @ 155 NONAME
+ __aeabi_uldivmod @ 157 NONAME
+ abort @ 221 NONAME
++
++_ZTVN10__cxxabiv117__class_type_infoE @ 123 NONAME DATA 4
++__aeabi_unwind_cpp_pr0 @ 158 NONAME DATA 4
++__aeabi_unwind_cpp_pr1 @ 159 NONAME DATA 4
++__aeabi_unwind_cpp_pr2 @ 160 NONAME DATA 4
++__cxa_begin_catch @ 180 NONAME DATA 4
++__cxa_begin_cleanup @ 181 NONAME DATA 4
++__cxa_end_catch @ 183 NONAME DATA 4
++__cxa_end_cleanup @ 184 NONAME DATA 4
++_ZN23TCppRTExceptionsGlobalsC1Ev @ 204 NONAME DATA 4
++_ZSt9terminatev @ 213 NONAME DATA 4
++__cxa_type_match @ 217 NONAME DATA 4
++_Unwind_VRS_Get @ 218 NONAME DATA 4
++_Unwind_VRS_Set @ 220 NONAME DATA 4
+--- /dev/null
++++ b/symbian9/src/audio/drt_additional_ordinal_import_probe.cpp
+@@ -0,0 +1,42 @@
++/* Retain static DRT function ordinals as data-only address references.
++   The imports are used only to create GOT slots for the E32 import table; the
++   retained probe is never called and it never invokes a DRT helper. The
++   link-time proxy declares these ordinal exports as 4-byte DATA because the
++   E32 converter supports imported-object GOT slots without call relocations. */
++extern "C" {
++
++extern const unsigned char quantumAeabiUnwindPr0[] __asm__("__aeabi_unwind_cpp_pr0");
++extern const unsigned char quantumAeabiUnwindPr1[] __asm__("__aeabi_unwind_cpp_pr1");
++extern const unsigned char quantumAeabiUnwindPr2[] __asm__("__aeabi_unwind_cpp_pr2");
++extern const unsigned char quantumCxaBeginCatch[] __asm__("__cxa_begin_catch");
++extern const unsigned char quantumCxaBeginCleanup[] __asm__("__cxa_begin_cleanup");
++extern const unsigned char quantumCxaEndCatch[] __asm__("__cxa_end_catch");
++extern const unsigned char quantumCxaEndCleanup[] __asm__("__cxa_end_cleanup");
++extern const unsigned char quantumCppExceptionsGlobalsCtor[] __asm__("_ZN23TCppRTExceptionsGlobalsC1Ev");
++extern const unsigned char quantumStdTerminate[] __asm__("_ZSt9terminatev");
++extern const unsigned char quantumCxaTypeMatch[] __asm__("__cxa_type_match");
++extern const unsigned char quantumUnwindVrsGet[] __asm__("_Unwind_VRS_Get");
++extern const unsigned char quantumUnwindVrsSet[] __asm__("_Unwind_VRS_Set");
++
++__attribute__((noinline, used))
++void quantumDrtAdditional13AddressRetentionProbe()
++    {
++    const unsigned char* volatile p0 = quantumAeabiUnwindPr0;
++    const unsigned char* volatile p1 = quantumAeabiUnwindPr1;
++    const unsigned char* volatile p2 = quantumAeabiUnwindPr2;
++    const unsigned char* volatile p3 = quantumCxaBeginCatch;
++    const unsigned char* volatile p4 = quantumCxaBeginCleanup;
++    const unsigned char* volatile p5 = quantumCxaEndCatch;
++    const unsigned char* volatile p6 = quantumCxaEndCleanup;
++    const unsigned char* volatile p7 = quantumCppExceptionsGlobalsCtor;
++    const unsigned char* volatile p8 = quantumStdTerminate;
++    const unsigned char* volatile p9 = quantumCxaTypeMatch;
++    const unsigned char* volatile p10 = quantumUnwindVrsGet;
++    const unsigned char* volatile p11 = quantumUnwindVrsSet;
++    (void)p0; (void)p1; (void)p2; (void)p3; (void)p4; (void)p5;
++    (void)p6; (void)p7; (void)p8; (void)p9; (void)p10; (void)p11;
++}
++
++volatile int quantumDrtAdditional13ImportProbeEnabled = 0;
++
++} // extern "C"
+--- /dev/null
++++ b/symbian9/src/audio/drt_class_typeinfo_import_probe.cpp
+@@ -0,0 +1,16 @@
++/* The class_type_info vtable is a data export (DRT ordinal 123). Compile this
++   isolated reference as PIC so it remains an undefined object import rather
++   than an executable copy relocation. The gate in level41_main.cc defaults
++   false, so this function does not run in the launch-only control. */
++extern "C" {
++extern const unsigned char quantumClassTypeInfoVtable[]
++    __asm__("_ZTVN10__cxxabiv117__class_type_infoE");
++
++void quantumDrtClassTypeInfoImportProbeMaybeRun()
++    {
++    const unsigned char* volatile classInfoVtable =
++        quantumClassTypeInfoVtable;
++    (void)classInfoVtable;
++    }
++
++} // extern "C"

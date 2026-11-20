@@ -1,0 +1,51 @@
+--- a/symbian9/level41_device_test/CMakeLists.txt
++++ b/symbian9/level41_device_test/CMakeLists.txt
+@@ -174,2 +174 @@
+-       (QUANTUM_LEVEL41_IMPORT_PROBE_NATIVE_LEAVES OR
+-        QUANTUM_LEVEL41_IMPORT_PROBE_DRT_DLL OR
++       (QUANTUM_LEVEL41_IMPORT_PROBE_DRT_DLL OR
+@@ -179 +178 @@
+-            "The ten-ordinal DRT probe must run alone, without the full DRT proxy, dynamic lookup, native leaves, or MDA imports")
++            "The ten-ordinal DRT proxy cannot combine with the full proxy, dynamic lookup, or MDA imports")
+@@ -349 +348,14 @@
+-            abort)
++            abort
++            _ZTVN10__cxxabiv117__class_type_infoE
++            __aeabi_unwind_cpp_pr0
++            __aeabi_unwind_cpp_pr1
++            __aeabi_unwind_cpp_pr2
++            __cxa_begin_catch
++            __cxa_begin_cleanup
++            __cxa_end_catch
++            __cxa_end_cleanup
++            _ZN23TCppRTExceptionsGlobalsC1Ev
++            _ZSt9terminatev
++            __cxa_type_match
++            _Unwind_VRS_Get
++            _Unwind_VRS_Set)
+@@ -384,0 +397,5 @@
++        # Native-leave enablement and exception unwinding link Symbian::CxxAbi;
++        # point that SDK imported target at the combined ten-plus-personality
++        # proxy for this control.
++        set_target_properties(SymbianCxxAbi PROPERTIES
++            IMPORTED_LOCATION "${_drt_ten_proxy}")
+@@ -390 +407,2 @@
+-        # the ELF linker and E32 converter see only the selected ten exports.
++        # the ELF linker and E32 converter see only the selected base and
++        # native-leave/personality exports.
+--- a/symbian9/level41_device_test/drtaeabi_ten_ordinals.def
++++ b/symbian9/level41_device_test/drtaeabi_ten_ordinals.def
+@@ -11,0 +12,13 @@
++_ZTVN10__cxxabiv117__class_type_infoE @ 123 NONAME
++__aeabi_unwind_cpp_pr0 @ 158 NONAME
++__aeabi_unwind_cpp_pr1 @ 159 NONAME
++__aeabi_unwind_cpp_pr2 @ 160 NONAME
++__cxa_begin_catch @ 180 NONAME
++__cxa_begin_cleanup @ 181 NONAME
++__cxa_end_catch @ 183 NONAME
++__cxa_end_cleanup @ 184 NONAME
++_ZN23TCppRTExceptionsGlobalsC1Ev @ 204 NONAME
++_ZSt9terminatev @ 213 NONAME
++__cxa_type_match @ 217 NONAME
++_Unwind_VRS_Get @ 218 NONAME
++_Unwind_VRS_Set @ 220 NONAME

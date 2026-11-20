@@ -1,0 +1,26 @@
+Processing quantum_level41_walk_test.pkg...
+quantum_level41_walk_test.pkg(1) : processing languages
+quantum_level41_walk_test.pkg(3) : processing localized vendor names
+quantum_level41_walk_test.pkg(4) : processing vendor name
+quantum_level41_walk_test.pkg(6) : processing header
+quantum_level41_walk_test.pkg(8) : processing file
+quantum_level41_walk_test.pkg(9) : processing file
+quantum_level41_walk_test.pkg(10) : processing file
+quantum_level41_walk_test.pkg(11) : processing file
+quantum_level41_walk_test.pkg(12) : processing file
+quantum_level41_walk_test.pkg(13) : processing file
+quantum_level41_walk_test.pkg(14) : processing file
+quantum_level41_walk_test.pkg(15) : processing file
+quantum_level41_walk_test.pkg(16) : processing file
+quantum_level41_walk_test.pkg(17) : processing file
+quantum_level41_walk_test.pkg(18) : processing file
+quantum_level41_walk_test.pkg(19) : processing file
+quantum_level41_walk_test.pkg(20) : processing file
+quantum_level41_walk_test.pkg(21) : processing file
+quantum_level41_walk_test.pkg(22) : processing file
+quantum_level41_walk_test.pkg(23) : processing file
+quantum_level41_walk_test.pkg(24) : processing file
+quantum_level41_walk_test.pkg(25) : processing file
+quantum_level41_walk_test.pkg(26) : processing file
+Generating SIS installation file...
+Created quantum_level41_walk_test-v1.0.28-level1-import-drt-ten-found-omap1710-dsa-argb32-armv5t.sis

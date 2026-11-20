@@ -1,0 +1,26 @@
+&EN
+
+%{"Quantum native port"}
+:"Quantum native port"
+
+#{"Quantum Level 41 Walk"},(0xE000A021),1,0,29
+
+"quantum_level41_walk_test.exe"-"!:\sys\bin\quantum_level41_walk_test.exe"
+"quantum_level41_walk_test_reg.rsc"-"!:\private\10003a3f\import\apps\quantum_level41_walk_test_reg.rsc"
+"quantum_level41_walk_test_loc.rsc"-"!:\resource\apps\quantum_level41_walk_test_loc.rsc"
+"L3D_new.3d"-"!:\private\e000a020\level41\L3D_new.3d"
+"lightmap.vla"-"!:\private\e000a020\level41\lightmap.vla"
+"skybox8.3d"-"!:\private\e000a020\level41\skybox8.3d"
+"forest.qtx"-"!:\private\e000a020\level41\forest.qtx"
+"map.qtx"-"!:\private\e000a020\level41\map.qtx"
+"river.qtx"-"!:\private\e000a020\level41\river.qtx"
+"sky.qtx"-"!:\private\e000a020\level41\sky.qtx"
+"weather.txt"-"!:\private\e000a020\level41\weather.txt"
+"weapon.qtx"-"!:\private\e000a020\level41\weapon.qtx"
+"weapon-fire.qtx"-"!:\private\e000a020\level41\weapon-fire.qtx"
+"weapon-sight-weapon.qtx"-"!:\private\e000a020\level41\weapon-sight-weapon.qtx"
+"weapon-gameplay.qwg"-"!:\private\e000a020\level41\weapon-gameplay.qwg"
+"weapon-catalog.qwc"-"!:\private\e000a020\level41\weapon-catalog.qwc"
+"audio/music/wth.mp3"-"!:\private\e000a020\audio\music\wth.mp3"
+"audio/sounds/wpn/fn2000.wav"-"!:\private\e000a020\audio\sounds\wpn\fn2000.wav"
+"audio/sounds/wpn/r.wav"-"!:\private\e000a020\audio\sounds\wpn\r.wav"
