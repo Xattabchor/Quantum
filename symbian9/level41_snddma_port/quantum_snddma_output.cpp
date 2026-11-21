@@ -11,20 +11,16 @@ public:
 
 private:
     explicit CQuantumSndDmaPump(CQuantumSndDmaOutput& aOwner);
-    void ConstructL();
     void DoCancel() override;
     void RunL() override;
     TInt RunError(TInt aError) override;
 
     CQuantumSndDmaOutput& iOwner;
-    RTimer iTimer;
-    TBool iTimerCreated;
 };
 
 CQuantumSndDmaPump::CQuantumSndDmaPump(CQuantumSndDmaOutput& aOwner)
     : CActive(CActive::EPriorityStandard),
-      iOwner(aOwner),
-      iTimerCreated(EFalse)
+      iOwner(aOwner)
 {
     CActiveScheduler::Add(this);
 }
@@ -32,35 +28,34 @@ CQuantumSndDmaPump::CQuantumSndDmaPump(CQuantumSndDmaOutput& aOwner)
 CQuantumSndDmaPump* CQuantumSndDmaPump::NewL(
     CQuantumSndDmaOutput& aOwner)
 {
-    CQuantumSndDmaPump* self = new (ELeave) CQuantumSndDmaPump(aOwner);
-    CleanupStack::PushL(self);
-    self->ConstructL();
-    CleanupStack::Pop(self);
-    return self;
-}
-
-void CQuantumSndDmaPump::ConstructL()
-{
-    User::LeaveIfError(iTimer.CreateLocal());
-    iTimerCreated = ETrue;
+    return new (ELeave) CQuantumSndDmaPump(aOwner);
 }
 
 CQuantumSndDmaPump::~CQuantumSndDmaPump()
 {
     Cancel();
-    if (iTimerCreated) iTimer.Close();
 }
 
 void CQuantumSndDmaPump::Schedule()
 {
     if (IsActive()) return;
-    iTimer.After(iStatus, TTimeIntervalMicroSeconds32(0));
+    /* Self-completing request: RunL runs on the next scheduler turn of this
+       thread, without waiting for an RTimer tick. The order is mandatory:
+       mark pending, SetActive, then complete. */
+    iStatus = KRequestPending;
     SetActive();
+    TRequestStatus* status = &iStatus;
+    User::RequestComplete(status, KErrNone);
 }
 
 void CQuantumSndDmaPump::DoCancel()
 {
-    iTimer.Cancel();
+    /* Schedule() completes the request immediately, so it is normally already
+       complete here. Completing it a second time would be a stray signal. */
+    if (iStatus.Int() == KRequestPending) {
+        TRequestStatus* status = &iStatus;
+        User::RequestComplete(status, KErrCancel);
+    }
 }
 
 void CQuantumSndDmaPump::RunL()

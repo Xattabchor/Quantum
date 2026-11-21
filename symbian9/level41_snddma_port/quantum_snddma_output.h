@@ -45,10 +45,14 @@ public:
 private:
     friend class CQuantumSndDmaPump;
 
+    // 512 frames at 11025 Hz is ~46 ms per block, ~139 ms for three blocks
+    // (256 frames gave ~70 ms and starved when a render frame ran long). A
+    // shot triggered now is heard after the blocks already queued, so lower
+    // this back to 256 only if UnderflowCount() stays at zero on the device.
     enum {
         KOutputRate = 11025,
         KOutputChannels = 2,
-        KFramesPerBlock = 256,
+        KFramesPerBlock = 512,
         KBytesPerSample = 2,
         KBytesPerFrame = KOutputChannels * KBytesPerSample,
         KBlockBytes = KFramesPerBlock * KBytesPerFrame,

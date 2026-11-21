@@ -379,6 +379,7 @@ void CQuantumLevel41SndDmaAudioWorker::UpdateEffectsStatus()
                                 KErrNone);
         return;
     }
+    iOwner.SetUnderflowCount(iOutput->UnderflowCount());
     const TInt outputError = iOutput->LastError();
     if (outputError != KErrNone) {
         SetEffectsFailure(outputError);
@@ -553,7 +554,8 @@ CQuantumLevel41SndDmaAudio::CQuantumLevel41SndDmaAudio(
       iMusicState(EAudioQueued),
       iEffectsState(EAudioQueued),
       iMusicError(KErrNone),
-      iEffectsError(KErrNone)
+      iEffectsError(KErrNone),
+      iUnderflowCount(0)
 {
     iMusicFile.Copy(aDrive);
     iMusicFile.Append(_L("\\data\\q41_wth.mp3"));
@@ -654,6 +656,14 @@ void CQuantumLevel41SndDmaAudio::SetEffectsStatus(
     iMutex.Signal();
 }
 
+void CQuantumLevel41SndDmaAudio::SetUnderflowCount(TInt aCount)
+{
+    if (!iMutexCreated) return;
+    iMutex.Wait();
+    iUnderflowCount = aCount;
+    iMutex.Signal();
+}
+
 void CQuantumLevel41SndDmaAudio::StartLevelMusic()
 {
     (void)Enqueue(ECommandPrepareEffects);
@@ -676,6 +686,7 @@ void CQuantumLevel41SndDmaAudio::StatusLine(TDes& aText)
     TAudioState effectsState;
     TInt musicError;
     TInt effectsError;
+    TInt underflows;
 
     if (!iMutexCreated) {
         aText.Copy(_L("AUDIO SNDDMA: NO WORKER"));
@@ -686,6 +697,7 @@ void CQuantumLevel41SndDmaAudio::StatusLine(TDes& aText)
     effectsState = iEffectsState;
     musicError = iMusicError;
     effectsError = iEffectsError;
+    underflows = iUnderflowCount;
     iMutex.Signal();
 
     TBuf<12> music;
@@ -714,9 +726,14 @@ void CQuantumLevel41SndDmaAudio::StatusLine(TDes& aText)
         effects.Copy(_L("READY"));
     }
 
-    TBuf<56> status;
-    status.Format(_L("SNDDMA FX:%S M:%S MIDI OFF"), &effects, &music);
-    aText.Copy(status);
+    if (underflows > 9999) underflows = 9999;
+    TBuf<64> status;
+    status.Format(_L("SNDDMA FX:%S M:%S MIDI OFF U:%d"),
+                  &effects, &music, underflows);
+    /* Callers pass TBuf<48>; never copy more than the target can hold. */
+    TInt length = status.Length();
+    if (length > aText.MaxLength()) length = aText.MaxLength();
+    aText.Copy(status.Left(length));
 }
 
 TInt CQuantumLevel41SndDmaAudio::ThreadEntry(TAny* aData)
@@ -737,6 +754,10 @@ TInt CQuantumLevel41SndDmaAudio::ThreadEntry(TAny* aData)
         delete cleanup;
         return criticalError;
     }
+
+    /* Refilling the PCM stream takes a fraction of a millisecond per block,
+       but it must not wait for a whole time slice of the software renderer. */
+    RThread().SetPriority(EPriorityMore);
 
     CActiveScheduler* scheduler = new CActiveScheduler;
     if (!scheduler) {

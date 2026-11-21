@@ -25,6 +25,17 @@ Quake-источники используются как архитектурн�
 - Музыка `wth.mp3` остаётся отдельным MDA Player Utility путём: `CMdaAudioOutputStream` получает PCM и не декодирует этот MP3.
 - Успешные host tests проверяют только портативный parser/mixer, а не MDA stream, hardware DMA, codec или работу на устройстве.
 
+## Заикания SNDDMA-выхода: что изменено (на E65 не проверено)
+
+Причина выбрана по чтению кода, а не по замерам на устройстве: аудио-поток и поток отрисовки имели один приоритет (`EPriorityNormal`, round-robin по time slice), а пополнение шло через `RTimer::After(0)`, то есть через лишнее ожидание планировщика. Запас буфера был ~70 мс (3 × 256 кадров при 11025 Hz).
+
+- `quantum_level41_snddma_audio.cpp`: аудио-поток получает `RThread().SetPriority(EPriorityMore)`. Для этого значения capability не нужна; ограничение `ProtServ` относится только к `EPriorityAbsoluteRealTime*`.
+- `quantum_snddma_output.cpp`: pump больше не использует `RTimer`, а самозавершает запрос (`KRequestPending` → `SetActive()` → `User::RequestComplete`). `DoCancel()` завершает запрос только если он ещё `KRequestPending`, чтобы не получить повторное завершение.
+- `quantum_snddma_output.h`: `KFramesPerBlock` 256 → 512 (~46 мс на блок, ~139 мс на три блока). Задержка выстрела растёт примерно до времени уже поставленных в очередь блоков; вернуть 256 стоит только если `UnderflowCount()` на устройстве остаётся нулевым.
+- Строка статуса теперь заканчивается `U:<n>`: это `UnderflowCount()` (ограничен 9999). По нему видно, остаются ли underflow после правок.
+
+Host-тест микшера проходит, но сам микшер не менялся. Изменённые Symbian-файлы здесь не компилировались (нет SDK), на E65 не запускались.
+
 ## Справочные источники
 
 - Идентификация платформы Nokia E65 как TI OMAP1710 / Symbian OS 9.1: [Legacy Portable Computing Wiki](https://lpcwiki.miraheze.org/wiki/Nokia_E65) (вторичный справочник).

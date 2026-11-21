@@ -58,6 +58,7 @@ private:
     TInt TakeCommands(TInt* aCommands, TInt aCapacity);
     void SetMusicStatus(TAudioState aState, TInt aError);
     void SetEffectsStatus(TAudioState aState, TInt aError);
+    void SetUnderflowCount(TInt aCount);
     static TInt ThreadEntry(TAny* aData);
 
     RMutex iMutex;
@@ -75,6 +76,7 @@ private:
     TAudioState iEffectsState;
     TInt iMusicError;
     TInt iEffectsError;
+    TInt iUnderflowCount;
 };
 
 #endif // QUANTUM_LEVEL41_SNDDMA_AUDIO_H
