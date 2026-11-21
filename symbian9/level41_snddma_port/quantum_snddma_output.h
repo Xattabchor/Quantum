@@ -86,6 +86,8 @@ private:
     TInt iSubmittedCount;
     TBool iReady;
     TBool iStopping;
+    RLibrary iStreamLibrary;
+    TBool iStreamLibraryLoaded;
 };
 
 #endif // QUANTUM_LEVEL41_SNDDMA_OUTPUT_H

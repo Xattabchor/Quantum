@@ -2,6 +2,20 @@
 
 #include <new>
 
+namespace {
+
+/* The E65-validated PCM probes never import mediaclientaudiostream.dll
+   statically: they load it at runtime and call NewL by ordinal. A static
+   import of this DLL is the import-table difference between a SNDDMA build
+   and those probes that is visible in the repository; it is a hypothesis for
+   the v1.0.44 launch failure, not a confirmed cause. */
+_LIT(KOutputStreamLibraryName, "mediaclientaudiostream.dll");
+const TInt KOutputStreamNewLOrdinal = 3;
+typedef CMdaAudioOutputStream* (*TOutputStreamNewLFunction)(
+    MMdaAudioOutputStreamCallback&, CMdaServer*);
+
+} // namespace
+
 class CQuantumSndDmaPump : public CActive
 {
 public:
@@ -85,7 +99,8 @@ CQuantumSndDmaOutput::CQuantumSndDmaOutput()
       iSubmittedHead(0),
       iSubmittedCount(0),
       iReady(EFalse),
-      iStopping(EFalse)
+      iStopping(EFalse),
+      iStreamLibraryLoaded(EFalse)
 {
     Mem::FillZ(iSubmittedBlocks, sizeof(iSubmittedBlocks));
 }
@@ -106,7 +121,18 @@ void CQuantumSndDmaOutput::ConstructL()
     iSettings.iSampleRate = TMdaAudioDataSettings::ESampleRate11025Hz;
     iSettings.iChannels = TMdaAudioDataSettings::EChannelsStereo;
 
-    iOutputStream = CMdaAudioOutputStream::NewL(*this);
+    /* Same sequence as the E65 probe: Load, Lookup(3), call through the
+       pointer. Failures leave with a code that reaches the status line
+       instead of the loader refusing to start the application. */
+    User::LeaveIfError(iStreamLibrary.Load(KOutputStreamLibraryName));
+    iStreamLibraryLoaded = ETrue;
+    const TLibraryFunction newLFunction =
+        iStreamLibrary.Lookup(KOutputStreamNewLOrdinal);
+    if (newLFunction == 0) User::Leave(KErrNotFound);
+    iOutputStream = reinterpret_cast<TOutputStreamNewLFunction>(
+        newLFunction)(*this, 0);
+    if (iOutputStream == 0) User::Leave(KErrNoMemory);
+
     const TInt keepOpenError = iOutputStream->KeepOpenAtEnd();
     if (keepOpenError != KErrNone && keepOpenError != KErrNotSupported) {
         User::LeaveIfError(keepOpenError);
@@ -121,6 +147,12 @@ CQuantumSndDmaOutput::~CQuantumSndDmaOutput()
     Stop();
     delete iPump;
     iPump = 0;
+    /* The stream's code lives in the library: close it only after the stream
+       object has been deleted by Stop(). */
+    if (iStreamLibraryLoaded) {
+        iStreamLibrary.Close();
+        iStreamLibraryLoaded = EFalse;
+    }
 }
 
 TInt CQuantumSndDmaOutput::SetWave(TEffect aEffect,
