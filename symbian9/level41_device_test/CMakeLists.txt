@@ -20,6 +20,8 @@ set(QUANTUM_LEVEL41_SOURCES
     ../src/core/software_world_sprite_renderer.cpp
     ../src/core/software_polygon_renderer.cpp
     ../src/core/software_triangle_renderer.cpp
+    ../src/core/software_texture16.cpp
+    ../src/core/software_fast_rasterizer.cpp
     ../src/core/software_weapon_renderer.cpp
     ../src/core/software_rain_renderer.cpp
     ../src/core/software_vertex_pipeline.cpp

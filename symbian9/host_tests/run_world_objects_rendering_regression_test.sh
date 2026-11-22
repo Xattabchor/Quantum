@@ -16,6 +16,8 @@ mkdir -p "$build_dir"
     "$repo_root/symbian9/src/core/software_mesh_renderer.cpp" \
     "$repo_root/symbian9/src/core/software_world_sprite_renderer.cpp" \
     "$repo_root/symbian9/src/core/software_triangle_renderer.cpp" \
+    "$repo_root/symbian9/src/core/software_texture16.cpp" \
+    "$repo_root/symbian9/src/core/software_fast_rasterizer.cpp" \
     "$repo_root/symbian9/src/core/software_polygon_renderer.cpp" \
     "$repo_root/symbian9/src/core/software_perspective_rasterizer.cpp" \
     "$repo_root/symbian9/src/core/software_vertex_pipeline.cpp" \

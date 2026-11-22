@@ -1,5 +1,6 @@
 #include "software_triangle_renderer.h"
 #include "quantum_integer.h"
+#include "software_fast_rasterizer.h"
 #include "software_perspective_rasterizer.h"
 
 namespace code {
@@ -371,7 +372,7 @@ SoftwareTriangleRenderSettings::SoftwareTriangleRenderSettings()
       perspectiveMove(150), fogColor(0),
       packedFogColor(0), hasPackedFogColor(false), fogDistance(1),
       shadeStrength(0), fallbackShadeStrength(0), waterDistance(10000),
-      fillSampleU(0), fillSampleV(0)
+      fillSampleU(0), fillSampleV(0), texture16(0), useFast16(false)
 {
     int i;
     for (i = 0; i < 3; ++i) {
@@ -392,6 +393,33 @@ bool SoftwareTriangleRenderer::draw(
     QInt32 drawMode = settings.drawMode;
     if (!RenderModePolicy::isSupportedTextureDrawMode(drawMode)) return false;
     if (drawMode == 4 && !settings.textureAlphaMixing) drawMode = 0;
+    if (settings.useFast16 && settings.texture16 != 0 &&
+        (drawMode == 0 || drawMode == 9)) {
+        QInt32 brightness[3];
+        resolveBrightness(settings, drawMode, brightness);
+        const bool whiteFactors = drawMode == 13
+            ? allColorChannelsWhite(settings) : brightnessIsWhite(settings);
+        const bool shade = drawMode == 9 && settings.fogQuality >= 1 &&
+                           !whiteFactors;
+        if (settings.usePerspectiveCorrection) {
+            if (shade) {
+                return SoftwareFastRasterizer::drawPerspectiveMode9(
+                    destination, *settings.texture16, first, second, third,
+                    brightness[0], brightness[1], brightness[2],
+                    settings.perspectiveStepPixels, settings.perspectiveMove);
+            }
+            return SoftwareFastRasterizer::drawPerspectiveMode0(
+                destination, *settings.texture16, first, second, third,
+                settings.perspectiveStepPixels, settings.perspectiveMove);
+        }
+        if (shade) {
+            return SoftwareFastRasterizer::drawAffineMode9(
+                destination, *settings.texture16, first, second, third,
+                brightness[0], brightness[1], brightness[2]);
+        }
+        return SoftwareFastRasterizer::drawAffineMode0(
+            destination, *settings.texture16, first, second, third);
+    }
     if (drawMode == 8 || (drawMode >= 10 && drawMode <= 12)) {
         return drawAffine(destination, texture, first, second, third,
                           drawMode, settings);

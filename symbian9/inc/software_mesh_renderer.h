@@ -4,6 +4,7 @@
 #include "matrix.h"
 #include "render_mode_policy.h"
 #include "software_polygon_renderer.h"
+#include "software_texture16.h"
 #include "vector3d.h"
 
 namespace code {
@@ -45,6 +46,12 @@ struct SoftwareMeshPolygon {
 struct SoftwareMeshTextureFrame {
     const SoftwareTextureView* mipLevels;
     code::Math::QInt32 mipLevelCount;
+    /*
+     * Optional parallel 16-bit mip chain (same dimensions/order). When
+     * non-null and the fast preset is active, drawmodes 0/9 are rasterized
+     * from these views; the 32-bit chain remains the fallback.
+     */
+    const SoftwareTexture16View* mipLevels16;
 
     SoftwareMeshTextureFrame();
     SoftwareMeshTextureFrame(const SoftwareTextureView* mipLevels,
@@ -59,6 +66,8 @@ struct SoftwareMeshTextureFrame {
 struct SoftwareMeshMaterial {
     const SoftwareTextureView* mipLevels;
     code::Math::QInt32 mipLevelCount;
+    /* Optional parallel 16-bit mip chain; see SoftwareMeshTextureFrame. */
+    const SoftwareTexture16View* mipLevels16;
     bool hasDrawModeOverride;
     code::Math::QInt32 drawMode;
     bool perspectiveCorrection;

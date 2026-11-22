@@ -33,7 +33,8 @@ QInt32 clampUpperBound(QInt32 value, QInt32 maximum)
 
 RenderModeSettings::RenderModeSettings()
     : perspectiveQuality(2), textureQuality(2), fogQuality(2),
-      standardDrawMode(0), perspectiveDistanceQ(24), mipMapping(true)
+      standardDrawMode(0), perspectiveDistanceQ(24), mipMapping(true),
+      use16BitTextures(false), useFastRasterizer(false)
 {
 }
 
@@ -107,6 +108,56 @@ QInt32 RenderModeSettings::perspectiveQualityPercent() const
 bool RenderModePolicy::usesFastAffinePath(const RenderModeSettings& settings)
 {
     return settings.perspectiveQuality == 0 && !settings.mipMapping;
+}
+
+void RenderModePolicy::applyFastPreset(RenderModeSettings& settings,
+                                       FastQualityPreset preset)
+{
+    switch (preset) {
+    case EFastQualityFast:
+        settings.perspectiveQuality = 0;
+        settings.perspectiveDistanceQ = 24;
+        settings.textureQuality = 1;
+        settings.fogQuality = 1;
+        settings.mipMapping = false;
+        settings.use16BitTextures = true;
+        settings.useFastRasterizer = true;
+        break;
+    case EFastQualityUltraFast:
+        settings.perspectiveQuality = 0;
+        settings.perspectiveDistanceQ = 24;
+        settings.textureQuality = 0;
+        settings.fogQuality = 0;
+        settings.mipMapping = false;
+        settings.use16BitTextures = true;
+        settings.useFastRasterizer = true;
+        break;
+    case EFastQualityOff:
+    default:
+        settings.perspectiveQuality = 2;
+        settings.perspectiveDistanceQ = 24;
+        settings.textureQuality = 2;
+        settings.fogQuality = 2;
+        settings.mipMapping = true;
+        settings.use16BitTextures = false;
+        settings.useFastRasterizer = false;
+        break;
+    }
+}
+
+FastQualityPreset RenderModePolicy::fastPresetOf(
+    const RenderModeSettings& settings)
+{
+    if (!settings.useFastRasterizer || !settings.use16BitTextures) {
+        return EFastQualityOff;
+    }
+    if (settings.perspectiveQuality == 0 && !settings.mipMapping) {
+        if (settings.fogQuality == 0 && settings.textureQuality == 0) {
+            return EFastQualityUltraFast;
+        }
+        return EFastQualityFast;
+    }
+    return EFastQualityOff;
 }
 
 bool RenderModePolicy::usesPerspectiveCorrection(

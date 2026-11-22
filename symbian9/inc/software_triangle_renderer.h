@@ -2,6 +2,7 @@
 #define QUANTUM_SOFTWARE_TRIANGLE_RENDERER_H
 
 #include "software_affine_rasterizer.h"
+#include "software_texture16.h"
 #include "render_mode_policy.h"
 
 namespace code {
@@ -35,6 +36,16 @@ struct SoftwareTriangleRenderSettings {
     code::Math::QInt32 waterDistance;
     code::Math::QInt32 fillSampleU;
     code::Math::QInt32 fillSampleV;
+
+    /*
+     * Optional fast 16-bit texture path. When useFast16 is true and
+     * texture16 is non-null, drawmodes 0 and 9 are rasterized from the
+     * 16-bit view by SoftwareFastRasterizer and the 32-bit `texture`
+     * argument is ignored. All other drawmodes fall back to the
+     * reference 32-bit kernels.
+     */
+    const SoftwareTexture16View* texture16;
+    bool useFast16;
 
     code::Math::QInt32 brightness[3];
     code::Math::QInt32 ditherGradient[3];

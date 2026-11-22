@@ -29,6 +29,9 @@ struct RenderModeSettings {
     code::Math::QInt32 standardDrawMode;
     code::Math::QInt32 perspectiveDistanceQ;
     bool mipMapping;
+    /* Optimized Symbian path: 16-bit textures + fast rasterizers. */
+    bool use16BitTextures;
+    bool useFastRasterizer;
 
     RenderModeSettings();
 
@@ -37,6 +40,8 @@ struct RenderModeSettings {
     void setFogQuality(code::Math::QInt32 quality);
     void setStandardDrawMode(code::Math::QInt32 drawMode);
     void setMipMapping(bool enabled);
+    void setUse16BitTextures(bool enabled);
+    void setUseFastRasterizer(bool enabled);
 
     void decreasePerspectiveQuality();
     void increasePerspectiveQuality();
@@ -73,9 +78,29 @@ enum AffineRasterizer {
  * bypass perspective mapping like the Java implementation. Mode numbers are
  * Java Texture.drawmode codes (0..13); selection sizes are projected spans.
  */
+/* Quality presets for the optimized Symbian path. */
+enum FastQualityPreset {
+    EFastQualityOff = 0,
+    EFastQualityFast,
+    EFastQualityUltraFast
+};
+
 class RenderModePolicy {
 public:
     static bool usesFastAffinePath(const RenderModeSettings& settings);
+
+    /*
+     * Apply a fast preset in place:
+     *  - Fast: affine-only (perspectiveQuality 0), LQ fog (fogQuality 1),
+     *    16-bit textures + fast rasterizers on, mipmapping off.
+     *  - UltraFast: affine-only, fog off (fogQuality 0), textureQuality 0,
+     *    16-bit textures + fast rasterizers on, mipmapping off.
+     *  - Off: restores full quality (perspectiveQuality 2, fogQuality 2,
+     *    textureQuality 2, mipmapping on) and disables the fast path.
+     */
+    static void applyFastPreset(RenderModeSettings& settings,
+                                FastQualityPreset preset);
+    static FastQualityPreset fastPresetOf(const RenderModeSettings& settings);
 
     static bool usesPerspectiveCorrection(
         const RenderModeSettings& settings,

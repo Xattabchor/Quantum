@@ -687,14 +687,15 @@ SoftwareMeshPolygon::SoftwareMeshPolygon()
 }
 
 SoftwareMeshTextureFrame::SoftwareMeshTextureFrame()
-    : mipLevels(0), mipLevelCount(0)
+    : mipLevels(0), mipLevelCount(0), mipLevels16(0)
 {
 }
 
 SoftwareMeshTextureFrame::SoftwareMeshTextureFrame(
     const SoftwareTextureView* textureMipLevels,
     QInt32 textureMipLevelCount)
-    : mipLevels(textureMipLevels), mipLevelCount(textureMipLevelCount)
+    : mipLevels(textureMipLevels), mipLevelCount(textureMipLevelCount),
+      mipLevels16(0)
 {
 }
 
@@ -1140,6 +1141,13 @@ bool SoftwareMeshRenderer::renderSceneWithSprites(
         triangleSettings.drawMode = item.drawMode;
         triangleSettings.fogQuality = options.quality.fogQuality;
         triangleSettings.textureAlphaMixing = textureAlphaMixing;
+        if (options.quality.useFastRasterizer &&
+            options.quality.use16BitTextures &&
+            textureFrame.mipLevels16 != 0) {
+            triangleSettings.texture16 =
+                &textureFrame.mipLevels16[item.mipLevel];
+            triangleSettings.useFast16 = true;
+        }
         triangleSettings.mode6UsesVertexLight =
             item.drawMode == 6 && options.cameraVectorLight;
         triangleSettings.usePerspectiveCorrection =
