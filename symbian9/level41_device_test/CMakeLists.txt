@@ -99,6 +99,12 @@ if(QUANTUM_LEVEL41_OMAP1710_MODE9_MUL_ORDER_EXPERIMENT)
     target_compile_definitions(quantum_level41_device_test PRIVATE
         QUANTUM_LEVEL41_OMAP1710_MODE9_MUL_ORDER_EXPERIMENT=1)
 endif()
+option(QUANTUM_LEVEL41_FAST16
+       "Use the 16-bit texture fast rasterizer path (no mipmapping)" OFF)
+if(QUANTUM_LEVEL41_FAST16)
+    target_compile_definitions(quantum_level41_device_test PRIVATE
+        QUANTUM_LEVEL41_FAST16=1)
+endif()
 option(QUANTUM_LEVEL41_OMAP1710_ECOLOR64K
        "Use EColor64K RGB565 presentation in the OMAP1710 candidate" OFF)
 if(QUANTUM_LEVEL41_OMAP1710_ECOLOR64K)

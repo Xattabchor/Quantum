@@ -140,6 +140,25 @@ public:
      * Output buffer must hold sourceWidth*sourceHeight texels; the
      * pixelsQ-reduced image is written in place at the start.
      */
+    /*
+     * Build a single 16-bit level from an already-decoded 8888 image.
+     *
+     * Some 16-bit destinations are needed where no mip chain exists (the
+     * fast path runs without mipmapping). useAlpha selects RGB1555 so the
+     * source's zero/transparent texels survive as 1-bit alpha; a texture
+     * with no transparency stays RGB565 and skips the per-texel alpha test.
+     * sourcePixelCount must be at least width*height.
+     * hasTransparentTexels is set to whether any output texel is 0 in 1555.
+     */
+    static bool convertLevel8888To16(const code::Math::QInt32* source,
+                                     code::Math::QInt32 width,
+                                     code::Math::QInt32 height,
+                                     bool useAlpha,
+                                     code::Math::QUint16* destination,
+                                     code::Math::QInt32 destinationCapacity,
+                                     bool& outIs1555,
+                                     bool& outHasTransparentTexels);
+
     static bool decodeQctTo16(const unsigned char* data,
                               code::Math::QInt32 dataLength,
                               code::Math::QInt32 pixelsQ,

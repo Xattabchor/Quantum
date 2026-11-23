@@ -396,6 +396,51 @@ void downsizeVertical16(QUint16* pixels,
 
 } // anonymous namespace
 
+bool SoftwareTexture16::convertLevel8888To16(
+    const QInt32* source,
+    QInt32 width,
+    QInt32 height,
+    bool useAlpha,
+    QUint16* destination,
+    QInt32 destinationCapacity,
+    bool& outIs1555,
+    bool& outHasTransparentTexels)
+{
+    outIs1555 = false;
+    outHasTransparentTexels = false;
+    if (source == 0 || destination == 0) return false;
+    if (width <= 0 || height <= 0) return false;
+    const QUint64 pixelCount64 = static_cast<QUint64>(width) *
+                                static_cast<QUint64>(height);
+    if (pixelCount64 > KMaxInt32) return false;
+    const QInt32 pixelCount = static_cast<QInt32>(pixelCount64);
+    if (destinationCapacity < pixelCount) return false;
+
+    /*
+     * 1555 keeps 1-bit alpha, so it is only worth its extra cost when the
+     * source actually has transparent texels. Otherwise stay on RGB565.
+     */
+    bool hasTransparency = false;
+    if (useAlpha) {
+        QInt32 index;
+        for (index = 0; index < pixelCount; ++index) {
+            if (source[index] == 0) {
+                hasTransparency = true;
+                break;
+            }
+        }
+    }
+
+    if (hasTransparency) {
+        convert8888To1555(source, destination, pixelCount);
+        outIs1555 = true;
+        outHasTransparentTexels = true;
+    } else {
+        convert8888To565(source, destination, pixelCount);
+    }
+    return true;
+}
+
 bool SoftwareTexture16::decodeQctTo16(const unsigned char* data,
                                       QInt32 dataLength,
                                       QInt32 pixelsQ,

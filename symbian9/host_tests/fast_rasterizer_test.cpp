@@ -163,6 +163,68 @@ std::vector<unsigned char> makeSyntheticQct()
     return qct;
 }
 
+/*
+ * Single-level 16-bit build used when mipmapping is off: opaque sources
+ * must select RGB565, sources with zero texels must select RGB1555 so the
+ * transparent key survives.
+ */
+void testSingleLevelBuild()
+{
+    const QInt32 width = 8;
+    const QInt32 height = 4;
+    const QInt32 pixelCount = width * height;
+
+    std::vector<QInt32> opaque(pixelCount);
+    for (QInt32 i = 0; i < pixelCount; ++i) {
+        const QUint32 rgb = 0xff000000U |
+                            (static_cast<QUint32>((i * 16) & 0xff) << 16U) |
+                            (static_cast<QUint32>((i * 8) & 0xff) << 8U) |
+                            static_cast<QUint32>((i * 4) & 0xff);
+        opaque[i] = code::Math::javaIntFromUnsigned(rgb);
+    }
+
+    std::vector<QUint16> out(pixelCount, 0xffff);
+    bool is1555 = true;
+    bool hasTransparent = true;
+    check(SoftwareTexture16::convertLevel8888To16(
+              opaque.data(), width, height, true, out.data(), pixelCount,
+              is1555, hasTransparent),
+          "single-level build failed for opaque texture");
+    check(!is1555, "opaque texture must select RGB565");
+    check(!hasTransparent, "opaque texture must report no transparency");
+    QInt32 worst = 0;
+    for (QInt32 i = 0; i < pixelCount; ++i) {
+        const QInt32 d = channelDiff(opaque[i], rgb8888From565(out[i]));
+        if (d > worst) worst = d;
+    }
+    check(worst <= 8, "single-level 565 build exceeds quantization");
+    std::printf("single-level 565: worst=%d\n", worst);
+
+    /* One transparent texel flips the whole level to RGB1555. */
+    std::vector<QInt32> keyed(opaque);
+    keyed[5] = 0;
+    std::fill(out.begin(), out.end(), 0xffff);
+    check(SoftwareTexture16::convertLevel8888To16(
+              keyed.data(), width, height, true, out.data(), pixelCount,
+              is1555, hasTransparent),
+          "single-level build failed for keyed texture");
+    check(is1555, "texture with zero texels must select RGB1555");
+    check(hasTransparent, "texture with zero texels must report transparency");
+    check(out[5] == 0U, "transparent texel must stay zero in the 1555 level");
+    check(out[0] != 0U, "opaque texel must not become zero in the 1555 level");
+    std::printf("single-level 1555: keyed texel preserved\n");
+
+    /* Capacity and argument validation. */
+    check(!SoftwareTexture16::convertLevel8888To16(
+              opaque.data(), width, height, true, out.data(),
+              pixelCount - 1, is1555, hasTransparent),
+          "single-level build must reject a short destination");
+    check(!SoftwareTexture16::convertLevel8888To16(
+              opaque.data(), 0, height, true, out.data(), pixelCount,
+              is1555, hasTransparent),
+          "single-level build must reject zero width");
+}
+
 void testQctDecode(const std::string& assetsDir)
 {
     (void)assetsDir;
@@ -570,6 +632,7 @@ int main(int argc, char** argv)
                  : "symbian9/level41_device_test/assets/sym9-level1";
     testConversions();
     testArmv5teModels();
+    testSingleLevelBuild();
     testQctDecode(assetsDir);
     testFastKernels();
     testPresets();

@@ -6,6 +6,7 @@
 #include "software_mesh_renderer.h"
 #include "software_world_sprite_renderer.h"
 #include "software_perspective_rasterizer.h"
+#include "software_texture16.h"
 #include "software_triangle_renderer.h"
 #if defined(QUANTUM_LEVEL41_INTERACTIVE_WALK)
 #include "collision_mesh_adapter.h"
@@ -456,6 +457,23 @@ QInt32* gForestPixels = 0;
 QInt32* gMapPixels = 0;
 QInt32* gRiverPixels = 0;
 QInt32* gSkyPixels = 0;
+
+/*
+ * Parallel 16-bit texture storage for the fast rasterizer path.
+ *
+ * Mipmapping is intentionally not used: each texture gets exactly one
+ * 16-bit level, so this costs one QUint16 per texel (half the 32-bit
+ * image). The fast preset also disables mipmapping, so no chain is ever
+ * selected here.
+ */
+QUint16* gTexture16Storage = 0;
+QUint16* gForestPixels16 = 0;
+QUint16* gMapPixels16 = 0;
+QUint16* gRiverPixels16 = 0;
+QUint16* gSkyPixels16 = 0;
+#if defined(QUANTUM_LEVEL41_INTERACTIVE_WALK)
+QUint16* gLevel1MeshTexturePixels16 = 0;
+#endif
 TUint8 gWorldFile[KMaximumWorldFileBytes];
 TUint8 gLightmapFile[KMaximumLightmapBytes];
 TUint8 gSkyboxFile[KMaximumSkyboxFileBytes];
@@ -465,6 +483,12 @@ SoftwareTextureView gWorldMipViews[5];
 SoftwareTextureView gRiverAnimationMipViews[KRiverTextureFrameCount];
 SoftwareMeshTextureFrame gRiverAnimationFrames[KRiverTextureFrameCount];
 SoftwareTextureView gSkyMipView;
+
+/* One 16-bit level per texture; no 16-bit mip chain (see gTexture16Storage). */
+SoftwareTexture16View gWorldViews16[5];
+SoftwareTexture16View gRiverAnimationViews16[KRiverTextureFrameCount];
+SoftwareTexture16View gSkyView16;
+bool gTexture16Ready = false;
 SoftwareMeshMaterial gWorldMaterials[5];
 SoftwareMeshMaterial gSkyMaterial[1];
 SoftwareMeshView gWorldView;
@@ -650,6 +674,8 @@ Vector3D gLevel1ObjectAnimationVertices[KLevel1MeshVertexCapacity];
 SoftwareMeshPolygon gLevel1ObjectMeshPolygons[KLevel1MeshPolygonCapacity];
 SoftwareMesh3DPart gLevel1ObjectMeshFrames[1];
 SoftwareTextureView gLevel1ObjectMeshMipView;
+SoftwareTexture16View gLevel1ObjectMeshView16;
+bool gLevel1MeshTexture16Ready = false;
 SoftwareMeshMaterial gLevel1ObjectMeshMaterials[1];
 SoftwareWorldMeshObjectInstance gLevel1MeshObjects[1];
 SoftwareWorldSpriteInstance gLevel1SpriteObjects[1];
@@ -974,6 +1000,33 @@ bool resolveLevel1ObjectMesh(void* rawContext,
         gLevel1ObjectMeshMaterials[0].mipLevels =
             &gLevel1ObjectMeshMipView;
         gLevel1ObjectMeshMaterials[0].mipLevelCount = 1;
+        /*
+         * Single 16-bit level for the fast path (drawmode 9). If the
+         * conversion fails the material keeps mipLevels16 == 0 and the
+         * 32-bit kernel handles this mesh.
+         */
+        gLevel1MeshTexture16Ready = false;
+        if (gLevel1MeshTexturePixels16 != 0) {
+            bool is1555 = false;
+            bool hasTransparent = false;
+            if (SoftwareTexture16::convertLevel8888To16(
+                    gLevel1MeshTexturePixels,
+                    gLevel1MeshTextureInfo.width,
+                    gLevel1MeshTextureInfo.height, true,
+                    gLevel1MeshTexturePixels16,
+                    KLevel1MeshTexturePixels, is1555, hasTransparent)) {
+                gLevel1ObjectMeshView16 = SoftwareTexture16View(
+                    gLevel1MeshTexturePixels16,
+                    gLevel1MeshTextureInfo.width *
+                        gLevel1MeshTextureInfo.height,
+                    gLevel1MeshTextureInfo.width,
+                    gLevel1MeshTextureInfo.height, is1555,
+                    hasTransparent);
+                gLevel1MeshTexture16Ready = true;
+            }
+        }
+        gLevel1ObjectMeshMaterials[0].mipLevels16 =
+            gLevel1MeshTexture16Ready ? &gLevel1ObjectMeshView16 : 0;
         gLevel1ObjectMeshMaterials[0].hasDrawModeOverride = false;
         gLevel1ObjectMeshMaterials[0].drawMode = 9;
         gLevel1ObjectMeshMaterials[0].perspectiveCorrection =
@@ -1274,6 +1327,81 @@ bool loadWeaponAssets(RFs& fileServer, const TDesC& drive)
 }
 #endif
 
+/*
+ * Build the single 16-bit level for each texture that the fast path can
+ * rasterize (drawmodes 0 and 9 only). Textures without one keep using the
+ * 32-bit reference kernel, so a failed conversion is not fatal.
+ *
+ * Mipmapping is not used here: exactly one level per texture, built from
+ * the already-decoded 8888 image. Textures with transparent texels become
+ * RGB1555 so the zero-texel key survives; the rest stay RGB565.
+ */
+bool buildTexture16Levels(const TextureInfo& forest,
+                          const TextureInfo& map,
+                          const TextureInfo* riverFrames,
+                          QInt32 riverFrameCount,
+                          const TextureInfo& sky)
+{
+    if (gForestPixels16 == 0 || gMapPixels16 == 0 || gRiverPixels16 == 0 ||
+        gSkyPixels16 == 0) {
+        return false;
+    }
+
+    bool is1555 = false;
+    bool hasTransparent = false;
+    if (!SoftwareTexture16::convertLevel8888To16(
+            gForestPixels, forest.width, forest.height, true,
+            gForestPixels16, KForestTexturePixels, is1555, hasTransparent)) {
+        return false;
+    }
+    gWorldViews16[0] = SoftwareTexture16View(
+        gForestPixels16, forest.width * forest.height,
+        forest.width, forest.height, is1555, hasTransparent);
+
+    if (!SoftwareTexture16::convertLevel8888To16(
+            gMapPixels, map.width, map.height, true,
+            gMapPixels16, KMapTexturePixels, is1555, hasTransparent)) {
+        return false;
+    }
+    gWorldViews16[1] = SoftwareTexture16View(
+        gMapPixels16, map.width * map.height,
+        map.width, map.height, is1555, hasTransparent);
+    gWorldViews16[2] = gWorldViews16[1];
+    gWorldViews16[3] = gWorldViews16[1];
+
+    QInt32 frameIndex;
+    for (frameIndex = 0; frameIndex < KRiverTextureFrameCount; ++frameIndex) {
+        if (frameIndex < riverFrameCount) {
+            const TextureInfo& frame = riverFrames[frameIndex];
+            QUint16* const pixels =
+                gRiverPixels16 + frameIndex * KRiverFramePixelCount;
+            if (!SoftwareTexture16::convertLevel8888To16(
+                    gRiverPixels + frameIndex * KRiverFramePixelCount,
+                    frame.width, frame.height, true,
+                    pixels, KRiverFramePixelCount, is1555, hasTransparent)) {
+                return false;
+            }
+            gRiverAnimationViews16[frameIndex] = SoftwareTexture16View(
+                pixels, frame.width * frame.height,
+                frame.width, frame.height, is1555, hasTransparent);
+        } else {
+            gRiverAnimationViews16[frameIndex] =
+                gRiverAnimationViews16[0];
+        }
+    }
+    gWorldViews16[4] = gRiverAnimationViews16[0];
+
+    if (!SoftwareTexture16::convertLevel8888To16(
+            gSkyPixels, sky.width, sky.height, true,
+            gSkyPixels16, KSkyTexturePixels, is1555, hasTransparent)) {
+        return false;
+    }
+    gSkyView16 = SoftwareTexture16View(
+        gSkyPixels16, sky.width * sky.height,
+        sky.width, sky.height, is1555, hasTransparent);
+    return true;
+}
+
 void setupWorldMaterials(const TextureInfo& forest,
                          const TextureInfo& map,
                          const TextureInfo* riverFrames,
@@ -1306,6 +1434,8 @@ void setupWorldMaterials(const TextureInfo& forest,
         }
         gRiverAnimationFrames[frameIndex] = SoftwareMeshTextureFrame(
             &gRiverAnimationMipViews[frameIndex], 1);
+        gRiverAnimationFrames[frameIndex].mipLevels16 =
+            gTexture16Ready ? &gRiverAnimationViews16[frameIndex] : 0;
     }
     gWorldMipViews[4] = gRiverAnimationMipViews[0];
 
@@ -1318,6 +1448,8 @@ void setupWorldMaterials(const TextureInfo& forest,
     for (index = 0; index < 5; ++index) {
         gWorldMaterials[index].mipLevels = &gWorldMipViews[index];
         gWorldMaterials[index].mipLevelCount = 1;
+        gWorldMaterials[index].mipLevels16 =
+            gTexture16Ready ? &gWorldViews16[index] : 0;
         gWorldMaterials[index].hasDrawModeOverride = false;
         gWorldMaterials[index].drawMode = 9;
         gWorldMaterials[index].perspectiveCorrection = true;
@@ -1347,6 +1479,7 @@ void setupWorldMaterials(const TextureInfo& forest,
         KMaximumTextureWidth, KMaximumTextureHeight, false);
     gSkyMaterial[0].mipLevels = &gSkyMipView;
     gSkyMaterial[0].mipLevelCount = 1;
+    gSkyMaterial[0].mipLevels16 = gTexture16Ready ? &gSkyView16 : 0;
     gSkyMaterial[0].hasDrawModeOverride = true;
     gSkyMaterial[0].drawMode = 0;
     gSkyMaterial[0].perspectiveCorrection = false;
@@ -1773,6 +1906,13 @@ bool loadLevel41(RFs& fileServer, const TDesC& drive)
             return false;
         }
     }
+    /*
+     * Build the 16-bit levels before the materials take their 16-bit view
+     * pointers. Failure leaves gTexture16Ready false, which keeps every
+     * material on the 32-bit reference kernels.
+     */
+    gTexture16Ready = buildTexture16Levels(
+        forest, map, riverFrames, riverFrameCount, sky);
     setupWorldMaterials(forest, map, riverFrames, riverFrameCount);
     gSkyMipView = SoftwareTextureView(
         gSkyPixels, sky.width * sky.height,
@@ -2329,6 +2469,17 @@ bool renderLevel41Frame()
     options.quality.setTextureQuality(2);
     options.quality.setFogQuality(2);
     options.quality.setMipMapping(true);
+#if defined(QUANTUM_LEVEL41_FAST16)
+    /*
+     * Opt-in 16-bit fast path: keep perspective correction and full fog (the
+     * preset's affine-only tuning is a separate policy choice), just switch
+     * the texture storage to 16 bits and allow the fast kernels. Mipmapping
+     * stays off because no 16-bit mip chain is built.
+     */
+    options.quality.use16BitTextures = true;
+    options.quality.useFastRasterizer = true;
+    options.quality.mipMapping = false;
+#endif
     options.triangleSettings.fogDistance = 1;
     options.triangleSettings.fogColor = 0x005500ff;
     options.farDistance = KFarDistance;
@@ -4398,6 +4549,21 @@ int main()
     const TInt textureStorageBytes =
         KTextureStoragePixels * static_cast<TInt>(sizeof(QInt32));
     gTextureStorage = static_cast<QInt32*>(User::Alloc(textureStorageBytes));
+    /*
+     * One 16-bit level per texture (no mip chain), so this is half the size
+     * of the 32-bit storage. A failure here degrades to the 32-bit path
+     * rather than stopping the app.
+     */
+    const TInt texture16StorageBytes =
+        KTextureStoragePixels * static_cast<TInt>(sizeof(QUint16));
+    gTexture16Storage =
+        static_cast<QUint16*>(User::Alloc(texture16StorageBytes));
+    if (gTexture16Storage != 0) {
+        gForestPixels16 = gTexture16Storage;
+        gMapPixels16 = gForestPixels16 + KForestTexturePixels;
+        gRiverPixels16 = gMapPixels16 + KMapTexturePixels;
+        gSkyPixels16 = gRiverPixels16 + KRiverTexturePixels;
+    }
     if (gTextureStorage == 0) {
         gRenderStatus = KErrNoMemory;
     } else {
@@ -4409,6 +4575,10 @@ int main()
         gLevel1MeshTexturePixels = gSkyPixels + KSkyTexturePixels;
         gLevel1SpriteTexturePixels =
             gLevel1MeshTexturePixels + KLevel1MeshTexturePixels;
+        if (gTexture16Storage != 0) {
+            gLevel1MeshTexturePixels16 =
+                gSkyPixels16 + KSkyTexturePixels;
+        }
 #endif
     }
 

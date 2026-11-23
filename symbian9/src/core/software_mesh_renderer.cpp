@@ -94,6 +94,7 @@ bool getMaterialTextureFrame(const SoftwareMeshMaterial& material,
         if (frameIndex != 0) return false;
         frame.mipLevels = material.mipLevels;
         frame.mipLevelCount = material.mipLevelCount;
+        frame.mipLevels16 = material.mipLevels16;
         if (textureAlphaMixing != 0) {
             *textureAlphaMixing = material.textureAlphaMixing;
         }
