@@ -2,6 +2,7 @@
 #define QUANTUM_SOFTWARE_WEAPON_RENDERER_H
 
 #include "software_affine_rasterizer.h"
+#include "software_texture16.h"
 
 namespace code {
 namespace Rendering {
@@ -64,14 +65,49 @@ struct SoftwareWeaponSpriteBuffers {
     SoftwareWeaponSpriteBuffers();
 };
 
+/*
+ * One prepared weapon image: the 32-bit view produced by the bilinear
+ * resize, plus an optional parallel 16-bit view of the same dimensions.
+ *
+ * The 16-bit view is built AFTER the resize, from the resized 8888 pixels,
+ * so it never has to reimplement the interpolation. It is used only when
+ * its format can represent the sprite honestly:
+ *   RGB1555  keyed art (no partial alpha beyond the 1-bit cut)
+ *   ARGB4444 per-texel translucency, e.g. the muzzle flash
+ * Both are two bytes per texel. `sixteen` is ignored if its dimensions or
+ * format do not match what the draw path needs, and drawing falls back to
+ * the 32-bit view.
+ */
+struct SoftwareWeaponSpriteImage {
+    SoftwareTextureView view;
+    SoftwareTexture16View sixteen;
+
+    SoftwareWeaponSpriteImage();
+
+    /*
+     * Build the parallel 16-bit view from the already-resized `view`.
+     *
+     * format4444 selects ARGB4444 (real translucency) and otherwise
+     * RGB1555 (1-bit key). `view` must already contain the final resized
+     * pixels, so this runs after SoftwareWeaponRenderer::prepareSprites and
+     * never re-implements the bilinear resize.
+     *
+     * Returns false and leaves `sixteen` empty when the arguments do not
+     * fit; drawing then stays on the 32-bit path.
+     */
+    bool buildSixteen(bool format4444,
+                      code::Math::QUint16* storage,
+                      code::Math::QInt32 capacity);
+};
+
 /* Images scaled once at weapon creation, as in Java's ImageResize calls.
  * dxFire/dyFire and maxOffsetX/maxOffsetY correspond to Weapon's cached
  * muzzle and sway offsets; the per-frame dx/dy remain caller-owned state. */
 struct SoftwareWeaponSpriteSet {
-    SoftwareTextureView weapon;
-    SoftwareTextureView fire;
-    SoftwareTextureView sight;
-    SoftwareTextureView sightWeapon;
+    SoftwareWeaponSpriteImage weapon;
+    SoftwareWeaponSpriteImage fire;
+    SoftwareWeaponSpriteImage sight;
+    SoftwareWeaponSpriteImage sightWeapon;
     code::Math::QInt32 viewportWidth;
     code::Math::QInt32 viewportHeight;
     code::Math::QInt32 dxFire;

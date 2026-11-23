@@ -1069,6 +1069,180 @@ void checkMuzzlePlacementAndFiringDraw()
             "Java X_POS=1.09 moves the firing flash to the configured muzzle anchor");
 }
 
+/*
+ * Weapon sprites are stored 16-bit: RGB1555 for the body (keyed art) and
+ * ARGB4444 for the muzzle flash (translucent glow). Both must draw the same
+ * picture as the 32-bit reference up to quantisation error. Because the
+ * 4-bit alpha of 4444 is coarser than the flash's original 8-bit alpha, the
+ * per-channel difference is bounded, not zero, and the test pins that bound.
+ */
+void checkWeaponSixteenBitParity()
+{
+    using namespace code::Math;
+    using namespace code::Rendering;
+
+    std::vector<QInt32> weaponSource(64 * 64, 0);
+    for (int y = 0; y < 64; ++y) {
+        for (int x = 0; x < 64; ++x) {
+            /* Keyed art: opaque core, transparent border, no partial alpha. */
+            const bool inside = x >= 8 && x < 56 && y >= 8 && y < 56;
+            weaponSource[y * 64 + x] =
+                inside ? static_cast<QInt32>(0xff2a6ac8U) : 0;
+        }
+    }
+    std::vector<QInt32> fireSource(32 * 32, 0);
+    for (int y = 0; y < 32; ++y) {
+        for (int x = 0; x < 32; ++x) {
+            const int dx = x - 16;
+            const int dy = y - 16;
+            const int r2 = dx * dx + dy * dy;
+            if (r2 > 240) continue;
+            /* Radial alpha falloff, the case 1555 cannot represent. */
+            QUint32 alpha = static_cast<QUint32>(255 - r2);
+            fireSource[y * 32 + x] =
+                static_cast<QInt32>((alpha << 24) | 0x00ffc040U);
+        }
+    }
+
+    SoftwareWeaponSpriteSources sources;
+    sources.weapon = SoftwareTextureView(
+        weaponSource.data(), static_cast<QInt32>(weaponSource.size()),
+        64, 64, true, true);
+    sources.fire = SoftwareTextureView(
+        fireSource.data(), static_cast<QInt32>(fireSource.size()),
+        32, 32, true, true);
+
+    const SoftwareWeaponTuning& tuning = gJavaWeaponTuning;
+    SoftwareWeaponCreateSettings create;
+    create.viewportWidth = 240;
+    create.viewportHeight = 256;
+    create.customPosition = tuning.customPosition;
+    create.muzzleXRatio = tuning.muzzleXRatio;
+    create.muzzleYRatio = tuning.muzzleYRatio;
+
+    SoftwareWeaponSpriteRequirements requirements;
+    require(SoftwareWeaponRenderer::measureSprites(
+                sources, create, requirements),
+            "16-bit weapon requirements are measured");
+
+    std::vector<QInt32> preparedWeapon(requirements.weapon.pixelCount);
+    std::vector<QInt32> preparedFire(requirements.fire.pixelCount);
+    SoftwareWeaponSpriteBuffers buffers;
+    buffers.weaponPixels = preparedWeapon.data();
+    buffers.weaponCapacity = static_cast<QInt32>(preparedWeapon.size());
+    buffers.firePixels = preparedFire.data();
+    buffers.fireCapacity = static_cast<QInt32>(preparedFire.size());
+    SoftwareWeaponSpriteSet sprites;
+    require(SoftwareWeaponRenderer::prepareSprites(
+                sources, create, requirements, buffers, sprites),
+            "16-bit weapon sprites are prepared");
+
+    /*
+     * Build the 16-bit images on a copy, exactly as the device does, so the
+     * untouched `sprites` still renders the 32-bit reference frame.
+     */
+    SoftwareWeaponSpriteSet sixteen = sprites;
+    std::vector<QUint16> weapon16(static_cast<size_t>(
+        sixteen.weapon.view.width) * sixteen.weapon.view.height);
+    std::vector<QUint16> fire16(static_cast<size_t>(
+        sixteen.fire.view.width) * sixteen.fire.view.height);
+    require(sixteen.weapon.buildSixteen(
+                false, weapon16.data(), static_cast<QInt32>(weapon16.size())),
+            "keyed weapon body converts to RGB1555");
+    require(sixteen.weapon.sixteen.is1555,
+            "weapon body uses the 1555 key format");
+    require(sixteen.fire.buildSixteen(
+                true, fire16.data(), static_cast<QInt32>(fire16.size())),
+            "muzzle flash converts to ARGB4444");
+    require(sixteen.fire.sixteen.is4444,
+            "muzzle flash uses the 4444 alpha format");
+    require(sprites.weapon.sixteen.pixels == 0 &&
+                sprites.fire.sixteen.pixels == 0,
+            "the reference set keeps its 32-bit-only views");
+
+    SoftwareWeaponDrawSettings draw;
+    draw.viewportWidth = 240;
+    draw.viewportHeight = 256;
+    draw.hasCurrentWeapon = true;
+    draw.firing = true;
+    draw.customPosition = tuning.customPosition;
+    draw.customPositionX = tuning.customPositionX;
+
+    /*
+     * Body only first: the weapon sprite is 1555, so the only error is the
+     * 5/5/5 requantisation and must stay within one 5-bit step of 8.
+     */
+    SoftwareWeaponDrawSettings bodyDraw = draw;
+    bodyDraw.firing = false;
+    std::vector<QInt32> bodyReference(240 * 256, 0);
+    const SoftwareRenderSurfaceView bodyReferenceSurface(
+        bodyReference.data(), static_cast<QInt32>(bodyReference.size()),
+        240, 256, 240);
+    require(SoftwareWeaponRenderer::draw(bodyReferenceSurface, sprites, bodyDraw),
+            "32-bit reference weapon body draws");
+    std::vector<QInt32> bodyFast(240 * 256, 0);
+    const SoftwareRenderSurfaceView bodyFastSurface(
+        bodyFast.data(), static_cast<QInt32>(bodyFast.size()), 240, 256, 240);
+    require(SoftwareWeaponRenderer::draw(bodyFastSurface, sixteen, bodyDraw),
+            "16-bit weapon body draws");
+    int bodyDiffering = 0;
+    int bodyWorst = 0;
+    for (size_t pixel = 0; pixel < bodyReference.size(); ++pixel) {
+        const QUint32 a = static_cast<QUint32>(bodyReference[pixel]);
+        const QUint32 b = static_cast<QUint32>(bodyFast[pixel]);
+        if (a == b) continue;
+        ++bodyDiffering;
+        for (int shift = 0; shift < 24; shift += 8) {
+            const int da = static_cast<int>((a >> shift) & 0xffU);
+            const int db = static_cast<int>((b >> shift) & 0xffU);
+            const int delta = da > db ? da - db : db - da;
+            if (delta > bodyWorst) bodyWorst = delta;
+        }
+    }
+    require(bodyDiffering > 0,
+            "the 1555 weapon body is actually exercised");
+    require(bodyWorst <= 8,
+            "the 1555 weapon body stays within one 5-bit quantisation step");
+
+    std::vector<QInt32> reference(240 * 256, 0);
+    const SoftwareRenderSurfaceView referenceSurface(
+        reference.data(), static_cast<QInt32>(reference.size()), 240, 256, 240);
+    require(SoftwareWeaponRenderer::draw(referenceSurface, sprites, draw),
+            "32-bit reference weapon frame draws");
+
+    std::vector<QInt32> fast(240 * 256, 0);
+    const SoftwareRenderSurfaceView fastSurface(
+        fast.data(), static_cast<QInt32>(fast.size()), 240, 256, 240);
+    require(SoftwareWeaponRenderer::draw(fastSurface, sixteen, draw),
+            "16-bit weapon frame draws");
+
+    int differing = 0;
+    int worst = 0;
+    for (size_t pixel = 0; pixel < reference.size(); ++pixel) {
+        const QUint32 a = static_cast<QUint32>(reference[pixel]);
+        const QUint32 b = static_cast<QUint32>(fast[pixel]);
+        if (a == b) continue;
+        ++differing;
+        for (int shift = 0; shift < 32; shift += 8) {
+            const int da = static_cast<int>((a >> shift) & 0xffU);
+            const int db = static_cast<int>((b >> shift) & 0xffU);
+            const int delta = da > db ? da - db : db - da;
+            if (delta > worst) worst = delta;
+        }
+    }
+    require(differing > 0,
+            "the 16-bit weapon path actually differs from the 32-bit reference");
+    /*
+     * Weapon body: 1555 has at most 3 bits of error per channel after the
+     * 5/5/5 requantisation. Flash: 4444 quantises alpha to 1/17 steps, so
+     * an opaque red peak may shift a scaled channel by up to ~16 after the
+     * blend. Anything larger means a real arithmetic divergence, not
+     * quantisation.
+     */
+    require(worst <= 20,
+            "16-bit weapon rendering stays within 1555/4444 quantisation error");
+}
+
 void checkOmap1710DivideReference()
 {
     using code::Math::QUint32;
@@ -1167,6 +1341,7 @@ int main()
     checkJavaShotLightState();
     checkWorldSpaceShotLighting();
     checkMuzzlePlacementAndFiringDraw();
+    checkWeaponSixteenBitParity();
     checkOmap1710DivideReference();
     checkRainStreakRasterization();
 #if defined(QUANTUM_LEVEL41_TURN_INERTIA)

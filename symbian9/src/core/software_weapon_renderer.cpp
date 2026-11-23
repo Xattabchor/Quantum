@@ -13,6 +13,8 @@ namespace {
 
 using code::Math::QInt32;
 using code::Math::QInt64;
+using code::Math::QUint16;
+using code::Math::QUint64;
 using code::Math::QUint32;
 
 const QInt32 KReferenceWidth = 240;
@@ -228,6 +230,31 @@ void drawWeaponRow(QInt32* destination,
 #endif
 }
 
+/*
+ * 16-bit counterpart. The texel is expanded to 0xAARRGGBB first, so the
+ * blend below is the reference arithmetic on an equivalent colour: 1555
+ * contributes a 1-bit alpha (0 or 255), 4444 a 4-bit alpha expanded to
+ * 0..255. No assembly kernel is used because the existing one is written
+ * for 32-bit ARGB rows; the per-pixel work here is a shift and a table-free
+ * expand.
+ */
+void drawWeaponRow16(QInt32* destination,
+                     const QUint16* source,
+                     QInt32 pixelCount,
+                     QInt32 sourceStep,
+                     bool is4444)
+{
+    QInt32 pixel;
+    for (pixel = 0; pixel < pixelCount; ++pixel) {
+        const QUint16 texel =
+            source[static_cast<QInt64>(pixel) * sourceStep];
+        const QInt32 expanded = is4444 ? argb8888From4444(texel)
+                                       : rgb8888From1555(texel);
+        blendOverRgb(destination + pixel,
+                     static_cast<QUint32>(expanded));
+    }
+}
+
 bool validDestination(const SoftwareRenderSurfaceView& destination)
 {
     if (destination.pixels == 0 || destination.width <= 0 ||
@@ -242,7 +269,7 @@ bool validDestination(const SoftwareRenderSurfaceView& destination)
 }
 
 bool drawSprite(const SoftwareRenderSurfaceView& destination,
-                const SoftwareTextureView& image,
+                const SoftwareWeaponSpriteImage& prepared,
                 QInt32 anchorX,
                 QInt32 anchorY,
                 TSpriteAnchor anchor,
@@ -251,9 +278,25 @@ bool drawSprite(const SoftwareRenderSurfaceView& destination,
                 QInt32 viewportHeight,
                 QInt32 screenY)
 {
+    /* The 32-bit view defines presence and geometry; the 16-bit view, when
+       usable, only changes where texels are read from. */
+    const SoftwareTextureView& image = prepared.view;
     bool present = false;
     if (!validateImage(image, present)) return false;
     if (!present) return true;
+
+    const SoftwareTexture16View* source16 = 0;
+    if (prepared.sixteen.pixels != 0 &&
+        (prepared.sixteen.is1555 || prepared.sixteen.is4444) &&
+        prepared.sixteen.width == image.width &&
+        prepared.sixteen.height == image.height &&
+        prepared.sixteen.pixelCount >= image.width * image.height) {
+        /* 1555 only reproduces art whose alpha is already a 0/255 cut;
+           4444 covers the translucent cases. */
+        if (prepared.sixteen.is4444 || image.hasTransparentTexels) {
+            source16 = &prepared.sixteen;
+        }
+    }
 
     QInt32 left = anchorX;
     QInt32 top = anchorY;
@@ -301,9 +344,17 @@ bool drawSprite(const SoftwareRenderSurfaceView& destination,
         const QInt32 sourceIndex = localY * image.width + firstSourceX;
         const QInt32 rowOffset = static_cast<QInt32>(screenY64) *
                                  destination.stride;
-        drawWeaponRow(destination.pixels + rowOffset +
-                          static_cast<QInt32>(firstX),
-                      image.pixels + sourceIndex, rowPixelCount, sourceStep);
+        if (source16 != 0) {
+            drawWeaponRow16(destination.pixels + rowOffset +
+                                static_cast<QInt32>(firstX),
+                            source16->pixels + sourceIndex, rowPixelCount,
+                            sourceStep, source16->is4444);
+        } else {
+            drawWeaponRow(destination.pixels + rowOffset +
+                              static_cast<QInt32>(firstX),
+                          image.pixels + sourceIndex, rowPixelCount,
+                          sourceStep);
+        }
     }
     return true;
 }
@@ -341,8 +392,8 @@ bool drawNormalWeapon(const SoftwareRenderSurfaceView& destination,
         width = javaFloatToInt(widthValue);
     }
 
-    if (settings.centreAlign && sprites.weapon.pixels != 0) {
-        x = code::Math::javaIntAdd(x, sprites.weapon.width / 2);
+    if (settings.centreAlign && sprites.weapon.view.pixels != 0) {
+        x = code::Math::javaIntAdd(x, sprites.weapon.view.width / 2);
     }
 
     const bool drawRightHand = settings.twoHands || !settings.leftHand;
@@ -355,7 +406,7 @@ bool drawNormalWeapon(const SoftwareRenderSurfaceView& destination,
 
     if (!settings.newFireAnimation) {
         if (drawRightHand) {
-            if (settings.firing && sprites.fire.pixels != 0) {
+            if (settings.firing && sprites.fire.view.pixels != 0) {
                 QInt32 fireX = code::Math::javaIntAdd(
                     code::Math::javaIntSub(width, sprites.dxFire), drawDx);
                 fireX = code::Math::javaIntAdd(fireX, x);
@@ -370,7 +421,7 @@ bool drawNormalWeapon(const SoftwareRenderSurfaceView& destination,
                     return false;
                 }
             }
-            if (sprites.weapon.pixels != 0 &&
+            if (sprites.weapon.view.pixels != 0 &&
                 !drawSprite(destination, sprites.weapon, weaponRight,
                             weaponBottom, ESpriteAnchorRightBottom, false,
                             settings.viewportWidth, settings.viewportHeight,
@@ -380,7 +431,7 @@ bool drawNormalWeapon(const SoftwareRenderSurfaceView& destination,
         }
 
         if (drawLeftHand) {
-            if (settings.firing && sprites.fire.pixels != 0) {
+            if (settings.firing && sprites.fire.view.pixels != 0) {
                 QInt32 unmirroredFireX = code::Math::javaIntAdd(
                     code::Math::javaIntSub(width, sprites.dxFire), drawDx);
                 unmirroredFireX = code::Math::javaIntAdd(unmirroredFireX, x);
@@ -399,7 +450,7 @@ bool drawNormalWeapon(const SoftwareRenderSurfaceView& destination,
             }
             const QInt32 weaponLeft = code::Math::javaIntSub(
                 oldWidth, weaponRight);
-            if (sprites.weapon.pixels != 0 &&
+            if (sprites.weapon.view.pixels != 0 &&
                 !drawSprite(destination, sprites.weapon, weaponLeft,
                             weaponBottom, ESpriteAnchorLeftBottom, true,
                             settings.viewportWidth, settings.viewportHeight,
@@ -410,16 +461,16 @@ bool drawNormalWeapon(const SoftwareRenderSurfaceView& destination,
         return true;
     }
 
-    const SoftwareTextureView& replacement =
+    const SoftwareWeaponSpriteImage& replacement =
         settings.firing ? sprites.fire : sprites.weapon;
-    if (drawRightHand && replacement.pixels != 0 &&
+    if (drawRightHand && replacement.view.pixels != 0 &&
         !drawSprite(destination, replacement, weaponRight, weaponBottom,
                     ESpriteAnchorRightBottom, false,
                     settings.viewportWidth, settings.viewportHeight,
                     settings.screenY)) {
         return false;
     }
-    if (drawLeftHand && replacement.pixels != 0) {
+    if (drawLeftHand && replacement.view.pixels != 0) {
         const QInt32 weaponLeft = code::Math::javaIntSub(
             oldWidth, weaponRight);
         if (!drawSprite(destination, replacement, weaponLeft, weaponBottom,
@@ -441,7 +492,7 @@ bool drawSight(const SoftwareRenderSurfaceView& destination,
         return false;
     }
 
-    if (sprites.sight.pixels == 0 && sprites.sightWeapon.pixels == 0) {
+    if (sprites.sight.view.pixels == 0 && sprites.sightWeapon.view.pixels == 0) {
         return true;
     }
 
@@ -455,7 +506,7 @@ bool drawSight(const SoftwareRenderSurfaceView& destination,
     }
     (void)drawDx; // Weapon.drawSight transforms both short fields; x is unused.
 
-    if (sprites.sightWeapon.pixels != 0) {
+    if (sprites.sightWeapon.view.pixels != 0) {
         const QInt32 sightX = settings.viewportWidth / 2;
         const QInt32 sightY = code::Math::javaIntAdd(
             code::Math::javaIntAdd(settings.viewportHeight, settings.screenY),
@@ -481,7 +532,7 @@ bool drawSight(const SoftwareRenderSurfaceView& destination,
         }
     }
 
-    if (sprites.sight.pixels != 0 &&
+    if (sprites.sight.view.pixels != 0 &&
         !drawSprite(destination, sprites.sight, 0, settings.screenY,
                     ESpriteAnchorLeftTop, false,
                     settings.viewportWidth, settings.viewportHeight,
@@ -492,6 +543,46 @@ bool drawSight(const SoftwareRenderSurfaceView& destination,
 }
 
 } // namespace
+
+SoftwareWeaponSpriteImage::SoftwareWeaponSpriteImage()
+    : view(), sixteen()
+{
+}
+
+bool SoftwareWeaponSpriteImage::buildSixteen(bool format4444,
+                                             QUint16* storage,
+                                             QInt32 capacity)
+{
+    sixteen = SoftwareTexture16View();
+    if (view.pixels == 0 || view.width <= 0 || view.height <= 0 ||
+        storage == 0) {
+        return false;
+    }
+    const QUint64 pixelCount = static_cast<QUint64>(view.width) *
+                               static_cast<QUint64>(view.height);
+    if (pixelCount == 0U || pixelCount > static_cast<QUint64>(capacity)) {
+        return false;
+    }
+    const QInt32 count = static_cast<QInt32>(pixelCount);
+
+    if (format4444) {
+        SoftwareTexture16::convert8888To4444(view.pixels, storage, count);
+        sixteen = SoftwareTexture16View(
+            storage, count, view.width, view.height, false, false, true);
+        return true;
+    }
+
+    /*
+     * 1555 must keep the zero-texel key exact, so a source with no
+     * transparent texels would only lose colour precision. That case keeps
+     * the 32-bit view.
+     */
+    if (!view.hasTransparentTexels) return false;
+    SoftwareTexture16::convert8888To1555(view.pixels, storage, count);
+    sixteen = SoftwareTexture16View(
+        storage, count, view.width, view.height, true, true);
+    return true;
+}
 
 SoftwareWeaponSpriteSources::SoftwareWeaponSpriteSources()
     : weapon(), fire(), sight(), sightWeapon()
@@ -706,8 +797,8 @@ bool SoftwareWeaponRenderer::prepareSprites(
         buffers.sightCapacity, buffers.sightWeaponCapacity
     };
     SoftwareTextureView* outputImages[4] = {
-        &prepared.weapon, &prepared.fire,
-        &prepared.sight, &prepared.sightWeapon
+        &prepared.weapon.view, &prepared.fire.view,
+        &prepared.sight.view, &prepared.sightWeapon.view
     };
 
     QInt32 imageIndex;
@@ -728,16 +819,16 @@ bool SoftwareWeaponRenderer::prepareSprites(
             sourceImages[imageIndex]->mayContainZeroTexels);
     }
 
-    if (prepared.weapon.pixels != 0) {
+    if (prepared.weapon.view.pixels != 0) {
         prepared.dxFire = javaShort(javaFloatToInt(
-            static_cast<float>(prepared.weapon.width) *
+            static_cast<float>(prepared.weapon.view.width) *
             settings.muzzleXRatio));
         prepared.dyFire = javaShort(javaFloatToInt(
-            static_cast<float>(prepared.weapon.height) *
+            static_cast<float>(prepared.weapon.view.height) *
             settings.muzzleYRatio));
         const QInt32 divisor = settings.attackIntensity > 1.0f ? 2 : 5;
-        prepared.maxOffsetX = javaShort(prepared.weapon.width / divisor);
-        prepared.maxOffsetY = javaShort(prepared.weapon.height / divisor);
+        prepared.maxOffsetX = javaShort(prepared.weapon.view.width / divisor);
+        prepared.maxOffsetY = javaShort(prepared.weapon.view.height / divisor);
     }
 
     sprites = prepared;
@@ -761,10 +852,10 @@ bool SoftwareWeaponRenderer::draw(
         settings.customPosition != sprites.customPositionAtCreation ||
         settings.resizeWeapons != sprites.resizedToWidth ||
         !validDestination(destination) ||
-        !validPreparedImage(sprites.weapon) ||
-        !validPreparedImage(sprites.fire) ||
-        !validPreparedImage(sprites.sight) ||
-        !validPreparedImage(sprites.sightWeapon)) {
+        !validPreparedImage(sprites.weapon.view) ||
+        !validPreparedImage(sprites.fire.view) ||
+        !validPreparedImage(sprites.sight.view) ||
+        !validPreparedImage(sprites.sightWeapon.view)) {
         return false;
     }
     if (settings.customPositionX != settings.customPositionX ||
