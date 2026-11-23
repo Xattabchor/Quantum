@@ -1,0 +1,264 @@
+PRICE_MEDICINE_CHEST=50
+Стандартная цена аптечки
+
+DEFAULT_ARSENAL=-1,0,1,2,3
+//DEFAULT_ARSENAL_AMMO=60
+арсенал игрока на старте игры
+Пустая рука
+Пистолет
+Кулак
+Топор (работает только при виде от третьего лица)
+
+ORIGINAL_SIGHT=1
+Отключает растягивание прицела
+
+WORLD_SCALE=5
+Стандартный шасштаб уровней
+VISIBILITY_CHECK=1
+OPTIMIZE_LEVEL_MODEL=1
+BOTS_CLEVER_PATHFINDING=1
+DELETE_IN_DISTANCE=1
+UPDATE_ONLY_NEAR=1
+WALK_SPEED_SIGHT=80
+
+OPEN_LEVELS=ALL
+Открытые уровни
+COUNT_LEVELS=1
+Добавляет цифры перед названиями уровней
+ALWAYS_EXIT=1
+Выход с уровней без убийства всех ENEMIES
+NEW_EXIT=1
+Переход на следующий уровень без задержки и без подписи
+SAVE_NAME=LITE
+Название сохранений
+PAUSE_SCREEN_SAVE=1
+Пункт для сохранения игры в меню паузы
+
+MENU_MUSIC=/music/menu.mp3
+MUSIC=null
+Стандартная музыка в меню и в игре
+
+
+WALK_SOUND=/sounds/fx_step2.wav
+JUMP_SOUND=/sounds/fx_jump.wav
+Звуки игрока
+
+
+BLOOD_TEX=/bots/decal_blood.png
+
+LIFE_ZOMBIE=500
+ZOMBIE_MODEL=/npc/plot/plot.3d
+ZOMBIE_TEXTURE=/npc/plot/plot.png
+ZOMBIE_SCALE=4.7
+ZOMBIE_DAMAGE=2
+ZOMBIE_ATTACKRADIUS=1.3
+ZOMBIE_ATTACKANIMSPEED=390
+ZOMBIE_ANIMSPEED=180
+
+LIFE_BIG_ZOMBIE=800
+BIGZOMBIE_MODEL=/npc/plot/plot.3d
+BIGZOMBIE_TEXTURE=/npc/plot/plot.png
+BIGZOMBIE_SCALE=4.8
+BIGZOMBIE_DAMAGE=4
+BIGZOMBIE_ATTACKRADIUS=1.3
+BIGZOMBIE_ATTACKANIMSPEED=390
+BIGZOMBIE_ANIMSPEED=180
+
+PLAYER_HAS_INVENTORY=1
+У игрока есть инвентарь
+INVENTORY_PROPORTIONAL=1
+Пропорциональное растягивание спрайтов в инвентаре
+если отключить, то кол-во предметов будет снизу
+
+BAG_MESH=/meshes/computer.3d
+BAG_TEXTURE=/meshes/computer.png
+BAG_SCALE=2
+Настройки мешка с предметами
+
+TITLE_SCREEN_MUSIC=/music/title.mp3
+
+SHOP_PROPORTIONAL=1
+Пропорциональное растягивание спрайтов в магазине
+SPLINTER_SCALE=1
+Размер искр от попадания в стену
+BLOOD_SCALE=0.3
+Размер крови вылетающей из ботов
+
+
+SPLINTER_SPRITE=/images/splinter.png
+Искры от попадания в стену
+BLOOD_SPRITE=/npc/bloodr.png
+Кровь из ботов
+
+LIFE_ICON=/images/life.png
+LOW_LIFE_ICON=/images/life_low.png
+MONEY_ICON=/images/money.png
+PATRON_NO_WEAPON_ICON
+/images/hand.png
+PATRON_ICON=/images/patron.png
+LOW_PATRON_ICON=/images/patron_low.png
+SIGHT_ICON=/images/sight.png
+SKULL_ICON=/images/skull.png
+HAND_ICON=/images/hand.png
+BACKGROUND_LOGO=/images/background.png
+BACKGROUND=/images/background2.png
+SPLASH=/images/splash.png
+SHOP_PATRON_ICON=/shop/icon_patron.png
+SHOP_MEDKIT_ICON=/shop/icon_medicine_chest.png
+
+TEXT_BCK=/images/text_bck.png
+DIALOG_BCK=/images/message_bck.png
+
+ENGLISH=English
+RUSSIAN=Русский
+
+PLAYER_SHOP=OFF
+Отключает магазин на левый софт
+
+PLAYER_ZOOM=74,44,1
+//Minimal Zoom, Maximal Zoom, Ability to use zoom
+
+[DROZH_ENEMY]
+//SPEED,SCALE,IMAGES
+DAMAGE_ANIM=4,30,/bots/shiver bot/damage.png
+DEATH_ANIM=5,30,/bots/shiver bot/death0.png,/bots/shiver bot/death1.png
+ATTACK_ANIM=10,30,/bots/shiver bot/shoot0.png,/bots/shiver bot/shoot1.png
+STAY_ANIM=2,60,/bots/shiver bot/walk_back0.png
+WALK_ANIM=6,30,/bots/shiver bot/walk0.png,/bots/shiver bot/walk1.png
+WALK_SIDE_ANIM=6,60,/bots/shiver bot/walk_side0.png,/bots/shiver bot/walk_side1.png
+WALK_BACK_ANIM=6,60,/bots/shiver bot/walk_back0.png,/bots/shiver bot/walk_back1.png
+
+SCALE=5
+FOLLOW=-1
+ATTACK=0
+FRAGSONDEATH=1
+MONEYONDEATH=15
+DAMAGE=3
+ATTACKRADIUS=1.5
+ATTACKANIMSPEED=700
+REACTTIMER=10
+SPEED=150
+HP=480
+MONEYONDEATH=10
+FRAGSONDEATH=1
+SLEEPONDAMAGE=220
+
+[ARMY]
+TEX=/npc/army/army.png;/npc/army/glass.png;/npc/army/groza.png
+MODEL=/npc/army/army.3d
+SCALE=5.4
+FRACTION=5
+ATTACKRADIUS=80.0
+ENEMYREACTION=3
+MAXENEMYDISTANCE=20000
+ATTACKTRIGGER=3
+ATTACK=0,1,2,3,4
+DAMAGE=5
+HP=300
+FOLLOW=-1
+FRAGSONDEATH=1
+MONEYONDEATH=30
+SLEEPONDAMAGE=500
+MUZZLE_FLASH_POS=-45,1510,690
+MUZZLE_FLASH=/shop/firer.png
+MUZZLE_FLASH_SCALE=4
+MUZZLE_FLASH_TIMER=300
+
+[ZOMBIE]
+TEX=/npc/zombie/zombie_t.bmp
+MODEL=/npc/zombie/zombie.3d
+SCALE=5.2
+FRACTION=7
+FOLLOW=-1
+ATTACK=0,1,2,3,4,5,6
+DAMAGE=13
+ATTACKRADIUS=3
+ATTACKANIMSPEED=200
+REACTTIMER=15
+SPEED=100
+HP=465
+JUMPHEIGHT=0
+MONEYONDEATH=10
+FRAGSONDEATH=1
+SLEEPONDAMAGE=0
+MAXENEMYDISTANCE=10000
+ATTACKONDAMAGE=1
+AI=1
+PLAYERREACTION=2
+ATTACKTRIGGER=2
+ADDSZ=4500
+
+[PLOT]
+TEX=/npc/plot/plot.bmp
+MODEL=/npc/plot/plot.3d
+SCALE=6
+FRACTION=4
+FOLLOW=-1
+ATTACK=0,1,2,3
+DAMAGE=4
+ATTACKRADIUS=2
+ATTACKANIMSPEED=200
+FALL_ON_DEATH=2
+REACTTIMER=25
+SPEED=150
+HP=200
+JUMPHEIGHT=0
+MONEYONDEATH=0
+MAXENEMYDISTANCE=15000
+FRAGSONDEATH=1
+SLEEPONDAMAGE=300
+ATTACKONDAMAGE=1
+AI=1
+PLAYERREACTION=2
+ATTACKTRIGGER=2
+ADDSZ=4500
+
+[ARMY1]
+TEX=/npc/army/army.bmp;/npc/army/glass.bmp;/npc/army/groza.bmp
+MODEL=/npc/army/army.3d
+DRAW_MODES=0,2,0
+SCALE=5.4
+FRACTION=5
+ATTACKRADIUS=80.0
+ENEMYREACTION=3
+MAXENEMYDISTANCE=20000
+ATTACKTRIGGER=3
+ATTACK=0,1,2,3,4
+DAMAGE=8
+HP=300
+FOLLOW=-1
+FRAGSONDEATH=1
+MONEYONDEATH=30
+SLEEPONDAMAGE=500
+MUZZLE_FLASH_POS=-45,1510,690
+MUZZLE_FLASH=/shop/firer.png
+MUZZLE_FLASH_SCALE=4
+MUZZLE_FLASH_TIMER=300
+
+[STALKER]
+TEX=/npc/stalker/ak.bmp;/npc/stalker/bag.bmp;/npc/stalker/stalker.bmp
+MODEL=/npc/stalker/stalker_guard.3d
+SCALE=4.9
+FRACTION=1
+ATTACKRADIUS=80.0
+ATTACKONDAMAGE_OP=1
+ATTACKONDAMAGE=1
+ENEMYREACTION=3
+ATTACKTRIGGER=3
+ATTACK=2,3,4,5,6,7
+FRIENDLY_FIRE=1
+DAMAGE=5
+HP=200
+FOLLOW=-1
+FRAGSONDEATH=0
+MAXENEMYDISTANCE=18000
+MONEYONDEATH=15
+SLEEPONDAMAGE=500
+ADDSZ=4500
+MUZZLE_FLASH_POS=-70,1430,746
+MUZZLE_FLASH=/shop/firer.png
+MUZZLE_FLASH_SCALE=4
+MUZZLE_FLASH_TIMER=300
+
+
+
