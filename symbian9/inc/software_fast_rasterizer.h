@@ -44,6 +44,29 @@ public:
                                 code::Math::QInt32 secondBrightness,
                                 code::Math::QInt32 thirdBrightness);
 
+    /*
+     * Drawmode 4: per-texel alpha blend against the existing framebuffer.
+     * Requires an ARGB4444 texture: 1-bit 1555 cannot express the partial
+     * alpha this mode exists for, and RGB565 has no alpha at all. The 4-bit
+     * alpha expands to 0..255 and the blend then uses the reference's exact
+     * 8-bit arithmetic, so results match the 32-bit kernel within 4444's
+     * channel quantisation.
+     */
+    static bool drawAffineMode4(const SoftwareRenderSurfaceView& destination,
+                                const SoftwareTexture16View& texture,
+                                const AffineTriangleVertex& first,
+                                const AffineTriangleVertex& second,
+                                const AffineTriangleVertex& third);
+
+    static bool drawPerspectiveMode4(
+        const SoftwareRenderSurfaceView& destination,
+        const SoftwareTexture16View& texture,
+        const AffineTriangleVertex& first,
+        const AffineTriangleVertex& second,
+        const AffineTriangleVertex& third,
+        code::Math::QInt32 perspectiveStepPixels,
+        code::Math::QInt32 move = 150);
+
     static bool drawPerspectiveMode0(
         const SoftwareRenderSurfaceView& destination,
         const SoftwareTexture16View& texture,

@@ -16,6 +16,7 @@
 #include "software_perspective_rasterizer.h"
 #include "software_qct_texture_decoder.h"
 #include "software_texture16.h"
+#include "software_world_sprite_renderer.h"
 
 #include <chrono>
 #include <cstdio>
@@ -174,6 +175,300 @@ std::vector<unsigned char> makeSyntheticQct()
  * disagrees with what the pixel would actually draw, which shows up as
  * opaque black holes over partially transparent texels.
  */
+/*
+ * ARGB4444 exists only for alpha-blended sprites, so it is judged on the
+ * two things that path needs: alpha survives at 4-bit resolution, and the
+ * fully transparent / fully opaque endpoints stay exact.
+ */
+/*
+ * End-to-end check of the sprite alpha path: render the same semi-
+ * transparent sprite twice, once from 8888 frames and once from ARGB4444
+ * frames, and require the results to match within 4444's quantisation.
+ * This covers frame selection, the wrapping texel index, and the alpha
+ * blend arithmetic staying in 8-bit space after expansion.
+ */
+/*
+ * Drawmode 4: the fast 4444 affine/perspective kernels must agree with the
+ * 32-bit reference alpha blend within 4444's channel quantisation. The
+ * destination is pre-filled with a gradient so the blend result is not
+ * trivially equal to either operand.
+ */
+void testMode4Kernels()
+{
+    const QInt32 width = 64;
+    const QInt32 height = 64;
+    const QInt32 pixelCount = width * height;
+    const QInt32 screenW = 96;
+    const QInt32 screenH = 96;
+    const QInt32 background = 0;
+
+    std::vector<QInt32> source(pixelCount, 0);
+    QInt32 i;
+    for (i = 0; i < pixelCount; ++i) {
+        const QInt32 x = i % width;
+        const QInt32 y = i / width;
+        QInt32 alpha = 255 - (x + y) * 2;
+        if (alpha < 0) alpha = 0;
+        const QUint32 rgb =
+            (static_cast<QUint32>(alpha) << 24U) |
+            (static_cast<QUint32>(30 + x * 2) << 16U) |
+            (static_cast<QUint32>(200 - y) << 8U) |
+            static_cast<QUint32>(60);
+        source[static_cast<size_t>(i)] =
+            code::Math::javaIntFromUnsigned(rgb);
+    }
+    std::vector<QUint16> pixels4444(pixelCount, 0);
+    SoftwareTexture16::convert8888To4444(
+        source.data(), pixels4444.data(), pixelCount);
+
+    const SoftwareTextureView texture32(
+        source.data(), pixelCount, width, height, false, true, true);
+    const SoftwareTexture16View texture4444(
+        pixels4444.data(), pixelCount, width, height, false, false, true);
+
+    const AffineTriangleVertex v0(10, 10, 0, 0, -1000);
+    const AffineTriangleVertex v1(85, 14, width, 0, -2000);
+    const AffineTriangleVertex v2(20, 85, 0, height, -1500);
+
+    const auto fillBackground = [&](std::vector<QInt32>& pixels) {
+        for (QInt32 k = 0; k < screenW * screenH; ++k) {
+            const QInt32 x = k % screenW;
+            const QInt32 y = k / screenW;
+            const QUint32 bg =
+                (0xffU << 24U) | (static_cast<QUint32>(x * 2) << 16U) |
+                (static_cast<QUint32>(y * 2) << 8U) |
+                static_cast<QUint32>((x + y) & 0xff);
+            pixels[static_cast<size_t>(k)] =
+                code::Math::javaIntFromUnsigned(bg);
+        }
+    };
+
+    /* Affine. */
+    {
+        Framebuffer ref(screenW, screenH);
+        Framebuffer fast(screenW, screenH);
+        fillBackground(ref.pixels);
+        fillBackground(fast.pixels);
+        check(SoftwareAffineRasterizer::drawMode4AlphaBlend(
+                  ref.view, texture32, v0, v1, v2),
+              "reference affine mode4 failed");
+        check(SoftwareFastRasterizer::drawAffineMode4(
+                  fast.view, texture4444, v0, v1, v2),
+              "fast affine mode4 failed");
+        const QInt32 worst = compareFrames(ref, fast, background);
+        check(worst <= 20, "fast affine mode4 differs beyond quantisation");
+        std::printf("fast affine mode4: worst=%d\n", worst);
+    }
+
+    /* Perspective. */
+    {
+        Framebuffer ref(screenW, screenH);
+        Framebuffer fast(screenW, screenH);
+        fillBackground(ref.pixels);
+        fillBackground(fast.pixels);
+        check(SoftwarePerspectiveRasterizer::drawMode4AlphaBlend(
+                  ref.view, texture32, v0, v1, v2, 16, 150),
+              "reference perspective mode4 failed");
+        check(SoftwareFastRasterizer::drawPerspectiveMode4(
+                  fast.view, texture4444, v0, v1, v2, 16, 150),
+              "fast perspective mode4 failed");
+        const QInt32 worst = compareFrames(ref, fast, background);
+        check(worst <= 20, "fast perspective mode4 differs beyond quantisation");
+        std::printf("fast perspective mode4: worst=%d\n", worst);
+    }
+
+    /* A non-4444 texture must be refused, not silently mis-sampled. */
+    {
+        std::vector<QUint16> pixels565(pixelCount, 0);
+        SoftwareTexture16::convert8888To565(
+            source.data(), pixels565.data(), pixelCount);
+        const SoftwareTexture16View as565(
+            pixels565.data(), pixelCount, width, height, false, false);
+        Framebuffer buffer(screenW, screenH);
+        check(!SoftwareFastRasterizer::drawAffineMode4(
+                  buffer.view, as565, v0, v1, v2),
+              "affine mode4 must reject a non-4444 texture");
+        check(!SoftwareFastRasterizer::drawPerspectiveMode4(
+                  buffer.view, as565, v0, v1, v2, 16, 150),
+              "perspective mode4 must reject a non-4444 texture");
+    }
+}
+
+void testSprite4444Path()
+{
+    const QInt32 width = 16;
+    const QInt32 height = 16;
+    const QInt32 pixelCount = width * height;
+    const QInt32 screenW = 48;
+    const QInt32 screenH = 48;
+
+    /* Soft-edged disc: centre opaque, alpha fading to zero at the rim. */
+    std::vector<QInt32> source(pixelCount, 0);
+    QInt32 y;
+    for (y = 0; y < height; ++y) {
+        QInt32 x;
+        for (x = 0; x < width; ++x) {
+            const QInt32 dx = x * 2 - (width - 1);
+            const QInt32 dy = y * 2 - (height - 1);
+            const QInt32 d2 = dx * dx + dy * dy;
+            const QInt32 maxD2 = (width - 1) * (width - 1) +
+                                 (height - 1) * (height - 1);
+            QInt32 alpha = 255 - (d2 * 255) / maxD2;
+            if (alpha < 0) alpha = 0;
+            const QUint32 rgb =
+                (static_cast<QUint32>(alpha) << 24U) |
+                (static_cast<QUint32>(40 + x * 8) << 16U) |
+                (static_cast<QUint32>(60 + y * 8) << 8U) |
+                static_cast<QUint32>(200);
+            source[static_cast<size_t>(y * width + x)] =
+                code::Math::javaIntFromUnsigned(rgb);
+        }
+    }
+
+    std::vector<QUint16> pixels4444(pixelCount, 0);
+    SoftwareTexture16::convert8888To4444(
+        source.data(), pixels4444.data(), pixelCount);
+
+    SoftwareTextureView frame32(
+        source.data(), pixelCount, width, height, false, true, true);
+    SoftwareTexture16View frame4444(
+        pixels4444.data(), pixelCount, width, height, false, false, true);
+
+    SoftwareWorldSprite sprite32;
+    sprite32.frames = &frame32;
+    sprite32.frameCount = 1;
+    sprite32.mode = ESoftwareWorldSpriteAlpha;
+    sprite32.scale = 1;
+    sprite32.textureScale = 0;
+
+    SoftwareWorldSprite sprite4444 = sprite32;
+    /* One 16-bit frame, parallel to sprite32.frames[0]. */
+    const SoftwareTexture16View frames16[1] = { frame4444 };
+    sprite4444.frames16 = frames16;
+
+    std::vector<QInt32> buffer32(screenW * screenH, 0);
+    std::vector<QInt32> buffer4444(screenW * screenH, 0);
+    SoftwareRenderSurfaceView view32(
+        buffer32.data(), screenW * screenH, screenW, screenH, screenW);
+    SoftwareRenderSurfaceView view4444(
+        buffer4444.data(), screenW * screenH, screenW, screenH, screenW);
+
+    /* Background so blending has something to blend against. */
+    for (QInt32 i = 0; i < screenW * screenH; ++i) {
+        const QInt32 bg = static_cast<QInt32>(0xff203040U);
+        buffer32[static_cast<size_t>(i)] = bg;
+        buffer4444[static_cast<size_t>(i)] = bg;
+    }
+
+    SoftwareWorldSpriteInstance instance32;
+    instance32.sprite = &sprite32;
+    instance32.queued = true;
+    instance32.frameIndex = 0;
+    instance32.screenX1 = 8;
+    instance32.screenY1 = 8;
+    instance32.screenX2 = 8 + width * 2;
+    instance32.screenY2 = 8 + height * 2;
+    instance32.currentColor = 0;
+
+    SoftwareWorldSpriteInstance instance4444 = instance32;
+    instance4444.sprite = &sprite4444;
+
+    SoftwareWorldSpriteRenderOptions options;
+    check(SoftwareWorldSpriteRenderer::draw(
+              view32, instance32, options),
+          "sprite 8888 alpha draw failed");
+    check(SoftwareWorldSpriteRenderer::draw(
+              view4444, instance4444, options),
+          "sprite 4444 alpha draw failed");
+
+    QInt32 worst = 0;
+    QInt32 changed = 0;
+    for (QInt32 i = 0; i < screenW * screenH; ++i) {
+        const QInt32 a = buffer32[static_cast<size_t>(i)];
+        const QInt32 b = buffer4444[static_cast<size_t>(i)];
+        if (a != b) ++changed;
+        const QInt32 d = channelDiff(a, b);
+        if (d > worst) worst = d;
+    }
+    /* 4444 loses 4 bits per channel, so allow one full nibble step. */
+    check(worst <= 20, "4444 sprite alpha path differs beyond quantisation");
+    /* If nothing changed, the test proved nothing. */
+    check(changed > 0, "4444 sprite test must blend at least one texel");
+    std::printf("sprite 4444 alpha: worst=%d, differing pixels=%d\n",
+                worst, changed);
+}
+
+void test4444Conversion()
+{
+    /* Endpoints must round-trip exactly or the sprite alpha test breaks. */
+    check(argb8888From4444(argb4444From8888(0)) == 0,
+          "4444 must keep a fully transparent texel transparent");
+    const QInt32 opaqueSource =
+        code::Math::javaIntFromUnsigned(0xffffffffU);
+    check(argb8888From4444(argb4444From8888(opaqueSource)) == opaqueSource,
+          "4444 must keep a fully opaque white texel exact");
+
+    QInt32 worstAlpha = 0;
+    QInt32 worstColour = 0;
+    QInt32 alpha;
+    for (alpha = 0; alpha < 256; ++alpha) {
+        QInt32 channel;
+        for (channel = 0; channel < 256; channel += 5) {
+            const QUint32 rgb =
+                (static_cast<QUint32>(alpha) << 24U) |
+                (static_cast<QUint32>(channel) << 16U) |
+                (static_cast<QUint32>(255 - channel) << 8U) |
+                static_cast<QUint32>((channel * 7) & 0xff);
+            const QInt32 source = code::Math::javaIntFromUnsigned(rgb);
+            const QInt32 back = argb8888From4444(argb4444From8888(source));
+            const QInt32 da = code::Math::javaIntSub(
+                code::Math::javaShiftRightUnsigned(
+                    static_cast<QUint32>(back), 24U), alpha);
+            const QInt32 a = da < 0 ? -da : da;
+            if (a > worstAlpha) worstAlpha = a;
+            const QInt32 dr = code::Math::javaIntSub(
+                code::Math::javaShiftRightUnsigned(
+                    static_cast<QUint32>(back), 16U) & 0xff,
+                channel);
+            const QInt32 dg = code::Math::javaIntSub(
+                code::Math::javaShiftRightUnsigned(
+                    static_cast<QUint32>(back), 8U) & 0xff,
+                255 - channel);
+            const QInt32 db = code::Math::javaIntSub(
+                static_cast<QUint32>(back) & 0xff, (channel * 7) & 0xff);
+            /* Bit replication keeps every channel within one nibble. */
+            if ((dr < -15 || dr > 15) || (dg < -15 || dg > 15) ||
+                (db < -15 || db > 15)) {
+                ++worstColour;
+            }
+        }
+    }
+    check(worstAlpha <= 15, "4444 alpha must stay within one nibble");
+    check(worstColour == 0,
+          "4444 channels must stay within one nibble of the source");
+    std::printf("4444 round-trip: worst alpha=%d, out-of-range channels=%d\n",
+                worstAlpha, worstColour);
+
+    /* 16 distinct alpha levels must map to 16 distinct expanded values. */
+    QInt32 seen = 0;
+    QInt32 nibble;
+    for (nibble = 0; nibble < 16; ++nibble) {
+        const QUint16 texel = static_cast<QUint16>(nibble << 12);
+        const QInt32 expanded = argb8888From4444(texel);
+        const QInt32 a = code::Math::javaShiftRightUnsigned(
+            static_cast<QUint32>(expanded), 24U);
+        if (nibble == 0) {
+            if (a != 0) ++seen;
+        } else if (nibble == 15) {
+            if (a != 255) ++seen;
+        } else if (a == 0 || a == 255) {
+            /* Intermediate levels must be neither fully clear nor opaque. */
+            ++seen;
+        }
+    }
+    check(seen == 0, "4444 intermediate alpha levels must be partially opaque");
+}
+
 void test1555KeyInvariant()
 {
     /* Sweep every alpha value against a few colors, plus the boundaries. */
@@ -689,6 +984,9 @@ int main(int argc, char** argv)
     testArmv5teModels();
     testSingleLevelBuild();
     test1555KeyInvariant();
+    test4444Conversion();
+    testSprite4444Path();
+    testMode4Kernels();
     testQctDecode(assetsDir);
     testFastKernels();
     testPresets();

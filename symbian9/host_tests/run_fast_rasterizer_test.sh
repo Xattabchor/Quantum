@@ -13,6 +13,8 @@ mkdir -p "$build_dir"
     "$repo_root/symbian9/src/core/software_texture16.cpp" \
     "$repo_root/symbian9/src/core/software_fast_rasterizer.cpp" \
     "$repo_root/symbian9/src/core/software_qct_texture_decoder.cpp" \
+    "$repo_root/symbian9/src/core/software_world_sprite_renderer.cpp" \
+    "$repo_root/symbian9/src/core/software_vertex_pipeline.cpp" \
     "$repo_root/symbian9/src/core/software_affine_rasterizer.cpp" \
     "$repo_root/symbian9/src/core/software_perspective_rasterizer.cpp" \
     "$repo_root/symbian9/src/core/render_mode_policy.cpp" \

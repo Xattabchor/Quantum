@@ -2,6 +2,7 @@
 #define QUANTUM_SOFTWARE_WORLD_SPRITE_RENDERER_H
 
 #include "software_affine_rasterizer.h"
+#include "software_texture16.h"
 #include "software_vertex_pipeline.h"
 #include "vector3d.h"
 
@@ -18,6 +19,14 @@ enum SoftwareWorldSpriteMode {
 /* Immutable, non-owning equivalent of the visual fields of Java Sprite. */
 struct SoftwareWorldSprite {
     const SoftwareTextureView* frames;
+    /*
+     * Optional parallel 16-bit frames, one per entry in `frames`. Built with
+     * ARGB4444 only when the sprite needs per-texel alpha (mode ALPHA with
+     * alphaMixing); keyed/add/multiply sprites keep the 32-bit frames and
+     * are unaffected. A null pointer or a null element falls back to the
+     * 32-bit frame for that entry.
+     */
+    const SoftwareTexture16View* frames16;
     code::Math::QInt32 frameCount;
     code::Math::QInt32 scale;
     /* RawImage.scale of textures[0], used by Sprite.project's pixel scaling. */

@@ -12,7 +12,7 @@ using code::Math::QUint64;
 
 SoftwareTexture16View::SoftwareTexture16View()
     : pixels(0), pixelCount(0), width(0), height(0),
-      hasTransparentTexels(false), is1555(false)
+      hasTransparentTexels(false), is1555(false), is4444(false)
 {
 }
 
@@ -22,12 +22,20 @@ SoftwareTexture16View::SoftwareTexture16View(
     QInt32 textureWidth,
     QInt32 textureHeight,
     bool textureIs1555,
-    bool textureHasTransparentTexels)
+    bool textureHasTransparentTexels,
+    bool textureIs4444)
     : pixels(texturePixels), pixelCount(texturePixelCount),
       width(textureWidth), height(textureHeight),
       hasTransparentTexels(textureHasTransparentTexels),
-      is1555(textureIs1555)
+      is1555(textureIs1555), is4444(textureIs4444)
 {
+}
+
+QInt32 SoftwareTexture16View::expandTexel(QUint16 texel) const
+{
+    if (is4444) return argb8888From4444(texel);
+    if (is1555) return rgb8888From1555(texel);
+    return rgb8888From565(texel);
 }
 
 void SoftwareTexture16::convert8888To565(const QInt32* source,
@@ -49,6 +57,17 @@ void SoftwareTexture16::convert8888To1555(const QInt32* source,
     QInt32 i;
     for (i = 0; i < pixelCount; ++i) {
         destination[i] = rgb1555From8888(source[i]);
+    }
+}
+
+void SoftwareTexture16::convert8888To4444(const QInt32* source,
+                                          QUint16* destination,
+                                          QInt32 pixelCount)
+{
+    if (source == 0 || destination == 0 || pixelCount <= 0) return;
+    QInt32 i;
+    for (i = 0; i < pixelCount; ++i) {
+        destination[i] = argb4444From8888(source[i]);
     }
 }
 

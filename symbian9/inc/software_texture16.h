@@ -22,6 +22,19 @@ namespace Rendering {
  * (R8>>3, G8>>2) which bounds round-trip error to <= 8 per channel.
  */
 
+/*
+ * Three packed formats, all two bytes per texel:
+ *  - RGB565   opaque world geometry; 6-bit green, 5-bit red/blue
+ *  - RGB1555  1-bit alpha for keyed sprites and textures with cut-outs
+ *  - ARGB4444 4-bit alpha, used only where real translucency is needed
+ *             (alpha-blended sprites); its channels are coarser than 565,
+ *             so it is never chosen as a general texture format
+ *
+ * The fast rasterizer covers RGB565 and RGB1555 through Is1555 template
+ * specialisation. ARGB4444 is not routed through those kernels: it is
+ * consumed by the sprite alpha-blend path, which expands each texel with
+ * argb8888From4444() and keeps its existing 32-bit arithmetic.
+ */
 struct SoftwareTexture16View {
     const code::Math::QUint16* pixels;
     code::Math::QInt32 pixelCount;
@@ -31,6 +44,8 @@ struct SoftwareTexture16View {
     bool hasTransparentTexels;
     /* False = RGB565 opaque, true = RGB1555 with 1-bit alpha. */
     bool is1555;
+    /* True for ARGB4444; never set together with is1555. */
+    bool is4444;
 
     SoftwareTexture16View();
     SoftwareTexture16View(const code::Math::QUint16* texturePixels,
@@ -38,7 +53,11 @@ struct SoftwareTexture16View {
                           code::Math::QInt32 textureWidth,
                           code::Math::QInt32 textureHeight,
                           bool textureIs1555 = false,
-                          bool textureHasTransparentTexels = false);
+                          bool textureHasTransparentTexels = false,
+                          bool textureIs4444 = false);
+
+    /* Expands this view's texel regardless of format. */
+    code::Math::QInt32 expandTexel(code::Math::QUint16 texel) const;
 };
 
 inline code::Math::QUint16 rgb565From8888(code::Math::QInt32 pixel)
@@ -110,12 +129,59 @@ inline code::Math::QInt32 rgb8888From1555(code::Math::QUint16 pixel)
     return code::Math::javaIntFromUnsigned(result);
 }
 
+/*
+ * ARGB4444: AAAA RRRR GGGG BBBB. Used only where per-texel alpha is needed,
+ * which in this renderer means alpha-blended sprites. Four bits per channel
+ * is coarser than RGB565 (max +-8.5 vs +-4.1/+-2.0 per channel), so this
+ * format is never a general texture format; it is a targeted replacement
+ * for alpha blending that 1-bit RGB1555 cannot express.
+ *
+ * Four-bit alpha expands to a full 0..255 range by bit replication, which
+ * keeps 0 == fully transparent and 255 (from 15) == fully opaque, so the
+ * sprite alpha path sees the same domain it always has.
+ */
+inline code::Math::QUint16 argb4444From8888(code::Math::QInt32 pixel)
+{
+    const code::Math::QUint32 bits = static_cast<code::Math::QUint32>(pixel);
+    /* Each field takes the source channel's high nibble into its slot:
+       alpha -> bits 12-15, red -> 8-11, green -> 4-7, blue -> 0-3. */
+    const code::Math::QUint32 alpha = ((bits >> 24U) & 0xf0U) << 8U;
+    const code::Math::QUint32 red = ((bits >> 16U) & 0xf0U) << 4U;
+    const code::Math::QUint32 green = (bits >> 8U) & 0xf0U;
+    const code::Math::QUint32 blue = (bits >> 4U) & 0x0fU;
+    return static_cast<code::Math::QUint16>(
+        alpha | red | green | blue);
+}
+
+/* Returns 0xAARRGGBB with alpha expanded back to 0..255. */
+inline code::Math::QInt32 argb8888From4444(code::Math::QUint16 pixel)
+{
+    const code::Math::QUint32 nibbleAlpha =
+        (static_cast<code::Math::QUint32>(pixel) >> 12U) & 0x0fU;
+    const code::Math::QUint32 alpha = (nibbleAlpha << 4U) | nibbleAlpha;
+    const code::Math::QUint32 red =
+        ((static_cast<code::Math::QUint32>(pixel) >> 8U) & 0x0fU);
+    const code::Math::QUint32 green =
+        ((static_cast<code::Math::QUint32>(pixel) >> 4U) & 0x0fU);
+    const code::Math::QUint32 blue =
+        static_cast<code::Math::QUint32>(pixel) & 0x0fU;
+    const code::Math::QUint32 result =
+        (alpha << 24U) |
+        (((red << 4U) | red) << 16U) |
+        (((green << 4U) | green) << 8U) |
+        ((blue << 4U) | blue);
+    return code::Math::javaIntFromUnsigned(result);
+}
+
 class SoftwareTexture16 {
 public:
     static void convert8888To565(const code::Math::QInt32* source,
                                  code::Math::QUint16* destination,
                                  code::Math::QInt32 pixelCount);
     static void convert8888To1555(const code::Math::QInt32* source,
+                                  code::Math::QUint16* destination,
+                                  code::Math::QInt32 pixelCount);
+    static void convert8888To4444(const code::Math::QInt32* source,
                                   code::Math::QUint16* destination,
                                   code::Math::QInt32 pixelCount);
     static void convert565To8888(const code::Math::QUint16* source,

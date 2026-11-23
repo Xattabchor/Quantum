@@ -1,5 +1,7 @@
 #include "software_world_sprite_renderer.h"
 
+#include "software_texture16.h"
+
 #include "quantum_integer.h"
 
 #include <math.h>
@@ -327,9 +329,13 @@ QInt32 multiplySpriteTexel(QInt32 brightness,
                   bitPattern(0x00ffffffU));
 }
 
-QInt32 sampleSpriteTexel(const SoftwareTextureView& image,
-                         QInt32 fixedU,
-                         QInt32 fixedV)
+/*
+ * The reference address computation, kept in one place so the 32-bit and
+ * 16-bit paths agree on which texel a span position maps to.
+ */
+QInt32 spriteTexelIndex(const SoftwareTextureView& image,
+                        QInt32 fixedU,
+                        QInt32 fixedV)
 {
     const QInt32 integerV = intAnd(fixedV, -4096);
     const QInt32 rowOffset = code::Math::javaIntMul(integerV, image.width);
@@ -337,14 +343,21 @@ QInt32 sampleSpriteTexel(const SoftwareTextureView& image,
     const QInt32 shifted = code::Math::javaShiftRight(fixedIndex, 12);
     const QInt32 positiveIndex =
         intAnd(shifted, static_cast<QInt32>(2147483647));
-    const QInt32 texelIndex = positiveIndex % image.pixelCount;
-    return image.pixels[texelIndex];
+    return positiveIndex % image.pixelCount;
+}
+
+QInt32 sampleSpriteTexel(const SoftwareTextureView& image,
+                         QInt32 fixedU,
+                         QInt32 fixedV)
+{
+    return image.pixels[spriteTexelIndex(image, fixedU, fixedV)];
 }
 
 } // anonymous namespace
 
 SoftwareWorldSprite::SoftwareWorldSprite()
-    : frames(0), frameCount(0), scale(5), textureScale(2), offsetX(0),
+    : frames(0), frames16(0), frameCount(0), scale(5), textureScale(2),
+      offsetX(0),
       offsetY(0), mode(ESoftwareWorldSpriteKeyed), cutoff(0), baseColor(0),
       mirrorX(false), mirrorY(false), fog(false), limiter(false),
       animationSpeed(1.0f), flicker(0), flickerCount(0),
@@ -614,6 +627,22 @@ bool SoftwareWorldSpriteRenderer::draw(
     const bool alphaMode = sprite.mode == ESoftwareWorldSpriteAlpha &&
                            image.hasAlphaMixing;
     const bool alphaFogMode = alphaMode && sprite.fog;
+    /*
+     * ARGB4444 is used only by the alpha-blend path, and only when the
+     * sprite actually has a 16-bit frame of matching size. Everything else
+     * keeps sampling the 32-bit image, so keyed/add/multiply are untouched.
+     */
+    const SoftwareTexture16View* frame16 = 0;
+    if (alphaMode && !alphaFogMode && sprite.frames16 != 0 &&
+        instance.frameIndex >= 0 && instance.frameIndex < sprite.frameCount) {
+        const SoftwareTexture16View& candidate =
+            sprite.frames16[instance.frameIndex];
+        if (candidate.pixels != 0 && candidate.is4444 &&
+            candidate.width == image.width &&
+            candidate.height == image.height) {
+            frame16 = &candidate;
+        }
+    }
     const QInt32 fogPower = sprite.fog
         ? spriteFogPower(instance.cameraDepth, options) : 0;
 
@@ -623,7 +652,19 @@ bool SoftwareWorldSpriteRenderer::draw(
         QInt32 texU = uStart;
         QInt32 x;
         for (x = xStart; x < xEnd; ++x) {
-            const QInt32 texel = sampleSpriteTexel(image, texU, vStart);
+            /*
+             * Keep the reference's wrapping index math for both paths so the
+             * two agree bit-for-bit on where a texel comes from; only the
+             * texel decode differs.
+             */
+            QInt32 texel;
+            if (frame16 != 0) {
+                const QInt32 index = spriteTexelIndex(image, texU, vStart);
+                texel = argb8888From4444(
+                    frame16->pixels[static_cast<size_t>(index)]);
+            } else {
+                texel = sampleSpriteTexel(image, texU, vStart);
+            }
             const QInt32 pixelIndex = code::Math::javaIntAdd(rowOffset, x);
             QInt32& target = destination.pixels[pixelIndex];
 

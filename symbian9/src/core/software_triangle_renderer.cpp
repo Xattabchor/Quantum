@@ -393,6 +393,22 @@ bool SoftwareTriangleRenderer::draw(
     QInt32 drawMode = settings.drawMode;
     if (!RenderModePolicy::isSupportedTextureDrawMode(drawMode)) return false;
     if (drawMode == 4 && !settings.textureAlphaMixing) drawMode = 0;
+    /*
+     * Drawmode 4 needs per-texel alpha, so it routes to the fast path only
+     * when the texture is ARGB4444; a 565/1555 view falls through to the
+     * 32-bit kernel rather than silently losing translucency.
+     */
+    if (settings.useFast16 && settings.texture16 != 0 &&
+        drawMode == 4 && settings.texture16->is4444 &&
+        settings.textureAlphaMixing) {
+        if (settings.usePerspectiveCorrection) {
+            return SoftwareFastRasterizer::drawPerspectiveMode4(
+                destination, *settings.texture16, first, second, third,
+                settings.perspectiveStepPixels, settings.perspectiveMove);
+        }
+        return SoftwareFastRasterizer::drawAffineMode4(
+            destination, *settings.texture16, first, second, third);
+    }
     if (settings.useFast16 && settings.texture16 != 0 &&
         (drawMode == 0 || drawMode == 9)) {
         QInt32 brightness[3];

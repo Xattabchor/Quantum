@@ -126,6 +126,12 @@ bool validSurface(const SoftwareRenderSurfaceView& surface)
 
 bool validTexture16(const SoftwareTexture16View& texture)
 {
+    /*
+     * The fast kernels only understand 565 and 1555 through their Is1555
+     * template argument. ARGB4444 is a sprite-alpha format handled by the
+     * sprite renderer; feeding it here would silently sample it as 565.
+     */
+    if (texture.is4444) return false;
     if (texture.pixels == 0 || texture.pixelCount <= 0 ||
         texture.width <= 0 || texture.height <= 0) {
         return false;
@@ -170,6 +176,37 @@ inline bool isTransparent(const SoftwareTexture16View& texture, QUint16 texel)
 {
     return texture.is1555 && texel == 0;
 }
+
+/*
+ * Drawmode 4 exact blend, shared by the affine and perspective kernels.
+ * `texel` is already expanded to 0xAARRGGBB, so the arithmetic matches the
+ * reference: ((texel*a + dst*(255-a)) mixed) >> 8 with the reference's
+ * channel masking.
+ */
+inline QInt32 blendAlpha4444(QInt32 texel, QInt32 destination)
+{
+    const QUint32 texelBits = static_cast<QUint32>(texel);
+    const QUint32 destinationBits = static_cast<QUint32>(destination);
+    const QInt32 alpha = code::Math::javaShiftRightUnsigned(texel, 24U);
+    const QInt32 destinationWeight = code::Math::javaIntSub(255, alpha);
+    const QInt32 redBlue = code::Math::javaIntAdd(
+        code::Math::javaIntMul(
+            static_cast<QInt32>(texelBits & 0x00ff00ffU), alpha),
+        code::Math::javaIntMul(
+            static_cast<QInt32>(destinationBits & 0x00ff00ffU),
+            destinationWeight));
+    const QInt32 green = code::Math::javaIntAdd(
+        code::Math::javaIntMul(
+            static_cast<QInt32>(texelBits & 0x0000ff00U), alpha),
+        code::Math::javaIntMul(
+            static_cast<QInt32>(destinationBits & 0x0000ff00U),
+            destinationWeight));
+    const QUint32 blended =
+        ((static_cast<QUint32>(redBlue) & 0xff00ff00U) |
+         (static_cast<QUint32>(green) & 0x00ff0000U)) >> 8U;
+    return code::Math::javaIntFromUnsigned(blended);
+}
+
 
 void swapVertices(AffineTriangleVertex& left, AffineTriangleVertex& right)
 {
@@ -361,6 +398,82 @@ inline void drawAffineSpanBody(const SoftwareTexture16View& texture,
     }
 }
 
+/*
+ * Drawmode 4 affine span. Only ARGB4444 is meaningful here, so unlike the
+ * mode 0/9 spans this one has no format branch: every texel expands with
+ * argb8888From4444 and blends against the existing framebuffer.
+ */
+void drawAffineAlphaSpan(const SoftwareRenderSurfaceView& destination,
+                         const SoftwareTexture16View& texture,
+                         QInt32 widthBit,
+                         QUint32 textureMask,
+                         QInt32 screenY,
+                         QInt32 leftFixed,
+                         QInt32 rightFixed,
+                         QInt32 leftU,
+                         QInt32 leftV,
+                         QInt32 rightU,
+                         QInt32 rightV,
+                         QInt32 du,
+                         QInt32 dv)
+{
+    QInt32 x1;
+    QInt32 x2;
+    QInt32 u;
+    QInt32 v;
+
+    if (leftFixed > rightFixed) {
+        x1 = rightFixed >> 14;
+        u = rightU;
+        v = rightV;
+        x2 = leftFixed >> 14;
+    } else {
+        x1 = leftFixed >> 14;
+        u = leftU;
+        v = leftV;
+        x2 = rightFixed >> 14;
+    }
+
+    if (x1 < 0) {
+        u = static_cast<QInt32>(static_cast<QInt64>(u) -
+                                static_cast<QInt64>(du) * x1);
+        v = static_cast<QInt32>(static_cast<QInt64>(v) -
+                                static_cast<QInt64>(dv) * x1);
+        x1 = 0;
+    }
+    if (x2 > destination.width) x2 = destination.width;
+    if (x2 <= 0 || x1 >= destination.width || x1 >= x2) return;
+
+    const size_t rowOffset = static_cast<size_t>(screenY) *
+                             static_cast<size_t>(destination.stride);
+    size_t destinationIndex = rowOffset + static_cast<size_t>(x1);
+
+    /* Reference pre-steps UV so the first sample lands on (u, v). */
+    QUint32 uBits = static_cast<QUint32>(u - du);
+    QUint32 vBits = static_cast<QUint32>(v - dv);
+    const QUint32 duBits = static_cast<QUint32>(du);
+    const QUint32 dvBits = static_cast<QUint32>(dv);
+    const QUint16* texels = texture.pixels;
+    QInt32* pixels = destination.pixels;
+
+    while (x1 < x2) {
+        uBits += duBits;
+        vBits += dvBits;
+        const QUint16 texel =
+            texels[(((vBits >> 12) << widthBit) + (uBits >> 12)) &
+                   textureMask];
+        const QInt32 expanded = argb8888From4444(texel);
+        const QInt32 alpha =
+            code::Math::javaShiftRightUnsigned(expanded, 24U);
+        if (alpha != 0) {
+            pixels[destinationIndex] =
+                blendAlpha4444(expanded, pixels[destinationIndex]);
+        }
+        ++x1;
+        ++destinationIndex;
+    }
+}
+
 void drawAffineSpan(const SoftwareRenderSurfaceView& destination,
                     const SoftwareTexture16View& texture,
                     QInt32 widthBit,
@@ -474,11 +587,21 @@ bool drawAffineTriangle(const SoftwareRenderSurfaceView& destination,
                         bool shaded,
                         QInt32 brightnessA,
                         QInt32 brightnessB,
-                        QInt32 brightnessC)
+                        QInt32 brightnessC,
+                        bool alphaBlend = false)
 {
     if (!validSurface(destination)) return false;
     if (destination.width == 0 || destination.height == 0) return true;
-    if (!validTexture16(texture)) return false;
+    /* Drawmode 4 needs ARGB4444; 565/1555 cannot express partial alpha. */
+    if (alphaBlend) {
+        if (!texture.is4444 || texture.pixels == 0 ||
+            texture.pixelCount <= 0 || texture.width <= 0 ||
+            texture.height <= 0) {
+            return false;
+        }
+    } else if (!validTexture16(texture)) {
+        return false;
+    }
 
     AffineTriangleVertex a(first);
     AffineTriangleVertex b(second);
@@ -668,9 +791,15 @@ bool drawAffineTriangle(const SoftwareRenderSurfaceView& destination,
             }
         }
 
-        drawAffineSpan(destination, texture, widthBit, textureMask, yStart,
-                       xStart, xEnd, uStart, vStart, uEnd, vEnd, shadeStart,
-                       shadeEnd, shadeSlope, du, dv, shaded);
+        if (alphaBlend) {
+            drawAffineAlphaSpan(destination, texture, widthBit, textureMask,
+                                yStart, xStart, xEnd, uStart, vStart, uEnd,
+                                vEnd, du, dv);
+        } else {
+            drawAffineSpan(destination, texture, widthBit, textureMask,
+                           yStart, xStart, xEnd, uStart, vStart, uEnd, vEnd,
+                           shadeStart, shadeEnd, shadeSlope, du, dv, shaded);
+        }
     }
 
     return true;
@@ -845,7 +974,7 @@ bool perspectiveDivide(QInt32 numerator, QInt32 denominator, QInt32& result)
     return true;
 }
 
-template <bool Is1555, bool Shaded>
+template <bool Is1555, bool Shaded, bool Is4444 = false>
 inline void drawPerspectiveSpanBody(const SoftwareTexture16View& texture,
                                     QInt32 widthBit,
                                     QUint32 textureMask,
@@ -888,7 +1017,14 @@ inline void drawPerspectiveSpanBody(const SoftwareTexture16View& texture,
                                    endV)) {
                 return;
             }
-            const QInt32 divisor = perspectiveStepPixels + 1;
+            /*
+             * drawmode 4's effect kernel divides by the segment length
+             * itself; the copy kernel (drawmode 0) divides by step + 1.
+             * They are not interchangeable: using the wrong rule shifts
+             * every texel in the segment.
+             */
+            const QInt32 divisor =
+                Is4444 ? perspectiveStepPixels : perspectiveStepPixels + 1;
             du = (endU - u) / divisor;
             dv = (endV - v) / divisor;
             length -= perspectiveStepPixels;
@@ -916,6 +1052,24 @@ inline void drawPerspectiveSpanBody(const SoftwareTexture16View& texture,
             const QUint16 texel =
                 texels[(((vBits >> 12) << widthBit) + (uBits >> 12)) &
                        textureMask];
+            if (Is4444) {
+                /*
+                 * Drawmode 4 blends against the framebuffer. The reference
+                 * effect kernel drops a zero texel before looking at alpha,
+                 * so a fully clear texel leaves the destination untouched.
+                 */
+                if (texel != 0) {
+                    const QInt32 expanded = argb8888From4444(texel);
+                    if (code::Math::javaShiftRightUnsigned(
+                            expanded, 24U) != 0) {
+                        QInt32* const target =
+                            &pixels[rowOffset + static_cast<size_t>(x1)];
+                        *target = blendAlpha4444(expanded, *target);
+                    }
+                }
+                ++x1;
+                continue;
+            }
             if (!Is1555 || texel != 0) {
                 QInt32 color = Is1555 ? rgb8888From1555(texel)
                                       : rgb8888From565(texel);
@@ -1008,7 +1162,12 @@ bool drawPerspectiveSpan(const SoftwareRenderSurfaceView& destination,
                              static_cast<size_t>(destination.stride);
     QInt32* pixels = destination.pixels;
 
-    if (texture.is1555) {
+    if (texture.is4444) {
+        drawPerspectiveSpanBody<false, false, true>(
+            texture, widthBit, textureMask, pixels, x1, x2, left, right,
+            horizontalSlope, perspectiveStepPixels, uBits, vBits, shade,
+            rowOffset);
+    } else if (texture.is1555) {
         if (shaded) {
             drawPerspectiveSpanBody<true, true>(texture, widthBit, textureMask,
                                                 pixels, x1, x2, left, right,
@@ -1050,11 +1209,20 @@ bool drawPerspectiveTriangle(const SoftwareRenderSurfaceView& destination,
                              QInt32 brightnessB,
                              QInt32 brightnessC,
                              QInt32 perspectiveStepPixels,
-                             QInt32 move)
+                             QInt32 move,
+                             bool alphaBlend = false)
 {
     if (!validSurface(destination)) return false;
     if (destination.width == 0 || destination.height == 0) return true;
-    if (!validTexture16(texture) || perspectiveStepPixels <= 0 || move <= 0) {
+    if (perspectiveStepPixels <= 0 || move <= 0) return false;
+    if (alphaBlend) {
+        /* Drawmode 4 needs ARGB4444; 565/1555 cannot express partial alpha. */
+        if (!texture.is4444 || texture.pixels == 0 ||
+            texture.pixelCount <= 0 || texture.width <= 0 ||
+            texture.height <= 0) {
+            return false;
+        }
+    } else if (!validTexture16(texture)) {
         return false;
     }
 
@@ -1182,6 +1350,31 @@ bool SoftwareFastRasterizer::drawAffineMode9(
     return drawAffineTriangle(destination, texture, first, second, third,
                               true, firstBrightness, secondBrightness,
                               thirdBrightness);
+}
+
+bool SoftwareFastRasterizer::drawAffineMode4(
+    const SoftwareRenderSurfaceView& destination,
+    const SoftwareTexture16View& texture,
+    const AffineTriangleVertex& first,
+    const AffineTriangleVertex& second,
+    const AffineTriangleVertex& third)
+{
+    return drawAffineTriangle(destination, texture, first, second, third,
+                              false, 255, 255, 255, true);
+}
+
+bool SoftwareFastRasterizer::drawPerspectiveMode4(
+    const SoftwareRenderSurfaceView& destination,
+    const SoftwareTexture16View& texture,
+    const AffineTriangleVertex& first,
+    const AffineTriangleVertex& second,
+    const AffineTriangleVertex& third,
+    code::Math::QInt32 perspectiveStepPixels,
+    code::Math::QInt32 move)
+{
+    return drawPerspectiveTriangle(destination, texture, first, second, third,
+                                   false, 255, 255, 255,
+                                   perspectiveStepPixels, move, true);
 }
 
 bool SoftwareFastRasterizer::drawPerspectiveMode0(
