@@ -19,6 +19,9 @@
 #if defined(QUANTUM_LEVEL41_SNDDMA_AUDIO)
 #include "quantum_level41_snddma_audio.h"
 typedef CQuantumLevel41SndDmaAudio TQuantumLevel41WalkAudio;
+#elif defined(QUANTUM_LEVEL41_PCM_ONE_AUDIO)
+#include "quantum_level41_pcm_audio.h"
+typedef CQuantumLevel41PcmAudio TQuantumLevel41WalkAudio;
 #else
 #include "quantum_level41_audio.h"
 typedef CQuantumLevel41Audio TQuantumLevel41WalkAudio;

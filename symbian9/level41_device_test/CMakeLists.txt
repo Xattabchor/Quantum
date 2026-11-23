@@ -193,8 +193,15 @@ if(QUANTUM_LEVEL41_TURN_INERTIA AND NOT QUANTUM_LEVEL41_INTERACTIVE_WALK)
     message(FATAL_ERROR
         "QUANTUM_LEVEL41_TURN_INERTIA requires QUANTUM_LEVEL41_INTERACTIVE_WALK=ON")
 endif()
+option(QUANTUM_LEVEL41_PCM_ONE_AUDIO
+       "Play fire/reload effects on a single PCM stream instead of one MDA player per effect" ON)
 option(QUANTUM_LEVEL41_SNDDMA_AUDIO
        "Use the separate SNDDMA-style PCM mixer for Level 41 fire/reload effects" OFF)
+if(QUANTUM_LEVEL41_PCM_ONE_AUDIO AND QUANTUM_LEVEL41_SNDDMA_AUDIO)
+    message(FATAL_ERROR
+        "QUANTUM_LEVEL41_PCM_ONE_AUDIO and QUANTUM_LEVEL41_SNDDMA_AUDIO are "
+        "mutually exclusive audio backends")
+endif()
 if(QUANTUM_LEVEL41_SNDDMA_AUDIO AND NOT QUANTUM_LEVEL41_INTERACTIVE_WALK)
     message(FATAL_ERROR
         "QUANTUM_LEVEL41_SNDDMA_AUDIO requires QUANTUM_LEVEL41_INTERACTIVE_WALK=ON")
@@ -208,6 +215,9 @@ if(QUANTUM_LEVEL41_INTERACTIVE_WALK)
         endif()
         set(QUANTUM_LEVEL41_WALK_AUDIO_SOURCE
             ../level41_snddma_port/quantum_level41_snddma_audio.cpp)
+    elseif(QUANTUM_LEVEL41_PCM_ONE_AUDIO)
+        set(QUANTUM_LEVEL41_WALK_AUDIO_SOURCE
+            ../level41_pcm_audio/quantum_level41_pcm_audio.cpp)
     endif()
     set(QUANTUM_LEVEL41_WALK_SOURCES
         ${QUANTUM_LEVEL41_SOURCES}
@@ -222,6 +232,12 @@ if(QUANTUM_LEVEL41_INTERACTIVE_WALK)
     target_include_directories(quantum_level41_walk_test PRIVATE ../inc)
     target_compile_definitions(quantum_level41_walk_test PRIVATE
         QUANTUM_LEVEL41_INTERACTIVE_WALK=1)
+    if(QUANTUM_LEVEL41_PCM_ONE_AUDIO)
+        target_include_directories(quantum_level41_walk_test PRIVATE
+            ../level41_pcm_audio)
+        target_compile_definitions(quantum_level41_walk_test PRIVATE
+            QUANTUM_LEVEL41_PCM_ONE_AUDIO=1)
+    endif()
     if(QUANTUM_LEVEL41_DISABLE_WEAPON_SWAY)
         target_compile_definitions(quantum_level41_walk_test PRIVATE
             QUANTUM_LEVEL41_DISABLE_WEAPON_SWAY=1)
