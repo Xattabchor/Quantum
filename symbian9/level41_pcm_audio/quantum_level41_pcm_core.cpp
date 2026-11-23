@@ -144,11 +144,14 @@ VoiceGate::VoiceGate() : iLastDurationUs(0), iHaveSubmitTime(false)
 {
 }
 
-bool VoiceGate::MaySubmit(bool aReady, bool aInFlight, bool aHaveSubmitTime,
+bool VoiceGate::MaySubmit(bool aReady, bool aInFlight, bool aQueued,
+                          bool aHaveSubmitTime,
                           std::int64_t aElapsedUs) const
 {
-    if (!aReady || aInFlight) return false;
-    if (aHaveSubmitTime && aElapsedUs < iLastDurationUs) return false;
+    if (!aReady || aInFlight || aQueued) return false;
+    if (aHaveSubmitTime && aElapsedUs >= 0 && aElapsedUs < iLastDurationUs) {
+        return false;
+    }
     return true;
 }
 

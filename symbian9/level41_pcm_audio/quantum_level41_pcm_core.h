@@ -54,13 +54,18 @@ bool CopyToStream(const PcmWaveView& aView, std::uint8_t* aDestination,
 
 // Admission rule for the single voice. There is no queue and no mixing: an
 // effect requested while the stream is busy is dropped, not deferred.
+//
+// This is the reference QuantumShotMaySubmit policy, kept verbatim: busy,
+// queued, or not-yet-elapsed all discard the request. A negative elapsed time
+// (clock moved backwards) is treated as "no estimate available" rather than
+// as an early repeat, which is what the device-tested build does.
 class VoiceGate {
 public:
     VoiceGate();
 
     // aElapsedUs is the time since the last accepted submission.
-    bool MaySubmit(bool aReady, bool aInFlight, bool aHaveSubmitTime,
-                   std::int64_t aElapsedUs) const;
+    bool MaySubmit(bool aReady, bool aInFlight, bool aQueued,
+                   bool aHaveSubmitTime, std::int64_t aElapsedUs) const;
     void RecordSubmit(std::size_t aByteCount);
 
     std::int64_t LastDurationUs() const { return iLastDurationUs; }

@@ -212,13 +212,17 @@ void TestRejectsMalformedContainers()
 void TestVoiceGateDropsWhileBusy()
 {
     VoiceGate gate;
-    Require(!gate.MaySubmit(/*ready=*/false, false, false, 0),
+    Require(!gate.MaySubmit(/*ready=*/false, false, false, false, 0),
             "an unopened stream must refuse effects");
     Require(gate.MaySubmit(/*ready=*/true, /*inFlight=*/false,
-                           /*haveSubmitTime=*/false, 0),
+                           /*queued=*/false, /*haveSubmitTime=*/false, 0),
             "a ready idle stream must accept the first effect");
-    Require(!gate.MaySubmit(/*ready=*/true, /*inFlight=*/true, false, 0),
+    Require(!gate.MaySubmit(/*ready=*/true, /*inFlight=*/true, false, false,
+                            0),
             "a request while a clip is in flight must be dropped");
+    Require(!gate.MaySubmit(/*ready=*/true, /*inFlight=*/false,
+                            /*queued=*/true, false, 0),
+            "a request with a command still queued must be dropped");
 
     // A packaged shot is 6400 bytes at 16000 B/s: 400 ms.
     gate.RecordSubmit(6400);
@@ -226,60 +230,84 @@ void TestVoiceGateDropsWhileBusy()
             "6400 bytes must be estimated at 400 ms at 8 kHz mono");
     Require(gate.HaveSubmitTime(), "a submission must be remembered");
 
-    Require(!gate.MaySubmit(true, false, gate.HaveSubmitTime(), 399999),
+    Require(!gate.MaySubmit(true, false, false, gate.HaveSubmitTime(),
+                            399999),
             "an effect must not restart before the estimated duration");
-    Require(gate.MaySubmit(true, false, gate.HaveSubmitTime(), 400000),
+    Require(gate.MaySubmit(true, false, false, gate.HaveSubmitTime(),
+                           400000),
             "an effect may restart once the estimate has elapsed");
 
     gate.Reset();
     Require(!gate.HaveSubmitTime(), "reset must clear the submission time");
-    Require(gate.MaySubmit(true, false, gate.HaveSubmitTime(), 0),
+    Require(gate.MaySubmit(true, false, false, gate.HaveSubmitTime(), 0),
             "after reset the next effect is admitted immediately");
 }
 
 /*
- * The trigger that arrives while the stream is still opening must survive the
- * open and be served by MaoscOpenComplete, otherwise the very first shot of
- * the level is silent. That path is: trigger -> held -> open complete ->
- * submit. Modelled with the same gate the worker uses.
+ * The device-tested reference treats a backwards clock as "no estimate", not
+ * as an early repeat: QuantumShotMaySubmit tests elapsedUs >= 0 before
+ * comparing it against the duration. Restarting on a negative delta would
+ * defeat the pacing entirely if the clock ever stepped.
  */
-void TestTriggerHeldAcrossStreamOpen()
+void TestNegativeElapsedIsNotAnEarlyRepeat()
 {
     VoiceGate gate;
-    bool streamReady = false;
+    gate.RecordSubmit(6400);
+    Require(gate.MaySubmit(true, false, false, gate.HaveSubmitTime(), -1),
+            "a negative elapsed must be treated as no estimate, not a repeat");
+    Require(!gate.MaySubmit(true, false, false, gate.HaveSubmitTime(), 0),
+            "a zero elapsed is still an early repeat");
+}
+
+/*
+ * Sequence of a single trigger in the reference build:
+ *   PlayShot -> poller -> HandleCommand -> SubmitL -> WriteL
+ *   MaoscBufferCopied -> iInFlight = false
+ *   poller tick -> SubmitL (queued work, if any)
+ * MaoscOpenComplete and MaoscPlayComplete do not submit anything. The first
+ * trigger of a level therefore waits for the next poller turn rather than
+ * writing from inside the open callback.
+ */
+void TestTriggerWaitsForPollerNotForOpenCallback()
+{
+    VoiceGate gate;
+    bool ready = false;
     bool inFlight = false;
-    bool held = false;
+    int queued = 0;
 
-    // Trigger one: the stream has not finished opening.
-    if (gate.MaySubmit(streamReady, inFlight, gate.HaveSubmitTime(), 0)) {
-        held = true;
+    // Trigger fired before the stream finished opening: dropped, because the
+    // reference does not hold it.
+    if (gate.MaySubmit(ready, inFlight, queued != 0, gate.HaveSubmitTime(),
+                       0)) {
+        ++queued;
     }
-    Require(!held, "a trigger before MaoscOpenComplete must not be submitted");
+    Require(queued == 0,
+            "a trigger before the stream is ready must be dropped");
 
-    // Present but not submitted: the worker keeps it, because the effect
-    // buffers are loaded before Open() is issued, so it is known-valid.
-    held = true;
+    // MaoscOpenComplete sets ready only; submission happens from the poller.
+    ready = true;
+    Require(gate.MaySubmit(ready, inFlight, queued != 0,
+                           gate.HaveSubmitTime(), 0),
+            "the poller turn after open must be able to submit");
 
-    // MaoscOpenComplete.
-    streamReady = true;
-    Require(gate.MaySubmit(streamReady, inFlight, gate.HaveSubmitTime(), 0),
-            "the held trigger must be admitted on open complete");
-
-    // Submit and immediately retrigger: the second one must be dropped.
+    // Submit: now queued and in flight.
+    ++queued;
     inFlight = true;
     gate.RecordSubmit(6400);
-    Require(!gate.MaySubmit(streamReady, inFlight, gate.HaveSubmitTime(),
-                            200000),
-            "a retrigger while the clip is in flight must be dropped");
 
-    // BufferCopied clears the flight flag, but the duration estimate still
-    // blocks an early retrigger.
+    // MaoscPlayComplete does not clear the flight flag in the reference.
+    Require(!gate.MaySubmit(ready, inFlight, queued != 0,
+                            gate.HaveSubmitTime(), 500000),
+            "play complete alone must not free the voice");
+
+    // MaoscBufferCopied clears it, but the duration estimate still blocks.
     inFlight = false;
-    Require(!gate.MaySubmit(streamReady, inFlight, gate.HaveSubmitTime(),
-                            100000),
+    queued = 0;
+    Require(!gate.MaySubmit(ready, inFlight, queued != 0,
+                            gate.HaveSubmitTime(), 100000),
             "BufferCopied alone must not allow an early retrigger");
-    Require(gate.MaySubmit(streamReady, inFlight, gate.HaveSubmitTime(),
-                           400000),
+    Require(gate.MaySubmit(ready, inFlight, queued != 0,
+                           gate.HaveSubmitTime(), 400000),
             "once the clip's estimated end passes the voice is free again");
 }
 
@@ -320,7 +348,8 @@ int main(int aArgumentCount, char** aArguments)
     TestRejectsUnsupportedFormats();
     TestRejectsMalformedContainers();
     TestVoiceGateDropsWhileBusy();
-    TestTriggerHeldAcrossStreamOpen();
+    TestNegativeElapsedIsNotAnEarlyRepeat();
+    TestTriggerWaitsForPollerNotForOpenCallback();
     TestRealFilesIfProvided(aArgumentCount, aArguments);
     std::printf("pcm_one_audio_test: all checks passed\n");
     return 0;

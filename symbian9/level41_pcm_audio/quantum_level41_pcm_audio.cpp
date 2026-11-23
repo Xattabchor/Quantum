@@ -449,9 +449,12 @@ void CQuantumLevel41PcmAudioWorker::MaoscOpenComplete(TInt aError)
     }
     iReady = ETrue;
     iOwner.SetEffectsStatus(CQuantumLevel41PcmAudio::EAudioReady, KErrNone);
-    /* A trigger that arrived while the stream was opening is served now. */
-    TRAPD(error, SubmitL());
-    if (error != KErrNone) Fail(error);
+    /*
+     * Nothing is submitted here on purpose. Writing to the stream from inside
+     * MaoscOpenComplete would re-enter the media server from its own
+     * callback; the reference build leaves the write to the poller, which
+     * picks the request up on its next 20 ms turn.
+     */
 }
 
 void CQuantumLevel41PcmAudioWorker::MaoscBufferCopied(
@@ -475,14 +478,13 @@ void CQuantumLevel41PcmAudioWorker::MaoscBufferCopied(
 void CQuantumLevel41PcmAudioWorker::MaoscPlayComplete(TInt aError)
 {
     if (iStopping) return;
-    iInFlight = EFalse;
-    /* Underflow is expected between clips; it is not a failure. */
-    if (aError != KErrNone && aError != KErrUnderflow) {
-        Fail(aError);
-        return;
-    }
-    TRAPD(error, SubmitL());
-    if (error != KErrNone) Fail(error);
+    /*
+     * Deliberately does not clear iInFlight and does not submit. The voice is
+     * released by MaoscBufferCopied and the next clip goes out from the
+     * poller, exactly as in the device-tested reference. Underflow is expected
+     * between clips; it is not a failure.
+     */
+    if (aError != KErrNone && aError != KErrUnderflow) Fail(aError);
 }
 
 void CQuantumLevel41PcmAudioWorker::ConfigureStreamL()
@@ -559,7 +561,7 @@ void CQuantumLevel41PcmAudioWorker::HandleCommand(TInt aCommand)
         now.UniversalTime();
         elapsed = now.MicroSecondsFrom(iLastSubmitTime).Int64();
     }
-    if (!iGate.MaySubmit(iReady != EFalse, iInFlight != EFalse,
+    if (!iGate.MaySubmit(iReady != EFalse, iInFlight != EFalse, iCount != 0,
                          iGate.HaveSubmitTime(), elapsed)) {
         return;
     }
@@ -582,11 +584,15 @@ void CQuantumLevel41PcmAudioWorker::Stop()
         delete iMusicPlayer;
         iMusicPlayer = 0;
     }
-    if (iStream != 0) {
-        iStream->Stop();
-        delete iStream;
-        iStream = 0;
-    }
+    /*
+     * The stream is deleted without an explicit Stop(), as the device-tested
+     * reference does. Stop() posts an asynchronous completion into an object
+     * that is about to be destroyed, which is exactly the shape of the
+     * worker-exit panics seen with the per-effect player path. MaoscBufferCopied
+     * and MaoscPlayComplete both return early once iStopping is set.
+     */
+    delete iStream;
+    iStream = 0;
     /* Libraries close only after the objects created from them are gone. */
     if (iMdaLibraryLoaded) {
         iMdaLibrary.Close();
@@ -803,16 +809,28 @@ TInt CQuantumLevel41PcmAudio::TakeCommands(TInt* aCommands, TInt aCapacity)
     return count;
 }
 
+/*
+ * The status is written by the audio thread and read by the game thread's
+ * status line, so it is published under the same mutex as the command queue.
+ * The reference build does the same; writing it unlocked is a data race, not
+ * a simplification.
+ */
 void CQuantumLevel41PcmAudio::SetMusicStatus(TInt aState, TInt aError)
 {
+    if (!iMutexCreated) return;
+    iMutex.Wait();
     iMusicState = aState;
     iMusicError = aError;
+    iMutex.Signal();
 }
 
 void CQuantumLevel41PcmAudio::SetEffectsStatus(TInt aState, TInt aError)
 {
+    if (!iMutexCreated) return;
+    iMutex.Wait();
     iEffectsState = aState;
     iEffectsError = aError;
+    iMutex.Signal();
 }
 
 TInt CQuantumLevel41PcmAudio::ThreadEntry(TAny* aSelf)
@@ -864,7 +882,17 @@ void CQuantumLevel41PcmAudio::PlayReload()
 
 void CQuantumLevel41PcmAudio::StatusLine(TDes& aText)
 {
+    if (!iMutexCreated) {
+        aText.Copy(_L("AUDIO: NO WORKER"));
+        return;
+    }
+    iMutex.Wait();
+    const TInt musicState = iMusicState;
+    const TInt effectsState = iEffectsState;
+    const TInt musicError = iMusicError;
+    const TInt effectsError = iEffectsError;
+    iMutex.Signal();
+
     _LIT(KFormat, "AUD mus %d/%d pcm %d/%d");
-    aText.Format(KFormat, iMusicState, iMusicError, iEffectsState,
-                 iEffectsError);
+    aText.Format(KFormat, musicState, musicError, effectsState, effectsError);
 }

@@ -76,7 +76,19 @@ headers) so it can be tested here:
   than played at the wrong pitch.
 - `VoiceGate` implements the one-voice admission rule, including the fact that
   `MaoscBufferCopied` is **not** a playback-ended notification: the estimated
-  clip duration from the last submission is what frees the voice.
+  clip duration from the last submission is what frees the voice. A negative
+  elapsed time counts as "no estimate", not as an early repeat.
+
+Callbacks deliberately do very little, matching the device-tested reference:
+
+- `MaoscOpenComplete` only sets the ready flag. It does **not** submit, so the
+  first trigger of a level goes out from the next poller turn instead of
+  re-entering the media server from inside its own callback.
+- `MaoscPlayComplete` does **not** clear the in-flight flag and does not
+  submit. `MaoscBufferCopied` is what releases the descriptor.
+- The stream is deleted **without** a preceding `Stop()`. `Stop()` posts an
+  asynchronous completion into an object that is about to be destroyed, which
+  is the shape of the worker-exit panics the per-effect player path produced.
 
 When a packaged build tree is present the test also decodes the real
 `fn2000.wav` and `r.wav` the SIS installs (6400 and 27098 stream bytes), which
