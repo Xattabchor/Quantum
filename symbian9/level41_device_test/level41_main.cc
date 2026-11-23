@@ -2679,9 +2679,20 @@ bool renderLevel41Frame()
     options.farDistance = KFarDistance;
     options.clipZ = -KClipDistance;
     options.mipQuality = 24;
+    /*
+     * Perspective segment length. Java calls this `q` and exposes it as the
+     * "PERSQ" quality setting (5 steps, q = 24 at persQ 0..2 and 12 above).
+     * 96 halves the number of perspective divides per scanline against 48,
+     * which buys 3.1x over the old default of 24 at the cost of noticeably
+     * coarser perspective on steep floors; see the measured table in
+     * symbian9/host_tests/README.md. Q48, if defined, still wins so the two
+     * experiments cannot silently stack.
+     */
 #if defined(QUANTUM_LEVEL41_FPS_EXPERIMENT_Q48)
     /* Separate E65 test app: trade perspective accuracy for fewer divides. */
     options.triangleSettings.perspectiveStepPixels = 48;
+#else
+    options.triangleSettings.perspectiveStepPixels = 96;
 #endif
     options.meshContentsPrevalidated = gMeshContentsPrevalidated;
 

@@ -1225,6 +1225,17 @@ bool drawPerspectiveEffectSpan(
         }
         const QInt32 deltaU = code::Math::javaIntSub(endU, u);
         const QInt32 deltaV = code::Math::javaIntSub(endV, v);
+        /*
+         * The divisor used to be special-cased for 24 so the compiler could
+         * replace the divide with a multiply-shift. The segment length is a
+         * runtime setting now, so that case is kept for the reference default
+         * and everything else goes through javaIntDiv.
+         *
+         * A plain signed shift is NOT usable as a substitute: it rounds toward
+         * negative infinity, while Java (and C++) truncate toward zero, which
+         * differs for every negative delta. The verification in
+         * symbian9/host_tests/quantum_perspective_test.cpp pins this.
+         */
         QInt32 du;
         QInt32 dv;
         if (pixelsInSegment == 24) {

@@ -365,6 +365,11 @@ bool drawPerspective(const SoftwareRenderSurfaceView& destination,
 
 } // anonymous namespace
 
+/*
+ * Java's default is q = 24 (Main.q), which is what this engine shipped with.
+ * The device target overrides it explicitly; code that constructs settings
+ * itself keeps the reference default.
+ */
 SoftwareTriangleRenderSettings::SoftwareTriangleRenderSettings()
     : drawMode(0), fogQuality(0), usePerspectiveCorrection(false),
       forceLowQualityFog(false), textureAlphaMixing(true),
