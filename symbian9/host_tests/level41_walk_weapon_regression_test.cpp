@@ -1204,6 +1204,135 @@ void checkWeaponSixteenBitParity()
     require(bodyWorst <= 8,
             "the 1555 weapon body stays within one 5-bit quantisation step");
 
+    /*
+     * The reticle is soft: its edge texels are partially transparent, which
+     * a 1555 key cannot hold. It is stored as ARGB4444 and must render the
+     * same anti-aliased silhouette as the 32-bit reference. A hard key would
+     * change the opaque-pixel count, so that count is compared too.
+     */
+    SoftwareWeaponSpriteSources sightSources;
+    std::vector<QInt32> sightSource(64 * 64, 0);
+    std::vector<QInt32> sightWeaponSource(96 * 64, 0);
+    for (int y = 0; y < 64; ++y) {
+        for (int x = 0; x < 64; ++x) {
+            const int dx = x - 32;
+            const int dy = y - 32;
+            const int r2 = dx * dx + dy * dy;
+            /* A hollow ring with a soft 1-texel falloff on each edge. */
+            const int outer = 26 * 26;
+            const int inner = 22 * 22;
+            if (r2 > outer || r2 < inner) continue;
+            const bool softEdge = r2 > outer - 26 || r2 < inner + 22;
+            sightSource[y * 64 + x] = static_cast<QInt32>(
+                (softEdge ? 0x8030ff30U : 0xff30ff30U));
+        }
+    }
+    for (int y = 0; y < 64; ++y) {
+        for (int x = 0; x < 96; ++x) {
+            /* Gun body under the reticle, fully opaque, plus a soft top edge. */
+            if (y < 8) continue;
+            const QUint32 alpha = y < 12 ? 0x70U : 0xffU;
+            sightWeaponSource[y * 96 + x] =
+                static_cast<QInt32>((alpha << 24) | 0x00383028U);
+        }
+    }
+    /* The last flag is Java RawImage.alphaMixing: real partial alpha. */
+    sightSources.sight = SoftwareTextureView(
+        sightSource.data(), static_cast<QInt32>(sightSource.size()),
+        64, 64, true, true, true);
+    sightSources.sightWeapon = SoftwareTextureView(
+        sightWeaponSource.data(), static_cast<QInt32>(sightWeaponSource.size()),
+        96, 64, true, true, true);
+
+    SoftwareWeaponCreateSettings sightCreate = create;
+    SoftwareWeaponSpriteRequirements sightRequirements;
+    require(SoftwareWeaponRenderer::measureSprites(
+                sightSources, sightCreate, sightRequirements),
+            "reticle sprite requirements are measured");
+    std::vector<QInt32> preparedSight(sightRequirements.sight.pixelCount);
+    std::vector<QInt32> preparedSightWeapon(
+        sightRequirements.sightWeapon.pixelCount);
+    SoftwareWeaponSpriteBuffers sightBuffers;
+    sightBuffers.sightPixels = preparedSight.data();
+    sightBuffers.sightCapacity = static_cast<QInt32>(preparedSight.size());
+    sightBuffers.sightWeaponPixels = preparedSightWeapon.data();
+    sightBuffers.sightWeaponCapacity =
+        static_cast<QInt32>(preparedSightWeapon.size());
+    SoftwareWeaponSpriteSet sightSprites;
+    require(SoftwareWeaponRenderer::prepareSprites(
+                sightSources, sightCreate, sightRequirements, sightBuffers,
+                sightSprites),
+            "reticle sprites are prepared");
+
+    SoftwareWeaponSpriteSet sightSixteen = sightSprites;
+    std::vector<QUint16> sight16(static_cast<size_t>(
+        sightSixteen.sight.view.width) * sightSixteen.sight.view.height);
+    std::vector<QUint16> sightWeapon16(static_cast<size_t>(
+        sightSixteen.sightWeapon.view.width) *
+        sightSixteen.sightWeapon.view.height);
+    require(sightSixteen.sight.buildSixteen(
+                true, sight16.data(), static_cast<QInt32>(sight16.size())),
+            "soft reticle converts to ARGB4444");
+    require(sightSixteen.sight.sixteen.is4444,
+            "reticle uses the 4444 alpha format");
+    require(!sightSixteen.sight.buildSixteen(
+                false, sight16.data(), static_cast<QInt32>(sight16.size())),
+            "a soft reticle is refused by the 1555 key format");
+    require(sightSixteen.sightWeapon.buildSixteen(
+                true, sightWeapon16.data(),
+                static_cast<QInt32>(sightWeapon16.size())),
+            "sight weapon converts to ARGB4444");
+
+    /* Java draws the reticle only while zoomed, so the test must zoom too. */
+    SoftwareWeaponDrawSettings sightDraw = draw;
+    sightDraw.firing = false;
+    sightDraw.zoom = true;
+    sightDraw.hasZoom = true;
+
+    std::vector<QInt32> sightReference(240 * 256, 0);
+    const SoftwareRenderSurfaceView sightReferenceSurface(
+        sightReference.data(), static_cast<QInt32>(sightReference.size()),
+        240, 256, 240);
+    require(SoftwareWeaponRenderer::draw(
+                sightReferenceSurface, sightSprites, sightDraw),
+            "32-bit reference reticle frame draws");
+    std::vector<QInt32> sightFast(240 * 256, 0);
+    const SoftwareRenderSurfaceView sightFastSurface(
+        sightFast.data(), static_cast<QInt32>(sightFast.size()), 240, 256, 240);
+    require(SoftwareWeaponRenderer::draw(sightFastSurface, sightSixteen, sightDraw),
+            "4444 reticle frame draws");
+
+    int sightDiffering = 0;
+    int sightWorst = 0;
+    for (size_t pixel = 0; pixel < sightReference.size(); ++pixel) {
+        const QUint32 a = static_cast<QUint32>(sightReference[pixel]);
+        const QUint32 b = static_cast<QUint32>(sightFast[pixel]);
+        if (a == b) continue;
+        ++sightDiffering;
+        for (int shift = 0; shift < 24; shift += 8) {
+            const int da = static_cast<int>((a >> shift) & 0xffU);
+            const int db = static_cast<int>((b >> shift) & 0xffU);
+            const int delta = da > db ? da - db : db - da;
+            if (delta > sightWorst) sightWorst = delta;
+        }
+    }
+
+    require(sightDiffering > 0,
+            "the 4444 reticle path is actually exercised");
+    /*
+     * 4-bit alpha re-quantises the soft edge, so blended channels can move
+     * by up to ~17 plus the 4-bit colour step. The silhouette must survive:
+     * no pixel may become fully transparent if the reference drew it.
+     */
+    require(sightWorst <= 24,
+            "the 4444 reticle stays within quantisation error");
+    int lostPixels = 0;
+    for (size_t pixel = 0; pixel < sightReference.size(); ++pixel) {
+        if (sightReference[pixel] != 0 && sightFast[pixel] == 0) ++lostPixels;
+    }
+    require(lostPixels == 0,
+            "the 4444 reticle keeps every pixel the reference drew");
+
     std::vector<QInt32> reference(240 * 256, 0);
     const SoftwareRenderSurfaceView referenceSurface(
         reference.data(), static_cast<QInt32>(reference.size()), 240, 256, 240);

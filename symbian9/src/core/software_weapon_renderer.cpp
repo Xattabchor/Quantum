@@ -293,7 +293,7 @@ bool drawSprite(const SoftwareRenderSurfaceView& destination,
         prepared.sixteen.pixelCount >= image.width * image.height) {
         /* 1555 only reproduces art whose alpha is already a 0/255 cut;
            4444 covers the translucent cases. */
-        if (prepared.sixteen.is4444 || image.hasTransparentTexels) {
+        if (prepared.sixteen.is4444 || !image.hasAlphaMixing) {
             source16 = &prepared.sixteen;
         }
     }
@@ -573,11 +573,13 @@ bool SoftwareWeaponSpriteImage::buildSixteen(bool format4444,
     }
 
     /*
-     * 1555 must keep the zero-texel key exact, so a source with no
-     * transparent texels would only lose colour precision. That case keeps
-     * the 32-bit view.
+     * 1555 carries a 1-bit key, so it can only represent art whose alpha is
+     * already a 0/255 cut. If any texel is partially transparent
+     * (Java RawImage.alphaMixing), the key would delete it: those texels
+     * must use 4444. A fully opaque sprite would also convert, but it
+     * would only lose colour precision, so it keeps the 32-bit view too.
      */
-    if (!view.hasTransparentTexels) return false;
+    if (view.hasAlphaMixing || !view.hasTransparentTexels) return false;
     SoftwareTexture16::convert8888To1555(view.pixels, storage, count);
     sixteen = SoftwareTexture16View(
         storage, count, view.width, view.height, true, true);
@@ -812,11 +814,29 @@ bool SoftwareWeaponRenderer::prepareSprites(
                          sizes[imageIndex]->height)) {
             return false;
         }
+        /*
+         * The resized view must carry hasAlphaMixing: the bilinear
+         * interpolation itself creates partial alpha along every edge, even
+         * when the source was a hard 0/255 cut. Without this flag a 1555
+         * weapon image would be accepted for art that now needs 4444.
+         */
+        bool resizedAlphaMixing = false;
+        bool resizedTransparent = false;
+        for (QInt32 pixel = 0; pixel < sizes[imageIndex]->pixelCount; ++pixel) {
+            const QUint32 alpha = static_cast<QUint32>(
+                destinationImages[imageIndex][pixel]) >> 24U;
+            if (alpha == 0U) {
+                resizedTransparent = true;
+            } else if (alpha < 255U) {
+                resizedAlphaMixing = true;
+            }
+        }
         *outputImages[imageIndex] = SoftwareTextureView(
             destinationImages[imageIndex], sizes[imageIndex]->pixelCount,
             sizes[imageIndex]->width, sizes[imageIndex]->height,
-            sourceImages[imageIndex]->hasTransparentTexels,
-            sourceImages[imageIndex]->mayContainZeroTexels);
+            resizedTransparent,
+            resizedTransparent && !resizedAlphaMixing,
+            resizedAlphaMixing);
     }
 
     if (prepared.weapon.view.pixels != 0) {

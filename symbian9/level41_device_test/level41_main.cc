@@ -56,6 +56,7 @@ const TUint KProbeWindowHandle = 2;
 
 using code::Math::Matrix;
 using code::Math::QInt32;
+using code::Math::QUint16;
 using code::Math::QUint32;
 using code::Math::Vector3D;
 using code::Rendering::SoftwareMesh3DParser;
@@ -126,6 +127,7 @@ using code::Rendering::SoftwareWeaponRenderer;
 using code::Rendering::SoftwareRainRenderer;
 #endif
 using code::Rendering::SoftwareWeaponSpriteBuffers;
+using code::Rendering::SoftwareWeaponSpriteImage;
 using code::Rendering::SoftwareWeaponSpriteRequirements;
 using code::Rendering::SoftwareWeaponSpriteSet;
 using code::Rendering::SoftwareWeaponSpriteSources;
@@ -533,13 +535,51 @@ SoftwareWeaponState gWeaponState;
 SoftwareWeaponSpriteBuffers gWeaponSpriteBuffers;
 SoftwareWeaponSpriteSet gWeaponSprites;
 /*
- * Parallel 16-bit weapon images, one buffer per sprite. The weapon body is
- * keyed art, so it uses RGB1555 (1-bit cut, half the bytes); the muzzle
- * flash is genuinely translucent and uses ARGB4444, whose 4-bit alpha
- * keeps the glow a gradient instead of a hard-edged blob.
+ * Allocate the 16-bit twin of one prepared weapon sprite and fill it from
+ * the resized 8888 pixels. `format4444` selects ARGB4444 (real per-texel
+ * alpha) over RGB1555 (1-bit key).
+ *
+ * Returns false when the sprite is absent, the image is empty, or the
+ * allocation fails; in every such case the sprite keeps drawing from its
+ * 32-bit view, so this is never fatal.
+ */
+bool buildWeaponSixteenImage(SoftwareWeaponSpriteImage& image,
+                             QUint16*& storage,
+                             bool format4444)
+{
+    if (image.view.pixels == 0 || image.view.width <= 0 ||
+        image.view.height <= 0) {
+        return false;
+    }
+    const TInt pixelCount = image.view.width * image.view.height;
+    if (pixelCount <= 0) return false;
+    storage = static_cast<QUint16*>(
+        User::Alloc(pixelCount * static_cast<TInt>(sizeof(QUint16))));
+    if (storage == 0) return false;
+    if (!image.buildSixteen(format4444, storage, pixelCount)) {
+        User::Free(storage);
+        storage = 0;
+        return false;
+    }
+    return true;
+}
+
+/*
+ * Parallel 16-bit weapon images, one buffer per sprite, allocated only for
+ * the images whose format actually fits:
+ *
+ *   weapon        RGB1555   keyed art, no partial alpha in the source
+ *   weapon-fire   ARGB4444  47% of its visible texels are below alpha 128,
+ *                            so a 1-bit key would erase the glow
+ *   weapon-sight            ARGB4444  soft anti-aliased reticle edges
+ *   weapon-sight-weapon     ARGB4444  14% of the frame is partial alpha
+ *
+ * A failed allocation is not fatal: that sprite keeps its 32-bit view.
  */
 QUint16* gWeaponSixteenStorage = 0;
 QUint16* gWeaponFireSixteenStorage = 0;
+QUint16* gWeaponSightSixteenStorage = 0;
+QUint16* gWeaponSightWeaponSixteenStorage = 0;
 bool gWeaponOverlayAvailable = false;
 bool gWeaponTuningLoadedFromAssets = false;
 TInt64 gLastWeaponUpdateMicros = 0;
@@ -1181,7 +1221,8 @@ bool loadWeaponImage(RFs& fileServer,
     image.view = SoftwareTextureView(
         image.pixels, pixelCount, image.info.width, image.info.height,
         image.info.hasTransparentTexels,
-        image.info.hasTransparentTexels || image.info.alphaMixing);
+        image.info.hasTransparentTexels || image.info.alphaMixing,
+        image.info.alphaMixing);
     return true;
 }
 
@@ -1214,6 +1255,14 @@ void releaseWeaponSpriteBuffers()
     if (gWeaponFireSixteenStorage != 0) {
         User::Free(gWeaponFireSixteenStorage);
         gWeaponFireSixteenStorage = 0;
+    }
+    if (gWeaponSightSixteenStorage != 0) {
+        User::Free(gWeaponSightSixteenStorage);
+        gWeaponSightSixteenStorage = 0;
+    }
+    if (gWeaponSightWeaponSixteenStorage != 0) {
+        User::Free(gWeaponSightWeaponSixteenStorage);
+        gWeaponSightWeaponSixteenStorage = 0;
     }
     gWeaponSpriteBuffers = SoftwareWeaponSpriteBuffers();
     gWeaponSprites = SoftwareWeaponSpriteSet();
@@ -1327,30 +1376,18 @@ bool loadWeaponAssets(RFs& fileServer, const TDesC& drive)
     }
     /*
      * Build the 16-bit weapon images from the resized 32-bit result, so the
-     * bilinear ImageResize path is not duplicated. Failure is not fatal:
-     * that sprite simply keeps drawing from its 32-bit view.
+     * bilinear ImageResize path is not duplicated.
      */
     if (ready) {
-        const TInt weaponPixels =
-            gWeaponSprites.weapon.view.width * gWeaponSprites.weapon.view.height;
-        const TInt firePixels =
-            gWeaponSprites.fire.view.width * gWeaponSprites.fire.view.height;
-        if (weaponPixels > 0) {
-            gWeaponSixteenStorage = static_cast<QUint16*>(User::Alloc(
-                weaponPixels * static_cast<TInt>(sizeof(QUint16))));
-            if (gWeaponSixteenStorage != 0) {
-                gWeaponSprites.weapon.buildSixteen(
-                    false, gWeaponSixteenStorage, weaponPixels);
-            }
-        }
-        if (firePixels > 0) {
-            gWeaponFireSixteenStorage = static_cast<QUint16*>(User::Alloc(
-                firePixels * static_cast<TInt>(sizeof(QUint16))));
-            if (gWeaponFireSixteenStorage != 0) {
-                gWeaponSprites.fire.buildSixteen(
-                    true, gWeaponFireSixteenStorage, firePixels);
-            }
-        }
+        (void)buildWeaponSixteenImage(
+            gWeaponSprites.weapon, gWeaponSixteenStorage, false);
+        (void)buildWeaponSixteenImage(
+            gWeaponSprites.fire, gWeaponFireSixteenStorage, true);
+        (void)buildWeaponSixteenImage(
+            gWeaponSprites.sight, gWeaponSightSixteenStorage, true);
+        (void)buildWeaponSixteenImage(
+            gWeaponSprites.sightWeapon, gWeaponSightWeaponSixteenStorage,
+            true);
     }
 
     releaseLoadedWeaponImage(weapon);
