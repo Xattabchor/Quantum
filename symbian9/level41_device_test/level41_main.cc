@@ -7,6 +7,7 @@
 #include "software_world_sprite_renderer.h"
 #include "software_perspective_rasterizer.h"
 #include "software_texture16.h"
+#include "software_qtx2.h"
 #include "software_triangle_renderer.h"
 #if defined(QUANTUM_LEVEL41_INTERACTIVE_WALK)
 #include "collision_mesh_adapter.h"
@@ -127,6 +128,8 @@ using code::Rendering::SoftwareWeaponRenderer;
 using code::Rendering::SoftwareRainRenderer;
 #endif
 using code::Rendering::SoftwareWeaponSpriteBuffers;
+using code::Rendering::SoftwareQtx2Format;
+using code::Rendering::SoftwareQtx2Header;
 using code::Rendering::SoftwareWeaponSpriteImage;
 using code::Rendering::SoftwareWeaponSpriteRequirements;
 using code::Rendering::SoftwareWeaponSpriteSet;
@@ -706,9 +709,18 @@ struct TextureInfo {
     TInt height;
     bool hasTransparentTexels;
     bool alphaMixing;
+    /*
+     * QTX2 assets arrive pre-quantised: the format was chosen at build time
+     * and the 16-bit words are stored in the file, so nothing has to be
+     * converted at start-up.
+     */
+    bool isQtx2;
+    SoftwareQtx2Format qtx2Format;
+    const QUint16* qtx2Pixels;
 
     TextureInfo()
-        : width(0), height(0), hasTransparentTexels(false), alphaMixing(false)
+        : width(0), height(0), hasTransparentTexels(false), alphaMixing(false),
+          isQtx2(false), qtx2Format(ESoftwareQtx2Rgb565), qtx2Pixels(0)
     {
     }
 };
@@ -821,7 +833,45 @@ TInt littleEndianU16(const TUint8* bytes)
 bool inspectQtxTexture(const TUint8* data, TInt length, TextureInfo& info)
 {
     info = TextureInfo();
-    if (data == 0 || length < 8 || data[0] != 'Q' || data[1] != 'T' ||
+    if (data == 0 || length < 8) return false;
+    /*
+     * QTX2 reuses this inspector so the rest of start-up keeps working: the
+     * dimensions and transparency flags come from the pre-quantised header.
+     */
+    if (data[0] == 'Q' && data[1] == 'T' && data[2] == 'X' && data[3] == '2') {
+        SoftwareQtx2Header header;
+        const QUint16* sixteen = 0;
+        const QInt32* rgb8888 = 0;
+        if (!code::Rendering::softwareQtx2Inspect(
+                reinterpret_cast<const unsigned char*>(data), length,
+                KMaximumTextureWidth, KMaximumTextureHeight, header,
+                &sixteen, &rgb8888)) {
+            return false;
+        }
+        info.width = header.width;
+        info.height = header.height;
+        info.isQtx2 = true;
+        info.qtx2Format = header.format;
+        info.qtx2Pixels = sixteen;
+        if (sixteen != 0) {
+            const code::Rendering::SoftwareTexture16View view =
+                code::Rendering::softwareQtx2TextView(header, sixteen);
+            info.hasTransparentTexels = view.hasTransparentTexels;
+            if (view.is4444) {
+                QInt32 pixel;
+                for (pixel = 0; pixel < view.pixelCount; ++pixel) {
+                    const QUint32 alpha =
+                        (view.pixels[pixel] >> 12U) & 0x0fU;
+                    if (alpha != 0U && alpha != 0x0fU) {
+                        info.alphaMixing = true;
+                        break;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+    if (data[0] != 'Q' || data[1] != 'T' ||
         data[2] != 'X' || data[3] != '1') {
         return false;
     }
@@ -859,6 +909,54 @@ bool decodeQtxTexture(const TUint8* data,
         pixels[pixelIndex] = code::Math::javaIntFromUnsigned(color);
         if (alpha == 0U) info.hasTransparentTexels = true;
         else if (alpha < 255U) info.alphaMixing = true;
+    }
+    return true;
+}
+
+/*
+ * QTX2 assets carry their pixels in the renderer's format already. The device
+ * only borrows a pointer into the loaded file image; `gTextureFile` outlives
+ * every texture view, so no copy is needed.
+ */
+bool loadQtx2Texture(const TUint8* data,
+                     TInt length,
+                     TextureInfo& info,
+                     const QUint16*& sixteen)
+{
+    SoftwareQtx2Header header;
+    const QInt32* rgb8888 = 0;
+    if (!code::Rendering::softwareQtx2Inspect(
+            reinterpret_cast<const unsigned char*>(data), length,
+            KMaximumTextureWidth, KMaximumTextureHeight, header,
+            &sixteen, &rgb8888)) {
+        return false;
+    }
+    if (sixteen == 0) return false; /* only world textures are streamed */
+
+    info = TextureInfo();
+    info.width = header.width;
+    info.height = header.height;
+    info.isQtx2 = true;
+    info.qtx2Format = header.format;
+    info.qtx2Pixels = sixteen;
+
+    const code::Rendering::SoftwareTexture16View view =
+        code::Rendering::softwareQtx2TextView(header, sixteen);
+    info.hasTransparentTexels = view.hasTransparentTexels;
+    /*
+     * 4444 keeps per-texel alpha, so any partially transparent texel is
+     * alpha mixing. 1555 cannot express it: those texels were already
+     * resolved into the 1-bit key at build time.
+     */
+    if (view.is4444) {
+        QInt32 pixel;
+        for (pixel = 0; pixel < view.pixelCount; ++pixel) {
+            const QUint32 alpha = (view.pixels[pixel] >> 12U) & 0x0fU;
+            if (alpha != 0U && alpha != 0x0fU) {
+                info.alphaMixing = true;
+                break;
+            }
+        }
     }
     return true;
 }
@@ -1416,6 +1514,45 @@ bool loadWeaponAssets(RFs& fileServer, const TDesC& drive)
  * the already-decoded 8888 image. Textures with transparent texels become
  * RGB1555 so the zero-texel key survives; the rest stay RGB565.
  */
+/*
+ * Produce the single 16-bit level for one texture.
+ *
+ * A QTX2 asset already holds it: the format was chosen at build time, so the
+ * view points straight at the file image and no conversion runs at start-up.
+ * A QTX1 asset still has to be converted here, which is the path this change
+ * is retiring.
+ *
+ * Mipmaps are not involved: exactly one level per texture.
+ */
+bool texture16ViewFor(const TextureInfo& info,
+                      const QInt32* pixels8888,
+                      QUint16* conversionStorage,
+                      QInt32 conversionCapacity,
+                      SoftwareTexture16View& view)
+{
+    if (info.isQtx2 && info.qtx2Pixels != 0) {
+        SoftwareQtx2Header header;
+        header.format = info.qtx2Format;
+        header.flags = code::Rendering::SoftwareQtx2FlagHas16;
+        header.width = info.width;
+        header.height = info.height;
+        view = code::Rendering::softwareQtx2TextView(header, info.qtx2Pixels);
+        return view.pixels != 0 && view.pixelCount > 0;
+    }
+
+    bool is1555 = false;
+    bool hasTransparent = false;
+    if (!SoftwareTexture16::convertLevel8888To16(
+            pixels8888, info.width, info.height, true,
+            conversionStorage, conversionCapacity, is1555, hasTransparent)) {
+        return false;
+    }
+    view = SoftwareTexture16View(
+        conversionStorage, info.width * info.height,
+        info.width, info.height, is1555, hasTransparent);
+    return true;
+}
+
 bool buildTexture16Levels(const TextureInfo& forest,
                           const TextureInfo& map,
                           const TextureInfo* riverFrames,
@@ -1427,25 +1564,12 @@ bool buildTexture16Levels(const TextureInfo& forest,
         return false;
     }
 
-    bool is1555 = false;
-    bool hasTransparent = false;
-    if (!SoftwareTexture16::convertLevel8888To16(
-            gForestPixels, forest.width, forest.height, true,
-            gForestPixels16, KForestTexturePixels, is1555, hasTransparent)) {
+    if (!texture16ViewFor(forest, gForestPixels, gForestPixels16,
+                          KForestTexturePixels, gWorldViews16[0]) ||
+        !texture16ViewFor(map, gMapPixels, gMapPixels16,
+                          KMapTexturePixels, gWorldViews16[1])) {
         return false;
     }
-    gWorldViews16[0] = SoftwareTexture16View(
-        gForestPixels16, forest.width * forest.height,
-        forest.width, forest.height, is1555, hasTransparent);
-
-    if (!SoftwareTexture16::convertLevel8888To16(
-            gMapPixels, map.width, map.height, true,
-            gMapPixels16, KMapTexturePixels, is1555, hasTransparent)) {
-        return false;
-    }
-    gWorldViews16[1] = SoftwareTexture16View(
-        gMapPixels16, map.width * map.height,
-        map.width, map.height, is1555, hasTransparent);
     gWorldViews16[2] = gWorldViews16[1];
     gWorldViews16[3] = gWorldViews16[1];
 
@@ -1455,15 +1579,12 @@ bool buildTexture16Levels(const TextureInfo& forest,
             const TextureInfo& frame = riverFrames[frameIndex];
             QUint16* const pixels =
                 gRiverPixels16 + frameIndex * KRiverFramePixelCount;
-            if (!SoftwareTexture16::convertLevel8888To16(
-                    gRiverPixels + frameIndex * KRiverFramePixelCount,
-                    frame.width, frame.height, true,
-                    pixels, KRiverFramePixelCount, is1555, hasTransparent)) {
+            if (!texture16ViewFor(
+                    frame, gRiverPixels + frameIndex * KRiverFramePixelCount,
+                    pixels, KRiverFramePixelCount,
+                    gRiverAnimationViews16[frameIndex])) {
                 return false;
             }
-            gRiverAnimationViews16[frameIndex] = SoftwareTexture16View(
-                pixels, frame.width * frame.height,
-                frame.width, frame.height, is1555, hasTransparent);
         } else {
             gRiverAnimationViews16[frameIndex] =
                 gRiverAnimationViews16[0];
@@ -1471,15 +1592,8 @@ bool buildTexture16Levels(const TextureInfo& forest,
     }
     gWorldViews16[4] = gRiverAnimationViews16[0];
 
-    if (!SoftwareTexture16::convertLevel8888To16(
-            gSkyPixels, sky.width, sky.height, true,
-            gSkyPixels16, KSkyTexturePixels, is1555, hasTransparent)) {
-        return false;
-    }
-    gSkyView16 = SoftwareTexture16View(
-        gSkyPixels16, sky.width * sky.height,
-        sky.width, sky.height, is1555, hasTransparent);
-    return true;
+    return texture16ViewFor(sky, gSkyPixels, gSkyPixels16,
+                            KSkyTexturePixels, gSkyView16);
 }
 
 void setupWorldMaterials(const TextureInfo& forest,
