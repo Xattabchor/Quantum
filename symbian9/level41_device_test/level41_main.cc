@@ -12,6 +12,7 @@
 #if defined(QUANTUM_LEVEL41_INTERACTIVE_WALK)
 #include "collision_mesh_adapter.h"
 #include "level41_key_mapping.h"
+#include "level41_weapon_selection.h"
 #include "software_walk_controller.h"
 #include "software_weapon_controller.h"
 #include "software_weapon_renderer.h"
@@ -548,6 +549,23 @@ SoftwareWeaponTuning gWeaponTuning;
 SoftwareWeaponState gWeaponState;
 SoftwareWeaponSpriteBuffers gWeaponSpriteBuffers;
 SoftwareWeaponSpriteSet gWeaponSprites;
+/*
+ * Which of the shipped weapon bodies is equipped. `#` advances it, wrapping
+ * from the last back to the first; see level41_weapon_selection.h. Only one
+ * body is ever resident: switching frees the current sprite buffers and loads
+ * the next, which is why the arsenal costs no extra heap at rest.
+ */
+TInt gCurrentWeapon = 0;
+/* Per-weapon controller state, so a weapon keeps its recoil and sway across
+   a round trip through the others instead of resetting every time. */
+SoftwareWeaponState gWeaponSavedStates[code::Rendering::KLevel41WeaponCount];
+bool gWeaponStateInitialized[code::Rendering::KLevel41WeaponCount];
+/* Held-key edge detection for `#`: a held key must switch only once. */
+bool gWeaponSwitchHeld = false;
+bool gWeaponSwitchStateKnown = false;
+/* Set once the assets have been loaded early enough for input to switch. */
+RFs* gWeaponFileServer = 0;
+TBuf<8> gWeaponDrive;
 /*
  * Allocate the 16-bit twin of one prepared weapon sprite and fill it from
  * the resized 8888 pixels. `format4444` selects ARGB4444 (real per-texel
@@ -1402,7 +1420,12 @@ bool allocateWeaponSpriteBuffer(QInt32 pixelCount,
     return true;
 }
 
-bool loadWeaponTuning(RFs& fileServer, const TDesC& drive)
+/*
+ * Index 0 keeps the original FN2000 tuning. The other three bodies reuse it
+ * until a per-weapon QWG is shipped for them: a missing file must not make a
+ * weapon unselectable, and the tuning is a gameplay profile, not art.
+ */
+bool loadWeaponTuning(RFs& fileServer, const TDesC& drive, TInt weaponIndex)
 {
     const TInt savedFailurePoint = gAssetFailurePoint;
     const TInt savedFailureCode = gAssetFailureCode;
@@ -1410,10 +1433,26 @@ bool loadWeaponTuning(RFs& fileServer, const TDesC& drive)
     const TInt savedBytesRead = gAssetBytesRead;
     unsigned char config[26];
     TInt length = 0;
+    TFileName configName;
+    if (weaponIndex == 0) {
+        configName.Copy(_L("weapon-gameplay.qwg"));
+    } else {
+        configName.Format(_L("weapon%d.qwg"), weaponIndex);
+    }
     bool loaded = readPrivateAsset(
-        fileServer, drive, _L("weapon-gameplay.qwg"), config,
+        fileServer, drive, configName, config,
         sizeof(config), length) &&
         SoftwareWeaponController::loadTuning(config, length, gWeaponTuning);
+    if (!loaded && weaponIndex != 0) {
+        /* Fall back to the original profile rather than to the built-in
+           defaults, so a weapon without its own QWG still fires and sways
+           like the FN2000 instead of silently losing its tuning. */
+        length = 0;
+        loaded = readPrivateAsset(
+            fileServer, drive, _L("weapon-gameplay.qwg"), config,
+            sizeof(config), length) &&
+            SoftwareWeaponController::loadTuning(config, length, gWeaponTuning);
+    }
     gAssetFailurePoint = savedFailurePoint;
     gAssetFailureCode = savedFailureCode;
     gAssetFileSize = savedFileSize;
@@ -1421,7 +1460,7 @@ bool loadWeaponTuning(RFs& fileServer, const TDesC& drive)
     return loaded;
 }
 
-bool loadWeaponAssets(RFs& fileServer, const TDesC& drive)
+bool loadWeaponAssets(RFs& fileServer, const TDesC& drive, TInt weaponIndex)
 {
     const TInt savedFailurePoint = gAssetFailurePoint;
     const TInt savedFailureCode = gAssetFailureCode;
@@ -1429,16 +1468,26 @@ bool loadWeaponAssets(RFs& fileServer, const TDesC& drive)
     const TInt savedBytesRead = gAssetBytesRead;
     releaseWeaponSpriteBuffers();
     gWeaponTuning = SoftwareWeaponTuning();
-    gWeaponTuningLoadedFromAssets = loadWeaponTuning(fileServer, drive);
+    gWeaponTuningLoadedFromAssets =
+        loadWeaponTuning(fileServer, drive, weaponIndex);
     TLoadedWeaponImage weapon;
     TLoadedWeaponImage fire;
     TLoadedWeaponImage sight;
 
     /* Index zero in a local Quantum JAR is the default USP. Its art and
        QWG1/QWG2 gameplay tuning are optional; the sample still uses the test
-       profile when the private weapon assets are not installed. */
+       profile when the private weapon assets are not installed.
+
+       The other three bodies are named weapon<N>.qtx, matching the files the
+       converter produced from the legacy QTX1 arsenal sprites. */
+    TFileName weaponName;
+    if (weaponIndex == 0) {
+        weaponName.Copy(_L("weapon.qtx"));
+    } else {
+        weaponName.Format(_L("weapon%d.qtx"), weaponIndex);
+    }
     const bool hasWeapon = loadWeaponImage(
-        fileServer, drive, _L("weapon.qtx"), weapon);
+        fileServer, drive, weaponName, weapon);
     if (!hasWeapon) {
         gAssetFailurePoint = savedFailurePoint;
         gAssetFailureCode = savedFailureCode;
@@ -1842,6 +1891,60 @@ bool fireLevel41Weapon()
     return true;
 }
 
+/*
+ * Equip the next weapon body. The previous body's controller state is saved
+ * first so it survives a full cycle, then the sprite buffers are released and
+ * the next body is loaded from scratch. A failed load rolls back to the body
+ * that was already working: a missing or corrupt sprite must never leave the
+ * player holding nothing.
+ *
+ * Loading is the same code path start-up uses, so the RGB1555 16-bit twin and
+ * the ARGB4444 muzzle flash are rebuilt for the new body exactly as they are
+ * for the first one.
+ */
+bool switchLevel41Weapon()
+{
+    if (gWeaponFileServer == 0) return false;
+    const TInt previous = gCurrentWeapon;
+    const TInt next = code::Rendering::level41NextWeapon(previous);
+    if (next == previous) return false;
+
+    if (code::Rendering::isValidLevel41Weapon(previous)) {
+        gWeaponSavedStates[previous] = gWeaponState;
+        gWeaponStateInitialized[previous] = true;
+    }
+
+    if (!loadWeaponAssets(*gWeaponFileServer, gWeaponDrive, next) ||
+        !gWeaponTuningLoadedFromAssets) {
+        if (code::Rendering::isValidLevel41Weapon(previous)) {
+            (void)loadWeaponAssets(*gWeaponFileServer, gWeaponDrive, previous);
+            gWeaponState = gWeaponSavedStates[previous];
+            gWeaponState.dxMax = gWeaponSprites.maxOffsetX;
+            gWeaponState.dyMax = gWeaponSprites.maxOffsetY;
+        }
+        return false;
+    }
+
+    if (gWeaponStateInitialized[next]) {
+        /* Restore this weapon's own recoil/sway, but take the sway limits from
+           the sprite set that was just rebuilt for the current viewport. */
+        gWeaponState = gWeaponSavedStates[next];
+        gWeaponState.dxMax = gWeaponSprites.maxOffsetX;
+        gWeaponState.dyMax = gWeaponSprites.maxOffsetY;
+    } else {
+        if (!SoftwareWeaponController::initialize(
+                gWeaponTuning, gWeaponSprites.maxOffsetX,
+                gWeaponSprites.maxOffsetY, gWeaponState)) {
+            return false;
+        }
+        gWeaponStateInitialized[next] = true;
+    }
+    gCurrentWeapon = next;
+    /* The muzzle frame belongs to the weapon that fired it. */
+    gLastWeaponUpdateMicros = 0;
+    return true;
+}
+
 bool isLevel41ArrowKey(TInt code)
 {
     return code == EKeyUpArrow || code == EKeyDownArrow ||
@@ -1867,6 +1970,22 @@ TInt level41WalkArrowCode(const TKeyEvent& keyEvent)
    use one-frame pulses for movement, jump, and camera-look keys. */
 bool setLevel41WalkKeyState(const TKeyEvent& keyEvent, bool isDown)
 {
+    if (code::Rendering::isLevel41WeaponSwitchKey(
+            keyEvent.iCode, keyEvent.iScanCode)) {
+        /*
+         * Switch on the transition into the held state, not on every repeat.
+         * Event-only Window Servers deliver no key-up, so the "unknown" flag
+         * makes the first delivery count as a fresh press instead of being
+         * swallowed as a repeat of the previous one.
+         */
+        if (isDown && (!gWeaponSwitchStateKnown || !gWeaponSwitchHeld)) {
+            (void)switchLevel41Weapon();
+        }
+        gWeaponSwitchHeld = isDown;
+        gWeaponSwitchStateKnown = true;
+        return true;
+    }
+
     if (code::Rendering::isLevel41JumpKey(
             keyEvent.iCode, keyEvent.iScanCode)) {
         if (isDown && (!gWalkJumpStateKnown || !gWalkJumpHeld)) {
@@ -2147,13 +2266,18 @@ bool loadLevel41(RFs& fileServer, const TDesC& drive)
     if (!buildWalkCollisionView()) return false;
     /* Art and gameplay config are optional; missing files must not stop the
        already-working Level 41 world. The test profile keeps input testable. */
-    (void)loadWeaponAssets(fileServer, drive);
+    gWeaponFileServer = &fileServer;
+    gWeaponDrive.Copy(drive);
+    gCurrentWeapon = 0;
+    gWeaponStateInitialized[0] = false;
+    (void)loadWeaponAssets(fileServer, drive, gCurrentWeapon);
     if (!SoftwareWeaponController::initialize(
             gWeaponTuning, gWeaponSprites.maxOffsetX,
             gWeaponSprites.maxOffsetY, gWeaponState)) {
         gAssetFailureCode = KErrCorrupt;
         return false;
     }
+    gWeaponStateInitialized[gCurrentWeapon] = true;
     gLastWeaponUpdateMicros = 0;
     TInt audioCreateError = KErrNone;
     gLevel41Audio = TQuantumLevel41WalkAudio::New(drive, audioCreateError);

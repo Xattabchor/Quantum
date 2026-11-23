@@ -46,7 +46,8 @@ FLAG_HAS_RGB8888 = 2
 # They carry the 8888 block; converting them before the resize would throw
 # away the interpolated alpha the resize creates.
 RETAINS_RGB8888 = ("weapon.qtx", "weapon-fire.qtx", "weapon-sight-weapon.qtx",
-                   "weapon-sight.qtx")
+                   "weapon-sight.qtx", "weapon1.qtx", "weapon2.qtx",
+                   "weapon3.qtx")
 
 # Explicit choices where the automatic rule would still be correct but the
 # reason deserves recording. Every entry is verified against the pixels.
@@ -58,6 +59,14 @@ FORMAT_OVERRIDES = {
     # resize, not authored translucency; the source is a hard 0/255 cut, so
     # 1555 reproduces it exactly.
     "weapon.qtx": FORMAT_1555,
+    # The three additional arsenal sprites follow the same rule as weapon.qtx:
+    # the requirement is that every weapon body is RGB1555. Their partial
+    # alpha is authored rather than a resize fringe (3.3%, 4.8% and 9.1% of
+    # texels), so rgb1555From8888() collapses those texels onto the key at
+    # alpha 128. Drawing keeps the 32-bit view in reserve.
+    "weapon1.qtx": FORMAT_1555,
+    "weapon2.qtx": FORMAT_1555,
+    "weapon3.qtx": FORMAT_1555,
 }
 
 
