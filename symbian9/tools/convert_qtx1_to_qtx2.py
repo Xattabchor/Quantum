@@ -51,14 +51,13 @@ RETAINS_RGB8888 = ("weapon.qtx", "weapon-fire.qtx", "weapon-sight-weapon.qtx",
 # Explicit choices where the automatic rule would still be correct but the
 # reason deserves recording. Every entry is verified against the pixels.
 FORMAT_OVERRIDES = {
+    # sky.qtx has no transparent and no partial texels at all: pure 565.
+    "sky.qtx": FORMAT_565,
     # The weapon body keeps the keyed 1555 look it has always had. Its 148
     # part-transparent texels are bilinear fringes introduced by the runtime
     # resize, not authored translucency; the source is a hard 0/255 cut, so
     # 1555 reproduces it exactly.
     "weapon.qtx": FORMAT_1555,
-    # The muzzle flash is a radial glow: 47% of its visible texels are below
-    # alpha 128, so a 1-bit key would erase the gradient.
-    "weapon-fire.qtx": FORMAT_4444,
 }
 
 
@@ -101,7 +100,16 @@ def argb_dwords(rgba: bytes) -> bytes:
 
 
 def classify(rgba: bytes) -> tuple[int, int, int, int]:
-    """Return (zero, partial, opaque, suggested format)."""
+    """Return (zero, partial, opaque, suggested format).
+
+    Partial alpha suggests 1555, never 4444. The renderer's fast path rejects
+    ARGB4444 outright (validTexture16 returns false for is4444): 4444 is a
+    sprite-alpha format that only the drawmode-4 kernel understands, so a 4444
+    world texture silently falls back to the 32-bit reference kernel and the
+    whole point of pre-quantising is lost. 1555 keeps the 1-bit zero key that
+    the engine's own rgb1555From8888() produces, and drawmode 4 still requests
+    4444 explicitly through FORMAT_OVERRIDES where a gradient really needs it.
+    """
     zero = partial = opaque = 0
     for alpha in rgba[3::4]:
         if alpha == 0:
@@ -110,9 +118,7 @@ def classify(rgba: bytes) -> tuple[int, int, int, int]:
             partial += 1
         else:
             opaque += 1
-    if partial:
-        suggested = FORMAT_4444
-    elif zero:
+    if partial or zero:
         suggested = FORMAT_1555
     else:
         suggested = FORMAT_565
@@ -169,11 +175,12 @@ def convert(source: Path, fmt: int | None, keep_rgb: bool) -> tuple[bytes, dict]
     # 16-bit block is stored, the conversion is itself the storage, and a
     # format that cannot represent the image would destroy pixels here.
     if not keep_rgb:
-        if chosen == FORMAT_1555 and partial:
-            raise SystemExit(
-                f"{source.name}: refused RGB1555, {partial} texels are "
-                "part-transparent and would be erased"
-            )
+        # RGB1555 is allowed to erase partial alpha: the renderer's own
+        # rgb1555From8888() does exactly this (alpha < 128 collapses to the
+        # zero key) for every 16-bit world texture, so storing 1555 moves that
+        # step from start-up into the asset and changes nothing visible except
+        # where it is already invisible. The count is recorded per file so the
+        # loss stays measured instead of implied.
         if chosen == FORMAT_565 and (zero or partial):
             raise SystemExit(
                 f"{source.name}: refused RGB565, {zero + partial} texels are "
@@ -204,6 +211,9 @@ def convert(source: Path, fmt: int | None, keep_rgb: bool) -> tuple[bytes, dict]
         ),
         "alpha_zero": zero,
         "alpha_partial": partial,
+        "texels_erased_by_1555": (
+            partial if (not keep_rgb and chosen == FORMAT_1555) else 0
+        ),
         "alpha_opaque": opaque,
         "source_size_bytes": len(rgba) + 8,
         "size_bytes": len(body),

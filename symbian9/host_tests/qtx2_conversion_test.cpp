@@ -114,15 +114,16 @@ struct AssetExpectation {
  * than a slightly different picture.
  */
 const AssetExpectation kExpected[] = {
-    {"forest.qtx", ESoftwareQtx2Rgb1555, false, false, 0},
-    {"map.qtx", ESoftwareQtx2Argb4444, false, false, 0},
+    /* Partial alpha collapses into the 1-bit key. The counts are the visible
+       texels each asset gives up, pinned so a converter change shows up. */
+    {"forest.qtx", ESoftwareQtx2Rgb1555, false, true, 362},
+    {"map.qtx", ESoftwareQtx2Rgb1555, false, true, 889},
     {"river.qtx", ESoftwareQtx2Rgb565, false, false, 0},
+    /* No transparency at all: pure 565, the one explicit override. */
     {"sky.qtx", ESoftwareQtx2Rgb565, false, false, 0},
-    /* The body keeps the keyed 1555 look it always had by explicit choice;
-       see FORMAT_OVERRIDES in the converter. */
     {"weapon.qtx", ESoftwareQtx2Rgb1555, true, true, 67},
-    {"weapon-fire.qtx", ESoftwareQtx2Argb4444, true, false, 0},
-    {"weapon-sight-weapon.qtx", ESoftwareQtx2Argb4444, true, false, 0},
+    {"weapon-fire.qtx", ESoftwareQtx2Rgb1555, true, true, 241},
+    {"weapon-sight-weapon.qtx", ESoftwareQtx2Rgb1555, true, true, 1581},
 };
 
 void checkAsset(const std::string& qtx2Dir,
@@ -458,6 +459,65 @@ void checkFormatSelection()
 
 } // namespace
 
+/*
+ * The device never reads the 16-bit block directly for world textures: it
+ * expands the file back to 8888 and hands that to the existing renderer
+ * views. This checks that expansion against the reader's own view, so a
+ * QTX2 package cannot silently produce garbage pixels at start-up.
+ */
+void checkExpandsBackToRgb8888(const std::string& qtx2Dir)
+{
+    for (const char* name : {"sky.qtx", "map.qtx", "forest.qtx", "mdy.qtx",
+                             "skl.qtx", "river.qtx", "weapon.qtx",
+                             "weapon-fire.qtx", "weapon-sight-weapon.qtx"}) {
+        const std::vector<unsigned char> packed =
+            readFile(qtx2Dir + "/" + name);
+        SoftwareQtx2Header header;
+        const QUint16* sixteen = 0;
+        const QInt32* stored = 0;
+        check(softwareQtx2Inspect(packed.data(),
+                                  static_cast<QInt32>(packed.size()),
+                                  4096, 4096, header, &sixteen, &stored),
+              "the packaged QTX2 image validates");
+        const QInt32 count = softwareQtx2PixelCount(header);
+        std::vector<QInt32> expanded(static_cast<size_t>(count), 0);
+        check(softwareQtx2ExpandToRgb8888(packed.data(),
+                                          static_cast<QInt32>(packed.size()),
+                                          expanded.data(), count),
+              "the QTX2 image expands to 8888");
+
+        /* Expanding a 16-bit image must reproduce the renderer's own view
+           texel for texel; a stored 8888 block must come back verbatim. */
+        const SoftwareTexture16View view = softwareQtx2TextView(header, sixteen);
+        QInt32 mismatches = 0;
+        for (QInt32 index = 0; index < count; ++index) {
+            const QInt32 reference = stored != 0
+                ? stored[index]
+                : (header.format == ESoftwareQtx2Argb4444
+                       ? argb8888From4444(view.pixels[index])
+                       : (header.format == ESoftwareQtx2Rgb1555
+                              ? rgb8888From1555(view.pixels[index])
+                              : rgb8888From565(view.pixels[index])));
+            if (expanded[static_cast<size_t>(index)] != reference) ++mismatches;
+        }
+        if (mismatches != 0) {
+            std::printf("FAIL: %s expanded %d texels differently\n",
+                        name, static_cast<int>(mismatches));
+            ++gFailures;
+        }
+        /* A null or too-small destination must be refused, not written. */
+        check(!softwareQtx2ExpandToRgb8888(packed.data(),
+                                           static_cast<QInt32>(packed.size()),
+                                           0, count),
+              "expansion refuses a null destination");
+        check(!softwareQtx2ExpandToRgb8888(packed.data(),
+                                           static_cast<QInt32>(packed.size()),
+                                           expanded.data(), count - 1),
+              "expansion refuses a short destination");
+    }
+    std::printf("QTX2 to 8888 expansion reproduces every stored texel.\n");
+}
+
 int main(int argc, char** argv)
 {
     if (argc < 3) {
@@ -475,6 +535,8 @@ int main(int argc, char** argv)
          ++index) {
         checkAsset(qtx2Dir, qtx1Dir, kExpected[index]);
     }
+
+    checkExpandsBackToRgb8888(qtx2Dir);
 
     if (gFailures != 0) {
         std::printf("%d QTX2 conformance failure(s)\n", gFailures);

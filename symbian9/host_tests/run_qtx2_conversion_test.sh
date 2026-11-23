@@ -19,7 +19,24 @@ mkdir -p "$build_dir"
     -o "$build_dir/qtx2_conversion_test"
 
 qtx2_dir=${QUANTUM_QTX2_DIR:-"$repo_root/build-assets/level41-qtx2"}
-qtx1_dir=${QUANTUM_QTX1_DIR:-"$repo_root/symbian9/level41_walk_test/output/v1.0.33-level1-import-drt-ten-plus-13-no-native-leaves-omap1710-dsa-argb32"}
+# The shipped Level 41 payload is assembled from two places, so collect the
+# exact 13 QTX1 sources the package carries into one directory. Point
+# QUANTUM_QTX1_DIR at your own set to compare against something else.
+qtx1_dir=${QUANTUM_QTX1_DIR:-"$build_dir/qtx1-sources"}
+if [ -z "${QUANTUM_QTX1_DIR:-}" ]; then
+    base="$repo_root/symbian9/level41_walk_test/output/v1.0.28-level1-import-drt-ten-found-omap1710-dsa-argb32"
+    sym9="$repo_root/symbian9/level41_device_test/assets/sym9-level1"
+    rm -rf "$qtx1_dir"
+    mkdir -p "$qtx1_dir"
+    for name in map.qtx river.qtx sky.qtx weapon.qtx weapon-fire.qtx \
+                weapon-sight-weapon.qtx; do
+        cp "$base/$name" "$qtx1_dir/$name"
+    done
+    for name in forest.qtx river0.qtx river1.qtx river2.qtx river3.qtx; do
+        cp "$sym9/qtx/$name" "$qtx1_dir/$name"
+    done
+    cp "$sym9/prop/mdy.qtx" "$sym9/prop/skl.qtx" "$qtx1_dir/"
+fi
 
 if [ ! -d "$qtx2_dir" ]; then
     echo "QTX2 assets missing: $qtx2_dir" >&2

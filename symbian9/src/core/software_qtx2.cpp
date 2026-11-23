@@ -1,5 +1,7 @@
 #include "software_qtx2.h"
 
+#include "software_texture16.h"
+
 namespace code {
 namespace Rendering {
 
@@ -263,6 +265,43 @@ void softwareQtx2ScanRgb8888(const QInt32* rgb8888,
             hasTransparentTexels = true;
         }
     }
+}
+
+bool softwareQtx2ExpandToRgb8888(const unsigned char* data,
+                                 QInt32 length,
+                                 QInt32* destination,
+                                 QInt32 destinationCapacity)
+{
+    if (data == 0 || destination == 0) return false;
+    SoftwareQtx2Header header;
+    const QUint16* sixteen = 0;
+    const QInt32* rgb8888 = 0;
+    /* No dimension limit of its own: the caller already validated the image
+     * with softwareQtx2Inspect and owns the buffer sizing decision. */
+    if (!softwareQtx2Inspect(data, length, 0x7fffffff, 0x7fffffff, header,
+                             &sixteen, &rgb8888)) {
+        return false;
+    }
+    const QInt32 pixelCount = softwareQtx2PixelCount(header);
+    if (pixelCount <= 0 || destinationCapacity < pixelCount) return false;
+
+    QInt32 index;
+    if (rgb8888 != 0) {
+        for (index = 0; index < pixelCount; ++index) {
+            destination[index] = rgb8888[index];
+        }
+        return true;
+    }
+    if (sixteen == 0) return false;
+    for (index = 0; index < pixelCount; ++index) {
+        const QUint16 texel = sixteen[index];
+        destination[index] = header.format == ESoftwareQtx2Argb4444
+            ? argb8888From4444(texel)
+            : (header.format == ESoftwareQtx2Rgb1555
+                   ? rgb8888From1555(texel)
+                   : rgb8888From565(texel));
+    }
+    return true;
 }
 
 } // namespace Rendering

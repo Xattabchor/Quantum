@@ -142,6 +142,21 @@ void softwareQtx2ScanRgb8888(const code::Math::QInt32* rgb8888,
                              bool& hasTransparentTexels,
                              bool& hasAlphaMixing);
 
+/*
+ * Expand a validated QTX2 image back to 8888, which is what every renderer
+ * consumer in the game asks for. A stored 8888 block is copied verbatim (it
+ * is the only lossless source); otherwise the 16-bit block is widened with
+ * the same 565/1555/4444 expansions the rest of the engine uses.
+ *
+ * `destination` must hold softwareQtx2PixelCount(header) texels. Returns
+ * false for a null pointer or an image that carries neither block, and does
+ * not modify the destination in that case.
+ */
+bool softwareQtx2ExpandToRgb8888(const unsigned char* data,
+                                 code::Math::QInt32 length,
+                                 code::Math::QInt32* destination,
+                                 code::Math::QInt32 destinationCapacity);
+
 } // namespace Rendering
 } // namespace code
 

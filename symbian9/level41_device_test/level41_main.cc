@@ -114,6 +114,11 @@ using code::Rendering::SoftwareTextureView;
 using code::Rendering::SoftwareQtx2Format;
 using code::Rendering::SoftwareQtx2Header;
 using code::Rendering::ESoftwareQtx2Rgb565;
+using code::Rendering::ESoftwareQtx2Argb4444;
+using code::Rendering::ESoftwareQtx2Rgb1555;
+using code::Rendering::argb8888From4444;
+using code::Rendering::rgb8888From1555;
+using code::Rendering::rgb8888From565;
 using code::Rendering::SoftwareTexture16;
 using code::Rendering::SoftwareTexture16View;
 using code::Rendering::ESoftwareMeshProjectionDirectX7;
@@ -902,6 +907,19 @@ bool decodeQtxTexture(const TUint8* data,
     if (!inspectQtxTexture(data, length, info) || pixels == 0) return false;
     const TInt pixelCount = info.width * info.height;
     if (pixelCount > pixelCapacity) return false;
+
+    /*
+     * QTX2 stores quantised pixels, not RGBA bytes, so the QTX1 loop below
+     * would read the file as garbage. Expand the stored block back to 8888:
+     * every consumer downstream (world mip views, level objects, weapon
+     * sprites) still asks for 8888, and the point of QTX2 is that the file
+     * already holds the final format, not that the caller changes shape.
+     */
+    if (info.isQtx2) {
+        return code::Rendering::softwareQtx2ExpandToRgb8888(
+            reinterpret_cast<const unsigned char*>(data), length, pixels,
+            pixelCapacity);
+    }
 
     TInt pixelIndex;
     for (pixelIndex = 0; pixelIndex < pixelCount; ++pixelIndex) {
