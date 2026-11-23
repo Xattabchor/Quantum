@@ -370,7 +370,9 @@ HBufC8* CQuantumLevel41PcmAudioWorker::LoadPcmL(const TDesC& aPath)
 {
     RFs fileServer;
     User::LeaveIfError(fileServer.Connect());
-    CleanupClosePushL(fileServer);
+    /* Close through RHandleBase, as the reference does: RFs::Close() is
+     * efsrv ordinal 390, and that import profile is what the E65 refused. */
+    CleanupClosePushL(static_cast<RHandleBase&>(fileServer));
 
     RFile file;
     User::LeaveIfError(
@@ -383,7 +385,10 @@ HBufC8* CQuantumLevel41PcmAudioWorker::LoadPcmL(const TDesC& aPath)
 
     HBufC8* wave = HBufC8::NewLC(size);
     TPtr8 bytes = wave->Des();
-    User::LeaveIfError(file.Read(bytes));
+    /* Use the length form. The one-argument RFile::Read(TDes8&) is efsrv
+     * ordinal 255, which no E65-launching build has ever imported; the
+     * main file already reads through RFile::Read(TDes8&, TInt) (257). */
+    User::LeaveIfError(file.Read(bytes, size));
     if (bytes.Length() != size) User::Leave(KErrCorrupt);
 
     PcmWaveView view;
@@ -406,7 +411,7 @@ HBufC8* CQuantumLevel41PcmAudioWorker::LoadPcmL(const TDesC& aPath)
     CleanupStack::Pop(output);
     CleanupStack::PopAndDestroy(wave);
     CleanupStack::PopAndDestroy(&file);
-    CleanupStack::PopAndDestroy(&fileServer);
+    CleanupStack::PopAndDestroy(static_cast<RHandleBase*>(&fileServer));
     return output;
 }
 
@@ -684,11 +689,8 @@ void CQuantumLevel41PcmAudioPoller::RunL()
             CActiveScheduler::Stop();
             return;
         }
-        TRAPD(error, iWorker.HandleCommand(commands[index]));
-        if (error != KErrNone) {
-            iOwner.SetEffectsStatus(CQuantumLevel41PcmAudio::EAudioFailed,
-                                    error);
-        }
+        /* The reference calls this directly; the worker does not leave. */
+        iWorker.HandleCommand(commands[index]);
     }
     Schedule();
 }
@@ -833,35 +835,51 @@ void CQuantumLevel41PcmAudio::SetEffectsStatus(TInt aState, TInt aError)
     iMutex.Signal();
 }
 
+/*
+ * Same shape as the device-tested reference: no TRAP around the thread body.
+ * A TRAPD here is what pulled the native-leave personalities and fourteen
+ * drtaeabi ordinals into the E32, and v1.0.32 showed that import profile is
+ * rejected by the E65 loader before the app screen appears.
+ */
 TInt CQuantumLevel41PcmAudio::ThreadEntry(TAny* aSelf)
 {
     CQuantumLevel41PcmAudio* self =
         static_cast<CQuantumLevel41PcmAudio*>(aSelf);
     CTrapCleanup* cleanup = CTrapCleanup::New();
-    if (cleanup == 0) return KErrNoMemory;
-    CActiveScheduler* scheduler = new CActiveScheduler();
+    if (cleanup == 0) {
+        self->SetEffectsStatus(EAudioFailed, KErrNoMemory);
+        return KErrNoMemory;
+    }
+
+    const TInt criticalError = User::SetCritical(User::ENotCritical);
+    if (criticalError != KErrNone) {
+        self->SetEffectsStatus(EAudioFailed, criticalError);
+        cleanup->CTrapCleanup::~CTrapCleanup(); User::Free(cleanup);
+        return criticalError;
+    }
+
+    CActiveScheduler* scheduler = new CActiveScheduler;
     if (scheduler == 0) {
-        delete cleanup;
+        self->SetEffectsStatus(EAudioFailed, KErrNoMemory);
+        cleanup->CTrapCleanup::~CTrapCleanup(); User::Free(cleanup);
         return KErrNoMemory;
     }
     CActiveScheduler::Install(scheduler);
-    TRAPD(error, self->ThreadMainL());
-    delete scheduler;
-    delete cleanup;
-    return error;
-}
 
-void CQuantumLevel41PcmAudio::ThreadMainL()
-{
-    TInt error = KErrNone;
+    TInt workerError = KErrNone;
     CQuantumLevel41PcmAudioWorker* worker =
-        CQuantumLevel41PcmAudioWorker::New(*this, error);
-    if (worker == 0) {
-        SetEffectsStatus(EAudioFailed, error);
-        return;
+        CQuantumLevel41PcmAudioWorker::New(*self, workerError);
+    if (workerError == KErrNone && worker != 0) {
+        CActiveScheduler::Start();
+    } else {
+        self->SetEffectsStatus(EAudioFailed, workerError);
     }
-    CActiveScheduler::Start();
+
     delete worker;
+    CActiveScheduler::Install(0);
+    scheduler->CActiveScheduler::~CActiveScheduler(); User::Free(scheduler);
+    cleanup->CTrapCleanup::~CTrapCleanup(); User::Free(cleanup);
+    return workerError;
 }
 
 void CQuantumLevel41PcmAudio::StartLevelMusic()

@@ -71,7 +71,6 @@ private:
     TInt Enqueue(TInt aCommand);
 
     static TInt ThreadEntry(TAny* aSelf);
-    void ThreadMainL();
 
     TFileName iMusicFile;
     TFileName iShotFile;

@@ -310,16 +310,6 @@ if(QUANTUM_LEVEL41_INTERACTIVE_WALK)
         Symbian::Math
         Symbian::Audio)
     target_compile_features(quantum_level41_walk_test PRIVATE cxx_std_20)
-    if(QUANTUM_LEVEL41_PCM_ONE_AUDIO AND
-       NOT QUANTUM_LEVEL41_SNDDMA_AUDIO)
-        # The PCM-one backend traps its command handler and its thread body.
-        # The SDK's default TRAP path needs TTrap::Trap/UnTrap, which no 0.3.0
-        # proxy exports; the native leave boundary compiles those two source
-        # files with the exception-based TRAP and supplies the personalities.
-        symbian_enable_native_leaves(quantum_level41_walk_test
-            SOURCES ../level41_pcm_audio/quantum_level41_pcm_audio.cpp
-                    ../level41_pcm_audio/quantum_level41_pcm_core.cpp)
-    endif()
     symbian_publish_executable(quantum_level41_walk_test UID3 0xe000a020)
 endif()
 
