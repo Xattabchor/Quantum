@@ -582,18 +582,22 @@ bool buildWeaponSixteenImage(SoftwareWeaponSpriteImage& image,
  * Parallel 16-bit weapon images, one buffer per sprite, allocated only for
  * the images whose format actually fits:
  *
- *   weapon        RGB1555   keyed art, no partial alpha in the source
- *   weapon-fire   ARGB4444  47% of its visible texels are below alpha 128,
- *                            so a 1-bit key would erase the glow
+ *   weapon        RGB1555   body art, 69% fully opaque, 0/255 cut
+ *   weapon-fire   ARGB4444  48% of its visible texels are genuinely
+ *                            translucent, so a 1-bit key would erase the glow
  *   weapon-sight            ARGB4444  soft anti-aliased reticle edges
- *   weapon-sight-weapon     ARGB4444  14% of the frame is partial alpha
+ *   weapon-sight-weapon     dropped   see below
+ *
+ * weapon-sight-weapon is not kept at all. Nothing can draw it: the reticle
+ * needs `zoom`, which this sample never raises, so the 300x320 sprite cost
+ * 384,000 bytes of 32-bit buffer plus 192,000 bytes of 16-bit buffer to sit
+ * unused. See loadWeaponAssets().
  *
  * A failed allocation is not fatal: that sprite keeps its 32-bit view.
  */
 QUint16* gWeaponSixteenStorage = 0;
 QUint16* gWeaponFireSixteenStorage = 0;
 QUint16* gWeaponSightSixteenStorage = 0;
-QUint16* gWeaponSightWeaponSixteenStorage = 0;
 bool gWeaponOverlayAvailable = false;
 bool gWeaponTuningLoadedFromAssets = false;
 TInt64 gLastWeaponUpdateMicros = 0;
@@ -1367,9 +1371,6 @@ void releaseWeaponSpriteBuffers()
     if (gWeaponSpriteBuffers.sightPixels != 0) {
         User::Free(gWeaponSpriteBuffers.sightPixels);
     }
-    if (gWeaponSpriteBuffers.sightWeaponPixels != 0) {
-        User::Free(gWeaponSpriteBuffers.sightWeaponPixels);
-    }
     if (gWeaponSixteenStorage != 0) {
         User::Free(gWeaponSixteenStorage);
         gWeaponSixteenStorage = 0;
@@ -1381,10 +1382,6 @@ void releaseWeaponSpriteBuffers()
     if (gWeaponSightSixteenStorage != 0) {
         User::Free(gWeaponSightSixteenStorage);
         gWeaponSightSixteenStorage = 0;
-    }
-    if (gWeaponSightWeaponSixteenStorage != 0) {
-        User::Free(gWeaponSightWeaponSixteenStorage);
-        gWeaponSightWeaponSixteenStorage = 0;
     }
     gWeaponSpriteBuffers = SoftwareWeaponSpriteBuffers();
     gWeaponSprites = SoftwareWeaponSpriteSet();
@@ -1436,7 +1433,6 @@ bool loadWeaponAssets(RFs& fileServer, const TDesC& drive)
     TLoadedWeaponImage weapon;
     TLoadedWeaponImage fire;
     TLoadedWeaponImage sight;
-    TLoadedWeaponImage sightWeapon;
 
     /* Index zero in a local Quantum JAR is the default USP. Its art and
        QWG1/QWG2 gameplay tuning are optional; the sample still uses the test
@@ -1452,14 +1448,21 @@ bool loadWeaponAssets(RFs& fileServer, const TDesC& drive)
     }
     (void)loadWeaponImage(fileServer, drive, _L("weapon-fire.qtx"), fire);
     (void)loadWeaponImage(fileServer, drive, _L("weapon-sight.qtx"), sight);
-    (void)loadWeaponImage(
-        fileServer, drive, _L("weapon-sight-weapon.qtx"), sightWeapon);
+    /*
+     * weapon-sight-weapon.qtx is deliberately not loaded. It is the zoomed
+     * reticle, and the reticle is drawn only when `settings.zoom` is set,
+     * which never happens in this sample (the QWG has hasZoom, but nothing
+     * raises zoom). Loading it cost a 240x256 decode plus a 300x320 resize
+     * buffer -- 384,000 bytes of 32-bit pixels -- to sit unread, and it was
+     * the last allocation that pushed the peak past the 2 MiB heap ceiling.
+     * Leaving the source view empty makes measureSprites() report a zero
+     * pixel count, so prepareSprites() and draw() both skip it by design.
+     */
 
     SoftwareWeaponSpriteSources sources;
     sources.weapon = weapon.view;
     sources.fire = fire.view;
     sources.sight = sight.view;
-    sources.sightWeapon = sightWeapon.view;
     SoftwareWeaponCreateSettings createSettings;
     createSettings.viewportWidth = gRenderWidth;
     createSettings.viewportHeight = gRenderHeight;
@@ -1485,11 +1488,7 @@ bool loadWeaponAssets(RFs& fileServer, const TDesC& drive)
                 allocateWeaponSpriteBuffer(
                     requirements.sight.pixelCount,
                     gWeaponSpriteBuffers.sightPixels,
-                    gWeaponSpriteBuffers.sightCapacity) &&
-                allocateWeaponSpriteBuffer(
-                    requirements.sightWeapon.pixelCount,
-                    gWeaponSpriteBuffers.sightWeaponPixels,
-                    gWeaponSpriteBuffers.sightWeaponCapacity);
+                    gWeaponSpriteBuffers.sightCapacity);
     }
     if (ready) {
         ready = SoftwareWeaponRenderer::prepareSprites(
@@ -1501,21 +1500,19 @@ bool loadWeaponAssets(RFs& fileServer, const TDesC& drive)
      * bilinear ImageResize path is not duplicated.
      */
     if (ready) {
+        /* Weapon body in RGB1555 (5-5-5-1) and the muzzle flash in ARGB4444,
+           per the required 16-bit layout. */
         (void)buildWeaponSixteenImage(
             gWeaponSprites.weapon, gWeaponSixteenStorage, false);
         (void)buildWeaponSixteenImage(
             gWeaponSprites.fire, gWeaponFireSixteenStorage, true);
         (void)buildWeaponSixteenImage(
             gWeaponSprites.sight, gWeaponSightSixteenStorage, true);
-        (void)buildWeaponSixteenImage(
-            gWeaponSprites.sightWeapon, gWeaponSightWeaponSixteenStorage,
-            true);
     }
 
     releaseLoadedWeaponImage(weapon);
     releaseLoadedWeaponImage(fire);
     releaseLoadedWeaponImage(sight);
-    releaseLoadedWeaponImage(sightWeapon);
     gAssetFailurePoint = savedFailurePoint;
     gAssetFailureCode = savedFailureCode;
     gAssetFileSize = savedFileSize;

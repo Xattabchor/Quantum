@@ -291,11 +291,11 @@ bool drawSprite(const SoftwareRenderSurfaceView& destination,
         prepared.sixteen.width == image.width &&
         prepared.sixteen.height == image.height &&
         prepared.sixteen.pixelCount >= image.width * image.height) {
-        /* 1555 only reproduces art whose alpha is already a 0/255 cut;
-           4444 covers the translucent cases. */
-        if (prepared.sixteen.is4444 || !image.hasAlphaMixing) {
-            source16 = &prepared.sixteen;
-        }
+        /* The stored format is authoritative: buildSixteen was asked for a
+           specific view per sprite, and the 4444 case already carries any
+           partial alpha the art has. Re-vetoing 1555 here would silently
+           send the weapon body back to the 32-bit path. */
+        source16 = &prepared.sixteen;
     }
 
     QInt32 left = anchorX;
@@ -573,13 +573,20 @@ bool SoftwareWeaponSpriteImage::buildSixteen(bool format4444,
     }
 
     /*
-     * 1555 carries a 1-bit key, so it can only represent art whose alpha is
-     * already a 0/255 cut. If any texel is partially transparent
-     * (Java RawImage.alphaMixing), the key would delete it: those texels
-     * must use 4444. A fully opaque sprite would also convert, but it
-     * would only lose colour precision, so it keeps the 32-bit view too.
+     * 1555 carries a 1-bit key. Partially transparent texels collapse to
+     * either the key or opaque when the key is the only alpha available, so
+     * the caller chooses the format per sprite and this function honours it:
+     *
+     *   weapon body  RGB1555. Its fringes are bilinear artefacts of the
+     *                runtime resize, not authored translucency, and the body
+     *                is 69% fully opaque with a hard 0/255 cut in the source.
+     *   muzzle flash ARGB4444. 48% of its visible texels are genuinely
+     *                translucent; the 1-bit key would erase the glow.
+     *
+     * A fully opaque sprite would convert too, but it would only lose colour
+     * precision, so it keeps the 32-bit view.
      */
-    if (view.hasAlphaMixing || !view.hasTransparentTexels) return false;
+    if (!view.hasTransparentTexels) return false;
     SoftwareTexture16::convert8888To1555(view.pixels, storage, count);
     sixteen = SoftwareTexture16View(
         storage, count, view.width, view.height, true, true);
