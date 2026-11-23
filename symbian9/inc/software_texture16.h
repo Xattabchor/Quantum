@@ -70,9 +70,17 @@ inline code::Math::QInt32 rgb8888From565(code::Math::QUint16 pixel)
 
 inline code::Math::QUint16 rgb1555From8888(code::Math::QInt32 pixel)
 {
+    /*
+     * 1555 is only valid as a transparent-key format when its zero texel and
+     * its clear alpha bit mean the same thing. rgb8888From1555() reports
+     * exactly those two cases as 0, so any source texel whose alpha sits
+     * below the 1-bit threshold must collapse to 0 as well. Otherwise it
+     * would decode to pitch black while still passing the `texel != 0` key
+     * test, drawing opaque black holes where partial alpha used to blend.
+     */
     const code::Math::QUint32 bits = static_cast<code::Math::QUint32>(pixel);
     const code::Math::QUint32 alpha = (bits >> 24U) & 0xffU;
-    if (alpha == 0U) {
+    if (alpha < 128U) {
         return 0;
     }
     const code::Math::QUint32 red = (bits >> 19U) & 0x1fU;

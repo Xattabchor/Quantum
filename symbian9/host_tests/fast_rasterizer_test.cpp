@@ -168,6 +168,61 @@ std::vector<unsigned char> makeSyntheticQct()
  * must select RGB565, sources with zero texels must select RGB1555 so the
  * transparent key survives.
  */
+/*
+ * RGB1555 is a transparent-key format only if expand(texel) == 0 exactly
+ * when texel == 0. Anything else means the fast kernels' `texel != 0` test
+ * disagrees with what the pixel would actually draw, which shows up as
+ * opaque black holes over partially transparent texels.
+ */
+void test1555KeyInvariant()
+{
+    /* Sweep every alpha value against a few colors, plus the boundaries. */
+    QInt32 violations = 0;
+    QInt32 partialBelowThreshold = 0;
+    const QUint32 colors[] = { 0x00ffffffU, 0x00ff8040U, 0x00000000U,
+                               0x00123456U, 0x00fefefeU };
+    for (int ci = 0; ci < 5; ++ci) {
+        for (QUint32 alpha = 0; alpha <= 255U; ++alpha) {
+            const QUint32 rgb =
+                (alpha << 24U) | (colors[ci] & 0x00ffffffU);
+            const QInt32 source = code::Math::javaIntFromUnsigned(rgb);
+            const QUint16 texel = rgb1555From8888(source);
+            const QInt32 expanded = rgb8888From1555(texel);
+            const bool keySaysDraw = texel != 0U;
+            const bool expandSaysDraw = expanded != 0;
+            if (keySaysDraw != expandSaysDraw) ++violations;
+            /*
+             * A black source colour is itself the zero texel, so it is not
+             * evidence that alpha collapsed the key. Count only colours
+             * that would survive at full alpha.
+             */
+            if (!keySaysDraw && alpha != 0U &&
+                (colors[ci] & 0x00ffffffU) != 0U) {
+                ++partialBelowThreshold;
+            }
+        }
+    }
+    check(violations == 0,
+          "1555 expansion disagrees with the zero-texel key test");
+    check(partialBelowThreshold == 4 * 127,
+          "sub-threshold alpha must collapse to the transparent key");
+    std::printf("1555 key invariant: violations=%d, sub-threshold collapsed=%d\n",
+                violations, partialBelowThreshold);
+
+    /* Expanded 1555 texels always carry a full alpha byte. */
+    QInt32 alphaViolations = 0;
+    for (QUint32 value = 0; value < 65536U; value += 7U) {
+        const QInt32 expanded =
+            rgb8888From1555(static_cast<QUint16>(value));
+        if (expanded == 0) continue;
+        if ((static_cast<QUint32>(expanded) >> 24U) != 0xffU) {
+            ++alphaViolations;
+        }
+    }
+    check(alphaViolations == 0,
+          "expanded 1555 texels must have an opaque alpha byte");
+}
+
 void testSingleLevelBuild()
 {
     const QInt32 width = 8;
@@ -633,6 +688,7 @@ int main(int argc, char** argv)
     testConversions();
     testArmv5teModels();
     testSingleLevelBuild();
+    test1555KeyInvariant();
     testQctDecode(assetsDir);
     testFastKernels();
     testPresets();
