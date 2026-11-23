@@ -8,6 +8,8 @@
  *
  * Usage: fast_rasterizer_test [assets-dir]
  */
+#include "armv5te_dsp.h"
+#include "omap1710_pdiv.h"
 #include "render_mode_policy.h"
 #include "software_affine_rasterizer.h"
 #include "software_fast_rasterizer.h"
@@ -512,12 +514,62 @@ void benchmark()
 
 } // namespace
 
+/*
+ * The fast kernels route Q12 products and <<12 divisions through the same
+ * ARMv5TE models the reference perspective kernel uses. On device those
+ * become SMULWB/SMLAWB and the normalized divide; on the host the models
+ * must agree with the plain 64-bit arithmetic they replace.
+ */
+void testArmv5teModels()
+{
+    const int fractions[] = { -4095, -3000, -2049, -2048, -2047, -1, 0,
+                              1, 1000, 2047, 2048, 3000, 4095 };
+    QInt32 mismatches = 0;
+    for (int fi = 0; fi < 13; ++fi) {
+        const QInt32 fraction = fractions[fi];
+        QInt32 slope;
+        for (slope = -60000; slope <= 60000; slope += 499) {
+            const QInt32 expected = static_cast<QInt32>(
+                (static_cast<code::Math::QInt64>(slope) * fraction) >> 12);
+            QInt32 got = 0;
+            if (!code::Math::ArmV5teDsp::q12ProductShiftArmV5teDspReference(
+                    slope, fraction, got)) {
+                got = expected;
+            }
+            if (got != expected) ++mismatches;
+        }
+    }
+    check(mismatches == 0, "ARMv5TE SMULWB model disagrees with arithmetic shift");
+
+    /* Normalized-divide model: quotient must match unsigned division. */
+    QInt32 divideMismatches = 0;
+    code::Math::QInt32 dividend;
+    for (dividend = 1; dividend < 55000; dividend += 37) {
+        code::Math::QInt32 divisor;
+        for (divisor = 1; divisor < 400; divisor += 3) {
+            code::Math::QUint32 quotient = 0;
+            if (!code::Math::ArmV5teDsp::omap1710UnsignedDivideReference(
+                    static_cast<code::Math::QUint32>(dividend),
+                    static_cast<code::Math::QUint32>(divisor), quotient) ||
+                quotient != static_cast<code::Math::QUint32>(
+                                 dividend / divisor)) {
+                ++divideMismatches;
+            }
+        }
+    }
+    check(divideMismatches == 0,
+          "ARMv5TE normalized-divide model disagrees with unsigned division");
+    std::printf("ARMv5TE models: mul mismatches=%d div mismatches=%d\n",
+                mismatches, divideMismatches);
+}
+
 int main(int argc, char** argv)
 {
     const std::string assetsDir =
         argc > 1 ? argv[1]
                  : "symbian9/level41_device_test/assets/sym9-level1";
     testConversions();
+    testArmv5teModels();
     testQctDecode(assetsDir);
     testFastKernels();
     testPresets();

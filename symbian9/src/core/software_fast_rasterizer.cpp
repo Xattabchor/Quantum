@@ -1,8 +1,23 @@
 #include "software_fast_rasterizer.h"
 
+#include "armv5te_dsp.h"
+#include "omap1710_pdiv.h"
 #include "quantum_integer.h"
 
 #include <stddef.h>
+
+#if defined(QUANTUM_LEVEL41_OMAP1710_DSP) && defined(__SYMBIAN32__)
+extern "C" code::Math::QInt32 quantum_omap1710_mul_shift12(
+    code::Math::QInt32 slope, code::Math::QInt32 fraction);
+extern "C" code::Math::QInt32 quantum_omap1710_mul_shift12_outer(
+    code::Math::QInt32 slope, code::Math::QInt32 fraction);
+#endif
+
+#if defined(QUANTUM_LEVEL41_OMAP1710_SCALAR_PDIV_ASM) && \
+    defined(__SYMBIAN32__)
+extern "C" code::Math::QUint32 quantum_omap1710_udiv_u32(
+    code::Math::QUint32 dividend, code::Math::QUint32 divisor);
+#endif
 
 namespace code {
 namespace Rendering {
@@ -17,6 +32,78 @@ namespace {
 const unsigned int KScreenFractionBits = 14U;
 const unsigned int KTextureFractionBits = 12U;
 const QInt32 KTextureFraction = 4096;
+
+/*
+ * Java evaluates ((long) value << 12) / divisor and narrows to int. A
+ * 32-bit divide would overflow (C++ signed overflow is undefined), so split
+ * the quotient into whole and 12-bit fractional parts and extend the
+ * remainder one bit at a time. On the E65 build the whole part goes through
+ * the same normalized-divide assembly helper the reference perspective
+ * kernel uses, so no hardware divide is needed on ARMv5TE.
+ */
+static QInt32 divideShift12(QInt32 value, QInt32 divisor)
+{
+    const QUint32 valueBits = static_cast<QUint32>(value);
+    const QUint32 divisorBits = static_cast<QUint32>(divisor);
+    const QUint32 valueMagnitude = value < 0
+        ? static_cast<QUint32>(static_cast<QUint32>(0) - valueBits)
+        : valueBits;
+    const QUint32 divisorMagnitude = divisor < 0
+        ? static_cast<QUint32>(static_cast<QUint32>(0) - divisorBits)
+        : divisorBits;
+    const bool negative = (value < 0) != (divisor < 0);
+    QUint32 whole = 0;
+#if defined(QUANTUM_LEVEL41_OMAP1710_SCALAR_PDIV_ASM) && \
+    defined(__SYMBIAN32__)
+    whole = quantum_omap1710_udiv_u32(valueMagnitude, divisorMagnitude);
+#elif defined(QUANTUM_LEVEL41_OMAP1710_SCALAR_PDIV_ASM)
+    if (!code::Math::ArmV5teDsp::omap1710UnsignedDivideReference(
+            valueMagnitude, divisorMagnitude, whole)) {
+        whole = valueMagnitude / divisorMagnitude;
+    }
+#else
+    whole = valueMagnitude / divisorMagnitude;
+#endif
+    QUint32 remainder = valueMagnitude - whole * divisorMagnitude;
+    QUint32 fractional = 0;
+    if (remainder != 0U) {
+        unsigned int bit;
+        for (bit = 0; bit < KTextureFractionBits; ++bit) {
+            fractional <<= 1U;
+            remainder += remainder;
+            if (remainder >= divisorMagnitude) {
+                remainder -= divisorMagnitude;
+                fractional |= 1U;
+            }
+        }
+    }
+    QUint32 quotientBits = (whole << KTextureFractionBits) | fractional;
+    if (negative) {
+        quotientBits = static_cast<QUint32>(
+            static_cast<QUint32>(0) - quotientBits);
+    }
+    return code::Math::javaIntFromUnsigned(quotientBits);
+}
+
+/*
+ * (slope * fraction) >> 12 with the reference's arithmetic shift. The E65
+ * build routes it through the same SMULWB/SMLAWB helper the reference
+ * kernel uses, which covers every Q12 fraction, including the one-period
+ * wrap outside [-2048, 2047].
+ */
+static QInt32 multiplyShift12(QInt32 slope, QInt32 fraction)
+{
+#if defined(QUANTUM_LEVEL41_OMAP1710_DSP) && defined(__SYMBIAN32__)
+    if (code::Math::ArmV5teDsp::canUseSmulwbDirectForQ12Fraction(fraction)) {
+        return quantum_omap1710_mul_shift12(slope, fraction);
+    }
+    if (code::Math::ArmV5teDsp::canUseArmV5teDspForQ12Fraction(fraction)) {
+        return quantum_omap1710_mul_shift12_outer(slope, fraction);
+    }
+#endif
+    const QInt64 product = static_cast<QInt64>(slope) * fraction;
+    return static_cast<QInt32>(product >> 12);
+}
 
 bool validSurface(const SoftwareRenderSurfaceView& surface)
 {
@@ -95,9 +182,12 @@ bool computeSlope(QInt32 delta, QInt32 rows, unsigned int fractionBits,
                   QInt32& slope)
 {
     if (rows == 0) return false;
-    const QInt64 shifted =
-        static_cast<QInt64>(delta) * (static_cast<QInt64>(1) << fractionBits);
-    slope = static_cast<QInt32>(shifted / rows);
+    if (fractionBits == KTextureFractionBits) {
+        slope = divideShift12(delta, rows);
+        return true;
+    }
+    slope = static_cast<QInt32>(
+        (static_cast<QInt64>(delta) << fractionBits) / rows);
     return true;
 }
 
@@ -483,14 +573,11 @@ bool drawAffineTriangle(const SoftwareRenderSurfaceView& destination,
 
     temp = (xStart - xEnd) >> 14;
     if (temp == 0) return true;
-    QInt32 du = static_cast<QInt32>(
-        static_cast<QInt64>(uStart - uEnd) / temp);
-    QInt32 dv = static_cast<QInt32>(
-        static_cast<QInt64>(vStart - vEnd) / temp);
+    QInt32 du = (uStart - uEnd) / temp;
+    QInt32 dv = (vStart - vEnd) / temp;
     QInt32 shadeSlope = 0;
     if (shaded) {
-        shadeSlope = static_cast<QInt32>(
-            static_cast<QInt64>(shadeStart - shadeEnd) / temp);
+        shadeSlope = (shadeStart - shadeEnd) / temp;
         if (shadeSlope > 0) shadeSlope -= 1;
         if (shadeSlope < 0) shadeSlope += 1;
     }
@@ -687,8 +774,7 @@ bool computePerspectiveSlope(QInt32 start, QInt32 end, QInt32 rows,
                              QInt32& slope)
 {
     if (rows == 0) return false;
-    slope = static_cast<QInt32>(
-        (static_cast<QInt64>(end - start) * 4096) / rows);
+    slope = divideShift12(end - start, rows);
     return true;
 }
 
@@ -744,10 +830,8 @@ void advancePointOneRow(FixedPerspectivePoint& point,
 QInt32 adjustForFraction(QInt32 value, QInt32 horizontalSlope,
                          QInt32 fraction)
 {
-    /* Reference uses an arithmetic (flooring) shift right by 12. */
-    const QInt64 product =
-        static_cast<QInt64>(horizontalSlope) * static_cast<QInt64>(fraction);
-    return static_cast<QInt32>(static_cast<QInt64>(value) - (product >> 12));
+    return static_cast<QInt32>(static_cast<QInt64>(value) -
+                               multiplyShift12(horizontalSlope, fraction));
 }
 
 bool perspectiveDivide(QInt32 numerator, QInt32 denominator, QInt32& result)
@@ -757,8 +841,7 @@ bool perspectiveDivide(QInt32 numerator, QInt32 denominator, QInt32& result)
         result = 0;
         return true;
     }
-    result = static_cast<QInt32>(
-        (static_cast<QInt64>(numerator) * 4096) / denominator);
+    result = divideShift12(numerator, denominator);
     return true;
 }
 
