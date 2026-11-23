@@ -704,6 +704,11 @@ void writePerspectivePixel(
     const AffineTriangleColor& colorSlope,
     QInt32 logicalDestinationIndex)
 {
+    /*
+     * Mode is a template argument, so every `Mode ==` test below is folded
+     * away at compile time and the spans only carry the code their own mode
+     * needs. Only EPerspectiveGlass reads logicalDestinationIndex.
+     */
     if (Mode == EPerspectiveGlass) {
         const QUint32 texelBits = static_cast<QUint32>(texel);
         const QInt32 offsetX = code::Math::javaShiftRight(
@@ -1155,6 +1160,12 @@ bool drawPerspectiveEffectSpan(
     QInt32 remaining = code::Math::javaIntSub(x2, x1);
     const size_t rowOffset = static_cast<size_t>(screenY) *
                              static_cast<size_t>(destination.stride);
+    /*
+     * The logical (unpadded) index only needs the row base; inside the loop it
+     * advances by one with x1. Only EPerspectiveGlass reads it, but computing
+     * it per pixel costs a multiply in every effect mode.
+     */
+    QInt32 logicalRowBase = code::Math::javaIntMul(screenY, destination.width);
     AffineTriangleColor color = left.color;
     if (floorSpecial &&
         (Mode == EPerspectiveVertexShade ||
@@ -1287,11 +1298,10 @@ bool drawPerspectiveEffectSpan(
                     texture, widthBit, textureMask, uBits, vBits);
                 const size_t destinationIndex = rowOffset +
                                                static_cast<size_t>(x1);
-                const QInt32 logicalIndex = code::Math::javaIntAdd(
-                    code::Math::javaIntMul(screenY, destination.width), x1);
                 writePerspectivePixel<Mode>(
                     destination, destinationIndex, texel, parameters,
-                    color, colorSlope, logicalIndex);
+                    color, colorSlope, logicalRowBase);
+                ++logicalRowBase;
                 ++x1;
             }
         }

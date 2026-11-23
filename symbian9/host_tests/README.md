@@ -100,3 +100,47 @@ in `symbian9/level41_device_test/CMakeLists.txt`. It is mutually exclusive with
 the retired `QUANTUM_LEVEL41_SNDDMA_AUDIO` mixer profile. Building a `.sis`
 still needs the S60 3rd Edition SDK, so this is source-verified and host-tested
 only; the device retest is still outstanding.
+
+## Perspective bit-exactness and fast-path parity
+
+`run_perspective_bitexact_test.sh` pins the 32-bit perspective reference path
+itself. The fast-rasterizer test compares 16-bit against 32-bit with a
+tolerance, which cannot see a one-channel change in the reference; this one
+renders three fixed triangles through every effect mode the walk uses (copy,
+shade, fog add, surface add, fog blend low/high) into a 96x80 framebuffer and
+compares an FNV-1a hash of the whole frame against stored golden values.
+
+Two textures are used: an opaque one with a colour ramp, and a keyed one with
+every third texel cleared so the `MayContainZeroTexels` template is exercised.
+Re-run with `--print` to regenerate hashes after an intentional change. The
+harness was validated by sabotaging the mode-1 addend mask and confirming it
+reports a mismatch.
+
+`run_perspective_parity_test.sh` renders the same triangles through the 32-bit
+reference and the fast 16-bit path and reports the worst per-channel
+difference. Current worst values, which must not grow:
+
+| pass | step 9 | step 24 | step 96 |
+| --- | ---: | ---: | ---: |
+| mode 0 copy | 7 | 7 | 7 |
+| mode 9 shade | - | 8 | 5 |
+
+Those match the budgets already recorded for this project (perspective mode0
+q=24: 8, perspective mode9 q=24: 8), so the harness is measuring the same
+thing the device builds were tuned against. Steps 9 and 96 are included because
+the scanline is walked in `perspectiveStepPixels`-sized pieces and the divisor
+is special-cased for 24 only.
+
+One optimisation landed on top of these harnesses: `drawPerspectiveEffectSpan`
+used to compute `screenY * destination.width + x1` inside the pixel loop, but
+only `EPerspectiveGlass` reads that value, and it is a row base plus an
+increment. It is now hoisted to `logicalRowBase` and advanced with `++`. All
+eight golden hashes are unchanged.
+
+A second candidate was rejected rather than shipped. Specialising the 16-bit
+texel expansion by template in the perspective path does nothing, because
+`SoftwareTextureView` is always 0xAARRGGBB: 16-bit textures are widened by the
+asset pipeline and by the fast rasterizer, not here. Only `software_fast_rasterizer.cpp`
+samples 16-bit storage, and it already selects `Is1555`/`Is4444` at compile
+time via `drawPerspectiveSpanBody`. Adding a template here would have been code
+that compiles to the same instructions.
