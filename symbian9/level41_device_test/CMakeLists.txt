@@ -21,6 +21,7 @@ set(QUANTUM_LEVEL41_SOURCES
     ../src/core/software_polygon_renderer.cpp
     ../src/core/software_triangle_renderer.cpp
     ../src/core/software_texture16.cpp
+    ../src/core/software_qtx2.cpp
     ../src/core/software_fast_rasterizer.cpp
     ../src/core/software_weapon_renderer.cpp
     ../src/core/software_rain_renderer.cpp
@@ -218,6 +219,10 @@ if(QUANTUM_LEVEL41_INTERACTIVE_WALK)
     elseif(QUANTUM_LEVEL41_PCM_ONE_AUDIO)
         set(QUANTUM_LEVEL41_WALK_AUDIO_SOURCE
             ../level41_pcm_audio/quantum_level41_pcm_audio.cpp)
+        # The PCM-one backend carries the MDA music half over inside its own
+        # translation unit, so the shipped MDA player file must not also be
+        # linked: both define CQuantumLevel41AudioCallback.
+        set(QUANTUM_LEVEL41_WALK_AUDIO_REPLACES_MDA ON)
     endif()
     set(QUANTUM_LEVEL41_WALK_SOURCES
         ${QUANTUM_LEVEL41_SOURCES}
@@ -227,8 +232,16 @@ if(QUANTUM_LEVEL41_INTERACTIVE_WALK)
         ../src/core/software_walk_controller.cpp
         ../src/core/software_weapon_controller.cpp
         ${QUANTUM_LEVEL41_WALK_AUDIO_SOURCE})
+    if(QUANTUM_LEVEL41_WALK_AUDIO_REPLACES_MDA)
+        set(QUANTUM_LEVEL41_WALK_SOURCES
+            ${QUANTUM_LEVEL41_WALK_SOURCES}
+            ../level41_pcm_audio/quantum_level41_pcm_core.cpp)
+    endif()
     symbian_add_executable(
         quantum_level41_walk_test ${QUANTUM_LEVEL41_WALK_SOURCES})
+    if(QUANTUM_LEVEL41_WALK_AUDIO_REPLACES_MDA)
+        quantum_level41_remove_interactive_audio(quantum_level41_walk_test)
+    endif()
     target_include_directories(quantum_level41_walk_test PRIVATE ../inc)
     target_compile_definitions(quantum_level41_walk_test PRIVATE
         QUANTUM_LEVEL41_INTERACTIVE_WALK=1)
@@ -297,6 +310,16 @@ if(QUANTUM_LEVEL41_INTERACTIVE_WALK)
         Symbian::Math
         Symbian::Audio)
     target_compile_features(quantum_level41_walk_test PRIVATE cxx_std_20)
+    if(QUANTUM_LEVEL41_PCM_ONE_AUDIO AND
+       NOT QUANTUM_LEVEL41_SNDDMA_AUDIO)
+        # The PCM-one backend traps its command handler and its thread body.
+        # The SDK's default TRAP path needs TTrap::Trap/UnTrap, which no 0.3.0
+        # proxy exports; the native leave boundary compiles those two source
+        # files with the exception-based TRAP and supplies the personalities.
+        symbian_enable_native_leaves(quantum_level41_walk_test
+            SOURCES ../level41_pcm_audio/quantum_level41_pcm_audio.cpp
+                    ../level41_pcm_audio/quantum_level41_pcm_core.cpp)
+    endif()
     symbian_publish_executable(quantum_level41_walk_test UID3 0xe000a020)
 endif()
 

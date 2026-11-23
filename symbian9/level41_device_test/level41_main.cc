@@ -111,6 +111,11 @@ using code::Rendering::SoftwareProjectionParameters;
 using code::Rendering::SoftwareRenderSurfaceView;
 using code::Rendering::SoftwareRenderVertex;
 using code::Rendering::SoftwareTextureView;
+using code::Rendering::SoftwareQtx2Format;
+using code::Rendering::SoftwareQtx2Header;
+using code::Rendering::ESoftwareQtx2Rgb565;
+using code::Rendering::SoftwareTexture16;
+using code::Rendering::SoftwareTexture16View;
 using code::Rendering::ESoftwareMeshProjectionDirectX7;
 #if defined(QUANTUM_LEVEL41_INTERACTIVE_WALK)
 using code::Collision::CollisionMaterialFlags;
@@ -131,8 +136,6 @@ using code::Rendering::SoftwareWeaponRenderer;
 using code::Rendering::SoftwareRainRenderer;
 #endif
 using code::Rendering::SoftwareWeaponSpriteBuffers;
-using code::Rendering::SoftwareQtx2Format;
-using code::Rendering::SoftwareQtx2Header;
 using code::Rendering::SoftwareWeaponSpriteImage;
 using code::Rendering::SoftwareWeaponSpriteRequirements;
 using code::Rendering::SoftwareWeaponSpriteSet;
